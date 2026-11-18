@@ -1,0 +1,173 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply font-sans antialiased text-gray-900 bg-white; }
+}
+
+@layer components {
+  .btn-white {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-white/80
+           text-white text-[13px] font-semibold tracking-wide
+           hover:bg-white hover:text-[#A01E0A] transition-all duration-200 active:scale-95;
+  }
+  .btn-indigo {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           bg-[#1D6FA3] text-white text-[13px] font-semibold tracking-wide
+           hover:bg-[#4a4eb8] transition-all duration-200 active:scale-95;
+  }
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl
+           bg-[#A01E0A] text-white text-[13px] font-semibold
+           hover:bg-[#7E1708] transition-all duration-200 active:scale-95;
+  }
+
+  .nav-link {
+    @apply text-[13.5px] font-medium text-gray-600
+           hover:text-[#A01E0A] transition-colors duration-150
+           px-1 py-0.5 relative;
+  }
+  .nav-link-active {
+    @apply text-[13.5px] font-semibold text-[#A01E0A] px-1 py-0.5 relative;
+  }
+  .nav-link-active::after {
+    content: '';
+    @apply absolute bottom-[-18px] left-0 right-0 h-[2.5px] bg-[#A01E0A] rounded-full;
+  }
+
+  .surface {
+    @apply bg-white rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.06)];
+  }
+  .surface-hover {
+    @apply hover:shadow-[0_6px_24px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 transition-all duration-300;
+  }
+
+  .eyebrow {
+    @apply text-[10.5px] font-bold tracking-[0.22em] uppercase text-[#F0641E];
+  }
+  .eyebrow-muted {
+    @apply text-[10.5px] font-bold tracking-[0.22em] uppercase text-gray-400;
+  }
+  .eyebrow-white {
+    @apply text-[10.5px] font-bold tracking-[0.22em] uppercase text-white/40;
+  }
+
+  .feed-tag {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full
+           text-[10px] font-bold tracking-wide uppercase;
+  }
+
+  .stat-card {
+    @apply relative overflow-hidden text-center py-6 px-4 rounded-2xl
+           bg-gradient-to-b from-[#F5EEE8] to-white
+           border border-[#d4eede];
+  }
+
+  .winner-header {
+    @apply relative px-5 pt-5 pb-4 overflow-hidden;
+    background: linear-gradient(135deg, #2E1E18 0%, #5A3C32 100%);
+  }
+}
+
+
+@keyframes fadeIn       { from { opacity: 0 }                              to { opacity: 1 } }
+@keyframes slideUp      { from { opacity: 0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes slideInRight { from { opacity: 0; transform: translateX(36px) } to { opacity: 1; transform: translateX(0) } }
+@keyframes slideInLeft  { from { opacity: 0; transform: translateX(-36px) }to { opacity: 1; transform: translateX(0) } }
+@keyframes progressBar  { from { width: 0% }                               to { width: 100% } }
+
+
+@keyframes circuitPulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.65; }
+}
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-7px); }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in        { animation: fadeIn       0.5s ease-out forwards; }
+.animate-slide-up       { animation: slideUp      0.5s ease-out forwards; }
+.animate-slide-in-right { animation: slideInRight 0.32s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+.animate-slide-in-left  { animation: slideInLeft  0.32s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+.animate-circuit-pulse  { animation: circuitPulse 2.8s ease-in-out infinite; }
+.animate-float-slow     { animation: floatSlow    4.5s ease-in-out infinite; }
+.animate-count-up       { animation: countUp      0.6s ease-out forwards; }
+
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, #f0f2f5 25%, #e8ebef 50%, #f0f2f5 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-circuit-pulse,
+  .animate-float-slow,
+  .animate-slide-in-right,
+  .animate-slide-in-left,
+  .animate-fade-in,
+  .animate-slide-up,
+  .skeleton-shimmer {
+    animation: none;
+  }
+}
+
+
+::-webkit-scrollbar        { width: 4px; }
+::-webkit-scrollbar-track  { background: #f8fafc; }
+::-webkit-scrollbar-thumb  { background: #F0641E; border-radius: 4px; }

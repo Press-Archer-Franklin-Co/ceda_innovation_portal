@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/staff/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CEDA Innovation Portal - Staff</title>
+    <style>
+      @font-face {
+        font-family: "Poppins";
+        src: url("/staff/fonts/Poppins-SemiBold.ttf") format("truetype");
+        font-style: normal;
+        font-weight: 600;
+      }
+      @keyframes ceda-spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <div id="ceda-loading" style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#F5EEE8;font-family:Poppins,-apple-system,BlinkMacSystemFont,sans-serif;">
+      <div style="text-align:center;">
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin:0 auto 28px;">
+          <img src="/staff/logo.png" alt="CEDA Innovation Portal" style="display:block;width:48px;height:48px;object-fit:contain;" />
+          <div style="width:1px;height:36px;background:#E6D9CF;"></div>
+          <div style="text-align:left;">
+            <p style="font-family:Poppins,sans-serif;font-weight:600;font-size:30px;line-height:1;color:#A01E0A;letter-spacing:-0.02em;text-transform:lowercase;margin:0;">ceda</p>
+            <p style="font-size:8px;font-weight:600;letter-spacing:0.12em;color:#9ca3af;white-space:nowrap;margin:6px 0 0;">Innovation Portal | staff</p>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:center;margin-bottom:28px;">
+          <div style="
+            width:22px;height:22px;
+            border:2px solid #E6D9CF;
+            border-top-color:#A01E0A;
+            border-radius:50%;
+            animation:ceda-spin 0.7s linear infinite;
+          "></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

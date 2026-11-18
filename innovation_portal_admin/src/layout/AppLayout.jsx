@@ -1,0 +1,61 @@
+import React, { useState, useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import Sidebar from './Sidebar'
+import Topbar  from './Topbar'
+import { LayoutContext } from './LayoutContext'
+
+export default function AppLayout() {
+  const [sidebarOpen, setSidebarOpen]             = useState(true)
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const location = useLocation()
+
+  useEffect(() => {
+    setMobileSidebarOpen(false)
+  }, [location.pathname])
+
+  useEffect(() => {
+    const checkWidth = () => {
+      if (window.innerWidth < 1024) setSidebarOpen(false)
+      else setSidebarOpen(true)
+    }
+    checkWidth()
+    window.addEventListener('resize', checkWidth)
+    return () => window.removeEventListener('resize', checkWidth)
+  }, [])
+
+  return (
+    <LayoutContext.Provider value={{ sidebarOpen, setSidebarOpen, mobileSidebarOpen, setMobileSidebarOpen }}>
+      <div className="flex h-screen bg-ceda-surface overflow-hidden">
+
+        <Sidebar />
+
+        {mobileSidebarOpen && (
+          <div
+            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        <div
+          className="flex-1 min-w-0 flex flex-col overflow-hidden transition-all duration-200"
+          style={{ marginLeft: sidebarOpen ? 'var(--sidebar-width)' : '0' }}
+        >
+          <Topbar />
+          {location.pathname.startsWith('/evaluate/') ? (
+            <main className="flex-1 overflow-hidden min-h-0">
+              <div className="h-full w-full overflow-hidden">
+                <Outlet />
+              </div>
+            </main>
+          ) : (
+            <main className="flex-1 overflow-y-auto overflow-x-hidden">
+              <div className="p-6 min-w-0 w-full">
+                <Outlet />
+              </div>
+            </main>
+          )}
+        </div>
+      </div>
+    </LayoutContext.Provider>
+  )
+}

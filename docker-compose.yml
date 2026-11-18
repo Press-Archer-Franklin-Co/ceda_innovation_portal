@@ -1,0 +1,188 @@
+name: innovation_portal
+
+services:
+  innovation_portal_db:
+    image: postgres:16-alpine
+    container_name: innovation_portal_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${INNOVATION_PORTAL_POSTGRES_DB}
+      POSTGRES_USER: ${INNOVATION_PORTAL_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${INNOVATION_PORTAL_POSTGRES_PASSWORD}
+    volumes:
+      - innovation_portal_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${INNOVATION_PORTAL_POSTGRES_USER} -d ${INNOVATION_PORTAL_POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - innovation_portal_net
+
+  innovation_portal_redis:
+    image: redis:7-alpine
+    container_name: innovation_portal_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - innovation_portal_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - innovation_portal_net
+
+  innovation_portal_backend:
+    build:
+      context: ./innovation_portal_api
+      dockerfile: Dockerfile
+    container_name: innovation_portal_backend
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      INNOVATION_PORTAL_POSTGRES_HOST: innovation_portal_db
+      INNOVATION_PORTAL_POSTGRES_PORT: 5432
+      REDIS_URL: redis://innovation_portal_redis:6379/0
+      SECRET_KEY: ${INNOVATION_PORTAL_SECRET_KEY}
+      DEFAULT_FROM_EMAIL: ${INNOVATION_PORTAL_DEFAULT_FROM_EMAIL}
+      ALLOWED_HOSTS: ${INNOVATION_PORTAL_ALLOWED_HOSTS}
+      CORS_ALLOWED_ORIGINS: ${INNOVATION_PORTAL_CORS_ALLOWED_ORIGINS}
+      CSRF_TRUSTED_ORIGINS: ${INNOVATION_PORTAL_CSRF_TRUSTED_ORIGINS}
+      CELERY_TASK_ALWAYS_EAGER: ${INNOVATION_PORTAL_CELERY_TASK_ALWAYS_EAGER}
+      SESSION_COOKIE_SECURE: ${INNOVATION_PORTAL_SESSION_COOKIE_SECURE}
+      CSRF_COOKIE_SECURE: ${INNOVATION_PORTAL_CSRF_COOKIE_SECURE}
+      SECURE_PROXY_SSL_HEADER_ENABLED: ${INNOVATION_PORTAL_SECURE_PROXY_SSL_HEADER}
+      ADMIN_EMAIL: ${INNOVATION_PORTAL_ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${INNOVATION_PORTAL_ADMIN_PASSWORD}
+      ADMIN_FIRST_NAME: ${INNOVATION_PORTAL_ADMIN_FIRST_NAME}
+      ADMIN_LAST_NAME: ${INNOVATION_PORTAL_ADMIN_LAST_NAME}
+      # Downloads are permission-checked by Django, then streamed by the edge nginx from
+      # its internal-only /protected-media/ location (deploy/edge/*.conf).
+      DOCUMENT_X_ACCEL_REDIRECT_PREFIX: /protected-media/
+    depends_on:
+      innovation_portal_db:
+        condition: service_healthy
+      innovation_portal_redis:
+        condition: service_healthy
+    ports:
+      - "${INNOVATION_PORTAL_BACKEND_PORT}:8000"
+    volumes:
+      - innovation_portal_static_data:/app/staticfiles
+      - innovation_portal_media_data:/app/media
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=5)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - innovation_portal_net
+
+  innovation_portal_celery_worker:
+    build:
+      context: ./innovation_portal_api
+      dockerfile: Dockerfile
+    container_name: innovation_portal_celery_worker
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "worker", "--loglevel=info", "--max-tasks-per-child=200"]
+    env_file:
+      - .env.production
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      INNOVATION_PORTAL_POSTGRES_HOST: innovation_portal_db
+      INNOVATION_PORTAL_POSTGRES_PORT: 5432
+      REDIS_URL: redis://innovation_portal_redis:6379/0
+      SECRET_KEY: ${INNOVATION_PORTAL_SECRET_KEY}
+      DEFAULT_FROM_EMAIL: ${INNOVATION_PORTAL_DEFAULT_FROM_EMAIL}
+      ALLOWED_HOSTS: ${INNOVATION_PORTAL_ALLOWED_HOSTS}
+      CORS_ALLOWED_ORIGINS: ${INNOVATION_PORTAL_CORS_ALLOWED_ORIGINS}
+      CSRF_TRUSTED_ORIGINS: ${INNOVATION_PORTAL_CSRF_TRUSTED_ORIGINS}
+      CELERY_TASK_ALWAYS_EAGER: "False"
+      SESSION_COOKIE_SECURE: ${INNOVATION_PORTAL_SESSION_COOKIE_SECURE}
+      CSRF_COOKIE_SECURE: ${INNOVATION_PORTAL_CSRF_COOKIE_SECURE}
+      SECURE_PROXY_SSL_HEADER_ENABLED: ${INNOVATION_PORTAL_SECURE_PROXY_SSL_HEADER}
+    depends_on:
+      innovation_portal_db:
+        condition: service_healthy
+      innovation_portal_redis:
+        condition: service_healthy
+    volumes:
+      - innovation_portal_static_data:/app/staticfiles
+      - innovation_portal_media_data:/app/media
+    networks:
+      - innovation_portal_net
+
+  innovation_portal_celery_beat:
+    build:
+      context: ./innovation_portal_api
+      dockerfile: Dockerfile
+    container_name: innovation_portal_celery_beat
+    restart: unless-stopped
+    command: ["celery", "-A", "config", "beat", "--loglevel=info"]
+    env_file:
+      - .env.production
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      INNOVATION_PORTAL_POSTGRES_HOST: innovation_portal_db
+      INNOVATION_PORTAL_POSTGRES_PORT: 5432
+      REDIS_URL: redis://innovation_portal_redis:6379/0
+      SECRET_KEY: ${INNOVATION_PORTAL_SECRET_KEY}
+      DEFAULT_FROM_EMAIL: ${INNOVATION_PORTAL_DEFAULT_FROM_EMAIL}
+      ALLOWED_HOSTS: ${INNOVATION_PORTAL_ALLOWED_HOSTS}
+      CORS_ALLOWED_ORIGINS: ${INNOVATION_PORTAL_CORS_ALLOWED_ORIGINS}
+      CSRF_TRUSTED_ORIGINS: ${INNOVATION_PORTAL_CSRF_TRUSTED_ORIGINS}
+      CELERY_TASK_ALWAYS_EAGER: "False"
+      SESSION_COOKIE_SECURE: ${INNOVATION_PORTAL_SESSION_COOKIE_SECURE}
+      CSRF_COOKIE_SECURE: ${INNOVATION_PORTAL_CSRF_COOKIE_SECURE}
+      SECURE_PROXY_SSL_HEADER_ENABLED: ${INNOVATION_PORTAL_SECURE_PROXY_SSL_HEADER}
+    depends_on:
+      innovation_portal_db:
+        condition: service_healthy
+      innovation_portal_redis:
+        condition: service_healthy
+      innovation_portal_celery_worker:
+        condition: service_started
+    volumes:
+      - innovation_portal_static_data:/app/staticfiles
+      - innovation_portal_media_data:/app/media
+    networks:
+      - innovation_portal_net
+
+  innovation_portal_edge:
+    build:
+      context: .
+      dockerfile: deploy/edge/Dockerfile
+      args:
+        PUBLIC_VITE_API_URL: ""
+        STAFF_VITE_PUBLIC_URL: "${INNOVATION_PORTAL_PUBLIC_URL:-}"
+    container_name: innovation_portal_edge
+    restart: unless-stopped
+    depends_on:
+      innovation_portal_backend:
+        condition: service_healthy
+    ports:
+      - "${INNOVATION_PORTAL_PUBLIC_PORT}:8080"
+      - "${INNOVATION_PORTAL_STAFF_PORT}:8081"
+    volumes:
+      - innovation_portal_static_data:/srv/backend-static:ro
+      - innovation_portal_media_data:/srv/backend-media:ro
+    networks:
+      - innovation_portal_net
+
+volumes:
+  innovation_portal_postgres_data:
+    name: innovation_portal_postgres_data
+  innovation_portal_redis_data:
+    name: innovation_portal_redis_data
+  innovation_portal_static_data:
+    name: innovation_portal_static_data
+  innovation_portal_media_data:
+    name: innovation_portal_media_data
+
+networks:
+  innovation_portal_net:
+    name: innovation_portal_net

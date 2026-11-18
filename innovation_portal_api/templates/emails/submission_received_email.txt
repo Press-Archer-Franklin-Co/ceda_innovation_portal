@@ -1,0 +1,13 @@
+CEDA Innovation Portal
+
+{{ headline }}
+
+{{ intro }}
+
+{{ cta_label }}: {{ cta_value }}
+{% if cta_hint %}{{ cta_hint }}{% endif %}
+
+{% for item in summary_items %}{{ item.label }}: {{ item.value }}
+{% endfor %}
+
+{% if support_email %}Support: {{ support_email }}{% endif %}

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>{{ headline }}</title>
+    <style>
+      @font-face {
+        font-family: 'Poppins';
+        src: url('https://innovation.ceda.co.bw/fonts/Poppins-ExtraBold.ttf') format('truetype');
+        font-style: normal;
+        font-weight: 800;
+      }
+      body, table, td, a {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+      }
+      table, td {
+        mso-table-lspace: 0pt;
+        mso-table-rspace: 0pt;
+      }
+      img {
+        -ms-interpolation-mode: bicubic;
+        border: 0;
+        outline: none;
+        text-decoration: none;
+      }
+      table {
+        border-collapse: collapse !important;
+      }
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        background-color: #F5EEE8;
+      }
+      a {
+        color: #A01E0A;
+      }
+      @media only screen and (max-width: 620px) {
+        .email-shell {
+          width: 100% !important;
+        }
+        .email-body {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+          padding-top: 0 !important;
+          padding-bottom: 0 !important;
+        }
+        .hero-pad {
+          padding: 0 !important;
+        }
+        .content-pad {
+          padding: 20px 18px 18px 18px !important;
+        }
+        .footer-pad {
+          padding: 18px 18px 26px 18px !important;
+        }
+        .hero-shell {
+          border-radius: 0 !important;
+        }
+        .body-shell {
+          border-radius: 0 !important;
+        }
+        .mobile-stack,
+        .mobile-stack tbody,
+        .mobile-stack tr,
+        .mobile-stack td {
+          display: block !important;
+          width: 100% !important;
+        }
+        .mobile-gap {
+          height: 14px !important;
+        }
+        .summary-label {
+          padding-bottom: 4px !important;
+          border-bottom: 0 !important;
+        }
+        .summary-value {
+          padding-top: 0 !important;
+        }
+        .hero-title {
+          font-size: 34px !important;
+          line-height: 38px !important;
+        }
+        .button-fill {
+          display: block !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+          text-align: center !important;
+        }
+        .hero-image {
+          border-radius: 0 !important;
+        }
+      }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background-color:#F5EEE8;">
+    <div style="display:none;font-size:1px;color:#F5EEE8;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;">
+      {{ preheader }}
+    </div>
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F5EEE8;">
+      <tr>
+        <td class="email-body" align="center" style="padding:24px 20px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" class="email-shell" style="width:640px;max-width:640px;">
+            <tr>
+              <td class="hero-shell hero-pad" style="border-radius:28px 28px 0 0;padding:0;">
+                <a href="{{ brand_url }}" target="_blank" style="text-decoration:none;display:block;">
+                  <img
+                    src="cid:{{ hero_cid }}"
+                    alt="{{ portal_name }} - {{ headline }}"
+                    width="640"
+                    height="310"
+                    class="hero-image"
+                    style="display:block;width:100%;max-width:640px;height:auto;border-radius:28px 28px 0 0;"
+                  />
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td class="body-shell" style="background-color:#ffffff;border-radius:0 0 28px 28px;">
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                  {% if not suppress_body_intro %}
+                  <tr>
+                    <td class="content-pad" style="padding:26px 32px 4px 32px;">
+                      {% if not suppress_body_headline %}
+                      <h1 style="margin:0 0 10px 0;font-family:'Trebuchet MS',Arial,sans-serif;font-size:22px;line-height:28px;color:#2E1E18;">
+                        {{ headline }}
+                      </h1>
+                      {% endif %}
+                      <p style="margin:0 0 18px 0;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#6B5248;">
+                        {{ intro|linebreaksbr }}
+                      </p>
+                    </td>
+                  </tr>
+                  {% endif %}
+                  {% if action_url and action_label %}
+                  <tr>
+                    <td class="content-pad" style="padding:12px 32px 14px 32px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td bgcolor="#A01E0A" style="border-radius:999px;">
+                            <a
+                              href="{{ action_url }}"
+                              target="_blank"
+                              class="button-fill"
+                              style="display:inline-block;padding:13px 24px;border-radius:999px;background-color:#A01E0A;color:#ffffff;font-family:Arial,sans-serif;font-size:14px;line-height:18px;font-weight:700;text-decoration:none;"
+                            >
+                              {{ action_label }}
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      {% if fallback_url %}
+                      <p style="margin:12px 0 0 0;font-family:Arial,sans-serif;font-size:12px;line-height:18px;color:#6B5248;">
+                        {{ fallback_label }}:
+                        <a href="{{ fallback_url }}" target="_blank" style="color:#A01E0A;text-decoration:underline;font-weight:700;">
+                          {{ fallback_url }}
+                        </a>
+                      </p>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endif %}
+                  {% if cta_value %}
+                  <tr>
+                    <td class="content-pad" style="padding:28px 32px 12px 32px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#FAF6F2;border-radius:20px;">
+                        <tr>
+                          <td style="padding:22px 20px;background-color:#FAF6F2;border-radius:20px;">
+                            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                              {% if cta_label %}
+                              <tr>
+                                <td style="font-family:'Trebuchet MS',Arial,sans-serif;font-size:12px;line-height:12px;color:#6B5248;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;">
+                                  {{ cta_label }}
+                                </td>
+                              </tr>
+                              {% endif %}
+                              <tr>
+                                <td style="padding-top:10px;font-family:'Arial Black',Arial,sans-serif;font-size:30px;line-height:34px;color:#A01E0A;font-weight:800;word-break:break-word;">
+                                  {{ cta_value }}
+                                </td>
+                              </tr>
+                              {% if cta_hint %}
+                              <tr>
+                                <td style="padding-top:10px;font-family:Arial,sans-serif;font-size:13px;line-height:20px;color:#6B5248;">
+                                  {{ cta_hint }}
+                                </td>
+                              </tr>
+                              {% endif %}
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  {% endif %}
+                  {% if summary_items %}
+                  <tr>
+                    <td class="content-pad" style="padding:10px 32px 8px 32px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                        {% for item in summary_items %}
+                        <tr class="mobile-stack">
+                          <td class="summary-label" valign="top" style="padding:14px 0;border-bottom:1px solid #EFE4DC;width:148px;font-family:'Trebuchet MS',Arial,sans-serif;font-size:12px;line-height:16px;color:#6B5248;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;">
+                            {{ item.label }}
+                          </td>
+                          <td class="summary-value" valign="top" style="padding:14px 0;border-bottom:1px solid #EFE4DC;font-family:Arial,sans-serif;font-size:15px;line-height:22px;color:#2E1E18;">
+                            {{ item.value }}
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </table>
+                    </td>
+                  </tr>
+                  {% endif %}
+                  <tr>
+                    <td class="footer-pad" style="padding:22px 32px 30px 32px;font-family:Arial,sans-serif;font-size:13px;line-height:22px;color:#6B5248;">
+                      This is an automated message from the CEDA Innovation Portal.
+                      {% if support_email %}
+                      For support, contact
+                      <a href="mailto:{{ support_email }}" style="color:#A01E0A;text-decoration:none;font-weight:700;">
+                        {{ support_email }}
+                      </a>.
+                      {% endif %}
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

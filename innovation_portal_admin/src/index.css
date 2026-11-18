@@ -1,0 +1,269 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/staff/fonts/Poppins-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/staff/fonts/Poppins-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/staff/fonts/Poppins-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/staff/fonts/Poppins-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/staff/fonts/Poppins-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/staff/fonts/Poppins-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+
+:root {
+  --sidebar-width: 260px;
+  --topbar-height: 64px;
+  --ceda-green:     #F0641E;
+  --ceda-forest:    #A01E0A;
+  --ceda-indigo:    #1D6FA3;
+  --ceda-brand-green: #A01E0A;
+}
+
+
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply font-sans text-ceda-dark bg-ceda-surface antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold leading-tight;
+  }
+
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ceda-green;
+  }
+}
+
+
+@layer components {
+
+  .btn {
+    @apply inline-flex items-center gap-2 font-medium text-sm rounded-lg
+           transition-all duration-150 active:scale-[0.97]
+           focus-visible:ring-2 focus-visible:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn px-4 py-2 bg-ceda-forest text-white
+           hover:bg-ceda-forest-dark
+           focus-visible:ring-ceda-forest;
+  }
+
+  .btn-secondary {
+    @apply btn px-4 py-2 bg-white text-ceda-forest border border-ceda-border
+           hover:bg-ceda-green-pale hover:border-ceda-green
+           focus-visible:ring-ceda-green;
+  }
+
+  .btn-accent {
+    @apply btn px-4 py-2 bg-ceda-green text-white
+           hover:bg-ceda-green-dark
+           focus-visible:ring-ceda-green;
+  }
+
+  .btn-ghost {
+    @apply btn px-3 py-2 text-ceda-muted
+           hover:bg-ceda-surface hover:text-ceda-forest
+           focus-visible:ring-ceda-green;
+  }
+
+  .btn-danger {
+    @apply btn px-4 py-2 bg-ceda-red text-white
+           hover:bg-ceda-red-light
+           focus-visible:ring-ceda-red;
+  }
+
+  .btn-sm   { @apply px-3 py-1.5 text-xs; }
+  .btn-icon { @apply btn p-2 text-ceda-muted hover:bg-ceda-surface hover:text-ceda-forest; }
+
+  .card {
+    @apply bg-white rounded-xl border border-ceda-border shadow-card min-w-0;
+  }
+  .card-hover {
+    @apply card transition-shadow duration-200 hover:shadow-card-hover;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-ceda-dark mb-1.5;
+  }
+
+  .input {
+    @apply w-full px-3 py-2.5 rounded-lg border border-ceda-border bg-white text-sm
+           text-ceda-dark placeholder:text-ceda-muted/60
+           focus:outline-none focus:ring-2 focus:ring-ceda-green focus:border-transparent
+           transition-colors duration-150
+           disabled:bg-ceda-surface disabled:cursor-not-allowed;
+  }
+
+  .select {
+    @apply input appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2.5rem;
+  }
+
+  .textarea {
+    @apply input resize-y min-h-[100px];
+  }
+
+  .checkbox {
+    @apply w-4 h-4 rounded border-ceda-border text-ceda-forest
+           focus:ring-2 focus:ring-ceda-green focus:ring-offset-0 cursor-pointer;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+           transition-colors duration-150 cursor-pointer;
+  }
+
+  .nav-item-idle {
+    @apply nav-item text-white/70 hover:bg-white/10 hover:text-white;
+  }
+
+  .nav-item-active {
+    @apply nav-item bg-ceda-forest-dark text-white;
+  }
+
+  .nav-group-label {
+    @apply px-3 mb-1 text-[10px] font-semibold tracking-widest uppercase text-white/35;
+  }
+
+  .th {
+    @apply text-left text-xs font-semibold text-ceda-muted uppercase tracking-wider
+           py-2.5 px-3 bg-ceda-surface border-b border-ceda-border
+           whitespace-nowrap overflow-hidden;
+  }
+
+  .td {
+    @apply py-2.5 px-3 text-sm text-ceda-dark align-middle border-b border-ceda-border/60;
+  }
+
+  .tab-btn {
+    @apply px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap;
+  }
+  .tab-active   { @apply tab-btn border-ceda-forest text-ceda-forest; }
+  .tab-inactive { @apply tab-btn border-transparent text-ceda-muted hover:text-ceda-dark hover:border-ceda-border; }
+
+  .section-divider {
+    @apply border-t border-ceda-border my-6;
+  }
+
+  .score-ring {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-full
+           font-bold text-sm border-2;
+  }
+}
+
+  .data-value {
+    @apply font-bold text-ceda-dark tabular-nums leading-none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .action-chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold;
+  }
+
+  .system-status {
+    @apply inline-flex items-center gap-1.5 text-[10px] font-mono tracking-widest uppercase;
+  }
+
+  .ops-header {
+    @apply flex items-center justify-between gap-3 px-5 py-3
+           border-b border-ceda-border bg-ceda-surface/60
+           text-xs font-semibold text-ceda-muted uppercase tracking-widest;
+  }
+
+
+
+
+.ops-grid-dark {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+
+.ops-grid-light {
+  background-image:
+    linear-gradient(rgba(26,35,50,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,35,50,0.04) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+
+.ops-dots-dark {
+  background-image: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.ops-dots-light {
+  background-image: radial-gradient(circle, rgba(26,35,50,0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-down,
+  .animate-slide-in,
+  .animate-slide-up,
+  .animate-pulse-dot {
+    animation: none;
+  }
+}
+
+
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: #f1f5f9; }
+::-webkit-scrollbar-thumb  { background: #F0641E; border-radius: 3px; opacity: 0.5; }
+::-webkit-scrollbar-thumb:hover { background: #C94F12; }
+
+
+.sidebar-scroll::-webkit-scrollbar { width: 0; }

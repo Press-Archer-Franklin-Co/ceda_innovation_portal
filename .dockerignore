@@ -1,0 +1,7 @@
+innovation_portal_admin/node_modules
+innovation_portal_admin/dist
+innovation_portal_public/node_modules
+innovation_portal_public/dist
+
+.git
+.gitignore

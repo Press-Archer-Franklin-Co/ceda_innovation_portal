@@ -1,0 +1,347 @@
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import models
+from django.db.models import F
+from django.utils import timezone
+from rest_framework import filters, generics, status
+from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.viewsets import ModelViewSet
+
+from apps.core.permissions import IsOfficerOrAdmin
+from apps.programs.access import ProgramAccessService
+
+from .models import ContentItem, HackathonDetail, HackathonMedia, LeadershipCard, SiteSettings, WinnerSpotlight
+from .serializers import (
+    ContentItemListSerializer,
+    ContentItemSerializer,
+    HackathonDetailSerializer,
+    HackathonMediaSerializer,
+    LeadershipCardSerializer,
+    SiteSettingsSerializer,
+    WinnerSpotlightSerializer,
+)
+
+
+class ContentItemViewSet(ModelViewSet):
+    """
+    News / announcement content items.
+
+    Public:  GET /api/content/           — published items only
+             GET /api/content/{id}/      — published item detail
+             GET /api/content/highlights/ — up to 5 highlighted published items
+    Staff:   POST / PATCH / DELETE       — requires IsOfficerOrAdmin
+    """
+
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["title", "excerpt", "tags"]
+    ordering_fields = ["published_at", "created_at", "category", "highlight_priority"]
+    ordering = ["-published_at"]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        qs = ContentItem.objects.select_related("author")
+        if not self.request.user.is_authenticated or not (
+            self.request.user.is_staff or getattr(self.request.user, "is_officer", False)
+        ):
+            qs = qs.filter(status="published")
+        category = self.request.query_params.get("category")
+        if category:
+            qs = qs.filter(category=category)
+        return qs
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return ContentItemListSerializer
+        return ContentItemSerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve", "highlights"):
+            return [AllowAny()]
+        return [IsOfficerOrAdmin()]
+
+    def perform_create(self, serializer):
+        published_at = serializer.validated_data.get("published_at")
+        if published_at is None and serializer.validated_data.get("status") == "published":
+            published_at = timezone.now()
+        try:
+            serializer.save(author=self.request.user, published_at=published_at)
+        except DjangoValidationError as exc:
+            raise DRFValidationError(detail=list(exc.messages))
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        published_at = serializer.validated_data.get("published_at", instance.published_at)
+        if published_at is None and serializer.validated_data.get("status") == "published":
+            published_at = timezone.now()
+        try:
+            serializer.save(published_at=published_at)
+        except DjangoValidationError as exc:
+            raise DRFValidationError(detail=list(exc.messages))
+
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny], url_path="highlights")
+    def highlights(self, request):
+        """Return up to 5 highlighted, published content items for the homepage."""
+        items = ContentItem.objects.filter(
+            status="published", is_highlighted=True
+        ).order_by(F("highlight_priority").asc(nulls_last=True), "-published_at")[:5]
+        serializer = ContentItemListSerializer(items, many=True, context={"request": request})
+        return Response(serializer.data)
+
+
+class HackathonDetailViewSet(ModelViewSet):
+    """
+    Rich content for a specific hackathon program.
+
+    Public:  GET /api/content/hackathons/           — published details
+             GET /api/content/hackathons/{id}/      — single hackathon detail
+    Staff:   POST / PATCH / DELETE                  — requires IsOfficerOrAdmin
+    """
+
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ["-created_at"]
+
+    def get_queryset(self):
+        qs = HackathonDetail.objects.select_related("program").prefetch_related("media")
+        if not self.request.user.is_authenticated or not (
+            self.request.user.is_staff or getattr(self.request.user, "is_officer", False)
+        ):
+            qs = qs.filter(is_published=True)
+            qs = ProgramAccessService.exclude_hidden(qs, self.request.user, prefix="program__")
+        program_id = self.request.query_params.get("program")
+        if program_id:
+            qs = qs.filter(program_id=program_id)
+        return qs
+
+    def get_serializer_class(self):
+        return HackathonDetailSerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsOfficerOrAdmin()]
+
+    def perform_create(self, serializer):
+        program_id = self.request.data.get("program")
+        if not program_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"program": ["This field is required."]})
+        from apps.programs.models import Program
+        try:
+            program = Program.objects.get(id=program_id)
+        except Program.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"program": ["Program not found."]})
+        serializer.save(program=program)
+
+
+class HackathonMediaViewSet(ModelViewSet):
+    """Upload / manage media files for a hackathon detail."""
+
+    serializer_class = HackathonMediaSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_queryset(self):
+        return HackathonMedia.objects.select_related("hackathon_detail")
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsOfficerOrAdmin()]
+
+
+class SiteSettingsView(generics.RetrieveUpdateAPIView):
+    """
+    GET  /api/content/site-settings/  — public, returns hero video URL + muted flag
+    PATCH /api/content/site-settings/ — staff only, accepts multipart (hero_video file)
+    """
+    serializer_class = SiteSettingsSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_permissions(self):
+        if self.request.method == "GET":
+            return [AllowAny()]
+        return [IsOfficerOrAdmin()]
+
+    def get_object(self):
+        return SiteSettings.get()
+
+    def patch(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if request.data.get("hero_video_clear") in (True, "true", "1"):
+            if instance.hero_video:
+                instance.hero_video.delete(save=False)
+                instance.hero_video = None
+                instance.save(update_fields=["hero_video"])
+            return Response(self.get_serializer(instance).data)
+        if "hero_video" in request.FILES and instance.hero_video:
+            instance.hero_video.delete(save=False)
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class LeadershipCardViewSet(ModelViewSet):
+    """
+    Leadership / executive testimonial cards for the homepage carousel.
+
+    Public:   GET /api/content/leadership/         — active cards in sort order
+    Staff:    POST / PATCH / DELETE                — requires IsOfficerOrAdmin
+    Reorder:  POST /api/content/leadership/reorder/ — [{id, sort_order}, ...]
+    """
+
+    serializer_class = LeadershipCardSerializer
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ["sort_order", "created_at"]
+
+    def get_queryset(self):
+        qs = LeadershipCard.objects.select_related("created_by")
+        if not self.request.user.is_authenticated or not (
+            self.request.user.is_staff or getattr(self.request.user, "is_officer", False)
+        ):
+            now = timezone.now()
+            qs = qs.filter(is_active=True).filter(
+                models.Q(start_at__isnull=True) | models.Q(start_at__lte=now)
+            ).filter(
+                models.Q(end_at__isnull=True) | models.Q(end_at__gt=now)
+            )
+        return qs
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsOfficerOrAdmin()]
+
+    def perform_create(self, serializer):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        try:
+            serializer.save(created_by=self.request.user)
+        except DjangoValidationError as exc:
+            raise DRFValidationError(detail=list(exc.messages))
+
+    def perform_update(self, serializer):
+        from django.core.exceptions import ValidationError as DjangoValidationError
+        from rest_framework.exceptions import ValidationError as DRFValidationError
+        instance = self.get_object()
+        if "photo" in self.request.FILES and instance.photo:
+            instance.photo.delete(save=False)
+        try:
+            serializer.save()
+        except DjangoValidationError as exc:
+            raise DRFValidationError(detail=list(exc.messages))
+
+    def perform_destroy(self, instance):
+        if instance.photo:
+            instance.photo.delete(save=False)
+        instance.delete()
+
+    @action(detail=False, methods=["post"], permission_classes=[IsOfficerOrAdmin], url_path="reorder")
+    def reorder(self, request):
+        """
+        Bulk-update sort_order.  Body: [{"id": "<uuid>", "sort_order": <int>}, ...]
+        """
+        items = request.data
+        if not isinstance(items, list):
+            return Response({"detail": "Expected a list."}, status=status.HTTP_400_BAD_REQUEST)
+        for item in items:
+            try:
+                LeadershipCard.objects.filter(id=item["id"]).update(sort_order=int(item["sort_order"]))
+            except (KeyError, ValueError, TypeError):
+                return Response({"detail": "Each item must have 'id' and 'sort_order'."}, status=status.HTTP_400_BAD_REQUEST)
+        qs = self.get_queryset()
+        return Response(LeadershipCardSerializer(qs, many=True, context={"request": request}).data)
+
+
+class WinnerSpotlightViewSet(ModelViewSet):
+    """
+    Featured winners.
+
+    Public:  GET /api/content/winners/          — all winners (optionally ?featured=true)
+    Staff:   POST / PATCH / DELETE              — requires IsOfficerOrAdmin
+    """
+
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ["-year", "position"]
+
+    def get_queryset(self):
+        qs = WinnerSpotlight.objects.select_related("program")
+        if not IsOfficerOrAdmin().has_permission(self.request, self):
+            qs = ProgramAccessService.exclude_hidden(qs, self.request.user, prefix="program__")
+        featured = self.request.query_params.get("featured")
+        if featured and featured.lower() == "true":
+            qs = qs.filter(is_featured=True)
+        program_id = self.request.query_params.get("program")
+        if program_id:
+            qs = qs.filter(program_id=program_id)
+        year = self.request.query_params.get("year")
+        if year:
+            qs = qs.filter(year=year)
+        return qs
+
+    def get_serializer_class(self):
+        return WinnerSpotlightSerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAny()]
+        return [IsOfficerOrAdmin()]
+
+
+class PublicStatsView(generics.GenericAPIView):
+    """Live public stats for the homepage — no auth required."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from apps.programs.models import Program
+        from apps.accounts.models import User
+        from django.db.models import Q
+
+        settings = SiteSettings.get()
+
+        innovators = User.objects.filter(
+            is_active=True, roles__code="innovator"
+        ).distinct().count()
+        if innovators == 0:
+            innovators = User.objects.filter(is_active=True, is_staff=False).count()
+
+        challenges = Program.objects.exclude(status__in=["draft"]).exclude(program_type__code="idea").count()
+
+        stats = [
+            {
+                "key": "innovators",
+                "label": "Registered Innovators",
+                "value": f"{innovators:,}",
+                "description": "Active members on the platform",
+            },
+            {
+                "key": "challenges",
+                "label": "Challenges Hosted",
+                "value": str(challenges),
+                "description": "Innovation programs run to date",
+            },
+        ]
+
+        if settings.prize_money_label:
+            stats.append({
+                "key": "prize_money",
+                "label": "Prize Money Awarded",
+                "value": settings.prize_money_label,
+                "description": "Total prizes distributed",
+            })
+
+        if settings.solutions_deployed:
+            stats.append({
+                "key": "solutions",
+                "label": "Solutions Deployed",
+                "value": str(settings.solutions_deployed),
+                "description": "Ideas turned into real products",
+            })
+
+        return Response({"stats": stats})
