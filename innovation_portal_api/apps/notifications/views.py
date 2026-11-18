@@ -1,3 +1,4 @@
+from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -7,7 +8,9 @@ from apps.communications.serializers import CommunicationLogSerializer
 from apps.communications.services import CommunicationService
 from apps.core.api import api_success
 from apps.communications.models import Notification
-from apps.notifications.serializers import NotificationMarkReadSerializer, NotificationSerializer
+from apps.notifications.selectors import NotificationPreferenceSelector
+from apps.notifications.serializers import NotificationMarkReadSerializer, NotificationPreferencesSerializer, NotificationSerializer
+from apps.notifications.services import NotificationPreferenceService
 
 
 class NotificationListView(generics.ListAPIView):
@@ -80,3 +83,45 @@ class NotificationRetryView(generics.GenericAPIView):
             return Response({"detail": "No outbound delivery exists for this notification."}, status=status.HTTP_400_BAD_REQUEST)
         CommunicationService.retry_log(str(log.id))
         return api_success(data={"notification_id": str(notification.id), "communication_log_id": str(log.id)})
+
+
+@extend_schema_view(
+    get=extend_schema(
+        tags=["Notifications"],
+        summary="Get my notification preferences",
+        description="Returns, for each notification type, which channels (web, whatsapp, sms, email) are switched on.",
+        responses={200: NotificationPreferencesSerializer},
+    ),
+    put=extend_schema(
+        tags=["Notifications"],
+        summary="Update my notification preferences",
+        description="Switch channels on or off per notification type. Types and channels left out keep their current value.",
+        request=NotificationPreferencesSerializer,
+        responses={200: NotificationPreferencesSerializer},
+        examples=[
+            OpenApiExample(
+                "Turn on WhatsApp for officer messages",
+                value={"preferences": {"officer_message": {"whatsapp": True, "sms": False}}},
+                request_only=True,
+            )
+        ],
+    ),
+)
+class NotificationPreferencesView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = NotificationPreferencesSerializer
+
+    def _payload(self, preferences):
+        return NotificationPreferencesSerializer({"preferences": preferences}).data
+
+    def get(self, request, *args, **kwargs):
+        return api_success(data=self._payload(NotificationPreferenceSelector.for_user(request.user)))
+
+    def put(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        preferences = NotificationPreferenceService.update_preferences(
+            user=request.user,
+            preferences=serializer.validated_data["preferences"],
+        )
+        return api_success(data=self._payload(preferences), message="Notification preferences saved.")

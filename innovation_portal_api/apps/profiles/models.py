@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 
+from apps.core.constants import BusinessStage
 from apps.core.models import TimeStampedModel, UUIDModel
 
 
@@ -14,6 +15,21 @@ class InnovatorProfile(UUIDModel, TimeStampedModel):
     person_type = models.CharField(max_length=60, blank=True)
     person_type_other = models.CharField(max_length=120, blank=True)
     region = models.CharField(max_length=120, blank=True)
+    district = models.ForeignKey(
+        "reference.District",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="innovator_profiles",
+    )
+    sector = models.ForeignKey(
+        "reference.Sector",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="innovator_profiles",
+    )
+    business_stage = models.CharField(max_length=20, choices=BusinessStage.choices, blank=True)
     bio = models.TextField(blank=True)
     sector_interests = models.JSONField(default=list, blank=True)
     skills = models.JSONField(default=list, blank=True)
@@ -23,7 +39,7 @@ class InnovatorProfile(UUIDModel, TimeStampedModel):
     past_participation_summary = models.TextField(blank=True)
 
     def __str__(self) -> str:
-        return f"Profile<{self.user.email}>"
+        return f"Profile<{self.user}>"
 
 
 class ContactVerification(UUIDModel, TimeStampedModel):

@@ -1,7 +1,9 @@
 from rest_framework import serializers
 
 from apps.accounts.models import User
+from apps.core.i18n import get_text, resolve_request_language
 from apps.profiles.models import ContactVerification, InnovatorProfile
+from apps.reference.models import District, Sector
 
 
 class UserSummarySerializer(serializers.ModelSerializer):
@@ -16,6 +18,10 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
     birthday = serializers.DateField(source="date_of_birth", required=False, allow_null=True)
     linkedin_profile = serializers.URLField(source="linkedin_url", required=False, allow_blank=True)
     website_portfolio = serializers.URLField(source="portfolio_url", required=False, allow_blank=True)
+    sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True), required=False, allow_null=True)
+    district = serializers.PrimaryKeyRelatedField(queryset=District.objects.filter(active=True), required=False, allow_null=True)
+    sector_name = serializers.SerializerMethodField()
+    district_name = serializers.SerializerMethodField()
 
     class Meta:
         model = InnovatorProfile
@@ -32,6 +38,11 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
             "person_type",
             "person_type_other",
             "region",
+            "district",
+            "district_name",
+            "sector",
+            "sector_name",
+            "business_stage",
             "bio",
             "sector_interests",
             "skills",
@@ -42,6 +53,15 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
             "linkedin_profile",
             "past_participation_summary",
         )
+
+    def _lang(self):
+        return resolve_request_language(self.context.get("request"))
+
+    def get_sector_name(self, obj):
+        return get_text(obj.sector.name, self._lang()) if obj.sector_id else ""
+
+    def get_district_name(self, obj):
+        return get_text(obj.district.name, self._lang()) if obj.district_id else ""
 
 
 class ContactVerificationSerializer(serializers.ModelSerializer):

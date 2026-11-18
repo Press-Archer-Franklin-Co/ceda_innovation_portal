@@ -218,7 +218,7 @@ class AuthIdentityService:
                 metadata={"provider": identity.provider, "reason": "missing_or_unverified_provider_email", "trust_level": identity.trust_level},
             )
             raise ValidationError({"email": "A verified provider email is required to link this account."})
-        if user.email.lower() != identity.email.lower():
+        if (user.email or "").lower() != (identity.email or "").lower():
             AuditService.log_action(
                 actor=user,
                 action_type="social_link_blocked",

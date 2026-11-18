@@ -115,12 +115,51 @@ class CommunicationChannel(models.TextChoices):
     EMAIL = "email", "Email"
     SMS = "sms", "SMS"
     INTERNAL = "internal", "Internal Notification"
+    WHATSAPP = "whatsapp", "WhatsApp"
+    USSD = "ussd", "USSD"
+
+
+class IntakeChannel(models.TextChoices):
+    """Where an idea, draft or submission came in from."""
+
+    WEB = "web", "Web"
+    WHATSAPP = "whatsapp", "WhatsApp"
+    USSD = "ussd", "USSD"
+    OFFICE = "office", "CEDA office"
+
+
+class NotificationType(models.TextChoices):
+    """Notification types a user can set channel preferences for."""
+
+    OFFICER_MESSAGE = "officer_message", "Message from an officer"
+    STAGE_CHANGE = "stage_change", "Application stage change"
+    DEADLINE = "deadline", "Deadline reminder"
+    NEW_CHALLENGE = "new_challenge", "New challenge"
+    NEWS = "news", "News"
+    DIGEST = "digest", "Digest"
+
+
+class NotificationDeliveryChannel(models.TextChoices):
+    """Channels a user can switch on or off per notification type."""
+
+    WEB = "web", "Web (in the portal)"
+    WHATSAPP = "whatsapp", "WhatsApp"
+    SMS = "sms", "SMS"
+    EMAIL = "email", "Email"
+
+
+class BusinessStage(models.TextChoices):
+    IDEA = "idea", "Idea"
+    TESTING = "testing", "Testing"
+    SELLING = "selling", "Selling"
+    GROWING = "growing", "Growing"
 
 
 class CommunicationStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     SENT = "sent", "Sent"
     FAILED = "failed", "Failed"
+    SKIPPED = "skipped", "Skipped (no provider configured)"
 
 
 class TemplateCode(models.TextChoices):

@@ -8,7 +8,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.accounts.auth_identity_service import AuthIdentityService
 from apps.accounts.identity_providers import GitHubIdentityProvider, IdentityProviderRegistry, IdentityTrustLevel, NormalizedIdentity
-from apps.accounts.models import SocialAuthState, User
+from apps.accounts.models import SocialAuthProvider, SocialAuthState, User
 from apps.audit.services import AuditService
 
 
@@ -137,7 +137,18 @@ class SocialAuthService:
                 metadata={"provider": provider, "errors": exc.detail},
             )
             raise
-        return AuthIdentityService.resolve_social_login(identity=identity)
+        result = AuthIdentityService.resolve_social_login(identity=identity)
+        if provider == SocialAuthProvider.CEDA_STAFF:
+            from apps.accounts.services import AuthTokenService, StaffSSOService
+
+            StaffSSOService.grant_staff_access(
+                user=result["user"],
+                created=result["created"],
+                allowed_by=(identity.raw_claims or {}).get("allowed_by", ""),
+            )
+            # Re-issue so the token's role claim includes the staff role.
+            result["tokens"] = AuthTokenService.issue_tokens(result["user"])
+        return result
 
     @staticmethod
     def begin_link(*, provider: str, user: User) -> dict:

@@ -60,6 +60,8 @@ urlpatterns = [
     path("api/support/", include("apps.support.urls")),
     path("api/content/", include("apps.content.urls")),
     path("api/tracking/", include("apps.tracking.urls")),
+    path("api/media/", include("apps.media_library.urls")),
+    path("api/reference/", include("apps.reference.urls")),
     path("api/submissions/<uuid:submission_id>/documents/", SubmissionDocumentListCreateView.as_view(), name="submission-documents-direct"),
     path("api/submissions/<uuid:submission_id>/screen/", ScreeningCreateView.as_view(), name="submission-screen-direct"),
     path("api/submissions/<uuid:submission_id>/screening/", ScreeningListView.as_view(), name="submission-screening-direct"),

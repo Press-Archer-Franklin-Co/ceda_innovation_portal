@@ -64,6 +64,8 @@ class MFAService:
     def issue_challenge(*, user: User, method: str, purpose: str, auth_method: str = "") -> MFAChallengePayload:
         expires_at = timezone.now() + timezone.timedelta(minutes=MFAService.CHALLENGE_MINUTES)
         code_hash = ""
+        if method == UserMFAProfile.MFAMethod.EMAIL and not user.email:
+            raise ValidationError({"code": "mfa_email_missing", "detail": "Add an email address to your account before using email codes."})
         if method == UserMFAProfile.MFAMethod.EMAIL:
             code = MFAService._generate_email_code()
             code_hash = MFAService._hash_code(code)

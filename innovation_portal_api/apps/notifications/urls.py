@@ -5,6 +5,7 @@ from apps.notifications.views import (
     NotificationDeliveryStatusView,
     NotificationMarkReadView,
     NotificationMarkSingleReadView,
+    NotificationPreferencesView,
     NotificationRetryView,
     NotificationUnreadCountView,
 )
@@ -12,6 +13,7 @@ from apps.notifications.views import (
 urlpatterns = [
     path("", NotificationListView.as_view(), name="notifications-list"),
     path("mark-read/", NotificationMarkReadView.as_view(), name="notifications-mark-read"),
+    path("preferences/", NotificationPreferencesView.as_view(), name="notifications-preferences"),
     path("unread-count/", NotificationUnreadCountView.as_view(), name="notifications-unread-count"),
     path("<uuid:notification_id>/mark-read/", NotificationMarkSingleReadView.as_view(), name="notifications-mark-single-read"),
     path("delivery-status/", NotificationDeliveryStatusView.as_view(), name="notifications-delivery-status"),

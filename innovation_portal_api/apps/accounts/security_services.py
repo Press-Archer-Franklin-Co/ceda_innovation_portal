@@ -26,6 +26,7 @@ class AccountSecurityState:
 
 class AccountSecurityService:
     PRIMARY_PROVIDER_PRIORITY = [
+        User.PrimaryAuthMethod.CEDA_STAFF,
         User.PrimaryAuthMethod.MICROSOFT,
         User.PrimaryAuthMethod.GOOGLE,
         User.PrimaryAuthMethod.GITHUB,
@@ -42,7 +43,13 @@ class AccountSecurityService:
             methods.append("password")
         if user.email_verified:
             methods.append("verified_email")
-        trusted = [provider for provider in provider_codes if provider in {SocialAuthProvider.GOOGLE, SocialAuthProvider.MICROSOFT}]
+        if getattr(user, "phone_verified", False):
+            methods.append("verified_phone")
+        trusted = [
+            provider
+            for provider in provider_codes
+            if provider in {SocialAuthProvider.GOOGLE, SocialAuthProvider.MICROSOFT, SocialAuthProvider.CEDA_STAFF}
+        ]
         if trusted:
             methods.append("trusted_social")
         elif provider_codes:
@@ -67,6 +74,11 @@ class AccountSecurityService:
         available_methods = set(provider_codes)
         if user.has_usable_password():
             available_methods.add(User.PrimaryAuthMethod.PASSWORD)
+        # One-time code sign-in stays available while the contact it uses is verified.
+        if getattr(user, "phone_verified", False) and user.phone_number:
+            available_methods.add(User.PrimaryAuthMethod.PHONE_CODE)
+        if user.email_verified and user.email:
+            available_methods.add(User.PrimaryAuthMethod.EMAIL_CODE)
         current = user.primary_auth_method or ""
         if current in available_methods:
             return current

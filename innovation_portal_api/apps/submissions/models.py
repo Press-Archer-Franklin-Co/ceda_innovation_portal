@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from apps.core.constants import FinalDecisionType, ScreeningOutcome, SubmissionOutcomeType, SubmissionStatus, SubmissionType
+from apps.core.constants import FinalDecisionType, IntakeChannel, ScreeningOutcome, SubmissionOutcomeType, SubmissionStatus, SubmissionType
 from apps.core.models import AuditMetadataMixin, TimeStampedModel, UUIDModel
 
 
@@ -32,6 +32,7 @@ class ApplicationDraft(UUIDModel, TimeStampedModel, AuditMetadataMixin):
         related_name="source_draft",
     )
     submitted_at = models.DateTimeField(null=True, blank=True)
+    channel = models.CharField(max_length=20, choices=IntakeChannel.choices, default=IntakeChannel.WEB, db_index=True)
 
     class Meta:
         constraints = [
@@ -58,6 +59,7 @@ class Submission(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     locked_for_editing = models.BooleanField(default=False)
     latest_version_number = models.PositiveIntegerField(default=1)
     form_version_number = models.PositiveIntegerField(default=1)
+    channel = models.CharField(max_length=20, choices=IntakeChannel.choices, default=IntakeChannel.WEB, db_index=True)
 
     class Meta:
         indexes = [

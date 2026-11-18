@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 import jwt
 from django.conf import settings
 from django.contrib.auth import authenticate
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.accounts.models import SocialAuthProvider, SocialAuthState
 
@@ -146,6 +146,11 @@ class OIDCIdentityProvider(BaseIdentityProvider):
         return f'{discovery["authorization_endpoint"]}?{urlencode(params)}', config["redirect_uri"]
 
     def fetch_identity(self, *, code: str, state_record: SocialAuthState) -> NormalizedIdentity:
+        claims = self.exchange_code_for_claims(code=code, state_record=state_record)
+        return self.identity_from_claims(claims)
+
+    def exchange_code_for_claims(self, *, code: str, state_record: SocialAuthState) -> dict[str, Any]:
+        """Swap the authorization code for an id_token and return its verified claims."""
         config = self.config()
         discovery = self._discovery()
         token_data = _http_json(
@@ -174,6 +179,9 @@ class OIDCIdentityProvider(BaseIdentityProvider):
         )
         if state_record.nonce and claims.get("nonce") != state_record.nonce:
             raise ValidationError({"provider": "Invalid social login nonce."})
+        return claims
+
+    def identity_from_claims(self, claims: dict[str, Any]) -> NormalizedIdentity:
         email = claims.get("email")
         if not email:
             raise ValidationError({"email": "The provider did not supply an email address."})
@@ -240,6 +248,131 @@ class MicrosoftIdentityProvider(OIDCIdentityProvider):
         required = super().required_config_keys()
         required["tenant_id"] = "MICROSOFT_OAUTH_TENANT_ID"
         return required
+
+
+class StaffSSORefused(PermissionDenied):
+    default_detail = "This account is not allowed to use CEDA staff sign-in."
+    default_code = "staff_sso_refused"
+
+
+class CedaStaffIdentityProvider(OIDCIdentityProvider):
+    """Single sign-on for CEDA staff through any OIDC provider (for example Microsoft Entra ID).
+
+    Configured only through environment variables (see .env.production.example):
+    CEDA_SSO_CLIENT_ID, CEDA_SSO_CLIENT_SECRET, CEDA_SSO_REDIRECT_URI, CEDA_SSO_DISCOVERY_URL,
+    and optionally CEDA_SSO_ISSUER, CEDA_SSO_SCOPES, CEDA_SSO_GROUPS_CLAIM.
+
+    Sign-in is refused unless the email domain is in CEDA_SSO_ALLOWED_DOMAINS or one of the
+    user's groups is in CEDA_SSO_ALLOWED_GROUPS. With both lists empty, nobody is let in.
+    """
+
+    provider = SocialAuthProvider.CEDA_STAFF
+    display_name = "CEDA staff sign-in"
+
+    @property
+    def discovery_url(self) -> str:
+        return getattr(settings, "CEDA_SSO_DISCOVERY_URL", "")
+
+    @property
+    def issuer_allowlist(self) -> tuple[str, ...]:
+        issuer = getattr(settings, "CEDA_SSO_ISSUER", "")
+        return (issuer,) if issuer else ()
+
+    @property
+    def scopes(self) -> str:
+        return getattr(settings, "CEDA_SSO_SCOPES", "") or "openid email profile"
+
+    def config(self) -> dict[str, str]:
+        return {
+            "client_id": getattr(settings, "CEDA_SSO_CLIENT_ID", ""),
+            "client_secret": getattr(settings, "CEDA_SSO_CLIENT_SECRET", ""),
+            "redirect_uri": getattr(settings, "CEDA_SSO_REDIRECT_URI", ""),
+            "discovery_url": getattr(settings, "CEDA_SSO_DISCOVERY_URL", ""),
+        }
+
+    def required_config_keys(self) -> dict[str, str]:
+        return {
+            "client_id": "CEDA_SSO_CLIENT_ID",
+            "client_secret": "CEDA_SSO_CLIENT_SECRET",
+            "redirect_uri": "CEDA_SSO_REDIRECT_URI",
+            "discovery_url": "CEDA_SSO_DISCOVERY_URL",
+        }
+
+    @staticmethod
+    def _setting_list(name: str) -> list[str]:
+        raw = getattr(settings, name, []) or []
+        if isinstance(raw, str):
+            raw = raw.split(",")
+        return [item.strip().lower() for item in raw if item and item.strip()]
+
+    @classmethod
+    def allowed_domains(cls) -> list[str]:
+        return [domain.lstrip("@") for domain in cls._setting_list("CEDA_SSO_ALLOWED_DOMAINS")]
+
+    @classmethod
+    def allowed_groups(cls) -> list[str]:
+        return cls._setting_list("CEDA_SSO_ALLOWED_GROUPS")
+
+    @staticmethod
+    def _email_from_claims(claims: dict[str, Any]) -> str:
+        # Entra ID often leaves out `email` and puts the address in preferred_username / upn.
+        for key in ("email", "preferred_username", "upn"):
+            value = (claims.get(key) or "").strip()
+            if "@" in value:
+                return value.lower()
+        return ""
+
+    @staticmethod
+    def _groups_from_claims(claims: dict[str, Any]) -> list[str]:
+        claim_name = getattr(settings, "CEDA_SSO_GROUPS_CLAIM", "") or "groups"
+        groups = claims.get(claim_name) or []
+        if isinstance(groups, str):
+            groups = [groups]
+        return [str(group).strip().lower() for group in groups if str(group).strip()]
+
+    @classmethod
+    def check_allow_list(cls, *, email: str, groups: list[str]) -> str:
+        """Return why the user is allowed (``domain`` or ``group``) or raise StaffSSORefused."""
+        domain = email.rsplit("@", 1)[-1] if "@" in email else ""
+        if domain and domain in cls.allowed_domains():
+            return "domain"
+        if set(groups) & set(cls.allowed_groups()):
+            return "group"
+        raise StaffSSORefused()
+
+    def identity_from_claims(self, claims: dict[str, Any]) -> NormalizedIdentity:
+        email = self._email_from_claims(claims)
+        groups = self._groups_from_claims(claims)
+        if not email:
+            raise ValidationError({"email": "The staff directory did not supply an email address."})
+        try:
+            matched_by = self.check_allow_list(email=email, groups=groups)
+        except StaffSSORefused:
+            from apps.audit.services import AuditService
+
+            AuditService.log_raw_action(
+                actor=None,
+                action_type="staff_sso_refused",
+                target_model="Identity",
+                target_id=str(claims.get("sub") or email),
+                metadata={"provider": self.provider, "email_domain": email.rsplit("@", 1)[-1], "group_count": len(groups)},
+            )
+            raise
+        first_name, last_name = self._split_name(claims.get("name", ""), email)
+        return NormalizedIdentity(
+            provider=self.provider,
+            provider_user_id=str(claims.get("oid") or claims.get("sub")),
+            email=email,
+            # The organisation's own directory vouches for the address, and it passed the allow list.
+            email_verified=True,
+            first_name=claims.get("given_name") or first_name,
+            last_name=claims.get("family_name") or last_name,
+            display_name=(claims.get("name") or "").strip(),
+            username=email,
+            avatar_url="",
+            raw_claims={"claims": claims, "groups": groups, "allowed_by": matched_by},
+            trust_level=IdentityTrustLevel.STRONG,
+        )
 
 
 class GitHubIdentityProvider(BaseIdentityProvider):
@@ -324,6 +457,7 @@ class IdentityProviderRegistry:
         SocialAuthProvider.GOOGLE: GoogleIdentityProvider(),
         SocialAuthProvider.GITHUB: GitHubIdentityProvider(),
         SocialAuthProvider.MICROSOFT: MicrosoftIdentityProvider(),
+        SocialAuthProvider.CEDA_STAFF: CedaStaffIdentityProvider(),
     }
     LOCAL_PROVIDER = LocalPasswordIdentityProvider()
 

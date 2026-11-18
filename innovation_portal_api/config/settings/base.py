@@ -137,6 +137,8 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.support",
     "apps.content",
+    "apps.reference",
+    "apps.media_library",
 ]
 
 MIDDLEWARE = [
@@ -344,9 +346,41 @@ MICROSOFT_OAUTH_TENANT_ID = env("MICROSOFT_OAUTH_TENANT_ID")
 
 DEFAULT_LOGIN_EMAIL_DOMAIN = env("DEFAULT_LOGIN_EMAIL_DOMAIN", default="ceda.co.bw")
 
+# --- CEDA staff single sign-on (any OIDC provider, e.g. Microsoft Entra ID) ---------------
+# Disabled until client id, secret, redirect URI and discovery URL are all set.
+# Staff access is given only when the email domain or a group matches the allow lists.
+CEDA_SSO_CLIENT_ID = env(_prefixed_name("CEDA_SSO_CLIENT_ID"), default="")
+CEDA_SSO_CLIENT_SECRET = env(_prefixed_name("CEDA_SSO_CLIENT_SECRET"), default="")
+CEDA_SSO_REDIRECT_URI = env(_prefixed_name("CEDA_SSO_REDIRECT_URI"), default="")
+CEDA_SSO_DISCOVERY_URL = env(_prefixed_name("CEDA_SSO_DISCOVERY_URL"), default="")
+CEDA_SSO_ISSUER = env(_prefixed_name("CEDA_SSO_ISSUER"), default="")
+CEDA_SSO_SCOPES = env(_prefixed_name("CEDA_SSO_SCOPES"), default="openid email profile")
+def _csv_env(name: str) -> list[str]:
+    return [item.strip() for item in (os.getenv(_prefixed_name(name)) or "").split(",") if item.strip()]
+
+
+CEDA_SSO_ALLOWED_DOMAINS = _csv_env("CEDA_SSO_ALLOWED_DOMAINS")
+CEDA_SSO_ALLOWED_GROUPS = _csv_env("CEDA_SSO_ALLOWED_GROUPS")
+CEDA_SSO_GROUPS_CLAIM = env(_prefixed_name("CEDA_SSO_GROUPS_CLAIM"), default="groups")
+CEDA_SSO_DEFAULT_ROLE = env(_prefixed_name("CEDA_SSO_DEFAULT_ROLE"), default="staff_member")
+
+# --- Text message senders (SMS now; WhatsApp and USSD later) ------------------------------
+# Dotted path to a sender class per channel. Empty means "no provider": messages on that
+# channel are logged and marked skipped. In DEBUG, SMS is written to the log.
+MESSAGE_SENDERS = {
+    "sms": env(
+        _prefixed_name("SMS_SENDER"),
+        default="apps.communications.senders.ConsoleMessageSender" if DEBUG else "",
+    ),
+    "whatsapp": env(_prefixed_name("WHATSAPP_SENDER"), default=""),
+    "ussd": env(_prefixed_name("USSD_SENDER"), default=""),
+}
+# Channel used for sign-in codes sent to a phone: "sms" or "whatsapp".
+LOGIN_CODE_PHONE_CHANNEL = env(_prefixed_name("LOGIN_CODE_PHONE_CHANNEL"), default="sms")
+
 
 ACCOUNT_SECURITY_POLICY = {
-    "TRUSTED_PROVIDERS": ["google", "microsoft"],
+    "TRUSTED_PROVIDERS": ["google", "microsoft", "ceda_staff"],
     "STAFF_REQUIRE_PASSWORD_FALLBACK": env.bool("SECURITY_POLICY_STAFF_REQUIRE_PASSWORD_FALLBACK", default=True),
     "STAFF_REQUIRE_TWO_RECOVERY_METHODS": env.bool("SECURITY_POLICY_STAFF_REQUIRE_TWO_RECOVERY_METHODS", default=True),
     "STAFF_REQUIRE_VERIFIED_EMAIL": env.bool("SECURITY_POLICY_STAFF_REQUIRE_VERIFIED_EMAIL", default=True),

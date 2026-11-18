@@ -1,3 +1,4 @@
+import logging
 from email.mime.image import MIMEImage
 from io import BytesIO
 from pathlib import Path
@@ -10,6 +11,9 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from PIL import Image, ImageDraw, ImageFont
 
+
+
+logger = logging.getLogger(__name__)
 
 
 class InlineImageEmail(EmailMultiAlternatives):
@@ -228,6 +232,10 @@ class EmailNotificationService:
 
     @staticmethod
     def _send(*, to_email: str, subject: str, template_name: str, context: dict, to_name: str = "", cc: list[str] | None = None):
+        if not to_email:
+            # Phone-only accounts have no email address; nothing to send.
+            logger.info("Skipped email %r: recipient has no email address.", template_name)
+            return
         html_body = render_to_string(f"emails/{template_name}.html", context)
         text_body = render_to_string(f"emails/{template_name}.txt", context)
         text_body = text_body.strip() or strip_tags(html_body)
@@ -379,6 +387,25 @@ class EmailNotificationService:
             to_email=user.email,
             to_name=user.full_name or user.email,
             subject="Your CEDA Innovation Portal security code",
+            template_name="mfa_code_email",
+            context=context,
+        )
+
+    @staticmethod
+    def send_login_code_email(*, to_email: str, code: str):
+        """One-time sign-in code for password-less login. The address may not have an account yet."""
+        context = EmailNotificationService._base_context(
+            preheader="Your sign-in code for CEDA Innovation Portal.",
+            headline="Your sign-in code",
+            intro="Use the code below to sign in to the CEDA Innovation Portal. If you did not ask for it, you can ignore this email.",
+            cta_label="Sign-in code",
+            cta_value=code,
+            cta_hint="This code expires in 10 minutes. Do not share it with anyone.",
+            action_label="Open portal",
+        )
+        EmailNotificationService._send(
+            to_email=to_email,
+            subject="Your CEDA Innovation Portal sign-in code",
             template_name="mfa_code_email",
             context=context,
         )

@@ -7,12 +7,16 @@ from django.utils import timezone
 from apps.audit.services import AuditService
 from apps.communications.email_notifications import EmailNotificationService
 from apps.communications.models import CommunicationLog, MessageTemplate, Notification
+from apps.communications.senders import MessageSenderRegistry
 from apps.core.constants import CommunicationChannel, CommunicationStatus, TemplateCode
+from apps.core.phone import try_normalize_phone
 
 logger = logging.getLogger(__name__)
 
 
 class CommunicationService:
+    TEXT_CHANNELS = frozenset({CommunicationChannel.SMS, CommunicationChannel.WHATSAPP, CommunicationChannel.USSD})
+
     @staticmethod
     def _dispatch_or_enqueue(log):
         from apps.notifications.tasks import send_communication_task
@@ -168,6 +172,8 @@ class CommunicationService:
                 log.status = CommunicationStatus.FAILED
                 log.failure_reason = str(exc)
                 AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_failed", target=log, metadata={"recipient_id": str(log.recipient_id), "error": str(exc)})
+        elif log.channel in CommunicationService.TEXT_CHANNELS:
+            CommunicationService._dispatch_text_message(log)
         else:
             log.status = CommunicationStatus.SENT
             log.failure_reason = ""
@@ -175,6 +181,42 @@ class CommunicationService:
             AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_sent", target=log, metadata={"recipient_id": str(log.recipient_id)})
         log.save(update_fields=["status", "failure_reason", "retry_count", "last_attempt_at", "sent_at", "updated_at"])
         return log
+
+    @staticmethod
+    def _dispatch_text_message(log):
+        """Send an SMS / WhatsApp / USSD log through the configured sender.
+
+        A channel without a provider is marked skipped, not sent.
+        """
+        metadata = {"recipient_id": str(log.recipient_id), "channel": log.channel}
+        phone = try_normalize_phone(getattr(log.recipient, "phone_number", ""))
+        if not phone:
+            log.status = CommunicationStatus.SKIPPED
+            log.failure_reason = "Recipient has no valid phone number."
+            AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_skipped", target=log, metadata={**metadata, "reason": "no_phone"})
+            return
+        try:
+            delivered = MessageSenderRegistry.send(
+                channel=log.channel,
+                to=phone,
+                body=log.rendered_body,
+                metadata={"communication_log_id": str(log.id)},
+            )
+        except Exception as exc:
+            logger.exception("Failed to dispatch %s communication log", log.channel, extra={"communication_log_id": str(log.id)})
+            log.status = CommunicationStatus.FAILED
+            log.failure_reason = str(exc)
+            AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_failed", target=log, metadata={**metadata, "error": str(exc)})
+            return
+        if not delivered:
+            log.status = CommunicationStatus.SKIPPED
+            log.failure_reason = f"No {log.channel} provider is configured."
+            AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_skipped", target=log, metadata={**metadata, "reason": "no_provider"})
+            return
+        log.status = CommunicationStatus.SENT
+        log.failure_reason = ""
+        log.sent_at = timezone.now()
+        AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_sent", target=log, metadata=metadata)
 
     @staticmethod
     def retry_log(log_id: str):
