@@ -1,7 +1,7 @@
 {
   "branch": "feature/b4-form-builder",
   "sha": "0321076f9431ed366cf9b37271c8930de7e6df6f",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44609983122",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44612886706",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -14,8 +14,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 220,
-      "job_seconds_to_here": 240
+      "pytest_seconds": 222,
+      "job_seconds_to_here": 246
     },
     "admin": {
       "install": "success",
