@@ -286,7 +286,7 @@ class ChallengeJudgingService:
     def process_program(cls, program, now=None):
         now = now or timezone.now()
         closes_at = program.submission_closes_at
-        if closes_at and now <= closes_at:
+        if closes_at is None or now <= closes_at:  # no close date (a draft) means not closed yet
             return
         marking_closes = program.marking_closes_at
         if marking_closes and now > marking_closes:

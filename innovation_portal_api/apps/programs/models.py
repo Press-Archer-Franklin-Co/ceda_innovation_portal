@@ -51,11 +51,12 @@ class TermsAndConditions(UUIDModel, TimeStampedModel):
 class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, max_length=280)
-    description = models.TextField()
+    description = models.TextField(blank=True, default="", help_text="Required to publish.")
     program_type = models.ForeignKey(ProgramType, on_delete=models.PROTECT, related_name="programs")
     status = models.CharField(max_length=30, choices=ProgramStatus.choices, default=ProgramStatus.DRAFT, db_index=True)
-    opening_date = models.DateTimeField()
-    closing_date = models.DateTimeField()
+    # A challenge can be saved as a draft without dates; publishing requires them (B5).
+    opening_date = models.DateTimeField(null=True, blank=True)
+    closing_date = models.DateTimeField(null=True, blank=True)
     screening_start = models.DateTimeField(null=True, blank=True)
     screening_end = models.DateTimeField(null=True, blank=True)
     judging_start = models.DateTimeField(null=True, blank=True)
@@ -130,6 +131,20 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
 
     def __str__(self) -> str:
         return self.title
+
+    def publish_problems(self) -> dict:
+        """What stops this programme from being published: {field: message}. Empty means it can be."""
+        problems = {}
+        if not (self.description or "").strip():
+            problems["description"] = "Add a description before publishing."
+        opens, closes = self.submission_opens_at, self.submission_closes_at
+        if not opens:
+            problems["opening_date"] = "Set when entries open before publishing."
+        if not closes:
+            problems["closing_date"] = "Set when entries close before publishing."
+        if opens and closes and closes <= opens:
+            problems["closing_date"] = "Entries must close after they open."
+        return problems
 
     @property
     def is_innovation_challenge(self):

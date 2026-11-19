@@ -189,6 +189,14 @@ class ProgramSerializer(serializers.ModelSerializer):
         read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake", "form_id", "pass_mark", "reviewers_per_idea")
         extra_kwargs = {"cover": {"required": False, "allow_null": True}}
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        opens = attrs.get("opening_date", getattr(self.instance, "opening_date", None))
+        closes = attrs.get("closing_date", getattr(self.instance, "closing_date", None))
+        if opens and closes and closes <= opens:
+            raise serializers.ValidationError({"closing_date": "Entries must close after they open."})
+        return attrs
+
     def validate_translations(self, value):
         if not isinstance(value, dict) or set(value) - {"tn"} or not isinstance(value.get("tn", {}), dict):
             raise serializers.ValidationError('Use {"tn": {"summary": "...", ...}}.')

@@ -164,6 +164,37 @@ class BuilderTests(B5TestCase):
         # Editing the challenge's copy leaves the library item alone.
         self.assertEqual(MarkingCriteriaItem.objects.get(id=library_id).weight, Decimal("0"))
 
+    def test_draft_without_description_or_dates_then_publish_needs_them(self):
+        self.client.force_authenticate(self.officer)
+        response = self.client.post("/api/programs/", {"title": "Half done", "program_type_id": str(self.type.id)}, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        program_id = response.json()["id"]
+        self.assertIsNone(response.json()["opening_date"])
+        steps = {item["step"]: item["complete"] for item in data(self.client.get(f"/api/programs/{program_id}/setup-status/"))["steps"]}
+        self.assertEqual((steps["details"], steps["dates"]), (False, False))
+
+        refused = self.client.post(f"/api/programs/{program_id}/publish/")
+        self.assertEqual(refused.status_code, 400)
+        self.assertEqual(set(refused.json()["errors"]), {"description", "opening_date", "closing_date"})
+        self.assertEqual(Program.objects.get(id=program_id).status, ProgramStatus.DRAFT)
+
+        now = timezone.now()
+        backwards = {"opening_date": (now + timedelta(days=5)).isoformat(), "closing_date": now.isoformat()}
+        self.assertEqual(self.client.patch(f"/api/programs/{program_id}/", backwards, format="json").status_code, 400)
+        filled = {"description": "Ideas for farmers", "opening_date": now.isoformat(), "closing_date": (now + timedelta(days=30)).isoformat()}
+        self.assertEqual(self.client.patch(f"/api/programs/{program_id}/", filled, format="json").status_code, 200)
+        self.assertEqual(self.client.post(f"/api/programs/{program_id}/publish/").status_code, 200)
+        self.assertEqual(Program.objects.get(id=program_id).status, ProgramStatus.PUBLISHED)
+
+    def test_judging_and_results_jobs_skip_challenges_without_a_close_date(self):
+        from apps.programs.challenge_results import ChallengeResultsService
+
+        program = Program.objects.create(title="Dateless", slug="dateless", program_type=self.type, owner=self.officer)
+        ChallengeJudge.objects.create(program=program, name="Judge", email="judge-dateless@example.com")
+        ChallengeJudgingService.process_program(program)
+        self.assertIsNone(ChallengeJudge.objects.get(program=program).invited_at)
+        self.assertFalse(ChallengeResultsService.try_announce(program))
+
     def test_judges_have_an_organisation(self):
         program = self.challenge("Panel")
         self.client.force_authenticate(self.officer)
