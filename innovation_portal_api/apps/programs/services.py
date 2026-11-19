@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from apps.audit.services import AuditService
 from apps.core.constants import ProgramStatus
@@ -10,6 +11,9 @@ class ProgramService:
     @staticmethod
     @transaction.atomic
     def publish(program: Program, actor):
+        problems = program.publish_problems()
+        if problems:
+            raise ValidationError(problems)
         try:
             type_code = program.program_type.code
         except Exception:

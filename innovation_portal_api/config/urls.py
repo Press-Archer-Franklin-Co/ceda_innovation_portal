@@ -22,6 +22,9 @@ class _StaffRedocView(SpectacularRedocView):
 from apps.audit.views import SubmissionAuditLogListView
 from apps.assignments.views import OverdueAssignmentListView, ReviewerQueueStatsView, ReviewerQueueView, ReviewerSuggestionView
 from apps.communications.message_views import SubmissionMessagesView
+from apps.assignments.saved_views import SavedViewDetailView, SavedViewListCreateView
+from apps.programs.challenge_views import CriteriaLibraryView
+from apps.submissions.staff_search import StaffSearchView
 from apps.communications.views import SubmissionCommunicationListView
 from apps.documents.views import SubmissionDocumentListCreateView
 from apps.screening.views import ScreeningCreateView, ScreeningListView
@@ -49,11 +52,15 @@ urlpatterns = [
     path("api/documents/", include("apps.documents.urls")),
     path("api/screening/", include("apps.screening.urls")),
     path("api/assignments/", include("apps.assignments.urls")),
+    path("api/evaluations/criteria-library/", CriteriaLibraryView.as_view(), name="criteria-library"),
     path("api/evaluations/", include("apps.evaluation.urls")),
     path("api/communications/", include("apps.communications.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/", include("apps.workflow.urls")),
     path("api/reviewer-queue/", ReviewerQueueView.as_view(), name="reviewer-queue"),
+    path("api/saved-views/", SavedViewListCreateView.as_view(), name="saved-views"),
+    path("api/saved-views/<uuid:view_id>/", SavedViewDetailView.as_view(), name="saved-view-detail"),
+    path("api/staff-search/", StaffSearchView.as_view(), name="staff-search"),
     path("api/reviewer-queue/stats/", ReviewerQueueStatsView.as_view(), name="reviewer-queue-stats-direct"),
     path("api/assignments/overdue/", OverdueAssignmentListView.as_view(), name="assignments-overdue-direct"),
     path("api/reviewer-suggestions/", ReviewerSuggestionView.as_view(), name="reviewer-suggestions-direct"),

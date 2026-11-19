@@ -67,7 +67,7 @@ class ChallengeResultsService:
         if program.results_announced_at:
             return False
         closes_at = program.submission_closes_at
-        if closes_at and now <= closes_at:
+        if closes_at is None or now <= closes_at:  # no close date (a draft) means not closed yet
             return False
         if program.results_publish_at and now < program.results_publish_at:
             return False
