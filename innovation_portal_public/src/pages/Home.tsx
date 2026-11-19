@@ -16,6 +16,7 @@ import heroImage from '../assets/main.png'
 import ChallengeSpotlight from '../components/challenges/ChallengeSpotlight'
 import { newsItems } from '../data/news'
 import type { NewsItem } from '../data/news'
+import { EMPTY_CELL } from '../lib/format'
 
 const CATEGORY_CODE_MAP: Record<string, string> = {
   announcement:    'Announcement',
@@ -32,7 +33,7 @@ function apiItemToNewsItem(item: ApiContentItem): NewsItem {
     excerpt:  item.excerpt,
     date:     item.published_at ?? item.created_at,
     category: (CATEGORY_CODE_MAP[item.category] ?? item.category) as NewsItem['category'],
-    readTime: item.read_time ?? '—',
+    readTime: item.read_time ?? EMPTY_CELL,
     image:    item.image_url ?? item.category,
     cover_is_video: Boolean(item.cover_is_video),
     featured: item.is_highlighted,
@@ -639,9 +640,7 @@ function ChallengesPreview() {
             return (
               <div key={p.id} className="surface surface-hover rounded-2xl overflow-hidden flex flex-col group cursor-pointer">
                 <div className={`h-[120px] bg-gradient-to-br ${gradientFor(typeCode)} relative flex items-center justify-center`}>
-                  <Badge variant={ds as 'open' | 'upcoming' | 'closed'} className="absolute top-3 left-3 z-10">
-                    {ds.charAt(0).toUpperCase() + ds.slice(1)}
-                  </Badge>
+                  <Badge status={ds} className="absolute top-3 left-3 z-10" />
                   {bannerUrl ? (
                     <>
                       <img src={bannerUrl} alt={p.title} className="absolute inset-0 h-full w-full object-cover" />
@@ -659,7 +658,7 @@ function ChallengesPreview() {
                   <div className="flex items-center justify-between mt-4 pt-3.5 border-t border-gray-100">
                     <span className="flex items-center gap-1 text-[12px] text-gray-400">
                       <Calendar size={11} />
-                      {ds === 'upcoming' && challenge ? `Opens ${formatDate(p.opening_date)}` : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : '—'}
+                      {ds === 'upcoming' && challenge ? `Opens ${formatDate(p.opening_date)}` : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : EMPTY_CELL}
                     </span>
                     <div className="flex items-center gap-2">
                       <Link

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import I18nProvider from './i18n/I18nProvider'
 import ToastProvider from './components/ui/ToastProvider'
+import ConfirmProvider from './components/ui/ConfirmProvider'
 import './index.css'
 
 const overlay = document.getElementById('ceda-loading')
@@ -21,7 +22,9 @@ ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <I18nProvider>
       <ToastProvider>
-        <App />
+        <ConfirmProvider>
+          <App />
+        </ConfirmProvider>
       </ToastProvider>
     </I18nProvider>
   </React.StrictMode>

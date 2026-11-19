@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Trash2, Star, X, Image } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import SectionCard from '../../components/ui/SectionCard'
 import { content, programs } from '../../lib/api/endpoints'
+import { useConfirm } from '../../components/ui/confirm'
 
 const POSITIONS = [
   { value: '1st',       label: '1st Place' },
@@ -27,6 +28,7 @@ function Field({ label, required, children, hint }) {
 }
 
 export default function WinnersManager() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
@@ -132,7 +134,7 @@ export default function WinnersManager() {
             {!isNew && (
               <button
                 className="btn-ghost text-red-500 hover:bg-red-50 flex items-center gap-1.5"
-                onClick={() => { if (confirm('Delete this winner entry?')) deleteMutation.mutate() }}
+                onClick={async () => { if (await confirm({ title: 'Delete this winner?', body: 'It disappears from the public results straight away.', note: 'This cannot be undone.', confirmLabel: 'Delete winner' })) deleteMutation.mutate() }}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 size={14} />Delete
@@ -163,7 +165,7 @@ export default function WinnersManager() {
             <div className="space-y-4">
               <Field label="Program / Challenge" required>
                 <select className="input w-full" value={form.program} onChange={set('program')}>
-                  <option value="">— Select a program —</option>
+                  <option value="">Choose a challenge</option>
                   {(allPrograms ?? []).map(p => (
                     <option key={p.id} value={p.id}>{p.title}</option>
                   ))}

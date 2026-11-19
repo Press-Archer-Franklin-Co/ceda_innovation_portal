@@ -98,6 +98,7 @@ function BellButton({ count }: { count?: number }) {
   return (
     <Link
       to="/dashboard?tab=updates"
+      data-toast-target
       aria-label={label}
       className="relative w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
     >

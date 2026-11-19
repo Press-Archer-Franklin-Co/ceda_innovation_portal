@@ -8,6 +8,7 @@ import {
 import PageHeader from '../../components/ui/PageHeader'
 import SectionCard from '../../components/ui/SectionCard'
 import { content } from '../../lib/api/endpoints'
+import { useConfirm } from '../../components/ui/confirm'
 
 function Field({ label, required, hint, children }) {
   return (
@@ -52,6 +53,7 @@ function CardPreview({ card, photoPreview }) {
 }
 
 export function LeadershipCardEditor() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
@@ -148,8 +150,9 @@ export function LeadershipCardEditor() {
     onError: () => setError('Delete failed.'),
   })
 
-  const handleDelete = () => {
-    if (!window.confirm(`Delete card for "${form.full_name}"? This cannot be undone.`)) return
+  const handleDelete = async () => {
+    const ok = await confirm({ title: `Delete the card for ${form.full_name}?`, note: 'This cannot be undone.', confirmLabel: 'Delete card' })
+    if (!ok) return
     deleteMutation.mutate()
   }
 
@@ -390,6 +393,7 @@ function CardRow({ card, onEdit, onToggle, onDelete, onMoveUp, onMoveDown, isFir
 }
 
 export default function LeadershipList({ embedded = false }) {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -426,8 +430,9 @@ export default function LeadershipList({ embedded = false }) {
     reorderMutation.mutate(next)
   }
 
-  const handleDelete = (card) => {
-    if (!window.confirm(`Delete card for "${card.full_name}"?`)) return
+  const handleDelete = async (card) => {
+    const ok = await confirm({ title: `Delete the card for ${card.full_name}?`, note: 'This cannot be undone.', confirmLabel: 'Delete card' })
+    if (!ok) return
     deleteMutation.mutate(card.id)
   }
 

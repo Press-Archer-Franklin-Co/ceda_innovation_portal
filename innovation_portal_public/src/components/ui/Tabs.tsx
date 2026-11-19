@@ -3,13 +3,15 @@ import clsx from 'clsx'
 
 // Figma Foundations › Tabs: underline strip, count in a muted pill (red tint when selected).
 // Below lg the strip scrolls sideways; labels never wrap. Hide tabs the person cannot read;
-// keep the selected tab in the URL (?tab=) at page level.
+// keep the selected tab in the URL with useTabParam (src/lib/useTabParam.ts).
 
 export interface TabItem<K extends string = string> {
   key: K
   label: ReactNode
   count?: number
   disabled?: boolean
+  /** Data this person cannot read: the tab is not shown. */
+  hidden?: boolean
 }
 
 export interface TabsProps<K extends string = string> {
@@ -25,7 +27,8 @@ export interface TabsProps<K extends string = string> {
   className?: string
 }
 
-export default function Tabs<K extends string = string>({ tabs, active, onChange, variant = 'line', label, idPrefix, className }: TabsProps<K>) {
+export default function Tabs<K extends string = string>({ tabs: allTabs, active, onChange, variant = 'line', label, idPrefix, className }: TabsProps<K>) {
+  const tabs = allTabs.filter((t) => !t.hidden)
   const auto = useId().replace(/:/g, '')
   const prefix = idPrefix ?? `tabs${auto}`
   const refs = useRef<Record<string, HTMLButtonElement | null>>({})

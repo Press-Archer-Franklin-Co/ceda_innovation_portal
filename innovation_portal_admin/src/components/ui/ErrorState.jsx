@@ -7,7 +7,7 @@ import StateCard from './StateCard'
  * Something failed: say what, in plain words, and offer Retry. Never show "empty" after a failure.
  * Props: title ("We could not load the review queue"), message, onRetry, retrying, compact, framed.
  */
-export default function ErrorState({ title, message, onRetry, retrying = false, compact = false, framed = false, className }) {
+export default function ErrorState({ title, message, onRetry, retrying = false, compact = false, framed = false, className, children }) {
   const t = useT()
   return (
     <StateCard icon={AlertCircle} tone="danger" title={title ?? t('common.somethingWrong')} body={message} compact={compact} framed={framed} className={className} role="alert">
@@ -16,6 +16,7 @@ export default function ErrorState({ title, message, onRetry, retrying = false, 
           {t('common.retry')}
         </Button>
       )}
+      {children}
     </StateCard>
   )
 }
