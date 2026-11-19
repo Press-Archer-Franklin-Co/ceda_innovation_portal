@@ -65,6 +65,12 @@ const tn: Record<StringKey, string> = {
   'status.withdrawn': 'E gogilwe morago', // TODO tn-review
   'status.unknown': 'Ga go itsiwe', // TODO tn-review
 
+  'error.page': 'Tsebe e e ga e a kgona go bulega', // TODO tn-review
+  'error.pageBody': 'Bothata bo kwa go rona. Tiro ya gago e babalesegile. Leka gape morago ga nakwana.', // TODO tn-review
+  'error.newVersion': 'Go na le kgatiso e ntšhwa ya webosaete', // TODO tn-review
+  'error.newVersionBody': 'Simolola sesha go bona kgatiso ya bosheng. Se o se bolokileng se a bolokwa.', // TODO tn-review
+  'error.reload': 'Simolola sesha', // TODO tn-review
+
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',
   'pager.next': 'Pele',
@@ -82,6 +88,7 @@ const tn: Record<StringKey, string> = {
   'nav.stories': 'Dikgang tsa katlego',
   'nav.help': 'Thuso',
   'nav.myIdeas': 'Dikakanyo tsa me',
+  'nav.websiteHome': 'Tsebe ya ntlha ya webosaete', // TODO tn-review
   'nav.profile': 'Porofaele',
   'nav.security': 'Tshireletso',
   'nav.staff': 'Kgolo ya badiri',

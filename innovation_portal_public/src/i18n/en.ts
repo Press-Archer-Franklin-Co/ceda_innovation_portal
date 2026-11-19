@@ -64,6 +64,12 @@ const en = {
   'status.withdrawn': 'Withdrawn',
   'status.unknown': 'Not known',
 
+  'error.page': 'This page could not load',
+  'error.pageBody': 'This is on our side. Your work is safe. Try again in a moment.',
+  'error.newVersion': 'There is a new version of the site',
+  'error.newVersionBody': 'Reload to get the latest version. Anything you saved is kept.',
+  'error.reload': 'Reload',
+
   'pager.label': 'Pages',
   'pager.previous': 'Previous',
   'pager.next': 'Next',
@@ -81,6 +87,7 @@ const en = {
   'nav.stories': 'Stories',
   'nav.help': 'Help',
   'nav.myIdeas': 'My ideas',
+  'nav.websiteHome': 'Website home',
   'nav.profile': 'Profile',
   'nav.security': 'Security',
   'nav.staff': 'Staff console',

@@ -80,9 +80,11 @@ export interface ErrorStateProps {
   retrying?: boolean
   framed?: boolean
   className?: string
+  /** Extra actions under the message (e.g. Reload). */
+  children?: ReactNode
 }
 
-export function ErrorState({ title, body, onRetry, retrying, framed = true, className }: ErrorStateProps) {
+export function ErrorState({ title, body, onRetry, retrying, framed = true, className, children }: ErrorStateProps) {
   const t = useT()
   return (
     <StateCard icon={AlertCircle} tone="danger" title={title ?? t('common.somethingWrong')} body={body} framed={framed} className={className} role="alert">
@@ -91,6 +93,7 @@ export function ErrorState({ title, body, onRetry, retrying, framed = true, clas
           {t('common.retry')}
         </Button>
       )}
+      {children}
     </StateCard>
   )
 }
