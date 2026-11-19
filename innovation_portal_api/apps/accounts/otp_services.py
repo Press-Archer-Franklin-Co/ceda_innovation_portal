@@ -254,6 +254,12 @@ class OTPService:
 
     @staticmethod
     def verify_code(*, target_type: str, target: str, code: str) -> LoginCodeVerifyResult:
+        login_code = OTPService.check_code_or_raise(target_type=target_type, target=target, code=code)
+        return OTPService._resolve_user(target_type=target_type, target=target, login_code=login_code)
+
+    @staticmethod
+    def check_code_or_raise(*, target_type: str, target: str, code: str) -> LoginCode:
+        """Check a code without signing anyone in. Raises the usual otp_* errors."""
         outcome, login_code = OTPService._check_code(target_type=target_type, target=target, code=code)
         if outcome != _VerifyOutcome.OK:
             AuditService.log_raw_action(
@@ -270,11 +276,27 @@ class OTPService:
         if outcome == _VerifyOutcome.INVALID:
             remaining = max(login_code.max_attempts - login_code.attempts, 0)
             raise ValidationError({"code": "otp_invalid", "detail": "That code is not right.", "attempts_remaining": remaining})
-        return OTPService._resolve_user(target_type=target_type, target=target, login_code=login_code)
+        return login_code
 
     @staticmethod
     @transaction.atomic
     def _resolve_user(*, target_type: str, target: str, login_code: LoginCode) -> LoginCodeVerifyResult:
+        is_phone = target_type == LoginCode.TargetType.PHONE
+        auth_method = User.PrimaryAuthMethod.PHONE_CODE if is_phone else User.PrimaryAuthMethod.EMAIL_CODE
+        user, created = OTPService.user_for_verified_target(target_type=target_type, target=target)
+        if login_code.user_id != user.id:
+            login_code.user = user
+            login_code.save(update_fields=["user", "updated_at"])
+        return LoginCodeVerifyResult(user=user, created=created, auth_method=auth_method)
+
+    @staticmethod
+    @transaction.atomic
+    def user_for_verified_target(*, target_type: str, target: str, source: str = "otp_signup", first_name: str = "", last_name: str = "") -> tuple[User, bool]:
+        """The account for a phone or email the person just proved they control.
+
+        Creates an innovator account when none exists. Raises account_disabled for a
+        disabled account.
+        """
         from apps.accounts.security_services import AccountSecurityService
         from apps.accounts.services import UserOnboardingService
         from apps.core.constants import RoleType
@@ -288,15 +310,15 @@ class OTPService:
                 email=None if is_phone else target,
                 password=None,
                 phone_number=target if is_phone else "",
-                first_name="",
-                last_name="",
+                first_name=first_name,
+                last_name=last_name,
                 email_verified=not is_phone,
                 phone_verified=is_phone,
             )
             created = True
             UserOnboardingService.ensure_user_onboarding(
                 user,
-                source="otp_signup",
+                source=source,
                 default_role_codes=[RoleType.INNOVATOR],
                 mark_email_verified=not is_phone,
                 metadata={"method": auth_method},
@@ -307,7 +329,7 @@ class OTPService:
                 actor=user,
                 reason="otp_signup_primary_assignment",
             )
-            AuditService.log_action(actor=user, action_type="otp_signup_success", target=user, metadata={"method": auth_method})
+            AuditService.log_action(actor=user, action_type="otp_signup_success", target=user, metadata={"method": auth_method, "source": source})
         else:
             if not user.is_active:
                 raise ValidationError({"code": "account_disabled", "detail": "This account is disabled."})
@@ -318,10 +340,7 @@ class OTPService:
             if not is_phone and not user.email_verified:
                 user.email_verified = True
                 user.save(update_fields=["email_verified", "updated_at"])
-        if login_code.user_id != user.id:
-            login_code.user = user
-            login_code.save(update_fields=["user", "updated_at"])
-        return LoginCodeVerifyResult(user=user, created=created, auth_method=auth_method)
+        return user, created
 
     @staticmethod
     def finalize_login(*, user: User, auth_method: str) -> dict:

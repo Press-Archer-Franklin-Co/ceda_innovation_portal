@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -16,6 +17,9 @@ from apps.programs.models import FieldValidationRule, SubmissionFormField
 from apps.profiles.models import InnovatorProfile
 from apps.submissions.models import ApplicationDraft, Submission, SubmissionResponse
 from apps.submissions.services import SubmissionService
+
+
+_UNSET = object()
 
 
 class ApplicationDraftService:
@@ -85,45 +89,62 @@ class ApplicationDraftService:
         return None
 
     @classmethod
+    def field_errors(cls, field: SubmissionFormField, values: dict) -> list[str]:
+        """Problems with one field's answer, given all answers (for visible_if/required_if)."""
+        state = cls._field_state(field, values)
+        if not state["visible"] or not state["enabled"]:
+            return []
+        errors: list[str] = []
+        value = values.get(field.key)
+        media_config = field.media_config or {}
+        if field.field_type == SubmissionFormFieldType.FILE:
+            file_items = value if isinstance(value, list) else ([value] if value else [])
+            min_files = int(media_config.get("min_files", 1 if state["required"] else 0))
+            max_files = int(media_config.get("max_files", 1 if not media_config.get("multiple") else max(1, media_config.get("max_files", 5))))
+            if state["required"] and len(file_items) < min_files:
+                return ["This file field requires at least one upload."]
+            if file_items and len(file_items) > max_files:
+                errors.append(f"No more than {max_files} files are allowed.")
+        if state["required"] and value in (None, "", []):
+            return ["This field is required."]
+        rule_qs = field.field_rules.filter(is_active=True)
+        if field.field_type == SubmissionFormFieldType.FILE and isinstance(value, list):
+            for file_item in value:
+                for rule in rule_qs:
+                    error = cls._validate_rule(field, rule, file_item)
+                    if error:
+                        errors.append(error)
+        else:
+            for rule in rule_qs:
+                error = cls._validate_rule(field, rule, value)
+                if error:
+                    errors.append(error)
+        return errors
+
+    @classmethod
     def validate_draft_data(cls, draft: ApplicationDraft, draft_data: dict) -> None:
         form = getattr(draft.program, "submission_form", None)
         if not form:
             return
         errors = {}
-        fields = form.fields.filter(is_active=True).prefetch_related("field_rules")
         values = cls._effective_values(draft, draft_data)
-        for field in fields:
-            state = cls._field_state(field, values)
-            if not state["visible"] or not state["enabled"]:
-                continue
-            value = values.get(field.key)
-            media_config = field.media_config or {}
-            if field.field_type == SubmissionFormFieldType.FILE:
-                file_items = value if isinstance(value, list) else ([value] if value else [])
-                min_files = int(media_config.get("min_files", 1 if state["required"] else 0))
-                max_files = int(media_config.get("max_files", 1 if not media_config.get("multiple") else max(1, media_config.get("max_files", 5))))
-                if state["required"] and len(file_items) < min_files:
-                    errors[field.key] = ["This file field requires at least one upload."]
-                    continue
-                if file_items and len(file_items) > max_files:
-                    errors.setdefault(field.key, []).append(f"No more than {max_files} files are allowed.")
-            if state["required"] and value in (None, "", []):
-                errors[field.key] = ["This field is required."]
-                continue
-            rule_qs = field.field_rules.filter(is_active=True)
-            if field.field_type == SubmissionFormFieldType.FILE and isinstance(value, list):
-                for file_item in value:
-                    for rule in rule_qs:
-                        error = cls._validate_rule(field, rule, file_item)
-                        if error:
-                            errors.setdefault(field.key, []).append(error)
-            else:
-                for rule in rule_qs:
-                    error = cls._validate_rule(field, rule, value)
-                    if error:
-                        errors.setdefault(field.key, []).append(error)
+        for field in form.fields.filter(is_active=True).prefetch_related("field_rules"):
+            field_problems = cls.field_errors(field, values)
+            if field_problems:
+                errors[field.key] = field_problems
         if errors:
             raise ValidationError({"draft_data": errors})
+
+    @classmethod
+    def validate_section(cls, draft: ApplicationDraft, section, draft_data: dict) -> dict:
+        """Errors for one step (form section) only: {field_key: [messages]}."""
+        values = cls._effective_values(draft, draft_data)
+        errors = {}
+        for field in section.fields.filter(is_active=True).prefetch_related("field_rules").order_by("ordering"):
+            field_problems = cls.field_errors(field, values)
+            if field_problems:
+                errors[field.key] = field_problems
+        return errors
 
     @classmethod
     def build_progress_metadata(cls, draft: ApplicationDraft, draft_data: dict, *, current_section_code: str = "") -> dict:
@@ -155,6 +176,12 @@ class ApplicationDraftService:
                         required_completed += 1
                     else:
                         missing_required.append(field.key)
+            if not missing_required and (section_completed or not section_required):
+                step_status = "done"
+            elif section_completed:
+                step_status = "in_progress"
+            else:
+                step_status = "not_started"
             section_payloads.append(
                 {
                     "section_code": section.code,
@@ -162,6 +189,7 @@ class ApplicationDraftService:
                     "percent_complete": int((section_completed / section_total) * 100) if section_total else 0,
                     "missing_required_fields": missing_required,
                     "current": section.code == current_section_code,
+                    "status": step_status,
                 }
             )
         return {
@@ -172,6 +200,7 @@ class ApplicationDraftService:
             "completed_required_fields": required_completed,
             "percent_complete": int((completed / total) * 100) if total else 0,
             "sections": section_payloads,
+            "step_status": {item["section_code"]: item["status"] for item in section_payloads},
         }
 
     @staticmethod
@@ -246,13 +275,16 @@ class ApplicationDraftService:
         draft: ApplicationDraft | None = None,
         current_section_code: str = "",
         metadata: dict | None = None,
+        sector=_UNSET,
     ) -> ApplicationDraft:
         ProgramAccessService.assert_can_enter(program, innovator)
-        draft = draft or ApplicationDraft.objects.filter(
-            innovator=innovator,
-            program=program,
-            status=ApplicationDraft.STATUS_DRAFT,
-        ).first()
+        if draft is None and not program.is_general_intake:
+            # One open draft per programme; the general ideas programme allows several.
+            draft = ApplicationDraft.objects.filter(
+                innovator=innovator,
+                program=program,
+                status=ApplicationDraft.STATUS_DRAFT,
+            ).first()
         if draft is None:
             draft = ApplicationDraft(
                 reference_number=cls.generate_reference_number(program),
@@ -262,6 +294,10 @@ class ApplicationDraftService:
             )
         else:
             draft.version += 1
+        draft.program = program
+        draft.is_general_idea = bool(program.is_general_intake)
+        if sector is not _UNSET:
+            draft.sector = sector
         draft.team = team
         draft.title = title
         draft.draft_data = draft_data or {}
@@ -276,10 +312,28 @@ class ApplicationDraftService:
 
     @classmethod
     @transaction.atomic
-    def submit_draft(cls, *, draft: ApplicationDraft, actor):
+    def submit_draft(
+        cls,
+        *,
+        draft: ApplicationDraft,
+        actor,
+        require_consent: bool = False,
+        consent: bool = False,
+        ip_address: str | None = None,
+        guest_name: str = "",
+    ):
+        """Turn a draft into a submission.
+
+        actor is None for a guest submission (draft without an innovator); the
+        submission then keeps only guest_name and the draft's verified guest phone.
+        require_consent is set by the API, which needs consent=True.
+        """
         if draft.status != ApplicationDraft.STATUS_DRAFT:
             raise ValidationError("Only active drafts can be submitted.")
         ProgramAccessService.assert_can_enter(draft.program, actor)
+        if require_consent and consent is not True:
+            raise ValidationError({"consent": {"code": "consent_required", "detail": "Please agree to the terms before sending your idea."}})
+        is_guest = draft.innovator_id is None
         cls.validate_draft_data(draft, draft.draft_data)
         submission = Submission.objects.create(
             reference_number="",
@@ -291,7 +345,24 @@ class ApplicationDraftService:
             metadata=draft.metadata,
             form_version_number=getattr(getattr(draft.program, "submission_form", None), "version", 1),
             channel=draft.channel,
+            sector=draft.sector,
+            is_guest=is_guest,
+            guest_name=guest_name if is_guest else "",
+            guest_phone=draft.guest_phone if is_guest else "",
         )
+        if consent is True:
+            from apps.submissions.models import ConsentRecord
+
+            ConsentRecord.objects.create(
+                purpose=ConsentRecord.PURPOSE_IDEA_SUBMISSION,
+                text_version=getattr(settings, "IDEA_SUBMISSION_CONSENT_VERSION", "2026-11"),
+                given_at=timezone.now(),
+                ip_address=ip_address,
+                user=draft.innovator,
+                guest_phone=draft.guest_phone if is_guest else "",
+                draft=draft,
+                submission=submission,
+            )
         form_version = getattr(getattr(draft.program, "submission_form", None), "version", 1)
         field_map = {
             field.key: field

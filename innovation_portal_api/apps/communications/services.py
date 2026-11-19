@@ -33,7 +33,7 @@ class CommunicationService:
     @staticmethod
     def _context_for_submission(submission):
         return {
-            "innovator_name": submission.innovator.full_name,
+            "innovator_name": submission.innovator.full_name if submission.innovator_id else submission.guest_name,
             "submission_reference": submission.reference_number,
             "program_name": submission.program.title,
             "submission_title": submission.title,
@@ -63,7 +63,37 @@ class CommunicationService:
         return log
 
     @staticmethod
+    def text_contact_for_submission(submission) -> str:
+        """Phone number for text updates: the guest's verified phone, or the innovator's."""
+        if submission.innovator_id:
+            return try_normalize_phone(submission.innovator.phone_number or "") or ""
+        return submission.guest_phone or ""
+
+    @staticmethod
+    def send_submission_text(submission, *, body: str, subject: str):
+        """Text message about a submission (SMS), logged against the submission. None if no phone."""
+        to = CommunicationService.text_contact_for_submission(submission)
+        if not to:
+            return None
+        log, _ = CommunicationService.record_text_message(
+            channel=CommunicationChannel.SMS,
+            to=to,
+            body_for_log=body,
+            subject=subject,
+            recipient=submission.innovator if submission.innovator_id else None,
+        )
+        log.related_submission = submission
+        log.related_program = submission.program
+        log.save(update_fields=["related_submission", "related_program", "updated_at"])
+        return log
+
+    @staticmethod
     def queue_submission_acknowledgement(submission):
+        if not submission.innovator_id or not submission.innovator.email:
+            # No email address (guest or phone-only account): send the reference by SMS.
+            track_url = f"{getattr(settings, 'PUBLIC_BASE_URL', '').rstrip('/')}/track/{submission.reference_number}"
+            body = f"CEDA: we received your idea \"{submission.title}\". Your reference is {submission.reference_number}. Track it at {track_url}"
+            return CommunicationService.send_submission_text(submission, body=body, subject="Submission received")
         template = MessageTemplate.objects.filter(code=TemplateCode.ACKNOWLEDGEMENT, active=True).first()
         if template:
             subject, body = CommunicationService.render_template(template, CommunicationService._context_for_submission(submission))
@@ -89,6 +119,12 @@ class CommunicationService:
     @staticmethod
     def send_correction_request(submission, reason, actor):
         body = f"Your submission requires more information. Reason: {reason}"
+        if not submission.innovator_id:
+            log = CommunicationService.send_submission_text(
+                submission, body=f"CEDA, {submission.reference_number}: {body}", subject="Correction requested"
+            )
+            AuditService.log_action(actor=actor, action_type="communication_sent", target=submission, metadata={"communication_id": str(log.id) if log else None, "guest": True})
+            return log
         log = CommunicationService.log_communication(
             recipient=submission.innovator,
             channel=CommunicationChannel.EMAIL,
@@ -130,6 +166,8 @@ class CommunicationService:
     @staticmethod
     def send_decision_notification(submission, decision, actor):
         body = f"Decision for {submission.reference_number}: {decision}."
+        if not submission.innovator_id:
+            return CommunicationService.send_submission_text(submission, body=f"CEDA: {body}", subject="Submission decision")
         log = CommunicationService.log_communication(
             recipient=submission.innovator,
             channel=CommunicationChannel.EMAIL,

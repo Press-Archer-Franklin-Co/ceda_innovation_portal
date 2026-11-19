@@ -15,9 +15,18 @@ class ApplicationDraft(UUIDModel, TimeStampedModel, AuditMetadataMixin):
 
     reference_number = models.CharField(max_length=60, unique=True, db_index=True)
     program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, related_name="application_drafts")
-    innovator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="application_drafts")
+    # Empty for a guest quick-start draft until it is claimed after sign-in.
+    innovator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="application_drafts"
+    )
     submission_type = models.CharField(max_length=40, choices=SubmissionType.choices)
     team = models.ForeignKey("teams.Team", on_delete=models.SET_NULL, null=True, blank=True, related_name="application_drafts")
+    sector = models.ForeignKey("reference.Sector", on_delete=models.SET_NULL, null=True, blank=True, related_name="application_drafts")
+    # Drafts for the general (always-open) ideas programme: a person may have several at once.
+    is_general_idea = models.BooleanField(default=False)
+    guest_name = models.CharField(max_length=255, blank=True)
+    guest_phone = models.CharField(max_length=32, blank=True)
+    guest_phone_verified_at = models.DateTimeField(null=True, blank=True)
     title = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True)
     version = models.PositiveIntegerField(default=1)
@@ -38,7 +47,7 @@ class ApplicationDraft(UUIDModel, TimeStampedModel, AuditMetadataMixin):
         constraints = [
             models.UniqueConstraint(
                 fields=["innovator", "program"],
-                condition=models.Q(status="draft"),
+                condition=models.Q(status="draft", is_general_idea=False),
                 name="uq_active_application_draft_per_user_program",
             )
         ]
@@ -49,8 +58,16 @@ class Submission(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     reference_number = models.CharField(max_length=50, blank=True, db_index=True)
     program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, related_name="submissions")
     submission_type = models.CharField(max_length=40, choices=SubmissionType.choices)
-    innovator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="submissions")
+    # Empty for a guest submission (sent without creating an account); guest_name and
+    # guest_phone are then the only personal details kept.
+    innovator = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="submissions"
+    )
     team = models.ForeignKey("teams.Team", on_delete=models.SET_NULL, null=True, blank=True, related_name="submissions")
+    sector = models.ForeignKey("reference.Sector", on_delete=models.SET_NULL, null=True, blank=True, related_name="submissions")
+    is_guest = models.BooleanField(default=False)
+    guest_name = models.CharField(max_length=255, blank=True)
+    guest_phone = models.CharField(max_length=32, blank=True)
     title = models.CharField(max_length=255)
     current_status = models.CharField(max_length=40, choices=SubmissionStatus.choices, default=SubmissionStatus.DRAFT, db_index=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
@@ -148,3 +165,29 @@ class SubmissionOutcome(UUIDModel, TimeStampedModel):
                 name="uq_current_submission_outcome",
             )
         ]
+
+
+class ConsentRecord(UUIDModel, TimeStampedModel):
+    """Proof that a person agreed to the submission terms: which text, when, from where."""
+
+    PURPOSE_IDEA_SUBMISSION = "idea_submission"
+
+    purpose = models.CharField(max_length=40, default=PURPOSE_IDEA_SUBMISSION)
+    text_version = models.CharField(max_length=40)
+    given_at = models.DateTimeField()
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="consent_records")
+    guest_phone = models.CharField(max_length=32, blank=True)
+    draft = models.ForeignKey(ApplicationDraft, on_delete=models.SET_NULL, null=True, blank=True, related_name="consent_records")
+    submission = models.ForeignKey(Submission, on_delete=models.SET_NULL, null=True, blank=True, related_name="consent_records")
+
+    class Meta:
+        ordering = ("-given_at",)
+
+
+class ReferenceSequence(models.Model):
+    """Last number used per reference prefix, e.g. CEDA-IP-2026 -> 41."""
+
+    prefix = models.CharField(max_length=40, unique=True)
+    last_value = models.PositiveIntegerField(default=0)
+

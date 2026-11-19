@@ -1,6 +1,8 @@
 from rest_framework import serializers
 
 from apps.submissions.models import Submission
+from apps.submissions.status_labels import public_status_label
+from apps.submissions.timeline import SubmissionTimelineService
 from apps.workflow.models import WorkflowActionLog
 
 
@@ -20,6 +22,7 @@ class PublicSubmissionTrackingSerializer(serializers.ModelSerializer):
     applicant_action_required = serializers.SerializerMethodField()
     public_status = serializers.SerializerMethodField()
     expected_next_step = serializers.SerializerMethodField()
+    timeline = serializers.SerializerMethodField()
 
     class Meta:
         model = Submission
@@ -35,29 +38,18 @@ class PublicSubmissionTrackingSerializer(serializers.ModelSerializer):
             "workflow_status",
             "applicant_action_required",
             "history",
+            "timeline",
         )
+
+    def get_timeline(self, obj):
+        # Reduced form: stage names, status, dates, explanations and durations; no staff names.
+        return SubmissionTimelineService.build(obj, public=True)
 
     def get_applicant_action_required(self, obj):
         return hasattr(obj, "workflow_instance") and obj.workflow_instance.status == "returned"
 
     def get_public_status(self, obj):
-        labels = {
-            "submitted": "Received",
-            "screening": "Under screening",
-            "judging_review": "Under judging review",
-            "under_review": "Under review",
-            "requires_more_information": "Action needed from applicant",
-            "returned": "Action needed from applicant",
-            "shortlisted": "Shortlisted",
-            "assigned_to_judges": "In judging queue",
-            "under_judging": "Under judging",
-            "approved": "Approved",
-            "rejected": "Not selected",
-            "finalist": "Finalist",
-            "winner": "Winner",
-            "closed": "Closed",
-        }
-        return labels.get(obj.current_status, obj.current_status.replace("_", " ").title())
+        return public_status_label(obj.current_status)
 
     def get_expected_next_step(self, obj):
         step = getattr(getattr(obj, "workflow_instance", None), "current_step", None)

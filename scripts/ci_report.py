@@ -41,6 +41,20 @@ def read_json(path: Path) -> dict:
         return {}
 
 
+def minutes(seconds) -> str:
+    return f"{seconds // 60}m {seconds % 60:02d}s"
+
+
+def timing_line(api_steps: dict) -> str:
+    """Times measured inside the api job (service-container start-up before the
+    first step and the artifact upload after it are not included)."""
+    pytest_seconds = api_steps.get("pytest_seconds")
+    job_seconds = api_steps.get("job_seconds_to_here")
+    if not isinstance(pytest_seconds, int) or not isinstance(job_seconds, int):
+        return ""
+    return f"Timing (api job): Run tests {minutes(pytest_seconds)}, job steps {minutes(job_seconds)}"
+
+
 def word(outcome: str | None) -> str:
     return {"success": "pass", "failure": "fail", "skipped": "not run", "cancelled": "cancelled"}.get(outcome or "", "not run")
 
@@ -97,6 +111,7 @@ def main() -> int:
         f"Run: {args.run_url}",
         f"Jobs: " + ", ".join(f"{name} {result}" for name, result in sorted(jobs.items())),
         f"Overall: **{'green' if all_green else 'red'}**",
+        timing_line(steps["api"]),
         "",
         "| Check | Result | Details |",
         "| --- | --- | --- |",
