@@ -1,7 +1,7 @@
 {
   "branch": "feat/screens-api-clients",
   "sha": "faa8ccb9b6f6dace93bf11c89952d1386b9ee349",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44610117050",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44612812728",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -14,8 +14,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 186,
-      "job_seconds_to_here": 212
+      "pytest_seconds": 188,
+      "job_seconds_to_here": 209
     },
     "admin": {
       "install": "success",

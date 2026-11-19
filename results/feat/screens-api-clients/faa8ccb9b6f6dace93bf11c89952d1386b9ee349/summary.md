@@ -1,9 +1,9 @@
 ## CI results for `feat/screens-api-clients` @ `faa8ccb`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44610117050
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44612812728
 Jobs: admin success, api success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 06s, job steps 3m 32s
+Timing (api job): Run tests 3m 08s, job steps 3m 29s
 
 | Check | Result | Details |
 | --- | --- | --- |
