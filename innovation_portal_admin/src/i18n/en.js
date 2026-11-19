@@ -4,6 +4,7 @@ const en = {
   'lang.tn': 'Setswana',
   'lang.label': 'Language',
   'common.close': 'Close',
+  'common.confirm': 'Confirm',
   'common.cancel': 'Cancel',
   'common.save': 'Save',
   'common.saving': 'Saving…',

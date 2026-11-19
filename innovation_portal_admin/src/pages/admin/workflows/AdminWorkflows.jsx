@@ -18,6 +18,7 @@ import {
 import { usePrograms } from '../../../lib/queries/programs'
 import ErrorState from '../../../components/ui/ErrorState'
 import { SkeletonTable } from '../../../components/ui/LoadingSkeleton'
+import { useConfirm } from '../../../components/ui/confirm'
 
 const STATUS_STYLE = {
   draft:     'bg-gray-100 text-gray-600',
@@ -236,6 +237,7 @@ function WorkflowRow({ wf, onAction }) {
 }
 
 export default function AdminWorkflows() {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [actionErr, setActionErr]   = useState(null)
@@ -267,7 +269,7 @@ export default function AdminWorkflows() {
         case 'archive':  await archiveMut.mutateAsync(id);  break
         case 'clone':    await cloneMut.mutateAsync(id);    break
         case 'delete':
-          if (window.confirm('Delete this workflow? This cannot be undone.')) {
+          if (await confirm({ title: 'Delete this workflow?', note: 'This cannot be undone.', confirmLabel: 'Delete workflow' })) {
             await deleteMut.mutateAsync(id)
           }
           break

@@ -11,8 +11,10 @@ import {
   useUpdateMarkingCriteriaItem,
   useDeleteMarkingCriteriaItem,
 } from '../../lib/queries/evaluations'
+import { useConfirm } from '../../components/ui/confirm'
 
 function ItemRow({ criteriaId, item, onDelete }) {
+  const confirm = useConfirm()
   const [expanded, setExpanded] = useState(false)
   const [form, setForm] = useState({
     name:                  item.name,
@@ -45,8 +47,9 @@ function ItemRow({ criteriaId, item, onDelete }) {
     )
   }
 
-  const handleDelete = () => {
-    if (!window.confirm(`Delete item "${item.name}"?`)) return
+  const handleDelete = async () => {
+    const ok = await confirm({ title: `Delete the item "${item.name}"?`, body: 'It is removed from this set of marking criteria.', confirmLabel: 'Delete item' })
+    if (!ok) return
     del.mutate({ criteriaId, itemId: item.id }, { onSuccess: onDelete })
   }
 
@@ -191,6 +194,7 @@ function AddItemForm({ criteriaId, nextOrder, onCancel }) {
 }
 
 function CriteriaCard({ criteria, onDeleted }) {
+  const confirm = useConfirm()
   const [open, setOpen]         = useState(false)
   const [editMeta, setEditMeta] = useState(false)
   const [showAddItem, setShowAddItem] = useState(false)
@@ -209,11 +213,12 @@ function CriteriaCard({ criteria, onDeleted }) {
     )
   }
 
-  const handleDelete = () => {
-    const msg = criteria.step_count > 0
-      ? `This criteria is used by ${criteria.step_count} workflow step(s). It will be deactivated instead of deleted. Confirm?`
-      : `Delete criteria "${criteria.title}"?`
-    if (!window.confirm(msg)) return
+  const handleDelete = async () => {
+    const inUse = criteria.step_count > 0
+    const ok = await confirm(inUse
+      ? { title: `Switch off "${criteria.title}"?`, body: `It is used by ${criteria.step_count} workflow step(s), so it is switched off instead of deleted.`, confirmLabel: 'Switch off' }
+      : { title: `Delete the marking criteria "${criteria.title}"?`, note: 'This cannot be undone.', confirmLabel: 'Delete criteria' })
+    if (!ok) return
     del.mutate(criteria.id, { onSuccess: onDeleted })
   }
 

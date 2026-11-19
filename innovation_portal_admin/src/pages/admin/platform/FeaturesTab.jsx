@@ -7,6 +7,7 @@ import { cn } from '../../../lib/cn'
 import { useFeatureFlags, useSetFeatureFlag } from '../../../lib/queries/platform'
 import { ErrorBanner } from './shared'
 import { formatWhen } from './utils'
+import { useConfirm } from '../../../components/ui/confirm'
 
 const GROUP_ORDER = ['sign_in', 'ideas', 'website', 'messaging', 'integrations']
 
@@ -65,6 +66,7 @@ function FlagRow({ flag, onToggle, busy }) {
 }
 
 export default function FeaturesTab() {
+  const confirm = useConfirm()
   const { data: flags, isLoading, error, refetch } = useFeatureFlags()
   const setFlag = useSetFeatureFlag()
   const [problem, setProblem] = useState(null)
@@ -78,11 +80,13 @@ export default function FeaturesTab() {
     return GROUP_ORDER.filter((key) => byGroup[key]).map((key) => ({ key, ...byGroup[key] }))
   }, [flags])
 
-  const onToggle = (flag, enabled) => {
+  const onToggle = async (flag, enabled) => {
     if (!enabled && flag.group === 'sign_in') {
-      const ok = window.confirm(
-        `Turn off "${flag.label}"? People who use it will not be able to sign in until it is turned back on.`,
-      )
+      const ok = await confirm({
+        title: `Turn off "${flag.label}"?`,
+        body: 'People who use it will not be able to sign in until it is turned back on.',
+        confirmLabel: 'Turn off',
+      })
       if (!ok) return
     }
     setProblem(null)

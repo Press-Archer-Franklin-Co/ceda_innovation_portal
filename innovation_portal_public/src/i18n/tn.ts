@@ -8,6 +8,7 @@ const tn: Record<StringKey, string> = {
   'lang.label': 'Puo',
 
   'common.close': 'Tswala',
+  'common.confirm': 'Netefatsa',
   'common.cancel': 'Khansela',
   'common.save': 'Boloka',
   'common.saving': 'E a boloka…',

@@ -7,8 +7,10 @@ import EmptyState from '../../components/ui/EmptyState'
 import ErrorState from '../../components/ui/ErrorState'
 import { SkeletonCards } from '../../components/ui/LoadingSkeleton'
 import { support } from '../../lib/api/endpoints'
+import { useConfirm } from '../../components/ui/confirm'
 
 export default function FaqList({ embedded = false }) {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const qc = useQueryClient()
 
@@ -46,8 +48,8 @@ export default function FaqList({ embedded = false }) {
     reorderMut.mutate(payload)
   }
 
-  function handleDelete(id) {
-    if (window.confirm('Delete this FAQ item?')) deleteMut.mutate(id)
+  async function handleDelete(id) {
+    if (await confirm({ title: 'Delete this question?', body: 'It disappears from the help pages straight away.', confirmLabel: 'Delete question' })) deleteMut.mutate(id)
   }
 
   const sorted = [...faqs].sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0))

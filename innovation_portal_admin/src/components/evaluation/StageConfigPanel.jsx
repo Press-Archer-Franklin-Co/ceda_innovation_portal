@@ -5,6 +5,7 @@ import {
   useStageConfig, useSetStageConfig, useAddCriterion, useUpdateCriterion, useDeleteCriterion,
   useMarkingCriteriaList,
 } from '../../lib/queries/evaluations'
+import { useConfirm } from '../../components/ui/confirm'
 
 const AGGREGATION_OPTIONS = [
   { value: 'average', label: 'Average' },
@@ -14,6 +15,7 @@ const AGGREGATION_OPTIONS = [
 ]
 
 function CriterionRow({ criterion, stepId, onDelete }) {
+  const confirm = useConfirm()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
     name:                  criterion.name,
@@ -40,8 +42,9 @@ function CriterionRow({ criterion, stepId, onDelete }) {
     updateMutation.mutate({ stepId, crId: criterion.id, body }, { onSuccess: () => setEditing(false) })
   }
 
-  const handleDelete = () => {
-    if (!window.confirm(`Delete criterion "${criterion.name}"?`)) return
+  const handleDelete = async () => {
+    const ok = await confirm({ title: `Delete the criterion "${criterion.name}"?`, body: 'It is removed from this step.', confirmLabel: 'Delete criterion' })
+    if (!ok) return
     deleteMutation.mutate({ stepId, crId: criterion.id }, { onSuccess: onDelete })
   }
 

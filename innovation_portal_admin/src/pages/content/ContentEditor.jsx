@@ -6,6 +6,7 @@ import PageHeader from '../../components/ui/PageHeader'
 import SectionCard from '../../components/ui/SectionCard'
 import { content } from '../../lib/api/endpoints'
 import { cn } from '../../lib/cn'
+import { useConfirm } from '../../components/ui/confirm'
 
 const CATEGORIES = [
   { value: 'announcement',    label: 'Announcement' },
@@ -34,6 +35,7 @@ function Field({ label, required, children, hint }) {
 }
 
 export default function ContentEditor() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const isNew = !id || id === 'new'
   const navigate = useNavigate()
@@ -165,7 +167,7 @@ export default function ContentEditor() {
             {!isNew && (
               <button
                 className="btn-ghost text-red-500 hover:bg-red-50 flex items-center gap-1.5"
-                onClick={() => { if (confirm('Delete this article?')) deleteMutation.mutate() }}
+                onClick={async () => { if (await confirm({ title: 'Delete this article?', body: 'It disappears from the public site straight away.', note: 'This cannot be undone.', confirmLabel: 'Delete article' })) deleteMutation.mutate() }}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 size={14} />Delete

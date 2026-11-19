@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Mail, Plus, Trash2, UserCheck } from 'lucide-react'
 import SectionCard from '../ui/SectionCard'
 import { evaluations, programs } from '../../lib/api/endpoints'
+import { useConfirm } from '../../components/ui/confirm'
 
 const STATUS = {
   not_invited: { label: 'Invite on marking day', cls: 'bg-gray-100 text-gray-600' },
@@ -15,6 +16,7 @@ function asList(data) {
 }
 
 export default function ChallengeJudgingCard({ programId, form, setForm }) {
+  const confirm = useConfirm()
   const qc = useQueryClient()
   const [newJudge, setNewJudge] = useState({ name: '', email: '' })
   const [error, setError] = useState(null)
@@ -106,7 +108,7 @@ export default function ChallengeJudgingCard({ programId, form, setForm }) {
                       className="btn-ghost btn-sm text-ceda-red"
                       title="Remove judge"
                       disabled={removeJudge.isPending}
-                      onClick={() => { if (confirm(`Remove ${judge.name} as a judge?`)) removeJudge.mutate(judge.id) }}
+                      onClick={async () => { if (await confirm({ title: `Remove ${judge.name} as a judge?`, body: 'They stop seeing entries for this challenge. Marks they already gave are kept.', confirmLabel: 'Remove judge' })) removeJudge.mutate(judge.id) }}
                     >
                       <Trash2 size={13} />
                     </button>

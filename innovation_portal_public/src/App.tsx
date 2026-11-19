@@ -34,6 +34,7 @@ import SpecialistInvite  from './pages/SpecialistInvite'
 import JudgeInvite       from './pages/JudgeInvite'
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
+import { ConfirmProvider } from './components/ui/ConfirmDialog'
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
@@ -106,9 +107,11 @@ export default function App() {
   return (
     <I18nProvider>
       <ToastProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ConfirmProvider>
       </ToastProvider>
     </I18nProvider>
   )
