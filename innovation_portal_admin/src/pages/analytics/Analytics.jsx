@@ -419,7 +419,7 @@ export default function Analytics() {
   const { data: progsData, isLoading: progsLoading } = usePrograms()
 
   const submissions = Array.isArray(subsData)  ? subsData  : subsData?.results  ?? []
-  const programs    = Array.isArray(progsData) ? progsData : progsData?.results ?? []
+  const programs    = useMemo(() => (Array.isArray(progsData) ? progsData : progsData?.results ?? []), [progsData])
 
   useEffect(() => {
     const nextTab = searchParams.get('tab')
