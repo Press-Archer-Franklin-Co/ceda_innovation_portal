@@ -120,3 +120,35 @@ class IsOwnerOrOfficerOrAdmin(BasePermission):
         ).exists():
             return True
         return getattr(obj, self.owner_field, None) == request.user
+
+
+class HasCapability(BasePermission):
+    """S1: allow users who hold a capability from apps/core/capabilities.py.
+
+    Use ``HasCapability.of("content.edit")`` in permission_classes. With ``write=``,
+    safe methods (GET, HEAD, OPTIONS) need ``capability`` and the others need ``write``.
+    Unknown capability names fail when the view module loads, not at request time.
+    """
+
+    capability: str = ""
+    write_capability: str = ""
+
+    @classmethod
+    def of(cls, capability: str, *, write: str = ""):
+        from apps.core.capabilities import roles_for
+
+        roles_for(capability)
+        if write:
+            roles_for(write)
+        name = f"HasCapability_{capability}{'__' + write if write else ''}".replace(".", "_")
+        return type(name, (cls,), {"capability": capability, "write_capability": write})
+
+    def required(self, request) -> str:
+        if self.write_capability and request.method not in SAFE_METHODS:
+            return self.write_capability
+        return self.capability
+
+    def has_permission(self, request, view):
+        from apps.core.capabilities import user_has
+
+        return user_has(request.user, self.required(request))

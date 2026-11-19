@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.core.api import api_success
-from apps.core.permissions import AuthRateThrottle, IPRateThrottle, IsAdministrator
+from apps.core.permissions import AuthRateThrottle, HasCapability, IPRateThrottle
 from apps.platform_config.models import FeatureFlag, IntegrationConnection
 from apps.platform_config.providers import providers_for
 from apps.platform_config.selectors import FeatureFlagSelector, IntegrationHistorySelector, IntegrationRuntimeSelector
@@ -27,7 +27,7 @@ TAGS = ["Platform settings"]
 
 
 class _AdminView(generics.GenericAPIView):
-    permission_classes = [IsAdministrator]
+    permission_classes = [HasCapability.of("settings.manage")]
     throttle_classes = [PlatformAdminThrottle]
 
 

@@ -2,12 +2,12 @@ from rest_framework import generics
 
 from apps.analytics.services import AnalyticsService
 from apps.core.api import api_success
-from apps.core.permissions import IsOfficerAdminOrManagementReadOnly
+from apps.core.permissions import HasCapability
 from apps.programs.models import Program
 
 
 class ProgramAnalyticsSummaryView(generics.GenericAPIView):
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("analytics.view")]
 
     def get(self, request, program_id, *args, **kwargs):
         program = Program.objects.get(id=program_id)
@@ -15,7 +15,7 @@ class ProgramAnalyticsSummaryView(generics.GenericAPIView):
 
 
 class ProgramAnalyticsPipelineView(generics.GenericAPIView):
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("analytics.view")]
 
     def get(self, request, program_id, *args, **kwargs):
         program = Program.objects.get(id=program_id)
@@ -23,7 +23,7 @@ class ProgramAnalyticsPipelineView(generics.GenericAPIView):
 
 
 class ProgramFormResponseAnalyticsView(generics.GenericAPIView):
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("analytics.view")]
 
     def get(self, request, program_id, *args, **kwargs):
         program = Program.objects.get(id=program_id)
@@ -31,14 +31,14 @@ class ProgramFormResponseAnalyticsView(generics.GenericAPIView):
 
 
 class ReviewerPerformanceView(generics.GenericAPIView):
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("analytics.view")]
 
     def get(self, request, *args, **kwargs):
         return api_success(data=AnalyticsService.reviewer_performance())
 
 
 class AnalyticsBottlenecksView(generics.GenericAPIView):
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("analytics.view")]
 
     def get(self, request, *args, **kwargs):
         return api_success(data=AnalyticsService.bottlenecks())

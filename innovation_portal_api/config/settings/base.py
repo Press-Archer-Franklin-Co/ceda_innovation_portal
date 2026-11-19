@@ -151,7 +151,19 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.audit.refusals.RefusalRecordingMiddleware",
 ]
+
+# S1: refusals are logged to "security.authorization" (ceda-security section 5).
+# A logger without a handler drops everything, so it gets its own console handler.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
