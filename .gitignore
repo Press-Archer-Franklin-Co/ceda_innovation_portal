@@ -16,7 +16,8 @@ innovation_portal_public/dist/
 innovation_portal_public/dist-ssr/
 coverage/
 old_forms/
-.claude/
+.claude/*
+!.claude/skills/
 
 # Frontend tooling artifacts
 *.tsbuildinfo
@@ -62,3 +63,6 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Test reports written by the verify-work skill
+test-reports/
