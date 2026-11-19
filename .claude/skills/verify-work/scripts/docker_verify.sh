@@ -4,7 +4,8 @@
 #   docker_verify.sh [all|api|admin|public] [extra pytest args...]
 #
 #   docker_verify.sh                     # everything, same checks as CI
-#   docker_verify.sh api tests/api/test_x.py::Class::test_y   # one test while fixing
+#   docker_verify.sh api tests/api/test_x.py::Class::test_y   # one test while fixing (no -n)
+#   docker_verify.sh api -n auto tests/api/                    # many tests: add -n yourself
 #   docker_verify.sh admin               # only admin lint + build
 #
 # Uses its own network and containers (ceda-test, ceda-test-db,
@@ -57,12 +58,17 @@ run_api() {
   ensure_services || { add_need api failure; return; }
   echo "== api: install, migrations check, pytest"
   # Quote extra args for the inner shell.
-  local args=""
-  for a in "${extra_pytest_args[@]}"; do args+=" $(printf '%q' "$a")"; done
+  # Full runs use 4-way style parallelism like CI; a targeted re-run is usually a
+  # handful of tests, where worker start-up costs more than it saves.
+  local args=" -n auto --dist loadfile --durations=15"
+  if [ ${#extra_pytest_args[@]} -gt 0 ]; then
+    args=""
+    for a in "${extra_pytest_args[@]}"; do args+=" $(printf '%q' "$a")"; done
+  fi
   docker run --rm --network ceda-test --user "$uid" \
     -v "$repo/innovation_portal_api":/app -v "$dir":/out -v "$HOME/.cache/ceda-test-pip":/tmp/.cache/pip -w /app \
     -e HOME=/tmp -e PIP_USER=1 -e PATH=/tmp/.local/bin:/usr/local/bin:/usr/bin:/bin -e PYTHONDONTWRITEBYTECODE=1 \
-    -e DJANGO_SETTINGS_MODULE=config.settings.local \
+    -e DJANGO_SETTINGS_MODULE=config.settings.test \
     -e INNOVATION_PORTAL_POSTGRES_HOST=ceda-test-db -e REDIS_URL=redis://ceda-test-redis:6379/0 \
     python:3.12-slim sh -c "
       pip install -q --disable-pip-version-check -r requirements/local.txt > /out/install.txt 2>&1 || { cat /out/install.txt; exit 10; }
