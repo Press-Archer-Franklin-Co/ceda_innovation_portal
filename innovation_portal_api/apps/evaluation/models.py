@@ -28,6 +28,7 @@ class MarkingCriteria(UUIDModel, TimeStampedModel):
         blank=True,
         related_name="marking_criteria_created",
     )
+    is_library = models.BooleanField(default=False, db_index=True, help_text="Shared library set: its items can be ticked into any challenge.")
 
     class Meta:
         ordering = ("title",)
@@ -59,6 +60,9 @@ class MarkingCriteriaItem(UUIDModel, TimeStampedModel):
         max_digits=5, decimal_places=2, null=True, blank=True,
         help_text="Require a comment when the raw score falls below this threshold.",
     )
+    score_meanings = models.JSONField(default=list, blank=True, help_text='What each score 1 to 5 means: [{"en": "...", "tn": "..."}] x5')
+    comment_required_scores = models.JSONField(default=list, blank=True, help_text="Scores that need a comment, e.g. [1, 5].")
+    library_item = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="copies", help_text="The library item this was copied from.")
 
     class Meta:
         ordering = ("ordering",)
@@ -289,6 +293,8 @@ class StageCriterion(UUIDModel, TimeStampedModel):
         blank=True,
         help_text="Require a reviewer comment when the raw score falls below this threshold.",
     )
+    score_meanings = models.JSONField(default=list, blank=True, help_text='What each score 1 to 5 means: [{"en": "...", "tn": "..."}] x5')
+    comment_required_scores = models.JSONField(default=list, blank=True, help_text="Scores that need a comment, e.g. [1, 5].")
 
     class Meta:
         ordering = ("ordering",)

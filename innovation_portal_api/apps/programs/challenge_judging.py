@@ -80,7 +80,9 @@ class ChallengeJudgingService:
             step.requires_evaluation = True
             step.save(update_fields=["requires_evaluation", "updated_at"])
 
-        required = max(1, program.challenge_judges.count())
+        judges = max(1, program.challenge_judges.count())
+        # R-10: reviewers per idea and the pass mark are set on the programme (PUT /api/programs/{id}/judging/).
+        required = min(judges, program.reviewers_per_idea) if program.reviewers_per_idea else judges
         StageEvaluationConfig.objects.update_or_create(
             workflow_step=step,
             defaults={
@@ -89,7 +91,7 @@ class ChallengeJudgingService:
                 "review_mode": StageEvaluationConfig.REVIEW_MODE_FIXED_COUNT,
                 "aggregation_method": StageEvaluationConfig.AGGREGATION_AVERAGE,
                 "threshold_reject_below": Decimal("0"),
-                "threshold_pass_above": Decimal("0"),
+                "threshold_pass_above": program.pass_mark if program.pass_mark is not None else Decimal("0"),
                 "allow_applicant_feedback": False,
             },
         )

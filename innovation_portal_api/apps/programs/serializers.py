@@ -174,8 +174,39 @@ class ProgramSerializer(serializers.ModelSerializer):
             "next_panel_at",
             "form_id",
             "form_summary",
+            "summary",
+            "problem_statement",
+            "support_headline",
+            "support_package",
+            "who_can_enter",
+            "where",
+            "what_we_look_for",
+            "translations",
+            "cover",
+            "pass_mark",
+            "reviewers_per_idea",
         )
-        read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake", "form_id")
+        read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake", "form_id", "pass_mark", "reviewers_per_idea")
+        extra_kwargs = {"cover": {"required": False, "allow_null": True}}
+
+    def validate_translations(self, value):
+        if not isinstance(value, dict) or set(value) - {"tn"} or not isinstance(value.get("tn", {}), dict):
+            raise serializers.ValidationError('Use {"tn": {"summary": "...", ...}}.')
+        allowed = set(Program.TRANSLATABLE)
+        unknown = set(value.get("tn", {})) - allowed
+        if unknown:
+            raise serializers.ValidationError(f"Only these texts can be translated: {', '.join(sorted(allowed))}.")
+        return value
+
+    def validate_support_package(self, value):
+        if not isinstance(value, list) or any(not isinstance(item, dict) or not item.get("title") for item in value):
+            raise serializers.ValidationError('A list of {"title": {en, tn}, "amount_label": "...", "description": {en, tn}}.')
+        return value[:10]
+
+    def validate_what_we_look_for(self, value):
+        if not isinstance(value, list):
+            raise serializers.ValidationError('A list of {"en": "...", "tn": "..."}.')
+        return [item if isinstance(item, dict) else {"en": str(item), "tn": ""} for item in value][:10]
 
     def create(self, validated_data):
         program_type_id = validated_data.pop("program_type_id")
@@ -242,7 +273,7 @@ class ChallengeJudgeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ChallengeJudge
-        fields = ("id", "name", "email", "status", "invited_at", "accepted_at", "last_reminded_at", "progress")
+        fields = ("id", "name", "email", "organisation", "status", "invited_at", "accepted_at", "last_reminded_at", "progress")
         read_only_fields = ("id", "status", "invited_at", "accepted_at", "last_reminded_at", "progress")
 
     def validate_email(self, value):

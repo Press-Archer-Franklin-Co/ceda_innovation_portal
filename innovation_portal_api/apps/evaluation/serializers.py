@@ -39,11 +39,17 @@ class CriterionScoreSerializer(serializers.ModelSerializer):
 
 class ScoreSheetSerializer(serializers.ModelSerializer):
     criterion_scores = CriterionScoreSerializer(many=True)
+    weighted_score = serializers.SerializerMethodField(help_text="Score out of 100, using the criteria weights.")
 
     class Meta:
         model = ScoreSheet
-        fields = ("id", "submission", "judge", "evaluation_round", "status", "total_score", "overall_comment", "is_final", "submitted_at", "criterion_scores")
+        fields = ("id", "submission", "judge", "evaluation_round", "status", "total_score", "weighted_score", "overall_comment", "is_final", "submitted_at", "criterion_scores")
         read_only_fields = ("judge", "status", "total_score", "submitted_at")
+
+    def get_weighted_score(self, obj) -> float | None:
+        from apps.evaluation.services import sheet_weighted_score
+
+        return sheet_weighted_score(obj) if obj.pk else None
 
 
 class SubmissionEvaluationSerializer(serializers.Serializer):
@@ -110,14 +116,40 @@ class FinalDecisionSerializer(serializers.ModelSerializer):
 
 
 
+def _validate_meanings(value):
+    if not isinstance(value, list) or len(value) > 5:
+        raise serializers.ValidationError("Give up to 5 meanings, one per score from 1 to 5.")
+    cleaned = []
+    for item in value:
+        if isinstance(item, str):
+            item = {"en": item}
+        if not isinstance(item, dict) or set(item) - {"en", "tn"}:
+            raise serializers.ValidationError('Each meaning is {"en": "...", "tn": "..."} or a plain English string.')
+        cleaned.append({"en": str(item.get("en") or ""), "tn": str(item.get("tn") or "")})
+    return cleaned
+
+
+def _validate_comment_scores(value):
+    if not isinstance(value, list) or any(isinstance(score, bool) or not isinstance(score, int) or not 1 <= score <= 5 for score in value):
+        raise serializers.ValidationError("Use a list of scores from 1 to 5, for example [1, 5].")
+    return sorted(set(value))
+
+
 class MarkingCriteriaItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarkingCriteriaItem
         fields = (
             "id", "name", "description", "max_score", "min_score",
             "weight", "ordering", "comment_required_below",
+            "score_meanings", "comment_required_scores", "library_item",
         )
-        read_only_fields = ("id",)
+        read_only_fields = ("id", "library_item")
+
+    def validate_score_meanings(self, value):
+        return _validate_meanings(value)
+
+    def validate_comment_required_scores(self, value):
+        return _validate_comment_scores(value)
 
 
 class MarkingCriteriaSerializer(serializers.ModelSerializer):
@@ -127,8 +159,13 @@ class MarkingCriteriaSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MarkingCriteria
-        fields = ("id", "title", "description", "is_active", "items", "total_max_score", "step_count", "created_at")
-        read_only_fields = ("id", "created_at", "total_max_score", "step_count")
+        fields = ("id", "title", "description", "is_active", "is_library", "items", "total_max_score", "total_weight", "step_count", "created_at")
+        read_only_fields = ("id", "created_at", "total_max_score", "total_weight", "step_count")
+
+    total_weight = serializers.SerializerMethodField(help_text="Sum of item weights. Challenge criteria must add up to 100.")
+
+    def get_total_weight(self, obj) -> float:
+        return float(sum((item.weight for item in obj.items.all()), 0))
 
     def get_step_count(self, obj):
         return obj.stage_configs.count()
@@ -137,7 +174,7 @@ class MarkingCriteriaSerializer(serializers.ModelSerializer):
 class MarkingCriteriaWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = MarkingCriteria
-        fields = ("title", "description", "is_active")
+        fields = ("title", "description", "is_active", "is_library")
 
 
 
@@ -147,8 +184,15 @@ class StageCriterionSerializer(serializers.ModelSerializer):
         fields = (
             "id", "name", "description", "max_score", "min_score",
             "weight", "ordering", "comment_required_below",
+            "score_meanings", "comment_required_scores",
         )
         read_only_fields = ("id",)
+
+    def validate_score_meanings(self, value):
+        return _validate_meanings(value)
+
+    def validate_comment_required_scores(self, value):
+        return _validate_comment_scores(value)
 
 
 class StageEvaluationConfigSerializer(serializers.ModelSerializer):

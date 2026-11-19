@@ -100,6 +100,20 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
         related_query_name="program",
         help_text="The form applicants fill in. One form can be used by several programmes.",
     )
+    # B5: what the public challenge page shows. English in these columns, Setswana in translations.
+    summary = models.CharField(max_length=300, blank=True, default="")
+    problem_statement = models.TextField(blank=True, default="")
+    support_headline = models.CharField(max_length=160, blank=True, default="", help_text='For example "Up to P150 000 plus mentoring".')
+    support_package = models.JSONField(default=list, blank=True, help_text='[{"title": {en, tn}, "amount_label": "...", "description": {en, tn}}]')
+    who_can_enter = models.TextField(blank=True, default="")
+    where = models.CharField(max_length=255, blank=True, default="")
+    what_we_look_for = models.JSONField(default=list, blank=True, help_text='[{"en": "...", "tn": "..."}]')
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"summary": "...", "problem_statement": "...", ...}}')
+    cover = models.ForeignKey("media_assets.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    pass_mark = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="0 to 100 on the weighted score. Copied to the judging stage.")
+    reviewers_per_idea = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Judges who mark each entry. Default: every judge.")
+
+    TRANSLATABLE = ("summary", "problem_statement", "support_headline", "who_can_enter", "where")
 
     class Meta:
         indexes = [models.Index(fields=["status", "program_type"]), models.Index(fields=["opening_date", "closing_date"])]
@@ -173,6 +187,7 @@ class ChallengeJudge(UUIDModel, TimeStampedModel):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="challenge_judges")
     name = models.CharField(max_length=255)
     email = models.EmailField()
+    organisation = models.CharField(max_length=255, blank=True, default="")
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="challenge_judgeships")
     invited_at = models.DateTimeField(null=True, blank=True)

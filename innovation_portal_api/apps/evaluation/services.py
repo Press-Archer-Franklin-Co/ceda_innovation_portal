@@ -256,6 +256,30 @@ class StageConfigService:
 
 
 
+def require_comment_for_score(criterion, raw, comment) -> None:
+    """B5: criteria can ask for a comment on given scores, for example 1 and 5."""
+    scores = getattr(criterion, "comment_required_scores", None) or []
+    if not scores or (comment or "").strip():
+        return
+    if raw == raw.to_integral_value() and int(raw) in {int(score) for score in scores}:
+        raise ValidationError(f"Add a comment to explain a score of {int(raw)} for '{criterion.name}'.")
+
+
+def sheet_weighted_score(sheet) -> float | None:
+    """The sheet's score out of 100: sum of weighted scores over the sum of weights (B5)."""
+    total_weight = Decimal("0")
+    earned = Decimal("0")
+    for score in sheet.criterion_scores.select_related("marking_criteria_item", "stage_criterion", "criterion"):
+        criterion = score.marking_criteria_item or score.stage_criterion or score.criterion
+        if criterion is None or not criterion.weight:
+            continue
+        total_weight += criterion.weight
+        earned += score.weighted_score or Decimal("0")
+    if not total_weight:
+        return None
+    return round(float(earned / total_weight * 100), 2)
+
+
 def _reviewer_role_label(user) -> str:
     """
     Return a short display label for the reviewer's primary role.
@@ -505,6 +529,7 @@ class EvaluationService:
                 criterion_obj = MarkingCriteriaItem.objects.get(id=criterion_id)
                 if raw < criterion_obj.min_score or raw > criterion_obj.max_score:
                     raise ValidationError(f"Score for '{criterion_obj.name}' is out of range.")
+                require_comment_for_score(criterion_obj, raw, comment)
                 if (
                     criterion_obj.comment_required_below is not None
                     and raw < criterion_obj.comment_required_below
@@ -527,6 +552,7 @@ class EvaluationService:
                 criterion_obj = StageCriterion.objects.get(id=criterion_id, stage_config=stage_config)
                 if raw < criterion_obj.min_score or raw > criterion_obj.max_score:
                     raise ValidationError(f"Score for '{criterion_obj.name}' is out of range.")
+                require_comment_for_score(criterion_obj, raw, comment)
                 if (
                     criterion_obj.comment_required_below is not None
                     and raw < criterion_obj.comment_required_below
@@ -984,6 +1010,7 @@ class EvaluationService:
                 "reviewer_role": reviewer_role,
                 "status": own_sheet.status,
                 "total_score": float(own_sheet.total_score),
+                "weighted_score": sheet_weighted_score(own_sheet),
                 "overall_comment": own_sheet.overall_comment,
                 "submitted_at": own_sheet.submitted_at.isoformat() if own_sheet.submitted_at else None,
                 "scores": [
@@ -1034,6 +1061,7 @@ class EvaluationService:
                     "reviewer_name": ps.judge.full_name if reveal_peers else None,
                     "reviewer_role": _reviewer_role_label(ps.judge),
                     "total_score": float(ps.total_score),
+                    "weighted_score": sheet_weighted_score(ps),
                     "overall_comment": ps.overall_comment,
                     "submitted_at": ps.submitted_at.isoformat() if ps.submitted_at else None,
                     "status": ps.status,

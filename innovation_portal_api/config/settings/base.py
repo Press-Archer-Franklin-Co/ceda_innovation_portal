@@ -236,6 +236,7 @@ REST_FRAMEWORK = {
         "draft_quick_start": "10/hour",
         "similar_ideas": "30/minute",
         "form_published": "60/minute",
+        "challenges_public": "120/minute",
     },
 }
 
