@@ -1,7 +1,7 @@
 {
   "branch": "feat/ui-system-genie",
   "sha": "3b28492a0f00d8ab1ab5844b87e219cafaed3dae",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44618559567",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44620887398",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -15,8 +15,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 183,
-      "job_seconds_to_here": 199
+      "pytest_seconds": 198,
+      "job_seconds_to_here": 217
     },
     "admin": {
       "install": "success",
@@ -32,7 +32,7 @@
     }
   },
   "tests": {
-    "passed": 471,
+    "passed": 492,
     "failed": 24,
     "skipped": 0,
     "known_failing": 24,
@@ -61,7 +61,7 @@
     {
       "check": "API tests",
       "result": "pass",
-      "details": "471 passed, 24 failed (24 known on main, 0 new)"
+      "details": "492 passed, 24 failed (24 known on main, 0 new)"
     },
     {
       "check": "Admin lint",
