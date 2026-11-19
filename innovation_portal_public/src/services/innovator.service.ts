@@ -2,7 +2,7 @@ import api from './api'
 import { query, unwrapData } from './envelope'
 import type {
   ChallengeMatches, Envelope, IdeasFilter, IdeasList, Lang, LinkChallengeResult,
-  MySummary, ProfileCompleteness, RecommendedChallenge, Timeline, UpdatesFeed,
+  MySummary, ProfileCompleteness, RecommendedChallenge, Timeline, TrackedIdea, UpdatesFeed,
 } from '../types/innovator'
 
 /** Screens 2.1, 2.2 and 2.4 (B2, on main). */
@@ -43,6 +43,12 @@ export const innovatorService = {
     const { data } = await api.get<Envelope<ProfileCompleteness> | ProfileCompleteness>('/profile/')
     const profile = unwrapData<Partial<ProfileCompleteness>>(data)
     return { percent_complete: profile.percent_complete ?? 0, missing_fields: profile.missing_fields ?? [] }
+  },
+
+  /** Screen 2.4: the idea, its answers and its timeline in one call. */
+  async trackedIdea(submissionId: string): Promise<TrackedIdea> {
+    const { data } = await api.get(`/submissions/${submissionId}/tracking-detail/`)
+    return unwrapData<TrackedIdea>(data)
   },
 
   /** Screen 2.4: the signed-in owner's view, with the officer on the current stage. */

@@ -330,6 +330,28 @@ export interface Timeline {
   next_panel_at: string | null
 }
 
+/** One answer as the submission stored it (label and type are snapshots). */
+export interface SubmissionAnswer {
+  id: string
+  field_key: string
+  field_label: string
+  field_type: string
+  value: unknown
+}
+
+/** GET /api/submissions/{id}/tracking-detail/: the Submission plus its timeline. Only fields 2.4 uses. */
+export interface TrackedIdea {
+  id: string
+  reference_number: string
+  title: string
+  current_status: string
+  submitted_at: string | null
+  sector: string | null
+  program_detail: { id: string; title: string; is_general_intake: boolean } & Record<string, unknown>
+  responses: SubmissionAnswer[]
+  timeline: Timeline
+}
+
 // ── 2.4 Messages (B3, not built) ───────────────────────────────────────────
 
 /** TODO(B3): shape from the B3 prompt; confirm against the backend schema. */
