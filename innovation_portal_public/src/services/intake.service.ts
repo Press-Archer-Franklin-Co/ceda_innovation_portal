@@ -45,8 +45,7 @@ function tokenHeaders(token?: string) {
 }
 
 /**
- * Quick start, guest drafts, step-by-step save and submit (B2, branch
- * feature/b2-ideas-innovator). Pass `token` for a guest draft; a signed-in
+ * Quick start, guest drafts, step-by-step save and submit (B2, on main). Pass `token` for a guest draft; a signed-in
  * owner needs no token.
  */
 export const intakeService = {

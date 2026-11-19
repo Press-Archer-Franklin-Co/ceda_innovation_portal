@@ -5,7 +5,7 @@ import type {
   MySummary, ProfileCompleteness, RecommendedChallenge, Timeline, UpdatesFeed,
 } from '../types/innovator'
 
-/** Screens 2.1, 2.2 and 2.4 (B2, branch feature/b2-ideas-innovator). */
+/** Screens 2.1, 2.2 and 2.4 (B2, on main). */
 export const innovatorService = {
   async summary(lang?: Lang): Promise<MySummary> {
     const { data } = await api.get<Envelope<MySummary>>(`/me/summary/${query({ lang })}`)

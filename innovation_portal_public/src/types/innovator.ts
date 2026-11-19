@@ -3,7 +3,7 @@
  *
  * Sources:
  * - main: code sign-in, notifications, preferences, media (B1).
- * - B2 (feature/b2-ideas-innovator, not merged yet): quick start, drafts, steps,
+ * - B2 (on main since 4facb3b): quick start, drafts, steps,
  *   /api/me/*, similar ideas, timeline.
  * - B3 and B4 are not built yet. Their types follow the prompts and are marked
  *   TODO(B3) / TODO(B4) until the backend lane publishes the schema.
@@ -69,20 +69,40 @@ export interface StepSaveResult {
   errors: Record<string, string[] | string>
 }
 
+/**
+ * ApplicationDraft in /api/schema/. The schema types percent_complete and
+ * guest_phone_verified as strings (untyped method fields); the API sends a
+ * number and a boolean.
+ */
 export interface IntakeDraft {
   id: string
   reference_number: string
-  program: string | null
-  program_detail?: { id: string; title: string; slug?: string; is_general_intake?: boolean } | null
+  program: string
+  /** The full Program; only the fields the screens use are typed here. */
+  program_detail: {
+    id: string
+    title: string
+    slug: string
+    is_general_intake: boolean
+    next_panel_at?: string | null
+  } & Record<string, unknown>
+  submission_type: 'idea' | 'hackathon_application' | 'innovation_challenge'
   sector: string | null
-  title: string
-  status: string
-  draft_data: Record<string, unknown>
-  current_section_code: string
-  progress_metadata: Record<string, unknown>
+  is_general_idea: boolean
   percent_complete: number
-  guest_phone_verified?: boolean
-  updated_at: string
+  guest_phone_verified: boolean
+  innovator: string | null
+  team: string | null
+  title: string
+  status: 'draft' | 'submitted'
+  version: number
+  draft_data: Record<string, unknown>
+  progress_metadata: Record<string, unknown>
+  current_section_code: string
+  submitted_submission: string | null
+  submitted_at: string | null
+  metadata: Record<string, unknown>
+  channel: 'web' | 'whatsapp' | 'ussd' | 'office'
   /** TODO(R-6): which published form to load for this draft. */
   form_id?: string
   /** TODO(R-6) */
