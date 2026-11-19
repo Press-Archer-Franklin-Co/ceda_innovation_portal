@@ -5,9 +5,7 @@ import api from '../../services/api'
  * Data the header and footer need. Everything is optional: a value that has not arrived is
  * hidden, never replaced by a made-up number.
  *
- * TODO(R-13): the contact fields below come from B6 part J (SiteSettings: WhatsApp number,
- * USSD code, call centre number, office finder url, footer links, languages enabled).
- * They are not on main yet; the names here are the ones requested in R-13.
+ * Fields from GET /api/content/site-settings/ (B6, R-13). Blank values come back as null.
  */
 export interface ShellSettings {
   whatsapp_number?: string | null
