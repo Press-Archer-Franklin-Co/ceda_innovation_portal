@@ -18,10 +18,16 @@ import Countdown, { useNow } from '../components/challenges/Countdown'
 
 const CONSENT_MESSAGE = 'Please tick the box to agree to the terms and privacy notice before you send your idea.'
 
-/** True when the API refused the submission because consent was not given (code consent_required). */
-function isConsentRequired(err: unknown): boolean {
+/**
+ * The API's own message when it refused the submission because consent was not given
+ * (errors.consent = { code: "consent_required", detail: "..." }), else null.
+ */
+function consentRequiredMessage(err: unknown): string | null {
   const data = (err as { response?: { data?: unknown } })?.response?.data
-  return JSON.stringify(data ?? '').includes('consent_required')
+  if (!JSON.stringify(data ?? '').includes('consent_required')) return null
+  const consent = (data as { errors?: { consent?: { detail?: unknown } } })?.errors?.consent
+  const detail = Array.isArray(consent?.detail) ? consent?.detail[0] : consent?.detail
+  return typeof detail === 'string' && detail.trim() ? detail : CONSENT_MESSAGE
 }
 
 
@@ -751,6 +757,7 @@ function SubmissionForm() {
   const [lastSaved,       setLastSaved]      = useState<Date | null>(null)
   const [error,           setError]          = useState('')
   const [consent,         setConsent]        = useState(false)
+  const [consentErrorShown, setConsentErrorShown] = useState(false)
   const [fieldErrors,     setFieldErrors]    = useState<Record<string, string>>({})
   const [refNumber,       setRefNumber]      = useState('')
   const [draftId,         setDraftId]        = useState<string | null>(null)
@@ -1132,6 +1139,7 @@ function SubmissionForm() {
       }
       if (!consent) {
         setError(CONSENT_MESSAGE)
+        setConsentErrorShown(true)
         return
       }
       const id = await persistDraft(currentSection?.code ?? sections[0]?.code ?? '')
@@ -1143,7 +1151,9 @@ function SubmissionForm() {
       setDraftId(null)
       setSubmitted(true)
     } catch (err) {
-      setError(isConsentRequired(err) ? CONSENT_MESSAGE : parseApiError(err))
+      const consentMessage = consentRequiredMessage(err)
+      setConsentErrorShown(Boolean(consentMessage))
+      setError(consentMessage ?? parseApiError(err))
     } finally {
       setSubmitting(false)
     }
@@ -1458,7 +1468,7 @@ function SubmissionForm() {
                         <input
                           type="checkbox"
                           checked={consent}
-                          onChange={(e) => { setConsent(e.target.checked); if (e.target.checked && error === CONSENT_MESSAGE) setError('') }}
+                          onChange={(e) => { setConsent(e.target.checked); if (e.target.checked && consentErrorShown) { setError(''); setConsentErrorShown(false) } }}
                           required
                           aria-required="true"
                           className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
