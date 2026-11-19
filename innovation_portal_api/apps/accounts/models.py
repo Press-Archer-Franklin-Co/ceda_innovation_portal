@@ -21,12 +21,18 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
         GOOGLE = "google", "Google"
         GITHUB = "github", "GitHub"
         MICROSOFT = "microsoft", "Microsoft"
+        CEDA_STAFF = "ceda_staff", "CEDA staff sign-in"
+        PHONE_CODE = "phone_code", "Phone code"
+        EMAIL_CODE = "email_code", "Email code"
 
-    email = models.EmailField(unique=True)
+    # Nullable so people who sign in with a phone code only can have an account.
+    # Still unique when set (PostgreSQL allows many NULLs under a unique index).
+    email = models.EmailField(unique=True, null=True, blank=True)
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     phone_number = models.CharField(max_length=30, blank=True)
     email_verified = models.BooleanField(default=False)
+    phone_verified = models.BooleanField(default=False)
     primary_auth_method = models.CharField(
         max_length=30,
         choices=PrimaryAuthMethod.choices,
@@ -45,7 +51,17 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
         indexes = [models.Index(fields=["email"]), models.Index(fields=["last_name"])]
 
     def __str__(self) -> str:
-        return self.email
+        return self.email or self.phone_number or str(self.pk)
+
+    def save(self, *args, **kwargs):
+        # Blank emails are stored as NULL so the unique index ignores them.
+        if not self.email:
+            self.email = None
+        super().save(*args, **kwargs)
+
+    @property
+    def display_contact(self) -> str:
+        return self.email or self.phone_number or ""
 
     @property
     def full_name(self) -> str:
@@ -62,7 +78,7 @@ class UserRole(UUIDModel, TimeStampedModel):
         indexes = [models.Index(fields=["user", "is_active"])]
 
     def __str__(self) -> str:
-        return f"{self.user.email} - {self.role.code}"
+        return f"{self.user} - {self.role.code}"
 
 
 User.add_to_class(
@@ -94,6 +110,7 @@ class SocialAuthProvider(models.TextChoices):
     GITHUB = "github", "GitHub"
     MICROSOFT = "microsoft", "Microsoft"
     LINKEDIN = "linkedin", "LinkedIn"
+    CEDA_STAFF = "ceda_staff", "CEDA staff sign-in"
 
 
 class SocialAccount(UUIDModel, TimeStampedModel):
@@ -171,3 +188,37 @@ class MFAChallenge(UUIDModel, TimeStampedModel):
 
     class Meta:
         indexes = [models.Index(fields=["user", "method", "purpose", "expires_at"])]
+
+
+class LoginCode(UUIDModel, TimeStampedModel):
+    """A one-time sign-in code sent to a phone or email address.
+
+    Only a hash of the code is stored. A code is valid for ``expires_at`` and
+    ``max_attempts`` wrong guesses, whichever comes first.
+    """
+
+    class Channel(models.TextChoices):
+        SMS = "sms", "SMS"
+        EMAIL = "email", "Email"
+        WHATSAPP = "whatsapp", "WhatsApp"
+
+    class TargetType(models.TextChoices):
+        PHONE = "phone", "Phone"
+        EMAIL = "email", "Email"
+
+    target_type = models.CharField(max_length=10, choices=TargetType.choices)
+    target = models.CharField(max_length=255, db_index=True)
+    channel = models.CharField(max_length=20, choices=Channel.choices)
+    code_hash = models.CharField(max_length=128)
+    expires_at = models.DateTimeField()
+    attempts = models.PositiveSmallIntegerField(default=0)
+    max_attempts = models.PositiveSmallIntegerField(default=5)
+    used_at = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="login_codes")
+    requested_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["target_type", "target", "used_at"], name="login_code_lookup_idx"),
+            models.Index(fields=["expires_at"], name="login_code_expiry_idx"),
+        ]

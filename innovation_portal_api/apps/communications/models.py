@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import models
 
-from apps.core.constants import CommunicationChannel, CommunicationStatus, TemplateCode
+from apps.core.constants import CommunicationChannel, CommunicationStatus, NotificationType, TemplateCode
 from apps.core.models import TimeStampedModel, UUIDModel
 
 
@@ -44,3 +44,28 @@ class NotificationPreference(UUIDModel, TimeStampedModel):
     email_enabled = models.BooleanField(default=True)
     sms_enabled = models.BooleanField(default=False)
     internal_enabled = models.BooleanField(default=True)
+
+
+class NotificationTypePreference(UUIDModel, TimeStampedModel):
+    """Which channels a user wants for one notification type.
+
+    Sits next to the older NotificationPreference (one row per user with global
+    email/sms/internal switches), which keeps working unchanged. A type with no row
+    falls back to defaults derived from that older row.
+    """
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notification_type_preferences")
+    notification_type = models.CharField(max_length=40, choices=NotificationType.choices)
+    web_enabled = models.BooleanField(default=True)
+    whatsapp_enabled = models.BooleanField(default=False)
+    sms_enabled = models.BooleanField(default=False)
+    email_enabled = models.BooleanField(default=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user", "notification_type"], name="uq_user_notification_type_pref"),
+        ]
+        ordering = ("notification_type",)
+
+    def __str__(self) -> str:
+        return f"{self.user_id}:{self.notification_type}"

@@ -114,10 +114,12 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "submitted_submission",
             "submitted_at",
             "metadata",
+            "channel",
         )
         read_only_fields = (
             "reference_number",
             "innovator",
+            "channel",
             "status",
             "version",
             "progress_metadata",
@@ -154,8 +156,9 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "metadata",
             "responses",
             "workflow",
+            "channel",
         )
-        read_only_fields = ("reference_number", "innovator", "current_status", "submitted_at", "locked_for_editing", "latest_version_number")
+        read_only_fields = ("reference_number", "innovator", "current_status", "submitted_at", "locked_for_editing", "latest_version_number", "channel")
 
     def get_innovator_detail(self, obj):
         user = getattr(obj, "innovator", None)

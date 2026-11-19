@@ -1,9 +1,10 @@
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 
-from apps.accounts.models import SocialAccount, User, UserMFAProfile
+from apps.accounts.models import LoginCode, SocialAccount, User, UserMFAProfile
 from apps.accounts.services import RoleService
 from apps.core.constants import RoleType
+from apps.core.phone import InvalidPhoneNumber, normalize_phone
 from apps.profiles.models import InnovatorProfile
 
 
@@ -13,6 +14,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ("id", "email", "first_name", "last_name", "phone_number", "password")
+        # Email is optional on the model (phone-only accounts) but still required here.
+        extra_kwargs = {"email": {"required": True, "allow_null": False, "allow_blank": False}}
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -96,7 +99,49 @@ class ChangeEmailSerializer(serializers.Serializer):
 
 
 class SocialAuthStartSerializer(serializers.Serializer):
-    provider = serializers.ChoiceField(choices=("google", "github", "microsoft"))
+    provider = serializers.ChoiceField(choices=("google", "github", "microsoft", "ceda_staff"))
+
+
+class _LoginCodeTargetSerializer(serializers.Serializer):
+    phone = serializers.CharField(required=False, allow_blank=False, max_length=32)
+    email = serializers.EmailField(required=False, allow_blank=False)
+
+    def validate_phone(self, value):
+        try:
+            return normalize_phone(value)
+        except InvalidPhoneNumber as exc:
+            raise serializers.ValidationError(str(exc)) from exc
+
+    def validate_email(self, value):
+        return value.strip().lower()
+
+    def validate(self, attrs):
+        has_phone = bool(attrs.get("phone"))
+        has_email = bool(attrs.get("email"))
+        if has_phone == has_email:
+            raise serializers.ValidationError({"detail": "Send either `phone` or `email`, not both."})
+        if has_phone:
+            attrs["target_type"] = LoginCode.TargetType.PHONE
+            attrs["target"] = attrs["phone"]
+        else:
+            attrs["target_type"] = LoginCode.TargetType.EMAIL
+            attrs["target"] = attrs["email"]
+        return attrs
+
+
+class LoginCodeRequestSerializer(_LoginCodeTargetSerializer):
+    pass
+
+
+class LoginCodeRequestResponseSerializer(serializers.Serializer):
+    target_type = serializers.CharField()
+    channel = serializers.CharField()
+    destination_hint = serializers.CharField()
+    expires_in_seconds = serializers.IntegerField()
+
+
+class LoginCodeVerifySerializer(_LoginCodeTargetSerializer):
+    code = serializers.RegexField(r"^\d{6}$", error_messages={"invalid": "Enter the 6-digit code."})
 
 
 class SocialAuthCompleteSerializer(serializers.Serializer):
@@ -113,6 +158,9 @@ class AuthUserProfileSerializer(serializers.ModelSerializer):
             "gender",
             "date_of_birth",
             "region",
+            "district",
+            "sector",
+            "business_stage",
             "bio",
             "sector_interests",
             "skills",
@@ -139,6 +187,7 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
             "last_name",
             "phone_number",
             "email_verified",
+            "phone_verified",
             "primary_auth_method",
             "mfa_enabled",
             "mfa_method",

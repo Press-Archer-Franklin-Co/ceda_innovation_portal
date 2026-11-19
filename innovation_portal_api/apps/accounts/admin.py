@@ -1,18 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from apps.accounts.models import Role, SocialAccount, SocialAuthState, User, UserRole
+from apps.accounts.models import LoginCode, Role, SocialAccount, SocialAuthState, User, UserRole
 from apps.accounts.services import UserOnboardingService
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     ordering = ("email",)
-    list_display = ("email", "first_name", "last_name", "is_active", "is_staff")
-    search_fields = ("email", "first_name", "last_name")
+    list_display = ("__str__", "email", "phone_number", "first_name", "last_name", "is_active", "is_staff")
+    search_fields = ("email", "phone_number", "first_name", "last_name")
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal info", {"fields": ("first_name", "last_name", "phone_number")}),
+        ("Personal info", {"fields": ("first_name", "last_name", "phone_number", "email_verified", "phone_verified")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important dates", {"fields": ("last_login",)}),
     )
@@ -21,7 +21,7 @@ class UserAdmin(BaseUserAdmin):
             None,
             {
                 "classes": ("wide",),
-                "fields": ("email", "first_name", "last_name", "password1", "password2", "is_staff", "is_active"),
+                "fields": ("email", "phone_number", "first_name", "last_name", "password1", "password2", "is_staff", "is_active"),
             },
         ),
     )
@@ -41,3 +41,14 @@ admin.site.register(Role)
 admin.site.register(UserRole)
 admin.site.register(SocialAccount)
 admin.site.register(SocialAuthState)
+
+
+@admin.register(LoginCode)
+class LoginCodeAdmin(admin.ModelAdmin):
+    list_display = ("target_type", "target", "channel", "attempts", "expires_at", "used_at", "created_at")
+    list_filter = ("target_type", "channel")
+    search_fields = ("target",)
+    readonly_fields = [field.name for field in LoginCode._meta.fields]
+
+    def has_add_permission(self, request):
+        return False

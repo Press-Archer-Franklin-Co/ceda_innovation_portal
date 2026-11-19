@@ -290,6 +290,7 @@ class ApplicationDraftService:
             title=draft.title,
             metadata=draft.metadata,
             form_version_number=getattr(getattr(draft.program, "submission_form", None), "version", 1),
+            channel=draft.channel,
         )
         form_version = getattr(getattr(draft.program, "submission_form", None), "version", 1)
         field_map = {

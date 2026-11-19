@@ -21,6 +21,9 @@ from apps.accounts.serializers import (
     ChangePasswordSerializer,
     ForgotPasswordSerializer,
     LinkedSocialAccountSerializer,
+    LoginCodeRequestResponseSerializer,
+    LoginCodeRequestSerializer,
+    LoginCodeVerifySerializer,
     LoginSerializer,
     LogoutSerializer,
     RegisterSerializer,
@@ -369,6 +372,7 @@ class UserListView(generics.ListAPIView):
                 models.Q(first_name__icontains=search)
                 | models.Q(last_name__icontains=search)
                 | models.Q(email__icontains=search)
+                | models.Q(phone_number__icontains=search)
             )
         return queryset.distinct()
 
@@ -747,3 +751,105 @@ class SocialAccountLinkView(generics.GenericAPIView):
             user=request.user,
         )
         return api_success(message="Provider unlinked successfully.", status_code=status.HTTP_200_OK)
+
+
+def _client_ip(request) -> str:
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    return forwarded.split(",")[0].strip() if forwarded else request.META.get("REMOTE_ADDR", "")
+
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Request a sign-in code",
+    description=(
+        "Sends a 6-digit sign-in code to a phone (SMS) or email address. The code is valid for 10 minutes "
+        "and allows 5 tries. The response is the same whether or not an account exists. "
+        "Phone numbers are stored in E.164 form; 8-digit numbers are treated as Botswana (+267)."
+    ),
+    request=LoginCodeRequestSerializer,
+    responses={200: LoginCodeRequestResponseSerializer},
+    examples=[
+        OpenApiExample("By phone", value={"phone": "71234567"}, request_only=True),
+        OpenApiExample("By email", value={"email": "innovator@example.com"}, request_only=True),
+    ],
+)
+class LoginCodeRequestView(generics.GenericAPIView):
+    serializer_class = LoginCodeRequestSerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [AuthRateThrottle]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        from apps.accounts.otp_services import OTPService
+
+        result = OTPService.request_code(
+            target_type=serializer.validated_data["target_type"],
+            target=serializer.validated_data["target"],
+            ip=_client_ip(request),
+        )
+        return api_success(
+            data=LoginCodeRequestResponseSerializer(result).data,
+            message="If the details are valid, a sign-in code has been sent.",
+            status_code=status.HTTP_200_OK,
+        )
+
+
+@extend_schema(
+    tags=["Authentication"],
+    summary="Sign in with a code",
+    description=(
+        "Checks a sign-in code. An existing account is signed in; otherwise a new innovator account is created "
+        "for that phone or email. Returns the same `access`, `refresh` and `user` payload as password login, plus "
+        "`created`. If the account has MFA switched on, returns an MFA challenge instead, as password login does."
+    ),
+    request=LoginCodeVerifySerializer,
+    examples=[OpenApiExample("Verify", value={"phone": "+26771234567", "code": "123456"}, request_only=True)],
+)
+class LoginCodeVerifyView(generics.GenericAPIView):
+    serializer_class = LoginCodeVerifySerializer
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [AuthRateThrottle]
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        from apps.accounts.otp_services import OTPService
+
+        result = OTPService.verify_code(
+            target_type=serializer.validated_data["target_type"],
+            target=serializer.validated_data["target"],
+            code=serializer.validated_data["code"],
+        )
+        user = result.user
+        if MFAService.is_enabled(user):
+            profile = MFAService.ensure_profile(user)
+            challenge = MFAService.issue_challenge(
+                user=user,
+                method=profile.method,
+                purpose="login",
+                auth_method=result.auth_method,
+            )
+            return Response(
+                {
+                    "mfa_required": True,
+                    "challenge_id": challenge.id,
+                    "method": challenge.method,
+                    "email_hint": challenge.email_hint,
+                    "expires_at": challenge.expires_at,
+                    "created": result.created,
+                },
+                status=status.HTTP_200_OK,
+            )
+        tokens = OTPService.finalize_login(user=user, auth_method=result.auth_method)
+        _establish_browser_session(request, user)
+        return Response(
+            {
+                **tokens,
+                "user": AuthenticatedUserSerializer(user).data,
+                "created": result.created,
+            },
+            status=status.HTTP_200_OK,
+        )

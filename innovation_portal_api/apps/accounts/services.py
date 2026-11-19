@@ -260,3 +260,62 @@ class UserVerificationService:
                     "reason": reason,
                 }
             )
+
+
+class StaffSSOService:
+    """Gives staff access to people who signed in through CEDA staff SSO.
+
+    The allow list check happens earlier, in CedaStaffIdentityProvider, before any
+    account is created. Existing staff roles are never changed here; a person with no
+    staff role gets CEDA_SSO_DEFAULT_ROLE (``staff_member`` by default, which can work
+    on assigned tasks but cannot manage challenges or users). Administrators raise
+    access from the staff console as usual.
+    """
+
+    STAFF_ROLE_CODES = frozenset(
+        {
+            RoleType.ADMINISTRATOR,
+            RoleType.INNOVATION_MANAGER,
+            RoleType.INNOVATION_OFFICER,
+            RoleType.INNOVATION_ANALYST,
+            RoleType.STAFF_MEMBER,
+            RoleType.JUDGE,
+            RoleType.SPECIALIST,
+            RoleType.EXO,
+            RoleType.MENTOR,
+            RoleType.MANAGEMENT_VIEWER,
+        }
+    )
+
+    @staticmethod
+    def default_role() -> str:
+        from django.conf import settings
+
+        role = getattr(settings, "CEDA_SSO_DEFAULT_ROLE", "") or RoleType.STAFF_MEMBER
+        if role not in StaffSSOService.STAFF_ROLE_CODES or role == RoleType.ADMINISTRATOR:
+            logger.warning("CEDA_SSO_DEFAULT_ROLE=%r is not an allowed default; using staff_member.", role)
+            return RoleType.STAFF_MEMBER
+        return role
+
+    @staticmethod
+    @transaction.atomic
+    def grant_staff_access(*, user: User, created: bool, allowed_by: str = "") -> User:
+        active_roles = set(user.roles.filter(user_roles__is_active=True).values_list("code", flat=True))
+        granted_role = None
+        if not active_roles & StaffSSOService.STAFF_ROLE_CODES:
+            granted_role = StaffSSOService.default_role()
+            RoleService.assign_roles(user, [granted_role])
+            UserRole.objects.filter(user=user, role__code=granted_role).update(is_active=True, updated_at=timezone.now())
+            if created:
+                # A brand-new SSO account is a staff account, not an innovator account.
+                UserRole.objects.filter(user=user, role__code=RoleType.INNOVATOR).update(is_active=False, updated_at=timezone.now())
+        if not user.is_staff:
+            user.is_staff = True
+            user.save(update_fields=["is_staff", "updated_at"])
+        AuditService.log_action(
+            actor=user,
+            action_type="staff_sso_access_granted",
+            target=user,
+            metadata={"created": created, "allowed_by": allowed_by, "granted_role": granted_role or ""},
+        )
+        return user

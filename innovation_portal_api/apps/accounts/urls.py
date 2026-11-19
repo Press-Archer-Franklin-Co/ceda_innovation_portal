@@ -7,6 +7,8 @@ from apps.accounts.views import (
     ChangeEmailView,
     ForgotPasswordView,
     LinkedSocialAccountsView,
+    LoginCodeRequestView,
+    LoginCodeVerifyView,
     LoginView,
     LogoutView,
     RefreshView,
@@ -33,6 +35,8 @@ from apps.accounts.views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
+    path("otp/request/", LoginCodeRequestView.as_view(), name="otp-request"),
+    path("otp/verify/", LoginCodeVerifyView.as_view(), name="otp-verify"),
     path("refresh/", RefreshView.as_view(), name="token-refresh"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("forgot-password/", ForgotPasswordView.as_view(), name="forgot-password"),
