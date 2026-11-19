@@ -10,6 +10,7 @@ from rest_framework.views import APIView
 from apps.core.api import api_success
 from apps.core.i18n import resolve_request_language
 from apps.platform_config.flags import require_feature
+from apps.submissions import openapi as docs
 from apps.submissions.innovator_dashboard import FILTERS, InnovatorDashboardSelector
 from apps.submissions.serializers import ApplicationDraftSerializer, SimilarIdeasRequestSerializer
 from apps.submissions.similar_ideas import find_similar_ideas
@@ -27,7 +28,7 @@ class SimilarIdeasThrottle(UserRateThrottle):
 class MySummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(tags=["Innovator"], summary="Home screen: most recent idea, next action, unread notifications (2.1)", responses=None)
+    @extend_schema(tags=["Innovator"], summary="Home screen: most recent idea, next action, unread notifications (2.1)", responses=docs.SUMMARY)
     def get(self, request):
         return api_success(data=InnovatorDashboardSelector.summary(request.user, lang=_lang(request)))
 
@@ -39,7 +40,7 @@ class MyIdeasView(APIView):
         tags=["Innovator"],
         summary="My ideas: drafts and submissions in one list, with tab counts (2.2)",
         parameters=[OpenApiParameter("filter", str, enum=list(FILTERS), required=False)],
-        responses=None,
+        responses=docs.IDEAS,
     )
     def get(self, request):
         return api_success(
@@ -54,7 +55,7 @@ class MyUpdatesView(APIView):
         tags=["Innovator"],
         summary="Updates since a time: notifications and status changes, newest first",
         parameters=[OpenApiParameter("since", str, required=False, description="ISO 8601; default the last 30 days.")],
-        responses=None,
+        responses=docs.UPDATES,
     )
     def get(self, request):
         return api_success(data=InnovatorDashboardSelector.updates(request.user, since=request.query_params.get("since")))
@@ -63,7 +64,7 @@ class MyUpdatesView(APIView):
 class RecommendedChallengesView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(tags=["Innovator"], summary="Open challenges in my sectors", responses=None)
+    @extend_schema(tags=["Innovator"], summary="Open challenges in my sectors", responses=docs.RECOMMENDED)
     def get(self, request):
         return api_success(data=InnovatorDashboardSelector.recommended_challenges(request.user, lang=_lang(request)))
 
@@ -71,7 +72,7 @@ class RecommendedChallengesView(APIView):
 class IdeaChallengeMatchesView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(tags=["Innovator"], summary="Open challenges that match one of my ideas", responses=None)
+    @extend_schema(tags=["Innovator"], summary="Open challenges that match one of my ideas", responses=docs.MATCHES)
     def get(self, request, idea_id):
         return api_success(data=InnovatorDashboardSelector.challenge_matches(request.user, idea_id, lang=_lang(request)))
 
@@ -83,7 +84,7 @@ class LinkIdeaToChallengeView(APIView):
         tags=["Innovator"],
         summary="Start a challenge entry from an idea: copies answers by field key, returns what is left to answer",
         request=None,
-        responses=None,
+        responses={201: docs.LINK},
     )
     def post(self, request, idea_id, program_id):
         result = InnovatorDashboardSelector.link_challenge(request.user, idea_id, program_id)
@@ -105,7 +106,7 @@ class SimilarIdeasView(APIView):
         tags=["Innovator"],
         summary="Up to 5 published ideas or stories similar to a text (title, year and place only)",
         request=SimilarIdeasRequestSerializer,
-        responses=None,
+        responses=docs.SIMILAR,
     )
     def post(self, request):
         require_feature("similar_ideas")

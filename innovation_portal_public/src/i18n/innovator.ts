@@ -5,17 +5,6 @@
 // screens lane and must be checked by a Setswana speaker at CEDA before launch.
 
 export const innovatorEn = {
-  // Status words (ceda-ui section 6). TODO(U0): move to src/lib/status.ts.
-  'status.draft': 'Draft',
-  'status.submitted': 'Submitted',
-  'status.inReview': 'In review',
-  'status.needsInput': 'Needs your input',
-  'status.shortlisted': 'Shortlisted',
-  'status.approved': 'Approved',
-  'status.winner': 'Winner',
-  'status.notTaken': 'Not taken forward',
-  'status.notKnown': 'Not known',
-
   'time.justNow': 'Just now',
   'time.minutes': '{count} min ago',
   'time.hours': '{count} hours ago',
@@ -245,16 +234,6 @@ export const innovatorEn = {
 export type InnovatorKey = keyof typeof innovatorEn
 
 export const innovatorTn: Record<InnovatorKey, string> = {
-  'status.draft': 'Tshwantsho',
-  'status.submitted': 'E rometswe',
-  'status.inReview': 'E a sekasekwa',
-  'status.needsInput': 'Go tlhokega karabo ya gago',
-  'status.shortlisted': 'E tlhophilwe',
-  'status.approved': 'E amogetswe',
-  'status.winner': 'Mofenyi',
-  'status.notTaken': 'Ga e a tswelelediwa',
-  'status.notKnown': 'Ga go itsiwe',
-
   'time.justNow': 'Gone jaanong',
   'time.minutes': 'Metsotso e {count} e e fetileng',
   'time.hours': 'Diura di le {count} tse di fetileng',

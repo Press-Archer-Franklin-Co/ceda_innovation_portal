@@ -1,9 +1,10 @@
-import { useId, useRef } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useT } from '../../i18n/context'
 import { useFocusTrap } from './useFocusTrap'
+import { useGenie } from '../../lib/motion/useGenie'
 
 const SIZE_MAP = {
   sm: 'sm:max-w-sm',
@@ -15,21 +16,37 @@ const SIZE_MAP = {
 /**
  * Figma Foundations › Modal and confirm dialog.
  * Header (title, muted description, square close), body, cream footer band (ghost Cancel, primary last).
- * Esc closes, focus is trapped and returns to the opener. Bottom sheet on phone.
- * U0 adds the genie motion; keep the panel > header, body, footer structure.
+ * Opens with the genie out of triggerRef and closes back into it (ceda-genie-motion).
+ * Esc closes, focus is trapped once it has opened and returns to the trigger. Bottom sheet on phone.
+ * Props: open, onClose, title, description, size sm|md|lg|xl, footer, triggerRef, closeOnBackdrop, alert.
  */
-export default function Modal({ open, onClose, title, description, size = 'md', footer, children, closeOnBackdrop = true, alert = false, bodyClassName }) {
+export default function Modal({ open, onClose, title, description, size = 'md', footer, children, closeOnBackdrop = true, alert = false, bodyClassName, triggerRef }) {
   const t = useT()
-  const panelRef = useRef(null)
   const id = useId().replace(/:/g, '')
-  useFocusTrap(panelRef, open, onClose)
+  const [settled, setSettled] = useState(false)
+  const onOpened = useCallback(() => setSettled(true), [])
+  const { mounted, panelRef, backdropRef } = useGenie(open, triggerRef, { onOpened })
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) setSettled(false)
+  }, [open])
+
+  // Esc works from the first frame (a control that handles Esc itself calls preventDefault);
+  // the focus trap starts once the live panel is shown.
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => { if (e.key === 'Escape' && !e.defaultPrevented) onClose?.() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
+  useFocusTrap(panelRef, open && settled)
+
+  if (!mounted) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
-      <div className="absolute inset-0 bg-scrim/45 animate-fade-in" aria-hidden onClick={closeOnBackdrop ? onClose : undefined} />
-
+    <>
+    <div ref={backdropRef} className="fixed inset-0 z-50 bg-scrim/45" style={{ opacity: 0 }} aria-hidden onClick={closeOnBackdrop ? onClose : undefined} />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none">
       <div
         ref={panelRef}
         role={alert ? 'alertdialog' : 'dialog'}
@@ -38,7 +55,7 @@ export default function Modal({ open, onClose, title, description, size = 'md', 
         aria-describedby={description ? `${id}-desc` : undefined}
         tabIndex={-1}
         className={cn(
-          'relative w-full bg-surface shadow-pop flex flex-col overflow-hidden focus:outline-none animate-slide-up',
+          'pointer-events-auto relative w-full bg-surface shadow-pop flex flex-col overflow-hidden focus:outline-none',
           'rounded-t-card sm:rounded-card max-h-[92vh] sm:max-h-[90vh]',
           SIZE_MAP[size] ?? SIZE_MAP.md,
         )}
@@ -72,7 +89,8 @@ export default function Modal({ open, onClose, title, description, size = 'md', 
           <div className="flex flex-wrap items-center justify-end gap-2 px-5 py-3 2xl:px-6 2xl:py-4 bg-surface2 flex-shrink-0">{footer}</div>
         )}
       </div>
-    </div>,
+    </div>
+    </>,
     document.body,
   )
 }

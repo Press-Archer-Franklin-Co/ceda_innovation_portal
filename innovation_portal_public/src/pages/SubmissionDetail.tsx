@@ -21,10 +21,11 @@ import VerificationRequired from '../components/ui/VerificationRequired'
 import StandardHero from '../components/ui/StandardHero'
 import { useAuth } from '../context/AuthContext'
 import { groupResponses, normalizeResponses } from '../utils/applicantDisplay'
+import { EMPTY_CELL } from '../lib/format'
 
 
 function fmt(iso: string | null | undefined) {
-  if (!iso) return '—'
+  if (!iso) return EMPTY_CELL
   try {
     return new Date(iso).toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric',
@@ -34,37 +35,10 @@ function fmt(iso: string | null | undefined) {
 }
 
 function fmtDate(iso: string | null | undefined) {
-  if (!iso) return '—'
+  if (!iso) return EMPTY_CELL
   try {
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   } catch { return iso }
-}
-
-function statusVariant(s: string): 'open' | 'upcoming' | 'closed' | 'orange' | 'red' | 'default' {
-  switch (s?.toLowerCase()) {
-    case 'draft':                                        return 'default'
-    case 'submitted':
-    case 'under_review': case 'in_review':
-    case 'screening': case 'judging_review':             return 'upcoming'
-    case 'shortlisted': case 'finalist':
-    case 'winner': case 'accepted': case 'approved':     return 'open'
-    case 'returned': case 'requires_more_information':   return 'orange'
-    case 'rejected': case 'screened_out':                return 'red'
-    case 'withdrawn':                                    return 'closed'
-    default:                                             return 'default'
-  }
-}
-
-function humanStatus(s: string) {
-  const map: Record<string, string> = {
-    draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review',
-    in_review: 'Under Review', screening: 'Screening', judging_review: 'Judging',
-    shortlisted: 'Shortlisted', finalist: 'Finalist', winner: 'Winner',
-    accepted: 'Accepted', approved: 'Approved', returned: 'Returned for Revision',
-    requires_more_information: 'More Info Needed', rejected: 'Not Selected',
-    screened_out: 'Not Selected', withdrawn: 'Withdrawn',
-  }
-  return map[s?.toLowerCase()] ?? s?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) ?? s
 }
 
 function getFileItems(raw: unknown): SubmissionFileDocument[] {
@@ -486,8 +460,8 @@ function StatusSidebar({
   const currentStage = journey.find(stage => ['current', 'returned', 'rejected'].includes((stage.state || '').toLowerCase()))
   const [openStageId, setOpenStageId] = useState<string | null>(currentStage?.id ?? journey[0]?.id ?? null)
   const progName = typeof sub.program_detail === 'object' && sub.program_detail
-    ? (sub.program_detail as { title?: string }).title ?? '—'
-    : '—'
+    ? (sub.program_detail as { title?: string }).title ?? EMPTY_CELL
+    : EMPTY_CELL
 
   useEffect(() => {
     setOpenStageId(currentStage?.id ?? journey[0]?.id ?? null)
@@ -501,9 +475,7 @@ function StatusSidebar({
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-100/80">Application Info</p>
             <p className="mt-0.5 truncate text-sm font-black leading-tight">{sub.title || 'Submission'}</p>
           </div>
-          <Badge variant={statusVariant(sub.current_status)} className="shrink-0 bg-white/15 text-white ring-1 ring-white/20">
-            {humanStatus(sub.current_status)}
-          </Badge>
+          <Badge status={sub.current_status} className="shrink-0" />
         </div>
       </div>
 
@@ -511,7 +483,7 @@ function StatusSidebar({
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
           <div className="min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Reference</p>
-            <p className="truncate font-mono font-semibold text-gray-800">{sub.reference_number ?? '—'}</p>
+            <p className="truncate font-mono font-semibold text-gray-800">{sub.reference_number ?? EMPTY_CELL}</p>
           </div>
           <div className="min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Submitted</p>
@@ -667,8 +639,8 @@ export default function SubmissionDetail() {
           title={sub.title || 'Untitled'}
           subtitle={
             typeof sub.program_detail === 'object' && sub.program_detail
-              ? (sub.program_detail as { title?: string }).title ?? '—'
-              : '—'
+              ? (sub.program_detail as { title?: string }).title ?? EMPTY_CELL
+              : EMPTY_CELL
           }
           gradient="linear-gradient(125deg, #2E1E18 0%, #5A3C32 55%, #6B4A3E 100%)"
         />

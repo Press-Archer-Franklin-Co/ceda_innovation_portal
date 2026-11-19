@@ -1,11 +1,13 @@
 from rest_framework import serializers
 
+from drf_spectacular.utils import extend_schema_serializer
 from apps.accounts.models import User
 from apps.core.i18n import get_text, resolve_request_language
 from apps.profiles.models import ContactVerification, InnovatorProfile
 from apps.reference.models import District, Sector
 
 
+@extend_schema_serializer(component_name="ProfileUserSummary")
 class UserSummarySerializer(serializers.ModelSerializer):
     class Meta:
         model = User
@@ -61,7 +63,7 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
     def _lang(self):
         return resolve_request_language(self.context.get("request"))
 
-    def get_sector_name(self, obj):
+    def get_sector_name(self, obj) -> str | None:
         return get_text(obj.sector.name, self._lang()) if obj.sector_id else ""
 
     def _completeness(self, obj):
@@ -73,13 +75,13 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
             self._completeness_cache = cache
         return cache[obj.pk]
 
-    def get_percent_complete(self, obj):
+    def get_percent_complete(self, obj) -> int:
         return self._completeness(obj)["percent_complete"]
 
-    def get_missing_fields(self, obj):
+    def get_missing_fields(self, obj) -> list[dict]:
         return self._completeness(obj)["missing_fields"]
 
-    def get_district_name(self, obj):
+    def get_district_name(self, obj) -> str | None:
         return get_text(obj.district.name, self._lang()) if obj.district_id else ""
 
 

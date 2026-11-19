@@ -38,6 +38,7 @@ import {
   useSetStageConfig,
   useStageConfig,
 } from '../../../lib/queries/evaluations'
+import { useConfirm } from '../../../components/ui/confirm'
 
 const ROLE_OPTIONS = ['', 'innovator', 'innovation_officer', 'innovation_manager', 'judge', 'specialist', 'mentor', 'administrator']
 const EXECUTION_OPTIONS = ['sequential', 'parallel_all', 'parallel_any', 'parallel_minimum']
@@ -615,7 +616,7 @@ function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelet
             <p className="text-sm font-medium text-ceda-dark">Step Scoring</p>
             <p className="mt-1 text-xs text-ceda-muted">
               Choose how this step reviews submissions. Criteria-based steps score against a linked
-              criteria set — any assignee role can be used. Manual steps rely on direct actions only.
+              criteria set, so any assignee role can be used. Manual steps rely on direct actions only.
             </p>
           </div>
 
@@ -802,6 +803,7 @@ function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelet
 }
 
 export default function WorkflowBuilder() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: definition, isLoading, error, refetch } = useWorkflowDefinition(id)
@@ -896,8 +898,8 @@ export default function WorkflowBuilder() {
     return () => window.removeEventListener('beforeunload', beforeUnload)
   }, [drawerDirty])
 
-  const confirmDiscardChanges = () => (
-    !drawerDirty || window.confirm('You have unsaved step changes. Discard them?')
+  const confirmDiscardChanges = async () => (
+    !drawerDirty || confirm({ title: 'Discard your step changes?', body: 'You have changes to this step that are not saved.', confirmLabel: 'Discard changes', cancelLabel: 'Keep editing' })
   )
 
   const handleVersionedResult = (result, fallbackId = id) => {
@@ -920,8 +922,8 @@ export default function WorkflowBuilder() {
     ))
   }
 
-  const openEditor = (stepId) => {
-    if (!confirmDiscardChanges()) return
+  const openEditor = async (stepId) => {
+    if (!(await confirmDiscardChanges())) return
     setEditingStepId(stepId)
   }
 
@@ -955,7 +957,7 @@ export default function WorkflowBuilder() {
   }
 
   const addStep = async () => {
-    if (!confirmDiscardChanges()) return
+    if (!(await confirmDiscardChanges())) return
     setActionError(null)
     setMessage(null)
     try {
@@ -1083,7 +1085,7 @@ export default function WorkflowBuilder() {
 
   const removeStep = async () => {
     if (!editingStep) return
-    if (!window.confirm(`Remove step "${editingStep.name}"? This cannot be undone.`)) return
+    if (!(await confirm({ title: `Remove the step "${editingStep.name}"?`, note: 'This cannot be undone.', confirmLabel: 'Remove step' }))) return
     const removedStep = editingStep
     const previousSteps = steps
 
@@ -1123,8 +1125,8 @@ export default function WorkflowBuilder() {
         title={definition.name}
         subtitle={`${definition.program_detail?.title ?? 'No program'} · Workflow overview and step management`}
         back={(
-          <button onClick={() => {
-            if (!confirmDiscardChanges()) return
+          <button onClick={async () => {
+            if (!(await confirmDiscardChanges())) return
             navigate('/admin/workflows')
           }} className="btn-ghost btn-sm -ml-2">
             <ArrowLeft size={14} /> Workflows
@@ -1366,8 +1368,8 @@ export default function WorkflowBuilder() {
         open={!!editingStep}
         busy={updateStep.isPending || deleteStep.isPending || setStageConfig.isPending}
         allSteps={steps}
-        onClose={() => {
-          if (!confirmDiscardChanges()) return
+        onClose={async () => {
+          if (!(await confirmDiscardChanges())) return
           setDrawerDirty(false)
           setEditingStepId(null)
         }}

@@ -176,6 +176,8 @@ export interface IdeaItem {
   sector: SectorRef | null
   program: { id: string; title: string; is_general_intake: boolean }
   stage: string
+  /** TODO(R-16): the raw status, with B3. */
+  status?: string
   percent_complete: number
   last_change: string | null
   needs_action_reason: string

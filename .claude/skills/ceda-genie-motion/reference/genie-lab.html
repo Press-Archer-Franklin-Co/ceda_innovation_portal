@@ -1,0 +1,704 @@
+<title>CEDA Genie Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=Montserrat:wght@600;700;800&display=swap">
+<style>
+/* Layout: a slice of the CEDA staff console on the left, a motion control strip on top. */
+:root{
+  --bg:#ffffff; --surface:#ffffff; --surface2:#f5eee8; --border:#e6d9cf; --text:#2e1e18; --muted:#6b5248;
+  --primary:#a01e0a; --onPrimary:#ffffff; --primarySoft:#fbe8e3; --hero:#5a3c32; --heroMuted:#eadbd2; --amber:#faa014;
+  --success:#2e7d32; --successSoft:#e6f3e6; --info:#1d6fa3; --infoSoft:#e3eff7; --warning:#9a5200; --warningSoft:#fff3d1;
+  --scrim:rgba(30,19,15,.42); --shadow:0 24px 48px rgba(30,19,15,.18);
+  --display:"Montserrat",system-ui,sans-serif; --body:"Lato",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#1c1c1e; --surface:#26262a; --surface2:#2f2c2b; --border:#3d3836; --text:#f3ece8; --muted:#b9aaa2;
+  --primary:#d2401f; --primarySoft:#3a2420; --hero:#3b2822; --heroMuted:#5b463e; --successSoft:#1f3321; --infoSoft:#1b2c38; --warningSoft:#3a2e14;
+  --scrim:rgba(0,0,0,.55); --shadow:0 24px 48px rgba(0,0,0,.5); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#1c1c1e; --surface:#26262a; --surface2:#2f2c2b; --border:#3d3836; --text:#f3ece8; --muted:#b9aaa2;
+  --primary:#d2401f; --primarySoft:#3a2420; --hero:#3b2822; --heroMuted:#5b463e; --successSoft:#1f3321; --infoSoft:#1b2c38; --warningSoft:#3a2e14;
+  --scrim:rgba(0,0,0,.55); --shadow:0 24px 48px rgba(0,0,0,.5); color-scheme:dark }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:var(--body);font-size:14px;margin:0}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;display:flex;flex-direction:column;gap:14px;min-height:100%}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+.lab{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px 14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2)}
+.lab h1{font-size:16px;font-weight:800}
+.lab p{margin:0;color:var(--muted);font-size:13px;flex:1 1 260px;min-width:0}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:transparent;color:var(--text);font:600 12px var(--display);padding:7px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--hero);color:#fff}
+.scrub{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.scrub input{width:140px;accent-color:var(--primary)}
+.app{flex:1;display:grid;grid-template-columns:200px 1fr;border:1px solid var(--border);border-radius:14px;overflow:hidden;min-height:540px;background:var(--bg)}
+.side{background:var(--hero);color:#fff;padding:16px 12px;display:flex;flex-direction:column;gap:4px}
+.brand{font:800 15px var(--display);letter-spacing:.02em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.brand i{width:22px;height:14px;border-radius:14px 14px 2px 2px;background:linear-gradient(120deg,#a01e0a 0 40%,#f0641e 40% 70%,#faa014 70%);display:inline-block}
+.side .grp{font:700 10px var(--display);letter-spacing:.12em;text-transform:uppercase;opacity:.6;margin:10px 6px 4px}
+.side a{color:#fff;text-decoration:none;padding:7px 8px;border-radius:8px;font-size:13px;opacity:.9}
+.side a.on{background:rgba(255,255,255,.12);opacity:1}
+.main{display:flex;flex-direction:column;min-width:0}
+.top{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border)}
+.search{flex:1;max-width:340px;border:1px solid var(--border);background:var(--surface2);border-radius:8px;padding:7px 10px;color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.icon-btn{width:34px;height:34px;border-radius:999px;border:1px solid var(--border);background:var(--surface);color:var(--text);display:grid;place-items:center;cursor:pointer;position:relative}
+.icon-btn .dot{position:absolute;top:6px;right:7px;width:7px;height:7px;border-radius:9px;background:var(--primary)}
+.content{padding:18px 18px 22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px}
+.head h2{font-size:22px;font-weight:800}
+.head p{margin:2px 0 0;color:var(--muted)}
+.head .spacer{flex:1}
+.btn{font:600 13px var(--display);border-radius:8px;padding:9px 14px;cursor:pointer;border:1px solid transparent}
+.btn.primary{background:var(--primary);color:var(--onPrimary)}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.btn:focus-visible,.icon-btn:focus-visible,.seg button:focus-visible,.more:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.table{border:1px solid var(--border);border-radius:12px;overflow:hidden;overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th{background:var(--surface2);font:700 11px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 14px;height:32px}
+td{padding:0 14px;height:40px;border-top:1px solid var(--border);font-size:13px}
+td:first-child{font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px 3px 8px;font:700 12px var(--body)}
+.chip:before{content:"";width:6px;height:6px;border-radius:9px;background:currentColor}
+.chip.ok{background:var(--successSoft);color:var(--success)}
+.chip.info{background:var(--infoSoft);color:var(--info)}
+.more{border:0;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;border-radius:6px;padding:2px 8px}
+.note{color:var(--muted);font-size:12px}
+/* surfaces */
+.backdrop{position:fixed;inset:0;background:var(--scrim);opacity:0;z-index:50}
+.modal{position:fixed;z-index:60;left:50%;top:50%;width:min(520px,calc(100vw - 32px));transform:translate(-50%,-50%);background:var(--surface);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.m-head{display:flex;gap:12px;padding:20px 20px 10px 24px}
+.m-head h3{font-size:18px;font-weight:700}
+.m-head p{margin:4px 0 0;color:var(--muted);font-size:13px;line-height:1.45}
+.x{margin-left:auto;width:32px;height:32px;border-radius:8px;border:0;background:var(--surface2);color:var(--muted);font-size:18px;cursor:pointer;flex:none}
+.m-body{padding:6px 24px 18px;display:flex;flex-direction:column;gap:12px}
+label{font:700 13px var(--body);display:flex;flex-direction:column;gap:6px}
+input.f{font:400 14px var(--body);border:1px solid var(--border);border-radius:8px;padding:9px 11px;background:var(--surface);color:var(--text)}
+.hint{font:400 12px var(--body);color:var(--muted)}
+.upload{display:flex;gap:12px;align-items:center;border:1px dashed var(--border);border-radius:12px;padding:12px;background:var(--surface2)}
+.upload b{display:block;font-size:13px}
+.thumb{width:40px;height:40px;border-radius:8px;background:var(--heroMuted);flex:none}
+.m-foot{display:flex;justify-content:flex-end;gap:8px;padding:14px 24px 16px;background:var(--surface2)}
+.pop{position:fixed;z-index:60;width:320px;background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.pop h4{font:700 14px var(--display);margin:0;padding:14px 16px 8px;display:flex}
+.pop h4 span{margin-left:auto;font:600 12px var(--display);color:var(--primary)}
+.n{display:flex;gap:10px;padding:10px 16px;border-top:1px solid var(--border)}
+.n.unread{background:var(--primarySoft)}
+.n i{width:8px;height:8px;border-radius:9px;background:#6d28d9;margin-top:5px;flex:none}
+.n b{display:block;font-size:13px}.n small{color:var(--muted)}
+.menu{position:fixed;z-index:60;width:200px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);padding:6px}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--text);font:400 13px var(--body);padding:8px 10px;border-radius:6px;cursor:pointer}
+.menu button:hover{background:var(--surface2)}
+.menu .danger{color:#b42318}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 0}
+.toast{position:fixed;z-index:70;right:max(20px,env(safe-area-inset-right,0px));bottom:max(20px,env(safe-area-inset-bottom,0px));width:340px;max-width:calc(100vw - 32px);display:flex;gap:12px;padding:12px 12px 12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+.toast .ic{width:28px;height:28px;border-radius:99px;background:var(--successSoft);display:grid;place-items:center;flex:none}
+.toast .ic:after{content:"";width:10px;height:10px;border-radius:9px;background:var(--success)}
+.toast b{display:block;font-size:14px}.toast span{color:var(--muted);font-size:13px}
+.toast a{font:600 13px var(--display);color:var(--primary);cursor:pointer;display:inline-block;margin-top:4px}
+@media (max-width:760px){.app{grid-template-columns:1fr}.side{display:none}.search{display:none}}
+</style>
+
+<div class="wrap">
+  <div class="lab" role="group" aria-label="Motion controls">
+    <h1>Genie lab</h1>
+    <p>Click "Add partner", the bell, a row's ⋯ menu or "Save". The sides bend along curves and the real content pours out of the button. Slow motion works like holding Shift on a Mac.</p>
+    <div class="seg" id="speed" aria-label="Speed">
+      <button type="button" aria-pressed="true" data-k="1">Real speed</button>
+      <button type="button" aria-pressed="false" data-k="4">Slow ×4</button>
+      <button type="button" aria-pressed="false" data-k="10">Slow ×10</button>
+    </div>
+    <div class="scrub"><label for="freeze" style="font:600 12px var(--display);flex-direction:row;align-items:center;gap:8px">Freeze at <input id="freeze" type="range" min="0" max="100" value="100"></label><output id="fv">off</output></div>
+  </div>
+
+  <div class="app">
+    <nav class="side" aria-label="Staff menu">
+      <div class="brand"><i></i>CEDA · Innovation</div>
+      <div class="grp">Overview</div>
+      <a href="#">Dashboard</a><a href="#">Review queue</a>
+      <div class="grp">Website content</div>
+      <a href="#">Home page</a><a href="#">News &amp; bulletin</a><a class="on" href="#">Partners &amp; sponsors</a><a href="#">FAQs</a>
+    </nav>
+    <div class="main">
+      <div class="top">
+        <div class="search">Search ideas, people, references</div>
+        <div class="spacer"></div>
+        <button class="icon-btn" id="bell" type="button" aria-label="Notifications">🔔<span class="dot"></span></button>
+      </div>
+      <div class="content">
+        <div class="head">
+          <div><h2>Partners &amp; sponsors</h2><p>Shown in the strip on the public home page.</p></div>
+          <div class="spacer"></div>
+          <button class="btn ghost" id="save" type="button">Save order</button>
+        </div>
+        <div class="table"><table>
+          <thead><tr><th>Partner</th><th>Level</th><th>Status</th><th>Since</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>Botswana Innovation Hub</td><td>Lead sponsor</td><td><span class="chip ok">Published</span></td><td>Mar 2024</td><td><button class="more" type="button" aria-label="Actions for Botswana Innovation Hub">⋯</button></td></tr>
+            <tr><td>Local Enterprise Authority</td><td>Partner</td><td><span class="chip ok">Published</span></td><td>Jun 2024</td><td><button class="more" type="button" aria-label="Actions for Local Enterprise Authority">⋯</button></td></tr>
+            <tr><td>University of Botswana</td><td>Partner</td><td><span class="chip info">Scheduled</span></td><td>Dec 2026</td><td><button class="more" type="button" aria-label="Actions for University of Botswana">⋯</button></td></tr>
+          </tbody></table></div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+          <button class="btn primary" id="add" type="button">Add partner</button>
+          <span class="note">Example data. Open, then close with Cancel, × or Esc to see it pour back into the button.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<template id="t-modal">
+  <div class="backdrop"></div>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <div class="m-head"><div><h3 id="mt">Add partner</h3><p>Partners show in the strip on the home page. You can hide them at any time.</p></div><button class="x" type="button" aria-label="Close" data-close>×</button></div>
+    <div class="m-body">
+      <label>Organisation name<input class="f" id="org" value="Debswana Diamond Company"><span class="hint">As it should appear on the site</span></label>
+      <label>Website<input class="f" id="web" placeholder="https://"><span class="hint">Optional</span></label>
+      <div class="upload"><div class="thumb"></div><div><b>Logo</b><span class="hint">PNG or SVG, up to 2 MB. We crop it to fit.</span></div></div>
+    </div>
+    <div class="m-foot"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn primary" type="button" data-close>Save partner</button></div>
+  </div>
+</template>
+
+<script>
+/**
+ * CEDA genie: an Apple-style genie transition for the web. No dependencies.
+ *
+ * How Apple's genie works, and how this file reproduces it
+ * --------------------------------------------------------
+ * 1. The two sides of the window are not straight lines. Each side is a
+ *    smooth S-curve (a funnel) that runs from the window's edge down to the
+ *    dock icon's edge. The curve is flat where it leaves the window, steepest
+ *    in the middle and flat again where it meets the icon.
+ * 2. The motion has two overlapping phases (minimise direction):
+ *      - "slide": the bottom of the funnel narrows from the window's width to
+ *        the icon's width. The window body bends while it is still in place.
+ *      - "translate": the whole window then pours down through the funnel
+ *        and is squeezed into the icon.
+ *    The translate phase starts a little before the slide phase ends, which is
+ *    what makes it feel like liquid rather than two steps.
+ * 3. The window's real picture is visible the whole time. It is cut into thin
+ *    horizontal slices and each slice is warped to sit between the two curves.
+ *
+ * Opening (our modal, popover, menu, toast) is the same timeline played
+ * backwards: the content pours up out of the button through the funnel, then
+ * the funnel's narrow end widens out and the panel settles.
+ *
+ * Technique on the web
+ * --------------------
+ * - The real panel is laid out at its final place, hidden.
+ * - N slices are built from a static clone of the panel. Each slice shows one
+ *   band of it (overflow hidden), so the content stays real text, not a blurry
+ *   screenshot, and there is no delay taking a snapshot.
+ * - Every frame, each slice is mapped onto the four-cornered shape between the
+ *   two curves with one CSS matrix3d (a rectangle-to-quad projective
+ *   transform). Adjacent slices share edges, so the sides read as smooth
+ *   curves. Transforms run on the compositor; nothing is laid out per frame.
+ * - At the end the slices are removed and the live panel is shown, pixel for
+ *   pixel where the last frame left it.
+ *
+ * The geometry follows the reconstruction in Harshil Shah's "Recreating the
+ * Mac genie effect" (slide phase 0 to 0.5, translate phase 0.4 to 1, funnel
+ * mapped from height to width through an ease-in-out curve).
+ */
+
+/* ------------------------------------------------------------------ */
+/* Settings                                                            */
+/* ------------------------------------------------------------------ */
+
+const GENIE = {
+  /** Opening a modal from a button. */
+  openMs: 620,
+  /** Closing back into the button. */
+  closeMs: 520,
+  /** Smaller surfaces (popover, menu, toast) use these. */
+  smallOpenMs: 440,
+  smallCloseMs: 380,
+  /** Phase split on the minimise timeline (0 = panel, 1 = inside trigger). */
+  slideEnd: 0.5,
+  translateStart: 0.4,
+  /** One slice per this many pixels along the funnel, within the limits below. */
+  slicePx: 8,
+  minSlices: 16,
+  maxSlices: 72,
+  /** Slices overlap by this many px so no hairline seams show. */
+  seamPx: 0.75,
+  /** While the panel is still inside the trigger it fades in, so the first
+   *  frame looks exactly like the button. Fraction of the open timeline. */
+  fadeIn: 0.1,
+  /** Backdrop opacity at rest. */
+  backdrop: 1,
+};
+
+/* ------------------------------------------------------------------ */
+/* Small maths                                                         */
+/* ------------------------------------------------------------------ */
+
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const lerp = (a, b, t) => a + (b - a) * t;
+/** Flat at both ends, steepest in the middle. The funnel's side profile. */
+const smoothstep = (h) => h * h * (3 - 2 * h);
+/** Each phase starts and ends gently. This is what makes it fluid. */
+const easeInOutSine = (t) => -(Math.cos(Math.PI * t) - 1) / 2;
+
+/* ------------------------------------------------------------------ */
+/* Which side of the panel the trigger is on                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Returns 'bottom' | 'top' | 'left' | 'right' | 'none'.
+ * The funnel always points from the panel towards the trigger.
+ */
+function funnelEdge(panel, trigger) {
+  const pcx = panel.x + panel.width / 2;
+  const pcy = panel.y + panel.height / 2;
+  const tcx = trigger.x + trigger.width / 2;
+  const tcy = trigger.y + trigger.height / 2;
+  const nx = (tcx - pcx) / (panel.width / 2 || 1);
+  const ny = (tcy - pcy) / (panel.height / 2 || 1);
+  if (Math.abs(nx) < 0.35 && Math.abs(ny) < 0.35) return 'none';
+  if (Math.abs(ny) >= Math.abs(nx)) return ny > 0 ? 'bottom' : 'top';
+  return nx > 0 ? 'right' : 'left';
+}
+
+/* ------------------------------------------------------------------ */
+/* Canonical frame: the funnel always runs "down" along axis a         */
+/* ------------------------------------------------------------------ */
+
+// a = along the funnel (towards the trigger), c = across it.
+function toCanonical(rect, edge) {
+  const { x, y, width: w, height: h } = rect;
+  switch (edge) {
+    case 'bottom': return { a0: y, a1: y + h, c0: x, c1: x + w };
+    case 'top': return { a0: -(y + h), a1: -y, c0: x, c1: x + w };
+    case 'right': return { a0: x, a1: x + w, c0: y, c1: y + h };
+    case 'left': return { a0: -(x + w), a1: -x, c0: y, c1: y + h };
+    default: throw new Error('bad edge ' + edge);
+  }
+}
+
+function toScreen(a, c, edge) {
+  switch (edge) {
+    case 'bottom': return [c, a];
+    case 'top': return [c, -a];
+    case 'right': return [a, c];
+    case 'left': return [-a, c];
+    default: throw new Error('bad edge ' + edge);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* The genie shape at a moment                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Slice boundaries at minimise fraction f (0 = full panel, 1 = in trigger).
+ * Returns n + 1 rows. Row k is where the panel's band edge k / n now sits:
+ *   { a, c0, c1 } in the canonical frame.
+ */
+function genieRows(f, panel, trigger, edge, n, opts = GENIE) {
+  const P = toCanonical(panel, edge);
+  const T = toCanonical(trigger, edge);
+
+  const slide = easeInOutSine(clamp01(f / opts.slideEnd));
+  const move = easeInOutSine(clamp01((f - opts.translateStart) / (1 - opts.translateStart)));
+
+  // Translate: the far edge travels to the trigger's far edge.
+  const d = move * (T.a0 - P.a0);
+  const top = P.a0 + d;
+  const bottom = Math.max(top + 0.25, Math.min(P.a1 + d, T.a1));
+
+  // Funnel band: from the panel's far edge to the trigger's far edge.
+  const bandTop = P.a0;
+  const bandBottom = Math.max(T.a0, P.a0 + 1);
+  const narrowL = lerp(P.c0, T.c0, slide);
+  const narrowR = lerp(P.c1, T.c1, slide);
+
+  const rows = new Array(n + 1);
+  for (let k = 0; k <= n; k++) {
+    const a = lerp(top, bottom, k / n);
+    const s = smoothstep(clamp01((a - bandTop) / (bandBottom - bandTop)));
+    let c0 = lerp(P.c0, narrowL, s);
+    let c1 = lerp(P.c1, narrowR, s);
+    if (c1 - c0 < 0.5) { const m = (c0 + c1) / 2; c0 = m - 0.25; c1 = m + 0.25; }
+    rows[k] = { a, c0, c1 };
+  }
+  return rows;
+}
+
+/**
+ * The outline of the whole genie at f, as screen points (for drawing the
+ * silhouette in a design tool, or a debug overlay). Clockwise.
+ */
+function genieOutline(f, panel, trigger, opts = GENIE, n = 48) {
+  const edge = funnelEdge(panel, trigger);
+  if (edge === 'none') return null;
+  const rows = genieRows(f, panel, trigger, edge, n, opts);
+  const left = rows.map((r) => toScreen(r.a, r.c0, edge));
+  const right = rows.map((r) => toScreen(r.a, r.c1, edge));
+  return [...left, ...right.reverse()];
+}
+
+/* ------------------------------------------------------------------ */
+/* Rectangle to quad as CSS matrix3d                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Maps an element of size w x h (origin 0 0) onto quad p (4 screen points:
+ * top-left, top-right, bottom-right, bottom-left of the element).
+ */
+function quadMatrix(w, h, p) {
+  const [x0, y0] = p[0], [x1, y1] = p[1], [x2, y2] = p[2], [x3, y3] = p[3];
+  const sx = x0 - x1 + x2 - x3;
+  const sy = y0 - y1 + y2 - y3;
+  let a, b, c, d, e, f, g, hh;
+  if (Math.abs(sx) < 1e-9 && Math.abs(sy) < 1e-9) {
+    a = x1 - x0; b = x3 - x0; c = x0;
+    d = y1 - y0; e = y3 - y0; f = y0;
+    g = 0; hh = 0;
+  } else {
+    const dx1 = x1 - x2, dx2 = x3 - x2, dy1 = y1 - y2, dy2 = y3 - y2;
+    const den = dx1 * dy2 - dx2 * dy1;
+    if (Math.abs(den) < 1e-12) return null;
+    g = (sx * dy2 - dx2 * sy) / den;
+    hh = (dx1 * sy - sx * dy1) / den;
+    a = x1 - x0 + g * x1; b = x3 - x0 + hh * x3; c = x0;
+    d = y1 - y0 + g * y1; e = y3 - y0 + hh * y3; f = y0;
+  }
+  const m = [a / w, d / w, 0, g / w, b / h, e / h, 0, hh / h, 0, 0, 1, 0, c, f, 0, 1];
+  for (const v of m) if (!Number.isFinite(v)) return null;
+  return m;
+}
+
+/** Applies quadMatrix to a point, for tests. */
+function applyMatrix(m, x, y) {
+  const X = m[0] * x + m[4] * y + m[12];
+  const Y = m[1] * x + m[5] * y + m[13];
+  const W = m[3] * x + m[7] * y + m[15];
+  return [X / W, Y / W];
+}
+
+/* ------------------------------------------------------------------ */
+/* DOM renderer                                                        */
+/* ------------------------------------------------------------------ */
+
+const toRect = (src) => {
+  if (!src) return null;
+  if (typeof src.getBoundingClientRect === 'function') {
+    const r = src.getBoundingClientRect();
+    return { x: r.x, y: r.y, width: r.width, height: r.height };
+  }
+  if ('width' in src) return { x: src.x, y: src.y, width: src.width, height: src.height };
+  return { x: src.x - 1, y: src.y - 1, width: 2, height: 2 }; // a pointer position
+};
+
+/**
+ * Builds the slices for one panel and returns render(f) and destroy().
+ * The panel must already be in its final position (it may be hidden).
+ */
+function createGenieRenderer(panelEl, triggerSrc, opts = GENIE) {
+  const panel = toRect(panelEl);
+  const trigger = toRect(triggerSrc);
+  const edge = funnelEdge(panel, trigger);
+  if (edge === 'none') return null;
+
+  const vertical = edge === 'top' || edge === 'bottom';
+  const length = vertical ? panel.height : panel.width;
+  const n = Math.max(opts.minSlices, Math.min(opts.maxSlices, Math.round(length / opts.slicePx)));
+  const sliceLen = length / n;
+
+  const layer = document.createElement('div');
+  layer.setAttribute('aria-hidden', 'true');
+  layer.dataset.genieLayer = '';
+  Object.assign(layer.style, {
+    position: 'fixed', inset: '0', pointerEvents: 'none', zIndex: '2147483000',
+    contain: 'strict',
+  });
+
+  const source = panelEl.cloneNode(true);
+  source.removeAttribute('id');
+  source.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id'));
+  source.querySelectorAll('input,select,textarea,button,a').forEach((el) => el.setAttribute('tabindex', '-1'));
+  const cs = getComputedStyle(panelEl);
+  Object.assign(source.style, {
+    position: 'absolute', left: '0', top: '0', margin: '0', transform: 'none',
+    width: panel.width + 'px', height: panel.height + 'px', boxSizing: 'border-box',
+    visibility: 'visible', opacity: '1', transition: 'none', animation: 'none',
+    boxShadow: 'none', // the shadow is drawn once, on the whole silhouette, below
+  });
+
+  const slices = [];
+  for (let k = 0; k < n; k++) {
+    // Band k in canonical terms is v in [k/n, (k+1)/n] from the far edge.
+    const farFirst = edge === 'bottom' || edge === 'right';
+    const offset = farFirst ? k * sliceLen : length - (k + 1) * sliceLen;
+    const seam = k === n - 1 ? 0 : opts.seamPx;
+    const w = vertical ? panel.width : sliceLen + seam;
+    const h = vertical ? sliceLen + seam : panel.height;
+    const el = document.createElement('div');
+    Object.assign(el.style, {
+      position: 'absolute', left: '0', top: '0', width: w + 'px', height: h + 'px',
+      overflow: 'hidden', transformOrigin: '0 0', willChange: 'transform', backfaceVisibility: 'hidden',
+      borderRadius: '0',
+    });
+    const inner = source.cloneNode(true);
+    inner.style.left = vertical ? '0' : -offset + 'px';
+    inner.style.top = vertical ? -offset + 'px' : '0';
+    el.appendChild(inner);
+    layer.appendChild(el);
+    // The matrix maps only the band itself; the seam spills past it into the
+    // neighbouring slice, which is what hides hairlines.
+    const mw = vertical ? panel.width : sliceLen;
+    const mh = vertical ? sliceLen : panel.height;
+    slices.push({ el, mw, mh, k });
+  }
+  document.body.appendChild(layer);
+
+  const pts = (r, side) => toScreen(r.a, side === 0 ? r.c0 : r.c1, edge);
+
+  function render(f) {
+    const rows = genieRows(f, panel, trigger, edge, n, opts);
+    for (const s of slices) {
+      const r0 = rows[s.k], r1 = rows[s.k + 1];
+      let quad;
+      // Element corners: TL, TR, BR, BL in screen orientation.
+      if (edge === 'bottom') quad = [pts(r0, 0), pts(r0, 1), pts(r1, 1), pts(r1, 0)];
+      else if (edge === 'top') quad = [pts(r1, 0), pts(r1, 1), pts(r0, 1), pts(r0, 0)];
+      else if (edge === 'right') quad = [pts(r0, 0), pts(r1, 0), pts(r1, 1), pts(r0, 1)];
+      else quad = [pts(r1, 0), pts(r0, 0), pts(r0, 1), pts(r1, 1)];
+      const m = quadMatrix(s.mw, s.mh, quad);
+      if (m) s.el.style.transform = 'matrix3d(' + m.join(',') + ')';
+    }
+    layer.style.opacity = String(clamp01((1 - f) / opts.fadeIn));
+  }
+
+  function destroy() { layer.remove(); }
+
+  return { render, destroy, edge, slices: n, panel, trigger, radius: cs.borderRadius };
+}
+
+/* ------------------------------------------------------------------ */
+/* Running it                                                          */
+/* ------------------------------------------------------------------ */
+
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Plays the genie.
+ *
+ *   const run = genie(panelEl, buttonEl, { direction: 'open', backdrop: el })
+ *   await run.finished
+ *   run.reverse()   // flips direction from where it is now
+ *   run.cancel()    // jumps to the end state of the current direction
+ *
+ * Open: the panel is hidden while the slices play, then shown.
+ * Close: the panel is hidden at once; remove it from the DOM after `finished`.
+ */
+function genie(panelEl, triggerSrc, options = {}) {
+  const opts = { ...GENIE, ...options };
+  let direction = opts.direction || 'open';
+  const small = !!opts.small;
+  const durFor = (dir) => opts.durationMs ?? (dir === 'open'
+    ? (small ? opts.smallOpenMs : opts.openMs)
+    : (small ? opts.smallCloseMs : opts.closeMs));
+  const backdrop = opts.backdropEl || null;
+
+  let resolveDone;
+  const finished = new Promise((r) => { resolveDone = r; });
+  let raf = 0;
+  let renderer = null;
+
+  // Reduced motion, or a trigger sitting on the panel: a short fade, no warp.
+  if (prefersReducedMotion() || opts.reduced || !triggerSrc ||
+      funnelEdge(toRect(panelEl), toRect(triggerSrc)) === 'none') {
+    const ms = 150;
+    const from = direction === 'open' ? 0 : 1;
+    panelEl.style.transition = `opacity ${ms}ms ease`;
+    if (backdrop) backdrop.style.transition = `opacity ${ms}ms ease`;
+    panelEl.style.opacity = String(from);
+    if (backdrop) backdrop.style.opacity = String(from * opts.backdrop);
+    requestAnimationFrame(() => {
+      panelEl.style.opacity = String(1 - from);
+      if (backdrop) backdrop.style.opacity = String((1 - from) * opts.backdrop);
+    });
+    setTimeout(() => { panelEl.style.transition = ''; resolveDone(direction); }, ms + 20);
+    return { finished, reverse() {}, cancel() {} };
+  }
+
+  renderer = createGenieRenderer(panelEl, triggerSrc, opts);
+  panelEl.style.visibility = 'hidden';
+  if (opts.onStart) opts.onStart(renderer);
+
+  // f is the minimise fraction: 0 = full panel, 1 = inside the trigger.
+  let f = direction === 'open' ? 1 : 0;
+  let last = performance.now();
+
+  const paint = () => {
+    renderer.render(f);
+    if (backdrop) backdrop.style.opacity = String(easeInOutSine(1 - f) * opts.backdrop);
+    if (opts.onFrame) opts.onFrame(f);
+  };
+
+  const step = (now) => {
+    const dt = now - last;
+    last = now;
+    const delta = dt / durFor(direction);
+    f = clamp01(direction === 'open' ? f - delta : f + delta);
+    paint();
+    const done = direction === 'open' ? f <= 0 : f >= 1;
+    if (done) return finish();
+    raf = requestAnimationFrame(step);
+  };
+
+  function finish() {
+    cancelAnimationFrame(raf);
+    renderer.destroy();
+    if (direction === 'open') {
+      panelEl.style.visibility = '';
+      // The slices carry no shadow (it would repaint every frame), so the
+      // panel's own shadow eases in as it settles instead of popping.
+      const shadow = getComputedStyle(panelEl).boxShadow;
+      if (shadow && shadow !== 'none' && panelEl.animate) {
+        panelEl.animate([{ boxShadow: 'none' }, { boxShadow: shadow }], { duration: 200, easing: 'ease-out' });
+      }
+    }
+    resolveDone(direction);
+  }
+
+  paint();
+  raf = requestAnimationFrame((t) => { last = t; raf = requestAnimationFrame(step); });
+
+  return {
+    finished,
+    /** Turn round mid-flight; keeps the current shape, so there is no jump. */
+    reverse() { direction = direction === 'open' ? 'close' : 'open'; },
+    cancel() { f = direction === 'open' ? 0 : 1; paint(); finish(); },
+    get progress() { return 1 - f; },
+    get direction() { return direction; },
+  };
+}
+
+/**
+ * For tests and design exports: draw one exact frame and leave it on screen.
+ * Returns destroy().
+ */
+function genieFrame(panelEl, triggerSrc, progress, opts = GENIE) {
+  const r = createGenieRenderer(panelEl, triggerSrc, opts);
+  if (!r) return () => {};
+  panelEl.style.visibility = 'hidden';
+  r.render(1 - progress);
+  return () => { r.destroy(); panelEl.style.visibility = ''; };
+}
+
+
+/* ---------- demo wiring ---------- */
+let speed = 1, freeze = null;
+document.querySelectorAll('#speed button').forEach(b => b.addEventListener('click', () => {
+  speed = +b.dataset.k;
+  document.querySelectorAll('#speed button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+const fr = document.getElementById('freeze'), fv = document.getElementById('fv');
+fr.addEventListener('input', () => { freeze = +fr.value >= 100 ? null : +fr.value / 100; fv.textContent = freeze == null ? 'off' : Math.round(freeze * 100) + '%'; });
+
+function play(panel, trigger, opts) {
+  const base = { ...opts };
+  const scale = (ms) => ms * speed;
+  if (freeze != null) {
+    const kill = genieFrame(panel, trigger, freeze, { ...GENIE, ...base });
+    if (base.backdropEl) base.backdropEl.style.opacity = String(easeInOutSine(freeze));
+    return { finished: new Promise(() => {}), freezeKill: kill };
+  }
+  const d = base.direction === 'open'
+    ? (base.small ? GENIE.smallOpenMs : GENIE.openMs)
+    : (base.small ? GENIE.smallCloseMs : GENIE.closeMs);
+  return genie(panel, trigger, { ...base, durationMs: scale(d) });
+}
+
+let open = null; // { els, trigger, close }
+function closeOpen() { if (open) open.close(); }
+
+function mount(nodes) { nodes.forEach(n => document.body.appendChild(n)); }
+
+// Modal
+document.getElementById('add').addEventListener('click', (e) => {
+  closeOpen();
+  const trigger = e.currentTarget;
+  const frag = document.getElementById('t-modal').content.cloneNode(true);
+  const backdrop = frag.querySelector('.backdrop'), modal = frag.querySelector('.modal');
+  mount([backdrop, modal]);
+  let run = play(modal, trigger, { direction: 'open', backdropEl: backdrop });
+  const onKey = (ev) => { if (ev.key === 'Escape') doClose(); };
+  document.addEventListener('keydown', onKey);
+  run.finished.then(() => modal.querySelector('#org').focus());
+  function doClose() {
+    document.removeEventListener('keydown', onKey);
+    if (run.freezeKill) { run.freezeKill(); backdrop.remove(); modal.remove(); open = null; return; }
+    if (run.direction === 'open' && run.progress < 1) { run.reverse(); }
+    else { run = play(modal, trigger, { direction: 'close', backdropEl: backdrop }); }
+    run.finished.then(() => { backdrop.remove(); modal.remove(); trigger.focus(); });
+    open = null;
+  }
+  modal.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', doClose));
+  backdrop.addEventListener('click', doClose);
+  open = { close: doClose };
+});
+
+// Popover and menu share one helper
+function anchored(trigger, el, place, small) {
+  closeOpen();
+  document.body.appendChild(el);
+  const r = trigger.getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight;
+  let x = place === 'end' ? r.right - w : r.left;
+  x = Math.max(12, Math.min(x, innerWidth - w - 12));
+  let y = r.bottom + 8; if (y + h > innerHeight - 12) y = r.top - h - 8;
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  let run = play(el, trigger, { direction: 'open', small });
+  const away = (ev) => { if (!el.contains(ev.target) && ev.target !== trigger) doClose(); };
+  const key = (ev) => { if (ev.key === 'Escape') doClose(); };
+  setTimeout(() => { document.addEventListener('pointerdown', away); document.addEventListener('keydown', key); });
+  function doClose() {
+    document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', key);
+    if (run.freezeKill) { run.freezeKill(); el.remove(); open = null; return; }
+    if (run.direction === 'open' && run.progress < 1) run.reverse();
+    else run = play(el, trigger, { direction: 'close', small });
+    run.finished.then(() => el.remove());
+    open = null;
+  }
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', doClose));
+  open = { close: doClose };
+}
+
+document.getElementById('bell').addEventListener('click', (e) => {
+  const el = document.createElement('div'); el.className = 'pop'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Notifications');
+  el.innerHTML = '<h4>Notifications<span>Mark all read</span></h4>' +
+    '<div class="n unread"><i></i><div><b>Your officer replied</b><small>Could you add the cost of the cold room? · 10 min ago</small></div></div>' +
+    '<div class="n"><i style="background:var(--border)"></i><div><b>Idea moved to In review</b><small>Solar cold rooms for Maun farmers · Yesterday</small></div></div>' +
+    '<div class="n"><i style="background:var(--border)"></i><div><b>New challenge: Made in Botswana</b><small>Entries close 12 Dec · 2 days ago</small></div></div>';
+  anchored(e.currentTarget, el, 'end', true);
+});
+
+document.querySelectorAll('.more').forEach(btn => btn.addEventListener('click', (e) => {
+  const el = document.createElement('div'); el.className = 'menu'; el.setAttribute('role', 'menu');
+  el.innerHTML = '<button role="menuitem">Edit</button><button role="menuitem">Move up</button><button role="menuitem">Hide from home page</button><hr><button role="menuitem" class="danger">Delete</button>';
+  anchored(e.currentTarget, el, 'end', true);
+}));
+
+// Toast from the Save button
+let toastEl = null;
+document.getElementById('save').addEventListener('click', (e) => {
+  if (toastEl) toastEl.remove();
+  const trigger = e.currentTarget;
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status');
+  t.innerHTML = '<div class="ic"></div><div><b>Order saved</b><span>The home page strip now follows this order.</span><br><a>Undo</a></div>';
+  document.body.appendChild(t); toastEl = t;
+  const run = play(t, trigger, { direction: 'open', small: true });
+  if (run.freezeKill) { setTimeout(() => { run.freezeKill(); t.remove(); }, 2500); return; }
+  run.finished.then(() => setTimeout(() => {
+    if (toastEl !== t) return;
+    play(t, document.getElementById('bell'), { direction: 'close', small: true }).finished.then(() => t.remove());
+  }, 3200 * Math.max(1, speed / 2)));
+});
+</script>
