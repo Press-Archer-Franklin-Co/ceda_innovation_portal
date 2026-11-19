@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from apps.reference.models import Sector
 from apps.core.constants import ProgramStatus
 
 from apps.programs.condition_services import FormConditionService
@@ -44,7 +46,7 @@ class ProgramTypeSerializer(serializers.ModelSerializer):
 class ProgramStageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProgramStage
-        fields = ("id", "name", "code", "ordering", "is_active")
+        fields = ("id", "name", "code", "ordering", "is_active", "explanation", "usual_duration")
 
 
 class SubmissionFormFieldOptionSerializer(serializers.ModelSerializer):
@@ -121,6 +123,7 @@ class ProgramSerializer(serializers.ModelSerializer):
     workflow_definitions = serializers.SerializerMethodField()
     entry = serializers.SerializerMethodField()
     marking_criteria_title = serializers.CharField(source="marking_criteria.title", read_only=True, default=None)
+    sectors = serializers.PrimaryKeyRelatedField(many=True, queryset=Sector.objects.filter(active=True), required=False)
 
     class Meta:
         model = Program
@@ -162,8 +165,11 @@ class ProgramSerializer(serializers.ModelSerializer):
             "availability",
             "active_workflow_definition",
             "workflow_definitions",
+            "is_general_intake",
+            "sectors",
+            "next_panel_at",
         )
-        read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason")
+        read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake")
 
     def create(self, validated_data):
         program_type_id = validated_data.pop("program_type_id")

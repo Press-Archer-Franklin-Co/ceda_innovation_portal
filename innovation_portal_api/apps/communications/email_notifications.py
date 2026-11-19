@@ -388,6 +388,8 @@ class EmailNotificationService:
 
     @staticmethod
     def send_submission_received_email(*, submission):
+        if not submission.innovator_id or not submission.innovator.email:
+            return
         context = EmailNotificationService._base_context(
             preheader="Your submission has been received by the CEDA Innovation Portal.",
             headline="Submission received",

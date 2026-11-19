@@ -10,6 +10,9 @@ from apps.notifications.selectors import CHANNEL_FIELDS, NotificationPreferenceS
 class NotificationService:
     @staticmethod
     def notify(*, user, notification_type: str, message: str, title: str = "", send_email: bool = False):
+        if user is None:
+            # Guest submissions have no account to notify; they get text messages instead.
+            return None
         notification = Notification.objects.filter(
             recipient=user,
             notification_type=notification_type,

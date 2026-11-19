@@ -66,7 +66,7 @@ class CedaDraftRuntimeAlignmentApiTests(TestCase):
         self.assertEqual(create_response.status_code, 201)
         draft_id = create_response.json()["id"]
 
-        submit_response = self.client.post(f"/api/drafts/{draft_id}/submit/", {}, format="json")
+        submit_response = self.client.post(f"/api/drafts/{draft_id}/submit/", {"consent": True}, format="json")
         self.assertEqual(submit_response.status_code, 200)
         self.assertEqual(submit_response.json()["data"]["current_status"], "submitted")
         self.assertTrue(self.program.submissions.filter(title="Separated Draft").exists())
@@ -115,7 +115,7 @@ class CedaDraftRuntimeAlignmentApiTests(TestCase):
         )
         self.assertEqual(upload_response.status_code, 201)
 
-        submit_response = self.client.post(f"/api/drafts/{draft_id}/submit/", {}, format="json")
+        submit_response = self.client.post(f"/api/drafts/{draft_id}/submit/", {"consent": True}, format="json")
         self.assertEqual(submit_response.status_code, 200)
         submission_id = submit_response.json()["data"]["id"]
 

@@ -73,6 +73,13 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     )
     results_announced_at = models.DateTimeField(null=True, blank=True)
     results_hold_reason = models.TextField(blank=True)
+    is_general_intake = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="The always-open programme that ideas without a chosen challenge belong to.",
+    )
+    sectors = models.ManyToManyField("reference.Sector", blank=True, related_name="programs")
+    next_panel_at = models.DateTimeField(null=True, blank=True, help_text="Next review panel date shown to innovators.")
 
     class Meta:
         indexes = [models.Index(fields=["status", "program_type"]), models.Index(fields=["opening_date", "closing_date"])]
@@ -160,11 +167,15 @@ class ChallengeJudge(UUIDModel, TimeStampedModel):
 
 
 class ProgramStage(UUIDModel, TimeStampedModel):
+    """Innovator-facing description of a review stage. Matched to workflow steps by code."""
+
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="stages")
     name = models.CharField(max_length=120)
     code = models.CharField(max_length=80)
     ordering = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
+    explanation = models.TextField(blank=True, help_text="Plain-language explanation shown on the idea timeline.")
+    usual_duration = models.CharField(max_length=60, blank=True, help_text='For example "1 to 2 weeks".')
 
     class Meta:
         unique_together = ("program", "code")

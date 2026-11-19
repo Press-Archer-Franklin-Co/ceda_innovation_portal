@@ -14,6 +14,14 @@ from apps.workflow.services import WorkflowRuntimeService
 
 
 class ReferenceNumberService:
+    """References for new submissions: CEDA-IP-YYYY-NNNNN, numbered per year.
+
+    Older references (CEDA-INNOV-..., CEDA-HACK-..., CEDA-IC-...) are never changed.
+    PREFIX_MAP is kept for the repair_duplicate_submission_references command,
+    which works on those older references.
+    """
+
+    PREFIX = "CEDA-IP"
     PREFIX_MAP = {
         "idea": "CEDA-INNOV",
         "hackathon": "CEDA-HACK",
@@ -22,16 +30,27 @@ class ReferenceNumberService:
     }
 
     @classmethod
-    def generate(cls, program) -> str:
-        year = timezone.now().year
-        prefix = cls.PREFIX_MAP.get(program.program_type.code, "CEDA-PROG")
-        stem = f"{prefix}-{year}-"
-        sequence = Submission.objects.filter(reference_number__startswith=stem).exclude(reference_number="").count() + 1
-        while True:
-            candidate = f"{stem}{sequence:06d}"
-            if not Submission.objects.filter(reference_number=candidate).exists():
-                return candidate
-            sequence += 1
+    def generate(cls, program=None) -> str:
+        from django.db import IntegrityError
+
+        from apps.submissions.models import ReferenceSequence
+
+        stem = f"{cls.PREFIX}-{timezone.now().year}"
+        for _ in range(3):
+            try:
+                with transaction.atomic():
+                    sequence, _ = ReferenceSequence.objects.select_for_update().get_or_create(prefix=stem)
+                    while True:
+                        sequence.last_value += 1
+                        candidate = f"{stem}-{sequence.last_value:05d}"
+                        if not Submission.objects.filter(reference_number=candidate).exists():
+                            break
+                    sequence.save(update_fields=["last_value"])
+                    return candidate
+            except IntegrityError:
+                # Two requests created the year's sequence row at once; try again.
+                continue
+        raise RuntimeError(f"Could not allocate a reference number for {stem}")
 
 
 class SubmissionService:

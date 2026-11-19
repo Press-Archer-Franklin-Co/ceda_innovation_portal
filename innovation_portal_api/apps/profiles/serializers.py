@@ -22,6 +22,8 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
     district = serializers.PrimaryKeyRelatedField(queryset=District.objects.filter(active=True), required=False, allow_null=True)
     sector_name = serializers.SerializerMethodField()
     district_name = serializers.SerializerMethodField()
+    percent_complete = serializers.SerializerMethodField()
+    missing_fields = serializers.SerializerMethodField()
 
     class Meta:
         model = InnovatorProfile
@@ -52,6 +54,8 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
             "linkedin_url",
             "linkedin_profile",
             "past_participation_summary",
+            "percent_complete",
+            "missing_fields",
         )
 
     def _lang(self):
@@ -59,6 +63,21 @@ class InnovatorProfileSerializer(serializers.ModelSerializer):
 
     def get_sector_name(self, obj):
         return get_text(obj.sector.name, self._lang()) if obj.sector_id else ""
+
+    def _completeness(self, obj):
+        from apps.submissions.innovator_dashboard import profile_completeness
+
+        cache = getattr(self, "_completeness_cache", {})
+        if obj.pk not in cache:
+            cache[obj.pk] = profile_completeness(obj)
+            self._completeness_cache = cache
+        return cache[obj.pk]
+
+    def get_percent_complete(self, obj):
+        return self._completeness(obj)["percent_complete"]
+
+    def get_missing_fields(self, obj):
+        return self._completeness(obj)["missing_fields"]
 
     def get_district_name(self, obj):
         return get_text(obj.district.name, self._lang()) if obj.district_id else ""

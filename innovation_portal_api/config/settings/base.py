@@ -233,8 +233,15 @@ REST_FRAMEWORK = {
         "auth": "5/minute",
         "platform_admin": "60/minute",
         "platform_test": "10/minute",
+        "draft_quick_start": "10/hour",
+        "similar_ideas": "30/minute",
     },
 }
+
+# Guest quick start (B2): how long the resume token kept by the browser is valid,
+# and which version of the consent text the submit screen shows.
+DRAFT_RESUME_TOKEN_MAX_AGE = int(os.getenv("INNOVATION_PORTAL_DRAFT_RESUME_TOKEN_MAX_AGE", str(30 * 24 * 3600)))
+IDEA_SUBMISSION_CONSENT_VERSION = os.getenv("INNOVATION_PORTAL_IDEA_SUBMISSION_CONSENT_VERSION", "2026-11")
 
 from datetime import timedelta
 

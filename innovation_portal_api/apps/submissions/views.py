@@ -28,6 +28,7 @@ from apps.submissions.serializers import (
     SubmissionStatusHistorySerializer,
 )
 from apps.submissions.services import SubmissionService
+from apps.submissions.timeline import SubmissionTimelineService
 from apps.workflow.serializers import (
     TaskExecutionSerializer,
     WorkflowActionLogSerializer,
@@ -492,6 +493,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             "status_history": SubmissionStatusHistorySerializer(submission.status_history.all(), many=True, context={"public": True}).data,
             "journey": self._public_journey(submission),
             "workflow_history": [],
+            "timeline": SubmissionTimelineService.build(submission),
         }
         return api_success(data=payload)
 
@@ -503,61 +505,6 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             return Response({"detail": "Submission does not have an active workflow instance."}, status=status.HTTP_404_NOT_FOUND)
         return api_success(data=WorkflowRuntimeService.evaluation_readiness(submission.workflow_instance))
 
-
-@extend_schema_view(
-    list=extend_schema(tags=["Drafts"], summary="List authenticated user drafts"),
-    retrieve=extend_schema(tags=["Drafts"], summary="Retrieve draft"),
-    create=extend_schema(tags=["Drafts"], summary="Create application draft"),
-    update=extend_schema(tags=["Drafts"], summary="Update application draft"),
-    partial_update=extend_schema(tags=["Drafts"], summary="Partially update application draft"),
-)
-class ApplicationDraftViewSet(viewsets.ModelViewSet):
-    serializer_class = ApplicationDraftSerializer
-    search_fields = ("title", "reference_number", "program__title")
-    filterset_fields = ("program", "submission_type", "status")
-
-    def get_queryset(self):
-        return ApplicationDraft.objects.filter(innovator=self.request.user).select_related("program")
-
-    def perform_create(self, serializer):
-        UserVerificationService.assert_verified(user=self.request.user, reason="draft_create")
-        data = serializer.validated_data
-        draft = ApplicationDraftService.save_draft(
-            program=data["program"],
-            innovator=self.request.user,
-            submission_type=data["submission_type"],
-            title=data["title"],
-            draft_data=data.get("draft_data") or {},
-            team=data.get("team"),
-            current_section_code=data.get("current_section_code", ""),
-            metadata=data.get("metadata"),
-        )
-        serializer.instance = draft
-
-    def perform_update(self, serializer):
-        instance = self.get_object()
-        UserVerificationService.assert_verified(user=self.request.user, reason="draft_update")
-        data = serializer.validated_data
-        updated = ApplicationDraftService.save_draft(
-            program=data.get("program", instance.program),
-            innovator=self.request.user,
-            submission_type=data.get("submission_type", instance.submission_type),
-            title=data.get("title", instance.title),
-            draft_data=data.get("draft_data", instance.draft_data),
-            team=data.get("team", instance.team),
-            draft=instance,
-            current_section_code=data.get("current_section_code", instance.current_section_code),
-            metadata=data.get("metadata", instance.metadata),
-        )
-        serializer.instance = updated
-
-    @action(detail=True, methods=["post"])
-    @extend_schema(tags=["Drafts"], summary="Submit draft and start runtime workflow")
-    def submit(self, request, pk=None):
-        draft = self.get_object()
-        UserVerificationService.assert_verified(user=request.user, reason="draft_submit")
-        submission = ApplicationDraftService.submit_draft(draft=draft, actor=request.user)
-        return api_success(data=SubmissionSerializer(submission, context={"request": request}).data)
 
 @extend_schema(tags=["Submissions"], summary="List my submissions")
 class MySubmissionListView(generics.ListAPIView):
