@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
@@ -42,6 +43,7 @@ def staff_claims(**overrides):
 @override_settings(**SSO_SETTINGS)
 class StaffSSOApiTests(TestCase):
     def setUp(self):
+        cache.clear()
         RoleService.ensure_default_roles()
         self.client = APIClient()
         patcher = patch.object(CedaStaffIdentityProvider, "_discovery", return_value=DISCOVERY)

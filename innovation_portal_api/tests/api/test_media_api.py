@@ -2,6 +2,7 @@ import shutil
 import tempfile
 from io import BytesIO
 
+from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from PIL import Image
@@ -43,6 +44,7 @@ class MediaApiTests(TestCase):
         super().tearDownClass()
 
     def setUp(self):
+        cache.clear()
         RoleService.ensure_default_roles()
         self.client = APIClient()
         self.owner = User.objects.create_user(email="owner@example.com", password="StrongPass123!", first_name="O", last_name="W")

@@ -49,6 +49,7 @@ class ReferenceListApiTests(TestCase):
 
 class ProfileReferenceFieldsTests(TestCase):
     def setUp(self):
+        cache.clear()
         from apps.accounts.services import UserOnboardingService
 
         self.user = User.objects.create_user(email="profile@example.com", password="StrongPass123!", first_name="P", last_name="F")

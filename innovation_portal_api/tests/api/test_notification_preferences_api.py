@@ -1,3 +1,4 @@
+from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -14,6 +15,7 @@ TYPES = {"officer_message", "stage_change", "deadline", "new_challenge", "news",
 
 class NotificationPreferencesApiTests(TestCase):
     def setUp(self):
+        cache.clear()
         RoleService.ensure_default_roles()
         self.user = User.objects.create_user(email="prefs@example.com", password="StrongPass123!", first_name="P", last_name="R")
         RoleService.assign_roles(self.user, [RoleType.INNOVATOR])

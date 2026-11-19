@@ -177,7 +177,7 @@ class TranslatedTextField(serializers.JSONField):
     """
 
     default_error_messages = {
-        "invalid_shape": "Enter text as an object such as {\"en\": \"...\", \"tn\": \"...\"}.",
+        "invalid_shape": "Enter text as an object with a string for each language code, for example en and tn.",
         "invalid_language": "Unsupported language code(s): {codes}.",
         "invalid_text": "Text for `{lang}` must be a string.",
         "required_english": "English text is required.",
