@@ -198,6 +198,11 @@ jobs:
             --baseline lint-baseline.json --root . \
             --summary-json ../ci-out/admin-lint-summary.json
 
+      - name: Tests
+        id: test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test 2>&1 | tee ../ci-out/admin-test.txt
+
       - name: Build
         id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -208,7 +213,7 @@ jobs:
         run: |
           mkdir -p ../ci-out
           cat > ../ci-out/admin-steps.json <<EOF
-          {"install": "${{ steps.install.outcome }}", "lint": "${{ steps.lint.outcome }}", "build": "${{ steps.build.outcome }}"}
+          {"install": "${{ steps.install.outcome }}", "lint": "${{ steps.lint.outcome }}", "test": "${{ steps.test.outcome }}", "build": "${{ steps.build.outcome }}"}
           EOF
 
       - uses: actions/upload-artifact@v4
@@ -246,6 +251,11 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npx tsc --noEmit 2>&1 | tee ../ci-out/public-typecheck.txt
 
+      - name: Tests
+        id: test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test 2>&1 | tee ../ci-out/public-test.txt
+
       - name: Build
         id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -256,7 +266,7 @@ jobs:
         run: |
           mkdir -p ../ci-out
           cat > ../ci-out/public-steps.json <<EOF
-          {"install": "${{ steps.install.outcome }}", "typecheck": "${{ steps.typecheck.outcome }}", "build": "${{ steps.build.outcome }}"}
+          {"install": "${{ steps.install.outcome }}", "typecheck": "${{ steps.typecheck.outcome }}", "test": "${{ steps.test.outcome }}", "build": "${{ steps.build.outcome }}"}
           EOF
 
       - uses: actions/upload-artifact@v4
