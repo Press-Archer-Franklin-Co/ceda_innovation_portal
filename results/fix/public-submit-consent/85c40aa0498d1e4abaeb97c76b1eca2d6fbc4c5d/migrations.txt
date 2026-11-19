@@ -76,11 +76,11 @@ Migrations for 'assignments':
     ~ Alter field role_type on assignment
     ~ Alter field created_at on specialistinvitation
 Migrations for 'submissions':
-  apps/submissions/migrations/0009_rename_submission__stage__5c8de5_idx_submissions_submiss_761ff7_idx_and_more.py
+  apps/submissions/migrations/0010_rename_submission__stage__5c8de5_idx_submissions_submiss_761ff7_idx_and_more.py
     ~ Rename index submission__stage__5c8de5_idx on submissionfeedbacksnapshot to submissions_submiss_761ff7_idx
     ~ Rename index submission__release_35df56_idx on submissionfeedbacksnapshot to submissions_submiss_d61766_idx
 Migrations for 'workflow':
-  apps/workflow/migrations/0015_alter_workflowstep_assignment_role_and_more.py
+  apps/workflow/migrations/0016_alter_workflowstep_assignment_role_and_more.py
     ~ Alter field assignment_role on workflowstep
     ~ Alter field role_required on workflowstep
     ~ Alter field submission_status on workflowstep
