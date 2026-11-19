@@ -1,0 +1,87 @@
+{
+  "branch": "chore/verify-work",
+  "sha": "1e1a8ecf51224d2f3afb04dee4aa16f486eeaa35",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44521767609",
+  "jobs": {
+    "api": "failure",
+    "admin": "success",
+    "public": "success"
+  },
+  "green": false,
+  "steps": {
+    "api": {
+      "install": "success",
+      "migrations": "success",
+      "pytest": "success",
+      "results": "failure"
+    },
+    "admin": {
+      "install": "success",
+      "lint": "success",
+      "build": "success"
+    },
+    "public": {
+      "install": "success",
+      "typecheck": "success",
+      "build": "success"
+    }
+  },
+  "tests": {
+    "passed": 271,
+    "failed": 25,
+    "skipped": 0,
+    "known_failing": 24,
+    "new_failures": [
+      {
+        "id": "tests/services/test_ci_gate_probe.py::CIGateProbeTests::test_deliberately_fails",
+        "reason": "AssertionError: 1 != 2 : deliberate failure to prove the CI gate"
+      }
+    ],
+    "known_now_passing": [],
+    "known_not_found": []
+  },
+  "lint": {
+    "errors": 1,
+    "warnings": 9,
+    "new": [],
+    "baseline_fixed": 0
+  },
+  "migrations": {
+    "pending": 11,
+    "new": [],
+    "known_gone": [],
+    "crashed": false
+  },
+  "rows": [
+    {
+      "check": "Migrations up to date",
+      "result": "pass",
+      "details": "11 known on main, 0 new"
+    },
+    {
+      "check": "API tests",
+      "result": "fail",
+      "details": "271 passed, 25 failed (24 known on main, 1 new)"
+    },
+    {
+      "check": "Admin lint",
+      "result": "pass",
+      "details": "1 errors, 9 warnings (0 new vs baseline)"
+    },
+    {
+      "check": "Admin build",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public type check",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public build",
+      "result": "pass",
+      "details": ""
+    }
+  ]
+}

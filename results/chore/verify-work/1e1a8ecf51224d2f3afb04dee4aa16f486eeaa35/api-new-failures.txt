@@ -1,0 +1,8 @@
+===== tests/services/test_ci_gate_probe.py::CIGateProbeTests::test_deliberately_fails
+self = <test_ci_gate_probe.CIGateProbeTests testMethod=test_deliberately_fails>
+
+    def test_deliberately_fails(self):
+>       self.assertEqual(1, 2, "deliberate failure to prove the CI gate")
+E       AssertionError: 1 != 2 : deliberate failure to prove the CI gate
+
+tests/services/test_ci_gate_probe.py:7: AssertionError
