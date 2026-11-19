@@ -1,31 +1,39 @@
+import { optionDTheme } from './tailwind.tokens.js'
+
+const v = (name) => `rgb(var(--c-${name}) / <alpha-value>)`
+
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: ['selector', '[data-theme="dark"]'],
   theme: {
     extend: {
+      ...optionDTheme,
       colors: {
+        ...optionDTheme.colors,
+        // Older names, kept so existing pages pick up Option D. Use the
+        // semantic names above in new code.
         ceda: {
-          dark:    '#A01E0A',
-          darker:  '#7E1708',
-          green:   '#F0641E',
-          light:   '#F5EEE8',
-          muted:   '#6B5248',
+          dark:    v('primary'),
+          darker:  v('primary-hover'),
+          green:   v('accent'),
+          light:   v('surface2'),
+          muted:   v('muted'),
         },
         indigo: {
-          ceda: '#1D6FA3',
+          ceda: v('info'),
         },
       },
-      fontFamily: {
-        sans: ['Poppins', 'system-ui', 'sans-serif'],
-      },
       borderRadius: {
+        ...optionDTheme.borderRadius,
         '2xl': '1rem',
         '3xl': '1.25rem',
         '4xl': '1.5rem',
       },
       boxShadow: {
+        ...optionDTheme.boxShadow,
         card: '0 4px 24px rgba(0,0,0,0.07)',
         'card-hover': '0 8px 40px rgba(0,0,0,0.13)',
       },

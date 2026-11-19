@@ -1,0 +1,103 @@
+/*
+ * CEDA Option D design tokens.
+ * Source: Figma "CEDA Innovation Portal · UI (Option D)", page Foundations,
+ * colour variables color/* and text styles D/*.
+ * https://www.figma.com/design/dzLeXDnM9ldZEurtYDcIh2
+ *
+ * This file is identical in innovation_portal_public and innovation_portal_admin.
+ * Change both together.
+ *
+ * Colours are stored as "R G B" channels so Tailwind opacity modifiers work
+ * (bg-primary/10, border-border/60). Use the Tailwind names from
+ * tailwind.config, not these variables, in components.
+ */
+
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat-500.woff2') format('woff2'); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat-600.woff2') format('woff2'); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat-700.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Montserrat'; src: url('../assets/fonts/Montserrat-800.woff2') format('woff2'); font-weight: 800 900; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato-400-normal.woff2') format('woff2'); font-weight: 300 500; font-style: normal; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato-400-italic.woff2') format('woff2'); font-weight: 300 500; font-style: italic; font-display: swap; }
+@font-face { font-family: 'Lato'; src: url('../assets/fonts/Lato-700-normal.woff2') format('woff2'); font-weight: 600 900; font-style: normal; font-display: swap; }
+
+:root {
+  /* Surfaces and text */
+  --c-bg: 255 255 255;           /* color/bg #FFFFFF: the page, always white */
+  --c-surface: 255 255 255;      /* color/surface #FFFFFF: cards, inputs */
+  --c-surface2: 245 238 232;     /* color/surface2 #F5EEE8: soft panels, table heads */
+  --c-border: 230 217 207;       /* color/border #E6D9CF */
+  --c-text: 46 30 24;            /* color/text #2E1E18 */
+  --c-muted: 107 82 72;          /* color/muted #6B5248 */
+
+  /* Brand */
+  --c-banner: 90 60 50;          /* color/hero #5A3C32: banners, footer, staff sidebar */
+  --c-banner-deep: 70 48 42;     /* color/heroDeep #46302A */
+  --c-banner-muted: 234 219 210; /* color/heroMuted #EADBD2: secondary text on banner */
+  --c-on-banner: 255 255 255;    /* color/onHero */
+  --c-primary: 160 30 10;        /* color/primary #A01E0A: CEDA red, actions */
+  --c-primary-hover: 126 23 8;   /* #7E1708: existing CEDA darker red (no hover in Figma) */
+  --c-primary-soft: 251 232 227; /* color/primarySoft #FBE8E3 */
+  --c-on-primary: 255 255 255;   /* color/onPrimary */
+  --c-accent: 240 100 30;        /* color/accent #F0641E: orange highlight */
+  --c-accent-soft: 254 239 229;  /* color/accentSoft #FEEFE5 */
+  --c-accent-ink: 180 70 15;     /* #B4460F: orange text on accentSoft (Tag tone Orange) */
+  --c-on-accent: 46 30 24;       /* color/onAccent #2E1E18 */
+  --c-amber: 250 160 20;         /* color/amber #FAA014 */
+  --c-yellow: 250 200 0;         /* color/yellow #FAC800 */
+
+  /* Status */
+  --c-success: 46 125 50;        /* #2E7D32 */
+  --c-success-soft: 230 243 230; /* #E6F3E6 */
+  --c-warning: 154 82 0;         /* #9A5200 */
+  --c-warning-soft: 255 243 209; /* #FFF3D1 */
+  --c-danger: 180 35 24;         /* #B42318 */
+  --c-danger-soft: 253 232 230;  /* #FDE8E6 */
+  --c-info: 29 111 163;          /* #1D6FA3 */
+  --c-info-soft: 227 239 247;    /* #E3EFF7 */
+
+  /* System */
+  --c-cms: 109 40 217;           /* #6D28D9: CMS-section tags (designs only) */
+  --c-cms-soft: 237 231 251;     /* #EDE7FB */
+  --c-scrim: 30 19 15;           /* #1E130F: behind dialogs */
+
+  /* Shape */
+  --radius-control: 8px;
+  --radius-card: 12px;
+
+  --font-heading: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Lato', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  color-scheme: light;
+}
+
+/*
+ * Dark mode: opt in with <html data-theme="dark">. It is not switched on from
+ * the OS setting yet, because older pages still hard-code white panels.
+ * Figma has no dark variables; these follow the person's rule
+ * (neutral grey page, brand colours unchanged). Needs a design check.
+ */
+[data-theme='dark'] {
+  --c-bg: 28 28 30;              /* #1C1C1E */
+  --c-surface: 44 44 46;         /* #2C2C2E */
+  --c-surface2: 36 36 38;        /* #242426 */
+  --c-border: 58 58 60;          /* #3A3A3C */
+  --c-text: 245 245 247;         /* #F5F5F7 */
+  --c-muted: 174 174 178;        /* #AEAEB2 */
+  --c-primary-soft: 72 30 24;
+  --c-accent-soft: 72 42 26;
+  --c-accent-ink: 255 160 110;
+  --c-success-soft: 30 56 32;
+  --c-warning-soft: 64 48 16;
+  --c-danger-soft: 72 30 28;
+  --c-info-soft: 22 46 64;
+  --c-cms-soft: 46 32 76;
+  --c-success: 120 200 125;
+  --c-warning: 245 180 90;
+  --c-danger: 255 130 120;
+  --c-info: 120 180 230;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-ok: 0; }
+}
