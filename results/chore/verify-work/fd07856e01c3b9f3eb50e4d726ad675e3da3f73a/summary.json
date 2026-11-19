@@ -1,0 +1,73 @@
+{
+  "branch": "chore/verify-work",
+  "sha": "fd07856e01c3b9f3eb50e4d726ad675e3da3f73a",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44514756090",
+  "jobs": {
+    "api": "failure",
+    "admin": "failure",
+    "public": "success"
+  },
+  "green": false,
+  "steps": {
+    "api": {
+      "install": "success",
+      "migrations": "failure",
+      "pytest": "success",
+      "results": "success"
+    },
+    "admin": {
+      "install": "success",
+      "lint": "failure",
+      "build": "success"
+    },
+    "public": {
+      "install": "success",
+      "typecheck": "success",
+      "build": "success"
+    }
+  },
+  "tests": {
+    "passed": 271,
+    "failed": 24,
+    "skipped": 0,
+    "known_failing": 24,
+    "new_failures": [],
+    "known_now_passing": [],
+    "known_not_found": []
+  },
+  "lint": {
+    "error": "Cannot read lint baseline: [Errno 2] No such file or directory: 'lint-baseline.json'"
+  },
+  "rows": [
+    {
+      "check": "Migrations up to date",
+      "result": "fail",
+      "details": ""
+    },
+    {
+      "check": "API tests",
+      "result": "pass",
+      "details": "271 passed, 24 failed (24 known on main, 0 new)"
+    },
+    {
+      "check": "Admin lint",
+      "result": "fail",
+      "details": "Cannot read lint baseline: [Errno 2] No such file or directory: 'lint-baseline.json'"
+    },
+    {
+      "check": "Admin build",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public type check",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public build",
+      "result": "pass",
+      "details": ""
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+Google OAuth disabled: missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI
+GitHub OAuth disabled: missing GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI
+Microsoft OAuth disabled: missing MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI
+Migrations for 'accounts':
+  apps/accounts/migrations/0009_remove_user_user_sort_idx_and_more.py
+    - Remove index user_sort_idx from user
+    ~ Rename index accounts_mf_user_id_5aafc3_idx on mfachallenge to accounts_mf_user_id_a82881_idx
+    ~ Rename index accounts_us_user_id_2bca33_idx on usermfaprofile to accounts_us_user_id_0a6639_idx
+    ~ Alter field code on role
+Migrations for 'assignments':
+  apps/assignments/migrations/0007_alter_assignment_role_type_and_more.py
+    ~ Alter field role_type on assignment
+    ~ Alter field created_at on specialistinvitation
+Migrations for 'submissions':
+  apps/submissions/migrations/0007_rename_submission__stage__5c8de5_idx_submissions_submiss_761ff7_idx_and_more.py
+    ~ Rename index submission__stage__5c8de5_idx on submissionfeedbacksnapshot to submissions_submiss_761ff7_idx
+    ~ Rename index submission__release_35df56_idx on submissionfeedbacksnapshot to submissions_submiss_d61766_idx
+Migrations for 'workflow':
+  apps/workflow/migrations/0015_alter_workflowstep_assignment_role_and_more.py
+    ~ Alter field assignment_role on workflowstep
+    ~ Alter field role_required on workflowstep
+    ~ Alter field submission_status on workflowstep
