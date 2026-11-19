@@ -235,6 +235,7 @@ REST_FRAMEWORK = {
         "platform_test": "10/minute",
         "draft_quick_start": "10/hour",
         "similar_ideas": "30/minute",
+        "content_public": "120/minute",
     },
 }
 
@@ -311,6 +312,11 @@ CELERY_BEAT_SCHEDULE = {
     },
     "announce-due-challenge-results": {
         "task": "apps.programs.tasks.announce_due_challenge_results",
+        "schedule": crontab(minute="*/5"),
+        "options": {"expires": 240},
+    },
+    "publish-due-content": {
+        "task": "apps.content.tasks.publish_due_content",
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
     },
