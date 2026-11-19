@@ -12,7 +12,9 @@ from apps.assignments.models import Assignment
 from apps.communications.senders import LocMemMessageSender
 from apps.core.constants import AssignmentRoleType, RoleType
 from apps.platform_config.testing import set_features
-from apps.programs.models import Program, ProgramStage
+from apps.programs.form_builder import FormDocumentService, FormPublishService
+from apps.programs.form_schema import build_form_schema
+from apps.programs.models import FormVersion, Program, ProgramStage
 from apps.reference.models import Sector
 from apps.submissions.models import ApplicationDraft, ConsentRecord, Submission
 
@@ -350,3 +352,58 @@ class IdeaIntakeApiTests(TestCase):
         self.assertEqual([s["code"] for s in public_stages], [s["code"] for s in stages])
         self.assertTrue(all("officer" not in stage for stage in public_stages))
         self.assertNotIn("Kagiso", public.content.decode())
+
+    # B4 / R-1 ---------------------------------------------------------------------
+
+    def test_submit_takes_first_and_last_name_and_returns_first_name(self):
+        draft_id, token = self.quick_start()
+        self.fill_all_steps(draft_id, token)
+        self.verify_phone_on_draft(draft_id, token)
+        response = self.as_guest(
+            "post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "first_name": "Lesedi", "last_name": "Mosweu Kgari"}
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["data"]["first_name"], "Lesedi")
+        user = User.objects.get(phone_number=PHONE)
+        self.assertEqual((user.first_name, user.last_name), ("Lesedi", "Mosweu Kgari"))
+
+    def test_guest_without_account_gets_first_name_back(self):
+        draft_id, token = self.quick_start()
+        self.fill_all_steps(draft_id, token)
+        self.verify_phone_on_draft(draft_id, token)
+        response = self.as_guest(
+            "post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "create_account": False, "first_name": "Neo", "last_name": "Kebadile"}
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["data"]["first_name"], "Neo")
+        self.assertEqual(Submission.objects.get(reference_number=response.json()["data"]["reference"]).guest_name, "Neo Kebadile")
+
+    # B4: published form versions ---------------------------------------------------------
+
+    def test_draft_names_its_form_and_a_submission_keeps_its_version_after_a_new_publish(self):
+        draft_id, token = self.quick_start()
+        form = Program.objects.get(is_general_intake=True).form
+        first = FormVersion.objects.get(form=form)
+        body = self.as_guest("get", f"/api/drafts/{draft_id}/", token).json()
+        draft = body.get("data", body)
+        self.assertEqual((draft["form_id"], draft["form_version_id"]), (str(form.id), str(first.id)))
+
+        self.fill_all_steps(draft_id, token)
+        self.verify_phone_on_draft(draft_id, token)
+        response = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True})
+        self.assertEqual(response.status_code, 200, response.content)
+        submission = Submission.objects.get(reference_number=response.json()["data"]["reference"])
+        self.assertEqual((submission.form_version_id, submission.form_version_number), (first.id, 1))
+
+        # Staff change the form and publish version 2: the submission still points at version 1.
+        form.languages = ["en"]
+        form.save()
+        document = build_form_schema(form)
+        document["steps"][0]["title"] = {"en": "Tell us your idea"}
+        FormDocumentService.save_document(form, document)
+        second, problems = FormPublishService.publish(form, actor=None)
+        self.assertEqual(problems, [])
+        self.assertEqual(second.number, 2)
+        submission.refresh_from_db()
+        self.assertEqual((submission.form_version_id, submission.form_version_number), (first.id, 1))
+        self.assertNotEqual(first.schema["steps"][0]["title"]["en"], "Tell us your idea")

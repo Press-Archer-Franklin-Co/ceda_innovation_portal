@@ -127,4 +127,20 @@ class GeneralIntakeService:
                         slug=f"{SLUG}-{program_type.code}", program_type=program_type, owner=cls._owner(), **program_defaults()
                     )
         build_form(program=program, SubmissionForm=SubmissionForm, FormSection=FormSection, SubmissionFormField=SubmissionFormField)
+        cls._ensure_published(program)
         return program
+
+    @staticmethod
+    def _ensure_published(program) -> None:
+        """The system-made general ideas form is published as version 1 (like migration 0014 does
+        for existing forms), so applicants always have a published version to load."""
+        from apps.programs.form_schema import build_form_schema
+        from apps.programs.models import FormVersion, SubmissionForm
+
+        form = program.form
+        if form is None or form.versions.exists():
+            return
+        form = SubmissionForm.objects.prefetch_related("sections", "fields__options", "fields__field_rules").get(pk=form.pk)
+        FormVersion.objects.get_or_create(form=form, number=1, defaults={"schema": build_form_schema(form, include_inactive=False)})
+        if form.status == SubmissionForm.Status.DRAFT:
+            SubmissionForm.objects.filter(pk=form.pk).update(status=SubmissionForm.Status.LIVE)

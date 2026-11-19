@@ -76,6 +76,7 @@ class Submission(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     locked_for_editing = models.BooleanField(default=False)
     latest_version_number = models.PositiveIntegerField(default=1)
     form_version_number = models.PositiveIntegerField(default=1)
+    form_version = models.ForeignKey("programs.FormVersion", on_delete=models.PROTECT, null=True, blank=True, related_name="submissions", help_text="The published form version the applicant answered.")
     channel = models.CharField(max_length=20, choices=IntakeChannel.choices, default=IntakeChannel.WEB, db_index=True)
 
     class Meta:

@@ -189,3 +189,24 @@ class SubmissionFormFieldType(models.TextChoices):
     MULTISELECT = "multiselect", "Multiselect"
     FILE = "file", "File"
     URL = "url", "URL"
+    RADIO = "radio", "Radio (one choice)"
+    CHECKBOXES = "checkboxes", "Checkboxes"
+    YES_NO = "yes_no", "Yes or no"
+    DISTRICT = "district", "District"
+    OMANG_ID = "omang_id", "Omang ID"
+    MEDIA = "media", "Photo or video"
+    HEADING = "heading", "Heading (layout only)"
+    PARAGRAPH = "paragraph", "Paragraph (layout only)"
+
+
+# Field types that only shape the page and never store an answer.
+LAYOUT_FIELD_TYPES = frozenset({SubmissionFormFieldType.HEADING, SubmissionFormFieldType.PARAGRAPH})
+# Field types whose answer must be one (or several) of the field's options.
+CHOICE_FIELD_TYPES = frozenset(
+    {
+        SubmissionFormFieldType.SELECT,
+        SubmissionFormFieldType.MULTISELECT,
+        SubmissionFormFieldType.RADIO,
+        SubmissionFormFieldType.CHECKBOXES,
+    }
+)
