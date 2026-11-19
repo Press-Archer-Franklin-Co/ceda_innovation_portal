@@ -213,11 +213,49 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SiteSettings
-        fields = ["hero_video", "hero_video_url", "hero_video_muted", "prize_money_label", "solutions_deployed"]
+        fields = [
+            "hero_video",
+            "hero_video_url",
+            "hero_video_muted",
+            "prize_money_label",
+            "solutions_deployed",
+            "quote_rotation_seconds",
+            "whatsapp_number",
+            "ussd_code",
+            "call_centre_number",
+            "office_finder_url",
+            "help_centre_url",
+            "accessibility_url",
+            "footer_links",
+            "languages_enabled",
+        ]
         read_only_fields = ["hero_video_url"]
+
+    footer_links = FlexibleJSONField(required=False)
+    languages_enabled = FlexibleJSONField(required=False)
 
     def get_hero_video_url(self, obj):
         return _media_url(obj.hero_video)
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        # Blank contact details come back as null so the shell hides them (R-13).
+        for key in ("whatsapp_number", "ussd_code", "call_centre_number", "office_finder_url", "help_centre_url", "accessibility_url"):
+            data[key] = data.get(key) or None
+        data["languages_enabled"] = data.get("languages_enabled") or ["en", "tn"]
+        return data
+
+    def validate_footer_links(self, value):
+        if not isinstance(value, list) or any(
+            not isinstance(item, dict) or not str(item.get("label") or "").strip() or not str(item.get("url") or "").strip() for item in value
+        ):
+            raise serializers.ValidationError('Footer links are a list of {"label": "...", "url": "..."}.')
+        return [{"label": str(item["label"])[:80], "url": str(item["url"])[:500]} for item in value][:20]
+
+    def validate_languages_enabled(self, value):
+        if not isinstance(value, list) or not value or any(lang not in ("en", "tn") for lang in value) or "en" not in value:
+            raise serializers.ValidationError('Use a list of language codes from en and tn, including en.')
+        return list(dict.fromkeys(value))
 
 
 class LeadershipCardSerializer(serializers.ModelSerializer):
