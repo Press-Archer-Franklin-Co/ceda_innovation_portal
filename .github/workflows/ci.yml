@@ -64,6 +64,10 @@ jobs:
         shell: bash
         working-directory: innovation_portal_api
     steps:
+      - name: Start clock
+        working-directory: .
+        run: date +%s > "$RUNNER_TEMP/job-start"
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -97,8 +101,10 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           set +e
+          date +%s > ../ci-out/pytest-start
           pytest -q -n auto --dist loadfile --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf --durations=15 2>&1 | tee ../ci-out/pytest-output.txt
           code=${PIPESTATUS[0]}
+          date +%s > ../ci-out/pytest-end
           echo "pytest exit code: $code"
           # 1 means some tests failed; the next step decides whether they are new.
           if [ "$code" -gt 1 ]; then exit "$code"; fi
@@ -118,8 +124,15 @@ jobs:
         run: |
           mkdir -p ../ci-out
           cp pytest-report.xml ../ci-out/ 2>/dev/null || true
+          now=$(date +%s)
+          job_seconds=$(( now - $(cat "$RUNNER_TEMP/job-start" 2>/dev/null || echo "$now") ))
+          if [ -f ../ci-out/pytest-start ] && [ -f ../ci-out/pytest-end ]; then
+            pytest_seconds=$(( $(cat ../ci-out/pytest-end) - $(cat ../ci-out/pytest-start) ))
+          else
+            pytest_seconds=null
+          fi
           cat > ../ci-out/api-steps.json <<EOF
-          {"install": "${{ steps.install.outcome }}", "migrations": "${{ steps.migrations.outcome }}", "pytest": "${{ steps.pytest.outcome }}", "results": "${{ steps.results.outcome }}"}
+          {"install": "${{ steps.install.outcome }}", "migrations": "${{ steps.migrations.outcome }}", "pytest": "${{ steps.pytest.outcome }}", "results": "${{ steps.results.outcome }}", "pytest_seconds": $pytest_seconds, "job_seconds_to_here": $job_seconds}
           EOF
 
       - uses: actions/upload-artifact@v4
