@@ -21,7 +21,6 @@ import MfaChallenge    from './pages/MfaChallenge'
 import AuthCallback    from './pages/AuthCallback'
 import Profile         from './pages/Profile'
 import Security        from './pages/Security'
-import Dashboard       from './pages/Dashboard'
 import TermsOfAgreement from './pages/TermsOfAgreement'
 import PrivacyPolicy    from './pages/PrivacyPolicy'
 import TermsOfUse       from './pages/TermsOfUse'
@@ -34,6 +33,14 @@ import SpecialistInvite  from './pages/SpecialistInvite'
 import JudgeInvite       from './pages/JudgeInvite'
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
+
+// U3 innovator screens (lazy; ceda-routing).
+const CodeSignIn     = lazy(() => import('./pages/innovator/CodeSignIn'))
+const InnovatorHome  = lazy(() => import('./pages/innovator/InnovatorHome'))
+const MyIdeas        = lazy(() => import('./pages/innovator/MyIdeas'))
+const TrackIdea      = lazy(() => import('./pages/innovator/TrackIdea'))
+const IdeaForm       = lazy(() => import('./pages/innovator/IdeaForm'))
+const Notifications  = lazy(() => import('./pages/innovator/Notifications'))
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
@@ -80,12 +87,18 @@ function AppRoutes() {
         <Route path="/news/:id"    element={<ArticleDetail />} />
         <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
+        <Route path="/sign-in"     element={<PublicOnlyRoute><Suspense fallback={null}><CodeSignIn /></Suspense></PublicOnlyRoute>} />
+
         <Route path="/terms-of-agreement" element={<TermsOfAgreement />} />
         <Route path="/privacy-policy"     element={<PrivacyPolicy />} />
         <Route path="/terms-of-use"       element={<TermsOfUse />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path="/dashboard"          element={<Dashboard />} />
+          <Route path="/dashboard"          element={<Suspense fallback={null}><InnovatorHome /></Suspense>} />
+          <Route path="/my-ideas"           element={<Suspense fallback={null}><MyIdeas /></Suspense>} />
+          <Route path="/my-ideas/draft/:id" element={<Suspense fallback={null}><IdeaForm /></Suspense>} />
+          <Route path="/my-ideas/:id"       element={<Suspense fallback={null}><TrackIdea /></Suspense>} />
+          <Route path="/notifications"      element={<Suspense fallback={null}><Notifications /></Suspense>} />
           <Route path="/submissions/:id"    element={<SubmissionDetail />} />
           <Route path="/documents/:id"      element={<DocumentPage />} />
           <Route path="/profile"            element={<Profile />} />
