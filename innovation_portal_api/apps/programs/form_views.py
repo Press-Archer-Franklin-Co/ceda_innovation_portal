@@ -1,5 +1,6 @@
 """Standalone forms (/api/forms/, B4): list, create, draft document, publish, translations, export."""
 
+from django.db.models import Q
 from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
@@ -62,27 +63,34 @@ class FormListCreateView(APIView):
     @extend_schema(
         tags=TAGS,
         summary="List forms",
-        description="Forms list (3.4). Templates are left out unless is_template=true.",
+        description="Forms list (3.4): {results: [...], counts: {all, draft, live, closed, archived}}. "
+        "counts follow the search but not the status filter (for the tabs; all leaves out archived). "
+        "Templates are left out unless is_template=true.",
         parameters=[
             OpenApiParameter("status", OpenApiTypes.STR, enum=[choice for choice, _ in SubmissionForm.Status.choices]),
             OpenApiParameter("search", OpenApiTypes.STR, description="Matches the form name or a linked programme title."),
             OpenApiParameter("is_template", OpenApiTypes.BOOL),
         ],
-        responses=FormListItemSerializer(many=True),
+        responses=inline_serializer(
+            "FormList",
+            fields={"results": FormListItemSerializer(many=True), "counts": serializers.DictField(child=serializers.IntegerField())},
+        ),
     )
     def get(self, request):
-        queryset = SubmissionForm.objects.all()
+        queryset = SubmissionForm.objects.filter(is_template=str(request.query_params.get("is_template", "")).lower() in {"1", "true", "yes"})
+        search = (request.query_params.get("search") or "").strip()
+        if search:
+            queryset = SubmissionForm.objects.filter(
+                id__in=queryset.filter(Q(title__icontains=search) | Q(program__title__icontains=search)).values("id")
+            )
+        counts = FormLibraryService.status_counts(queryset)
         status_value = request.query_params.get("status")
         if status_value:
             queryset = queryset.filter(status=status_value)
         else:
             queryset = queryset.exclude(status=SubmissionForm.Status.ARCHIVED)
-        queryset = queryset.filter(is_template=str(request.query_params.get("is_template", "")).lower() in {"1", "true", "yes"})
-        search = (request.query_params.get("search") or "").strip()
-        if search:
-            queryset = queryset.filter(title__icontains=search) | queryset.filter(program__title__icontains=search)
-        queryset = FormLibraryService.annotated(queryset.distinct()).order_by("-updated_at")
-        return api_success(data=FormListItemSerializer(queryset, many=True).data)
+        queryset = FormLibraryService.annotated(queryset).order_by("-updated_at")
+        return api_success(data={"results": FormListItemSerializer(queryset, many=True).data, "counts": counts})
 
     @extend_schema(
         tags=TAGS,

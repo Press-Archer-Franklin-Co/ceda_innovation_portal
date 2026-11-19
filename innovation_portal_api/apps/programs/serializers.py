@@ -125,6 +125,9 @@ class ProgramSerializer(serializers.ModelSerializer):
     marking_criteria_title = serializers.CharField(source="marking_criteria.title", read_only=True, default=None)
     sectors = serializers.PrimaryKeyRelatedField(many=True, queryset=Sector.objects.filter(active=True), required=False)
     form_id = serializers.UUIDField(read_only=True, allow_null=True, help_text="The form applicants fill in. Change it with PUT /api/programs/{id}/form/.")
+    form_summary = serializers.SerializerMethodField(
+        help_text="{form_id, name, status, version_number, step_count, question_count, challenge_question_count, estimated_minutes} or null"
+    )
 
     class Meta:
         model = Program
@@ -170,6 +173,7 @@ class ProgramSerializer(serializers.ModelSerializer):
             "sectors",
             "next_panel_at",
             "form_id",
+            "form_summary",
         )
         read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake", "form_id")
 
@@ -192,6 +196,11 @@ class ProgramSerializer(serializers.ModelSerializer):
                 TermsAndConditions.objects.get(id=terms_id) if terms_id else None
             )
         return super().update(instance, validated_data)
+
+    def get_form_summary(self, obj) -> dict | None:
+        from apps.programs.form_builder import FormLibraryService
+
+        return FormLibraryService.summary(obj.form) if obj.form_id else None
 
     def get_availability(self, obj):
         return obj.availability_summary()

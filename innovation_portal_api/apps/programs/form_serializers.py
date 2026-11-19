@@ -21,6 +21,7 @@ class FormListItemSerializer(serializers.ModelSerializer):
     step_count = serializers.IntegerField(read_only=True)
     answer_count = serializers.IntegerField(read_only=True)
     latest_version = serializers.SerializerMethodField()
+    layout_preview = serializers.SerializerMethodField(help_text='Widths of the first 4 rows, e.g. [["half", "half"], ["full"]].')
 
     class Meta:
         model = SubmissionForm
@@ -39,6 +40,7 @@ class FormListItemSerializer(serializers.ModelSerializer):
             "answer_count",
             "version",
             "latest_version",
+            "layout_preview",
             "created_at",
             "updated_at",
         )
@@ -50,8 +52,13 @@ class FormListItemSerializer(serializers.ModelSerializer):
         return LinkedProgramSerializer(sorted(obj.programs.all(), key=lambda item: item.created_at), many=True).data
 
     def get_latest_version(self, obj) -> dict | None:
-        version = obj.latest_version
-        return FormVersionSummarySerializer(version).data if version else None
+        versions = sorted(obj.versions.all(), key=lambda item: item.number, reverse=True)
+        return FormVersionSummarySerializer(versions[0]).data if versions else None
+
+    def get_layout_preview(self, obj) -> list:
+        from apps.programs.form_builder import FormLibraryService
+
+        return FormLibraryService.layout_preview(obj)
 
 
 class FormTemplateSerializer(FormListItemSerializer):
@@ -60,7 +67,7 @@ class FormTemplateSerializer(FormListItemSerializer):
     description = serializers.SerializerMethodField()
 
     class Meta(FormListItemSerializer.Meta):
-        fields = ("id", "name", "name_i18n", "description", "question_count", "step_count", "estimated_minutes", "works_on_ussd", "languages")
+        fields = ("id", "name", "name_i18n", "description", "question_count", "step_count", "estimated_minutes", "works_on_ussd", "languages", "layout_preview")
 
     def get_estimated_minutes(self, obj) -> int | None:
         return (obj.template_meta or {}).get("estimated_minutes")
@@ -81,7 +88,7 @@ class FormVersionSummarySerializer(serializers.ModelSerializer):
 
     def get_published_by(self, obj) -> str | None:
         user = obj.published_by
-        return (user.get_full_name() or user.email) if user else None
+        return (user.full_name or user.email) if user else None
 
 
 class FormCreateSerializer(serializers.Serializer):
@@ -164,6 +171,7 @@ class _OptionDocSerializer(serializers.Serializer):
     id = serializers.UUIDField(required=False)
     value = serializers.CharField()
     label = _TextSerializer()
+    description = _TextSerializer(required=False, help_text="Optional second line on radio cards.")
 
 
 class _RuleDocSerializer(serializers.Serializer):
@@ -180,6 +188,7 @@ class _FieldDocSerializer(serializers.Serializer):
     help_text = _TextSerializer()
     placeholder = _TextSerializer()
     required = serializers.BooleanField()
+    is_challenge_question = serializers.BooleanField(required=False, help_text="Shows the Challenge question badge.")
     width = serializers.ChoiceField(choices=("quarter", "half", "three_quarter", "full"))
     is_active = serializers.BooleanField()
     link_url = serializers.CharField(allow_blank=True)
@@ -204,6 +213,7 @@ class _StepDocSerializer(serializers.Serializer):
     code = serializers.CharField()
     title = _TextSerializer()
     description = _TextSerializer()
+    tips = _TextSerializer(many=True, required=False, help_text='"Tips for this step"')
     is_active = serializers.BooleanField()
     rows = _RowDocSerializer(many=True)
 

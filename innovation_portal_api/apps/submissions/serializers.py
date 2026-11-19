@@ -102,6 +102,8 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
     sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True), required=False, allow_null=True)
     percent_complete = serializers.SerializerMethodField()
     guest_phone_verified = serializers.SerializerMethodField()
+    form_id = serializers.SerializerMethodField(help_text="The programme's form; load GET /api/forms/{form_id}/published/.")
+    form_version_id = serializers.SerializerMethodField(help_text="The latest published version of that form (null if never published).")
 
     class Meta:
         model = ApplicationDraft
@@ -115,6 +117,8 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "is_general_idea",
             "percent_complete",
             "guest_phone_verified",
+            "form_id",
+            "form_version_id",
             "innovator",
             "team",
             "title",
@@ -146,6 +150,15 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
     def get_guest_phone_verified(self, obj):
         return bool(obj.guest_phone_verified_at)
 
+    def get_form_id(self, obj) -> str | None:
+        form_id = getattr(obj.program, "form_id", None) if obj.program_id else None
+        return str(form_id) if form_id else None
+
+    def get_form_version_id(self, obj) -> str | None:
+        form = obj.program.form if obj.program_id else None
+        version = form.latest_version if form else None
+        return str(version.id) if version else None
+
 
 class QuickStartSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255, trim_whitespace=True)
@@ -164,7 +177,9 @@ class DraftSubmitSerializer(serializers.Serializer):
     # then answer with the consent_required code.
     consent = serializers.BooleanField(required=False, default=False)
     create_account = serializers.BooleanField(required=False, default=True)
-    name = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    name = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Full name. first_name and last_name win when sent.")
+    first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
 
 
 class DraftStepSerializer(serializers.Serializer):

@@ -34,6 +34,7 @@ from apps.programs.form_schema import (
     build_form_schema,
     iter_schema_fields,
     localize_schema,
+    normalize_tips,
 )
 from apps.programs.models import (
     FieldValidationRule,
@@ -138,6 +139,9 @@ class FormDocumentService:
             if code and code in codes:
                 errors.append({"path": f"{path}.code", "message": f"Two steps use the code `{code}`."})
             codes.add(code)
+            tips = step.get("tips", [])
+            if not isinstance(tips, list) or any(not isinstance(tip, (str, dict)) for tip in tips):
+                errors.append({"path": f"{path}.tips", "message": 'Tips must be a list of {"en": "...", "tn": "..."} or plain strings.'})
             rows = step.get("rows", [])
             if not isinstance(rows, list):
                 errors.append({"path": f"{path}.rows", "message": "`rows` must be a list."})
@@ -259,6 +263,8 @@ class FormDocumentService:
             section.ordering = step_index
             section.is_active = bool(step.get("is_active", True))
             _set_texts(section, STEP_TEXTS, step, errors=text_errors, path=f"steps[{step_index - 1}]", max_lengths={"title": 255})
+            if "tips" in step:
+                section.tips = normalize_tips(step.get("tips"))
             if not section.title:
                 section.title = f"Step {step_index}"
             section.save()
@@ -274,6 +280,7 @@ class FormDocumentService:
             field.key = field_doc["key"]
             field.field_type = field_doc["type"]
             field.required = bool(field_doc.get("required", False)) and field_doc["type"] not in LAYOUT_FIELD_TYPES
+            field.is_challenge_question = bool(field_doc.get("is_challenge_question", False))
             field.width = field_doc.get("width") or FieldWidth.FULL
             field.row = row_index
             field.ordering = ordering_by_section[counter_key]
@@ -312,8 +319,10 @@ class FormDocumentService:
             option = existing.get(str(option_doc.get("id") or "")) or by_value.get(option_doc["value"]) or SubmissionFormFieldOption(field=field)
             option.value = str(option_doc["value"])[:120]
             option.ordering = index
-            label = option_doc.get("label", option_doc["value"])
-            _set_texts(option, OPTION_TEXTS, {"label": label}, errors=text_errors, path=f"fields.{field.key}.options[{index - 1}]", max_lengths={"label": 120})
+            texts = {"label": option_doc.get("label", option_doc["value"])}
+            if "description" in option_doc:
+                texts["description"] = option_doc["description"]
+            _set_texts(option, OPTION_TEXTS, texts, errors=text_errors, path=f"fields.{field.key}.options[{index - 1}]", max_lengths={"label": 120, "description": 255})
             if not option.label:
                 option.label = option.value
             option.save()
@@ -380,6 +389,8 @@ class FormPublishService:
             texts.append((step["title"], Problem("missing_translation", "Step title", step=step["code"])))
             if step["description"][DEFAULT_LANGUAGE].strip():
                 texts.append((step["description"], Problem("missing_translation", "Step description", step=step["code"])))
+            for tip_number, tip in enumerate(step.get("tips") or [], start=1):
+                texts.append((tip, Problem("missing_translation", f"Step tip {tip_number}", step=step["code"])))
         for step, field in iter_schema_fields(schema):
             step_code = step["code"] if step else None
             label_en = field["label"][DEFAULT_LANGUAGE].strip()
@@ -409,6 +420,8 @@ class FormPublishService:
                     texts.append((field[text_key], Problem("missing_translation", f"Question {text_key.replace('_', ' ')}", step=step_code, field=field["key"])))
             for option in field["options"]:
                 texts.append((option["label"], Problem("missing_translation", "Option label", step=step_code, field=field["key"], option=option["value"])))
+                if option["description"][DEFAULT_LANGUAGE].strip():
+                    texts.append((option["description"], Problem("missing_translation", "Option description", step=step_code, field=field["key"], option=option["value"])))
 
         for lang in languages:
             for value, template in texts:
@@ -491,6 +504,25 @@ def get_translation_provider() -> TranslationProvider:
     return import_string(path)()
 
 
+def _target_texts(obj, attr: str) -> dict[str, str]:
+    if attr.startswith("tips."):
+        tips = normalize_tips(obj.tips)
+        index = int(attr.split(".")[1]) - 1
+        return tips[index] if index < len(tips) else {DEFAULT_LANGUAGE: "", **{lang: "" for lang in OTHER_LANGUAGES}}
+    return bilingual(obj, attr)
+
+
+def _save_tip(section, number: int, row: dict):
+    tips = normalize_tips(section.tips)
+    tip = tips[number - 1]
+    for lang in (DEFAULT_LANGUAGE, *OTHER_LANGUAGES):
+        if lang in row:
+            if row[lang] is not None and not isinstance(row[lang], str):
+                raise ValidationError({"rows": f"`{row['key']}`: text for {lang} must be a string."})
+            tip[lang] = row[lang] or ""
+    section.tips = tips
+
+
 class FormTranslationService:
     """Every translatable text of a form as rows, for the Setswana screen (3.5b)."""
 
@@ -504,6 +536,8 @@ class FormTranslationService:
             where = f"Step {step_number} · {section.title}"
             targets.append((f"step.{section.code}.title", f"{where} › title", section, "title"))
             targets.append((f"step.{section.code}.description", f"{where} › description", section, "description"))
+            for tip_number, _tip in enumerate(normalize_tips(section.tips), start=1):
+                targets.append((f"step.{section.code}.tips.{tip_number}", f"{where} › tip {tip_number}", section, f"tips.{tip_number}"))
             for field in (item for item in fields if item.section_id == section.id):
                 targets.extend(FormTranslationService._field_targets(field, where))
         for field in (item for item in fields if item.section_id is None):
@@ -516,13 +550,14 @@ class FormTranslationService:
         result = [(f"field.{field.key}.{attr}", f"{where} › {name} › {attr.replace('_', ' ')}", field, attr) for attr in FIELD_TEXTS.values()]
         for option in sorted(field.options.all(), key=lambda item: item.ordering):
             result.append((f"option.{field.key}.{option.value}.label", f"{where} › {name} › option {option.value}", option, "label"))
+            result.append((f"option.{field.key}.{option.value}.description", f"{where} › {name} › option {option.value} description", option, "description"))
         return result
 
     @classmethod
     def rows(cls, form: SubmissionForm, *, lang: str = "tn") -> list[dict]:
         rows = []
         for key, where, obj, attr in cls._targets(form):
-            texts = bilingual(obj, attr)
+            texts = _target_texts(obj, attr)
             if not texts[DEFAULT_LANGUAGE].strip() and not texts.get(lang, "").strip():
                 continue
             rows.append(
@@ -550,6 +585,10 @@ class FormTranslationService:
         touched = {}
         for row in rows:
             obj, attr = targets[row["key"]]
+            if attr.startswith("tips."):
+                _save_tip(obj, int(attr.split(".")[1]), row)
+                touched[(type(obj), obj.pk)] = obj
+                continue
             translations = dict(obj.translations or {})
             for lang in (DEFAULT_LANGUAGE, *OTHER_LANGUAGES):
                 if lang not in row:
@@ -639,7 +678,57 @@ class FormLibraryService:
             ),
             step_count=Count("sections", filter=Q(sections__is_active=True), distinct=True),
             answer_count=Count("fields__responses__submission", distinct=True),
-        ).prefetch_related("programs")
+        ).prefetch_related("programs", "sections", "fields", "versions")
+
+    @staticmethod
+    def status_counts(queryset) -> dict[str, int]:
+        found = dict(queryset.values_list("status").annotate(total=Count("id")).values_list("status", "total"))
+        counts = {choice: found.get(choice, 0) for choice, _ in SubmissionForm.Status.choices}
+        counts["all"] = sum(total for status, total in counts.items() if status != SubmissionForm.Status.ARCHIVED)
+        return counts
+
+    @staticmethod
+    def layout_preview(form, *, rows: int = 4) -> list[list[str]]:
+        """Widths of the first rows of active fields, e.g. [["half", "half"], ["full"]], for the card picture."""
+        sections = sorted((section for section in form.sections.all() if section.is_active), key=lambda item: (item.ordering, item.title))
+        fields = [field for field in form.fields.all() if field.is_active]
+        preview: list[list[str]] = []
+        for section in sections:
+            section_fields = sorted((field for field in fields if field.section_id == section.id), key=lambda item: (item.row, item.ordering))
+            current_row, widths = None, []
+            for field in section_fields:
+                if field.row != current_row and widths:
+                    preview.append(widths)
+                    widths = []
+                    if len(preview) >= rows:
+                        return preview
+                current_row = field.row
+                widths.append(field.width or "full")
+            if widths:
+                preview.append(widths)
+                if len(preview) >= rows:
+                    return preview
+        return preview
+
+    @staticmethod
+    def summary(form) -> dict | None:
+        """Short description of a programme's form (R-10c)."""
+        if form is None:
+            return None
+        version = form.latest_version
+        totals = form.fields.filter(is_active=True).exclude(field_type__in=list(LAYOUT_FIELD_TYPES)).aggregate(
+            questions=Count("id"), challenge=Count("id", filter=Q(is_challenge_question=True))
+        )
+        return {
+            "form_id": str(form.id),
+            "name": form.title,
+            "status": form.status,
+            "version_number": version.number if version else None,
+            "step_count": form.sections.filter(is_active=True).count(),
+            "question_count": totals["questions"],
+            "challenge_question_count": totals["challenge"],
+            "estimated_minutes": (form.template_meta or {}).get("estimated_minutes"),
+        }
 
     @staticmethod
     @transaction.atomic

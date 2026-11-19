@@ -617,7 +617,7 @@ class NodeAssignmentBindingView(generics.GenericAPIView):
 
 class WorkflowFormDefinitionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOfficerOrAdmin]
-    queryset = SubmissionForm.objects.prefetch_related("sections__fields__field_rules", "sections__fields__options").all()
+    queryset = SubmissionForm.objects.filter(is_template=False).prefetch_related("sections__fields__field_rules", "sections__fields__options").all()
     serializer_class = WorkflowFormDefinitionSerializer
 
     def get_queryset(self):

@@ -317,6 +317,7 @@ class FormSection(UUIDModel, TimeStampedModel):
     ordering = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
     translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"title": "...", "description": "..."}}')
+    tips = models.JSONField(default=list, blank=True, help_text='"Tips for this step": a list of {"en": "...", "tn": "..."}')
 
     TRANSLATABLE = ("title", "description")
 
@@ -346,6 +347,7 @@ class SubmissionFormField(UUIDModel, TimeStampedModel):
     is_active = models.BooleanField(default=True)
     width = models.CharField(max_length=20, choices=FieldWidth.choices, default=FieldWidth.FULL)
     row = models.PositiveIntegerField(default=1, help_text="Row within the section; fields in one row sit side by side, left to right by ordering.")
+    is_challenge_question = models.BooleanField(default=False, help_text="Asked only for this challenge (shows the Challenge question badge).")
     translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"label": "...", "help_text": "...", "placeholder": "..."}}')
 
     TRANSLATABLE = ("label", "help_text", "placeholder")
@@ -381,10 +383,11 @@ class SubmissionFormFieldOption(UUIDModel, TimeStampedModel):
     field = models.ForeignKey(SubmissionFormField, on_delete=models.CASCADE, related_name="options")
     label = models.CharField(max_length=120)
     value = models.CharField(max_length=120)
+    description = models.CharField(max_length=255, blank=True, help_text="Optional second line on radio cards.")
     ordering = models.PositiveIntegerField(default=1)
-    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"label": "..."}}')
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"label": "...", "description": "..."}}')
 
-    TRANSLATABLE = ("label",)
+    TRANSLATABLE = ("label", "description")
 
     class Meta:
         ordering = ("ordering",)

@@ -13,17 +13,17 @@ Shape::
     {
       "id", "name": {en, tn}, "description": {en, tn}, "languages": ["en", "tn"],
       "steps": [
-        {"id", "code", "title": {en, tn}, "description": {en, tn}, "is_active",
+        {"id", "code", "title": {en, tn}, "description": {en, tn}, "tips": [{en, tn}], "is_active",
          "rows": [{"row": 1, "fields": [FIELD, ...]}, ...]}
       ],
       "loose_fields": [FIELD, ...]   # old fields that are not in any step
     }
 
     FIELD = {"id", "key", "type", "label": {en, tn}, "help_text": {en, tn},
-             "placeholder": {en, tn}, "required", "width", "is_active",
+             "placeholder": {en, tn}, "required", "is_challenge_question", "width", "is_active",
              "visible_if", "required_if", "enabled_if", "validation_rules",
              "media_config", "default_value", "example_value", "link_url",
-             "options": [{"id", "value", "label": {en, tn}}],
+             "options": [{"id", "value", "label": {en, tn}, "description": {en, tn}}],
              "rules": [{"rule_type", "rule_value", "error_message"}]}
 """
 
@@ -38,7 +38,7 @@ OTHER_LANGUAGES = ("tn",)
 FORM_TEXTS = {"name": "title", "description": "description"}
 STEP_TEXTS = {"title": "title", "description": "description"}
 FIELD_TEXTS = {"label": "label", "help_text": "help_text", "placeholder": "placeholder"}
-OPTION_TEXTS = {"label": "label"}
+OPTION_TEXTS = {"label": "label", "description": "description"}
 
 FIELD_DATA_KEYS = (
     "visible_if",
@@ -65,6 +65,20 @@ def _texts(obj, mapping: dict[str, str]) -> dict[str, dict[str, str]]:
     return {doc_key: bilingual(obj, attr) for doc_key, attr in mapping.items()}
 
 
+def normalize_tips(value) -> list[dict[str, str]]:
+    """Step tips as a list of ``{"en", "tn"}`` (plain strings are English)."""
+    tips = []
+    for item in value or []:
+        if isinstance(item, str):
+            item = {DEFAULT_LANGUAGE: item}
+        if not isinstance(item, dict):
+            continue
+        tip = {lang: str(item.get(lang) or "") for lang in (DEFAULT_LANGUAGE, *OTHER_LANGUAGES)}
+        if any(text.strip() for text in tip.values()):
+            tips.append(tip)
+    return tips
+
+
 def field_document(field) -> dict[str, Any]:
     options = sorted(field.options.all(), key=lambda option: (option.ordering, option.value))
     rules = sorted(
@@ -77,6 +91,7 @@ def field_document(field) -> dict[str, Any]:
         "type": field.field_type,
         **_texts(field, FIELD_TEXTS),
         "required": bool(field.required),
+        "is_challenge_question": bool(getattr(field, "is_challenge_question", False)),
         "width": getattr(field, "width", "full") or "full",
         "is_active": bool(field.is_active),
         "link_url": field.link_url or "",
@@ -116,6 +131,7 @@ def build_form_schema(form, *, include_inactive: bool = True) -> dict[str, Any]:
                 "id": str(section.id),
                 "code": section.code,
                 **_texts(section, STEP_TEXTS),
+                "tips": normalize_tips(getattr(section, "tips", None)),
                 "is_active": bool(section.is_active),
                 "rows": _rows(section_fields),
             }
@@ -164,7 +180,7 @@ def localize_schema(schema: dict[str, Any], lang: str) -> dict[str, Any]:
 
     result = texts(schema, FORM_TEXTS)
     result["steps"] = [
-        {**texts(step, STEP_TEXTS), "rows": [{**row, "fields": [field(f) for f in row.get("fields") or []]} for row in step.get("rows") or []]}
+        {**texts(step, STEP_TEXTS), "tips": [_pick(tip, lang) for tip in step.get("tips") or []], "rows": [{**row, "fields": [field(f) for f in row.get("fields") or []]} for row in step.get("rows") or []]}
         for step in schema.get("steps") or []
     ]
     result["loose_fields"] = [field(f) for f in schema.get("loose_fields") or []]
