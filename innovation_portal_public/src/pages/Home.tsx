@@ -639,9 +639,7 @@ function ChallengesPreview() {
             return (
               <div key={p.id} className="surface surface-hover rounded-2xl overflow-hidden flex flex-col group cursor-pointer">
                 <div className={`h-[120px] bg-gradient-to-br ${gradientFor(typeCode)} relative flex items-center justify-center`}>
-                  <Badge variant={ds as 'open' | 'upcoming' | 'closed'} className="absolute top-3 left-3 z-10">
-                    {ds.charAt(0).toUpperCase() + ds.slice(1)}
-                  </Badge>
+                  <Badge status={ds} className="absolute top-3 left-3 z-10" />
                   {bannerUrl ? (
                     <>
                       <img src={bannerUrl} alt={p.title} className="absolute inset-0 h-full w-full object-cover" />

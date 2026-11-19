@@ -40,33 +40,6 @@ function fmtDate(iso: string | null | undefined) {
   } catch { return iso }
 }
 
-function statusVariant(s: string): 'open' | 'upcoming' | 'closed' | 'orange' | 'red' | 'default' {
-  switch (s?.toLowerCase()) {
-    case 'draft':                                        return 'default'
-    case 'submitted':
-    case 'under_review': case 'in_review':
-    case 'screening': case 'judging_review':             return 'upcoming'
-    case 'shortlisted': case 'finalist':
-    case 'winner': case 'accepted': case 'approved':     return 'open'
-    case 'returned': case 'requires_more_information':   return 'orange'
-    case 'rejected': case 'screened_out':                return 'red'
-    case 'withdrawn':                                    return 'closed'
-    default:                                             return 'default'
-  }
-}
-
-function humanStatus(s: string) {
-  const map: Record<string, string> = {
-    draft: 'Draft', submitted: 'Submitted', under_review: 'Under Review',
-    in_review: 'Under Review', screening: 'Screening', judging_review: 'Judging',
-    shortlisted: 'Shortlisted', finalist: 'Finalist', winner: 'Winner',
-    accepted: 'Accepted', approved: 'Approved', returned: 'Returned for Revision',
-    requires_more_information: 'More Info Needed', rejected: 'Not Selected',
-    screened_out: 'Not Selected', withdrawn: 'Withdrawn',
-  }
-  return map[s?.toLowerCase()] ?? s?.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) ?? s
-}
-
 function getFileItems(raw: unknown): SubmissionFileDocument[] {
   if (!raw) return []
   if (typeof raw === 'string') {
@@ -501,9 +474,7 @@ function StatusSidebar({
             <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-100/80">Application Info</p>
             <p className="mt-0.5 truncate text-sm font-black leading-tight">{sub.title || 'Submission'}</p>
           </div>
-          <Badge variant={statusVariant(sub.current_status)} className="shrink-0 bg-white/15 text-white ring-1 ring-white/20">
-            {humanStatus(sub.current_status)}
-          </Badge>
+          <Badge status={sub.current_status} className="shrink-0" />
         </div>
       </div>
 

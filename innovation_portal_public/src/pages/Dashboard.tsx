@@ -21,8 +21,6 @@ function formatDate(iso: string): string {
   } catch { return iso }
 }
 
-type StatusMeta = { label: string; variant: 'open' | 'upcoming' | 'closed' | 'orange' | 'red' | 'default' }
-
 const DRAFT_STATUSES = new Set(['draft'])
 const COMPLETED_STATUSES = new Set([
   'accepted',
@@ -35,27 +33,6 @@ const COMPLETED_STATUSES = new Set([
   'shortlisted',
   'finalist',
 ])
-
-function statusMeta(s: string): StatusMeta {
-  switch (s?.toLowerCase()) {
-    case 'draft':          return { label: 'Draft',        variant: 'default'  }
-    case 'submitted':      return { label: 'Submitted',    variant: 'upcoming' }
-    case 'under_review':
-    case 'in_review':
-    case 'screening':      return { label: 'Under Review', variant: 'upcoming' }
-    case 'judging_review': return { label: 'Judging',      variant: 'upcoming' }
-    case 'shortlisted':    return { label: 'Shortlisted',  variant: 'open'     }
-    case 'finalist':       return { label: 'Finalist',     variant: 'open'     }
-    case 'winner':         return { label: 'Winner',       variant: 'open'     }
-    case 'accepted':
-    case 'approved':       return { label: 'Accepted',     variant: 'open'     }
-    case 'returned':       return { label: 'Returned',     variant: 'orange'   }
-    case 'rejected':
-    case 'screened_out':   return { label: 'Not Selected', variant: 'red'      }
-    case 'withdrawn':      return { label: 'Withdrawn',    variant: 'closed'   }
-    default:               return { label: s ? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'Unknown', variant: 'default' }
-  }
-}
 
 function submissionStatus(submission: Submission): string {
   return submission.current_status?.toLowerCase().trim() ?? ''
@@ -514,7 +491,6 @@ export default function Dashboard() {
                   <>
                     <div className="sm:hidden divide-y divide-gray-100">
                       {tabSubs[appTab].map(sub => {
-                        const { label, variant } = statusMeta(sub.current_status)
                         const isReturned = sub.current_status?.toLowerCase() === 'returned'
                         return (
                           <div
@@ -527,7 +503,7 @@ export default function Dashboard() {
                                 <p className="font-semibold text-gray-900 text-[13px] truncate">{sub.title || '—'}</p>
                                 <p className="text-[11px] text-gray-400 truncate mt-0.5">{programName(sub)}</p>
                               </div>
-                              <Badge variant={variant} className="shrink-0">{label}</Badge>
+                              <Badge status={sub.current_status} className="shrink-0" />
                             </div>
                             {isReturned && (
                               <span className="text-[11px] font-medium text-amber-600 block mb-1">Action required →</span>
@@ -551,7 +527,6 @@ export default function Dashboard() {
                         </thead>
                         <tbody>
                           {tabSubs[appTab].map(sub => {
-                            const { label, variant } = statusMeta(sub.current_status)
                             const isReturned = sub.current_status?.toLowerCase() === 'returned'
                             return (
                               <tr
@@ -568,7 +543,7 @@ export default function Dashboard() {
                                 <td className="px-5 py-3.5 text-gray-500 text-[13px] max-w-[160px]">
                                   <span className="truncate block">{programName(sub)}</span>
                                 </td>
-                                <td className="px-5 py-3.5"><Badge variant={variant}>{label}</Badge></td>
+                                <td className="px-5 py-3.5"><Badge status={sub.current_status} /></td>
                                 <td className="px-5 py-3.5 text-gray-400 text-[12px] whitespace-nowrap">
                                   {sub.submitted_at ? formatDate(sub.submitted_at) : '—'}
                                 </td>
