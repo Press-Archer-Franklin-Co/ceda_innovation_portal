@@ -1,5 +1,6 @@
 import logging
 from email.mime.image import MIMEImage
+from functools import cache
 from io import BytesIO
 from pathlib import Path
 import textwrap
@@ -58,95 +59,18 @@ class EmailNotificationService:
         except Exception:
             return ImageFont.load_default()
 
+    HERO_SIZE = (1280, 620)
+
     @staticmethod
     def _build_hero_png_bytes(*, headline: str, intro: str):
-        if not EmailNotificationService.LOGO_PATH.exists():
+        background = _hero_background()
+        if background is None:
             return None
-        width, height = 1280, 620
-        image = Image.new("RGBA", (width, height), "#5A3C32")
-        pixels = image.load()
-
-        top = (46, 30, 24, 255)
-        mid = (90, 60, 50, 255)
-        bottom = (107, 74, 62, 255)
-        for y in range(height):
-            vertical_ratio = y / float(height - 1)
-            for x in range(width):
-                horizontal_ratio = x / float(width - 1)
-                diagonal_ratio = (horizontal_ratio * 0.70) + (vertical_ratio * 0.30)
-                if diagonal_ratio < 0.55:
-                    mix = diagonal_ratio / 0.55
-                    color = tuple(int(top[i] + (mid[i] - top[i]) * mix) for i in range(4))
-                else:
-                    mix = (diagonal_ratio - 0.55) / 0.45
-                    color = tuple(int(mid[i] + (bottom[i] - mid[i]) * mix) for i in range(4))
-                pixels[x, y] = color
-
+        image = background.copy()
         draw = ImageDraw.Draw(image)
 
-        for y in range(16, height, 26):
-            for x in range(16, width, 26):
-                draw.ellipse((x, y, x + 2, y + 2), fill=(148, 163, 184, 128))
-
-        glow = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        glow_draw = ImageDraw.Draw(glow)
-        glow_center_x = int(width * 0.85)
-        glow_center_y = int(height * 0.50)
-        for radius, alpha in ((420, 10), (330, 17), (245, 24), (160, 33)):
-            glow_draw.ellipse(
-                (
-                    glow_center_x - radius,
-                    glow_center_y - radius,
-                    glow_center_x + radius,
-                    glow_center_y + radius,
-                ),
-                fill=(240, 100, 30, alpha),
-            )
-        image = Image.alpha_composite(image, glow)
-        draw = ImageDraw.Draw(image)
-
-        circuit = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        circuit_draw = ImageDraw.Draw(circuit)
-        stroke = (255, 255, 255, 14)
-        fill = (255, 255, 255, 14)
-        outline = (255, 255, 255, 14)
-        circuit_draw.line((973, 74, 973, 236), fill=stroke, width=2)
-        circuit_draw.line((973, 236, 1126, 236), fill=stroke, width=2)
-        circuit_draw.line((1126, 111, 1126, 384), fill=stroke, width=2)
-        circuit_draw.line((1126, 384, 1203, 384), fill=stroke, width=2)
-        circuit_draw.line((1203, 279, 1203, 483), fill=stroke, width=2)
-        circuit_draw.ellipse((968, 69, 978, 79), fill=fill)
-        circuit_draw.ellipse((966, 229, 980, 243), outline=outline, width=2)
-        circuit_draw.ellipse((1122, 107, 1130, 115), fill=fill)
-        circuit_draw.ellipse((1121, 231, 1131, 241), fill=fill)
-        circuit_draw.ellipse((1119, 377, 1133, 391), outline=outline, width=2)
-        circuit_draw.ellipse((1199, 275, 1207, 283), fill=fill)
-        circuit_draw.ellipse((1198, 478, 1208, 488), fill=fill)
-        circuit_draw.polygon(
-            ((922, 136), (947, 111), (998, 111), (1024, 136), (998, 161), (947, 161)),
-            outline=outline,
-            width=2,
-        )
-        circuit_draw.polygon(
-            ((1050, 446), (1076, 421), (1126, 421), (1152, 446), (1126, 471), (1076, 471)),
-            outline=outline,
-            width=2,
-        )
-        image = Image.alpha_composite(image, circuit)
-        draw = ImageDraw.Draw(image)
-
-        logo = Image.open(EmailNotificationService.LOGO_PATH).convert("RGBA").resize((92, 92))
-        image.alpha_composite(logo, (74, 60))
-
-        draw.line((196, 72, 196, 146), fill=(255, 255, 255, 70), width=2)
-
-        wordmark_font = EmailNotificationService._load_font(EmailNotificationService.FONT_HEAVY_PATH, 56)
-        label_font = EmailNotificationService._load_font(EmailNotificationService.FONT_DEMIBOLD_PATH, 24)
-        headline_font = EmailNotificationService._load_font(EmailNotificationService.FONT_HEAVY_PATH, 96)
-        intro_font = EmailNotificationService._load_font(EmailNotificationService.FONT_DEMIBOLD_PATH, 30)
-
-        draw.text((228, 70), "ceda", font=wordmark_font, fill=(255, 255, 255, 255))
-        draw.text((228, 126), "Innovation Portal", font=label_font, fill=(255, 255, 255, 150))
+        headline_font = _hero_font(str(EmailNotificationService.FONT_HEAVY_PATH), 96)
+        intro_font = _hero_font(str(EmailNotificationService.FONT_DEMIBOLD_PATH), 30)
 
         headline_lines = textwrap.wrap(headline, width=22)[:2]
         headline_y = 205
@@ -161,7 +85,8 @@ class EmailNotificationService:
             intro_y += 44
 
         buffer = BytesIO()
-        image.convert("RGB").save(buffer, format="PNG", optimize=True)
+        # Default zlib level: about 5x faster than optimize=True for a ~4% larger file.
+        image.convert("RGB").save(buffer, format="PNG")
         return buffer.getvalue()
 
     @staticmethod
@@ -507,3 +432,124 @@ class EmailNotificationService:
             template_name="test_notification_email",
             context=context,
         )
+
+
+# ---------------------------------------------------------------------------
+# Hero picture background
+#
+# Everything in the email hero except the headline and intro text is the same
+# for every email, so it is drawn once per process and cached. Each email copies
+# it and draws only its own text.
+# ---------------------------------------------------------------------------
+
+_HERO_TOP = (46, 30, 24)
+_HERO_MID = (90, 60, 50)
+_HERO_BOTTOM = (107, 74, 62)
+_HERO_GRADIENT_SCALE = 8  # gradient is computed at 1/8 size, then resized
+
+
+@cache
+def _hero_font(path: str, size: int):
+    return EmailNotificationService._load_font(Path(path), size)
+
+
+def _hero_gradient(width: int, height: int) -> Image.Image:
+    """Diagonal three-colour gradient (top-left dark to bottom-right light).
+
+    The colour depends on d = 0.7 * x/width + 0.3 * y/height, linear on each
+    side of d = 0.55. Linear pieces survive bilinear resizing, so it is
+    computed on a small grid and scaled up instead of colouring 800,000 pixels
+    in Python.
+    """
+    small_w = max(2, width // _HERO_GRADIENT_SCALE)
+    small_h = max(2, height // _HERO_GRADIENT_SCALE)
+    data = []
+    for sy in range(small_h):
+        # Sample at the positions the small pixels map to in the full image.
+        y = (sy + 0.5) * height / small_h - 0.5
+        vertical_ratio = min(max(y / float(height - 1), 0.0), 1.0)
+        for sx in range(small_w):
+            x = (sx + 0.5) * width / small_w - 0.5
+            horizontal_ratio = min(max(x / float(width - 1), 0.0), 1.0)
+            diagonal_ratio = (horizontal_ratio * 0.70) + (vertical_ratio * 0.30)
+            if diagonal_ratio < 0.55:
+                mix = diagonal_ratio / 0.55
+                low, high = _HERO_TOP, _HERO_MID
+            else:
+                mix = (diagonal_ratio - 0.55) / 0.45
+                low, high = _HERO_MID, _HERO_BOTTOM
+            data.append(tuple(int(low[i] + (high[i] - low[i]) * mix) for i in range(3)))
+    small = Image.new("RGB", (small_w, small_h))
+    small.putdata(data)
+    return small.resize((width, height), Image.BILINEAR).convert("RGBA")
+
+
+@cache
+def _hero_background():
+    """The hero picture without the per-email text, or None without the logo file."""
+    if not EmailNotificationService.LOGO_PATH.exists():
+        return None
+    width, height = EmailNotificationService.HERO_SIZE
+    image = _hero_gradient(width, height)
+    draw = ImageDraw.Draw(image)
+
+    for y in range(16, height, 26):
+        for x in range(16, width, 26):
+            draw.ellipse((x, y, x + 2, y + 2), fill=(148, 163, 184, 128))
+
+    glow = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    glow_draw = ImageDraw.Draw(glow)
+    glow_center_x = int(width * 0.85)
+    glow_center_y = int(height * 0.50)
+    for radius, alpha in ((420, 10), (330, 17), (245, 24), (160, 33)):
+        glow_draw.ellipse(
+            (
+                glow_center_x - radius,
+                glow_center_y - radius,
+                glow_center_x + radius,
+                glow_center_y + radius,
+            ),
+            fill=(240, 100, 30, alpha),
+        )
+    image = Image.alpha_composite(image, glow)
+
+    circuit = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    circuit_draw = ImageDraw.Draw(circuit)
+    stroke = (255, 255, 255, 14)
+    fill = (255, 255, 255, 14)
+    outline = (255, 255, 255, 14)
+    circuit_draw.line((973, 74, 973, 236), fill=stroke, width=2)
+    circuit_draw.line((973, 236, 1126, 236), fill=stroke, width=2)
+    circuit_draw.line((1126, 111, 1126, 384), fill=stroke, width=2)
+    circuit_draw.line((1126, 384, 1203, 384), fill=stroke, width=2)
+    circuit_draw.line((1203, 279, 1203, 483), fill=stroke, width=2)
+    circuit_draw.ellipse((968, 69, 978, 79), fill=fill)
+    circuit_draw.ellipse((966, 229, 980, 243), outline=outline, width=2)
+    circuit_draw.ellipse((1122, 107, 1130, 115), fill=fill)
+    circuit_draw.ellipse((1121, 231, 1131, 241), fill=fill)
+    circuit_draw.ellipse((1119, 377, 1133, 391), outline=outline, width=2)
+    circuit_draw.ellipse((1199, 275, 1207, 283), fill=fill)
+    circuit_draw.ellipse((1198, 478, 1208, 488), fill=fill)
+    circuit_draw.polygon(
+        ((922, 136), (947, 111), (998, 111), (1024, 136), (998, 161), (947, 161)),
+        outline=outline,
+        width=2,
+    )
+    circuit_draw.polygon(
+        ((1050, 446), (1076, 421), (1126, 421), (1152, 446), (1126, 471), (1076, 471)),
+        outline=outline,
+        width=2,
+    )
+    image = Image.alpha_composite(image, circuit)
+    draw = ImageDraw.Draw(image)
+
+    logo = Image.open(EmailNotificationService.LOGO_PATH).convert("RGBA").resize((92, 92))
+    image.alpha_composite(logo, (74, 60))
+
+    draw.line((196, 72, 196, 146), fill=(255, 255, 255, 70), width=2)
+
+    wordmark_font = _hero_font(str(EmailNotificationService.FONT_HEAVY_PATH), 56)
+    label_font = _hero_font(str(EmailNotificationService.FONT_DEMIBOLD_PATH), 24)
+    draw.text((228, 70), "ceda", font=wordmark_font, fill=(255, 255, 255, 255))
+    draw.text((228, 126), "Innovation Portal", font=label_font, fill=(255, 255, 255, 150))
+    return image

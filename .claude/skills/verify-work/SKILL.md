@@ -15,13 +15,13 @@ The checks are the same everywhere, and match `.github/workflows/ci.yml`:
 | Check | Command (from the app folder) |
 | --- | --- |
 | Migrations up to date | `python manage.py makemigrations --check --dry-run > mig.txt 2>&1; python ../scripts/check_migrations.py mig.txt --exit-code $? --known tests/known_migration_drift.txt` (innovation_portal_api) |
-| API tests | `pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf`, then `python ../scripts/check_test_results.py pytest-report.xml --known tests/known_failures.txt --root .` |
+| API tests | `pytest -q -n auto --dist loadfile --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf --durations=15`, then `python ../scripts/check_test_results.py pytest-report.xml --known tests/known_failures.txt --root .` |
 | Admin lint | `npm run lint -- --format json --output-file lint.json`, then `python3 ../scripts/check_lint_baseline.py lint.json --baseline lint-baseline.json --root .` |
 | Admin build | `npm run build` (innovation_portal_admin) |
 | Public type check | `npx tsc --noEmit` (innovation_portal_public) |
 | Public build | `npm run build` (innovation_portal_public) |
 
-The migrations check, API tests and admin lint pass when there is nothing **new** compared with `main`: main has model changes without migrations (`innovation_portal_api/tests/known_migration_drift.txt`), 24 tests already fail on main (`innovation_portal_api/tests/known_failures.txt`), and admin lint has a baseline (`innovation_portal_admin/lint-baseline.json`). The checker scripts decide; do not judge by pytest's or ESLint's exit code.
+Tests use `config.settings.test` (fast password hasher, in-memory email); `pytest.ini` sets it, and `config.settings.local` stays for running the server. The migrations check, API tests and admin lint pass when there is nothing **new** compared with `main`: main has model changes without migrations (`innovation_portal_api/tests/known_migration_drift.txt`), 24 tests already fail on main (`innovation_portal_api/tests/known_failures.txt`), and admin lint has a baseline (`innovation_portal_admin/lint-baseline.json`). The checker scripts decide; do not judge by pytest's or ESLint's exit code.
 
 ## 1. Check what can run here
 
@@ -45,10 +45,10 @@ When Python 3.12+, a reachable PostgreSQL and Redis exist:
 cd innovation_portal_api
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements/local.txt
-export DJANGO_SETTINGS_MODULE=config.settings.local REDIS_URL=redis://localhost:6379/0
+export DJANGO_SETTINGS_MODULE=config.settings.test REDIS_URL=redis://localhost:6379/0
 # plus INNOVATION_PORTAL_POSTGRES_{USER,PASSWORD,DB,HOST,PORT} if not innovation/innovation/innovation_portal on localhost:5432
 python manage.py makemigrations --check --dry-run > mig.txt 2>&1; python ../scripts/check_migrations.py mig.txt --exit-code $? --known tests/known_migration_drift.txt
-pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf
+pytest -q -n auto --dist loadfile --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf --durations=15
 python ../scripts/check_test_results.py pytest-report.xml --known tests/known_failures.txt --root .
 ```
 
@@ -84,9 +84,9 @@ docker run -d --rm --name ceda-test-redis --network ceda-test redis:7-alpine
 
 # API tests
 docker run --rm --network ceda-test -v "$PWD/innovation_portal_api":/app -w /app \
-  -e DJANGO_SETTINGS_MODULE=config.settings.local \
+  -e DJANGO_SETTINGS_MODULE=config.settings.test \
   -e INNOVATION_PORTAL_POSTGRES_HOST=ceda-test-db -e REDIS_URL=redis://ceda-test-redis:6379/0 \
-  python:3.12-slim sh -c "pip install -q -r requirements/local.txt && pytest -q --create-db -p no:cacheprovider -rf"
+  python:3.12-slim sh -c "pip install -q -r requirements/local.txt && pytest -q -n auto --dist loadfile --create-db -p no:cacheprovider -rf"
 
 # Frontends
 docker run --rm -v "$PWD/innovation_portal_admin":/app -w /app node:22 sh -c "npm ci && npm run lint && npm run build"
@@ -113,6 +113,7 @@ sha=$(git rev-parse HEAD)
 Then read the result, using the first option that works:
 1. `gh` installed and signed in:
    `gh run list --branch <branch> --commit $sha`, `gh run watch <run-id> --exit-status`, `gh run view <run-id> --log-failed`.
+   Ignore runs whose conclusion is `cancelled` (CI cancels a run when a newer one starts for the same branch, including the duplicate `push`/`pull_request` pair) and watch the newest run for the commit.
 2. A GitHub API token in the environment (`GH_TOKEN` or `GITHUB_TOKEN`):
    `curl -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/{owner}/{repo}/actions/runs?head_sha=$sha"`, then the run's jobs and logs.
 3. Plain git access only (SSH remote, no token; the usual case for this repo):
@@ -123,7 +124,7 @@ Never open the PR until this run is green. Never merge `ci-results` into anythin
 
 ## 3. While fixing, run only what changed
 
-After a failure, re-run just the failing tests or step until it passes (for example `pytest tests/api/test_x.py::Class::test_name`, or only the admin build). On the CI route every push re-runs everything, so batch fixes into one push. When everything is fixed, run the full set once more and report on that final run.
+After a failure, re-run just the failing tests or step until it passes (for example `pytest tests/api/test_x.py::Class::test_name`, or only the admin build). For fewer than about 20 tests, drop `-n auto`: starting the workers costs more than it saves. On the CI route every push re-runs everything, so batch fixes into one push. When everything is fixed, run the full set once more and report on that final run.
 
 ## 4. Never
 

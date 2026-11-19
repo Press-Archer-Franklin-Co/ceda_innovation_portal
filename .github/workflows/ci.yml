@@ -17,6 +17,12 @@ on:
 permissions:
   contents: read
 
+# One run per branch: a push to a branch with an open PR triggers both `push`
+# and `pull_request`, and a new push makes the previous run pointless.
+concurrency:
+  group: ci-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   api:
     name: api
@@ -46,7 +52,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      DJANGO_SETTINGS_MODULE: config.settings.local
+      DJANGO_SETTINGS_MODULE: config.settings.test
       INNOVATION_PORTAL_POSTGRES_USER: innovation
       INNOVATION_PORTAL_POSTGRES_PASSWORD: innovation
       INNOVATION_PORTAL_POSTGRES_DB: innovation_portal
@@ -58,6 +64,10 @@ jobs:
         shell: bash
         working-directory: innovation_portal_api
     steps:
+      - name: Start clock
+        working-directory: .
+        run: date +%s > "$RUNNER_TEMP/job-start"
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
@@ -91,8 +101,10 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           set +e
-          pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf 2>&1 | tee ../ci-out/pytest-output.txt
+          date +%s > ../ci-out/pytest-start
+          pytest -q -n auto --dist loadfile --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf --durations=15 2>&1 | tee ../ci-out/pytest-output.txt
           code=${PIPESTATUS[0]}
+          date +%s > ../ci-out/pytest-end
           echo "pytest exit code: $code"
           # 1 means some tests failed; the next step decides whether they are new.
           if [ "$code" -gt 1 ]; then exit "$code"; fi
@@ -112,8 +124,15 @@ jobs:
         run: |
           mkdir -p ../ci-out
           cp pytest-report.xml ../ci-out/ 2>/dev/null || true
+          now=$(date +%s)
+          job_seconds=$(( now - $(cat "$RUNNER_TEMP/job-start" 2>/dev/null || echo "$now") ))
+          if [ -f ../ci-out/pytest-start ] && [ -f ../ci-out/pytest-end ]; then
+            pytest_seconds=$(( $(cat ../ci-out/pytest-end) - $(cat ../ci-out/pytest-start) ))
+          else
+            pytest_seconds=null
+          fi
           cat > ../ci-out/api-steps.json <<EOF
-          {"install": "${{ steps.install.outcome }}", "migrations": "${{ steps.migrations.outcome }}", "pytest": "${{ steps.pytest.outcome }}", "results": "${{ steps.results.outcome }}"}
+          {"install": "${{ steps.install.outcome }}", "migrations": "${{ steps.migrations.outcome }}", "pytest": "${{ steps.pytest.outcome }}", "results": "${{ steps.results.outcome }}", "pytest_seconds": $pytest_seconds, "job_seconds_to_here": $job_seconds}
           EOF
 
       - uses: actions/upload-artifact@v4
@@ -233,13 +252,17 @@ jobs:
           path: ci-out/
           if-no-files-found: warn
 
-  # Writes one summary for the run. On pushes it is also committed to the
-  # `ci-results` branch (results/<branch>/<sha>/) so agents without a GitHub
-  # API token can read the outcome with `git fetch`.
+  # Writes one summary for the run and commits it to the `ci-results` branch
+  # (results/<branch>/<sha>/) so agents without a GitHub API token can read the
+  # outcome with `git fetch`. Branch and sha are the PR head's for pull_request
+  # runs, so whichever of push/pull_request survives the concurrency group
+  # publishes the result.
+  # Skipped when the run was cancelled (superseded), so a cancelled run never
+  # publishes a result.
   report:
     name: report
     needs: [api, admin, public]
-    if: ${{ always() }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -270,12 +293,14 @@ jobs:
           --needs "$NEEDS_JSON"
 
       - name: Publish to the ci-results branch
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
-          dest="results/${GITHUB_REF_NAME}/${GITHUB_SHA}"
+          dest="results/${BRANCH}/${HEAD_SHA}"
           url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -291,7 +316,7 @@ jobs:
             mkdir -p "results-repo/${dest}"
             cp -R ci-summary/. "results-repo/${dest}/"
             git -C results-repo add -A
-            git -C results-repo commit --quiet -m "CI results: ${GITHUB_REF_NAME} ${GITHUB_SHA::7} (run ${GITHUB_RUN_ID})"
+            git -C results-repo commit --quiet -m "CI results: ${BRANCH} ${HEAD_SHA::7} (run ${GITHUB_RUN_ID}, ${GITHUB_EVENT_NAME})"
             if git -C results-repo push --quiet origin ci-results; then
               echo "Published to ci-results:${dest}"
               exit 0
