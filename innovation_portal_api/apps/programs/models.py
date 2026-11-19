@@ -9,6 +9,17 @@ from apps.core.constants import ProgramAudience, ProgramStatus, ProgramTypeCode,
 from apps.core.models import AuditMetadataMixin, TimeStampedModel, UUIDModel
 
 
+def default_form_languages():
+    return ["en", "tn"]
+
+
+class FieldWidth(models.TextChoices):
+    QUARTER = "quarter", "Quarter"
+    HALF = "half", "Half"
+    THREE_QUARTER = "three_quarter", "Three quarters"
+    FULL = "full", "Full"
+
+
 class ProgramType(UUIDModel, TimeStampedModel):
     code = models.CharField(max_length=50, choices=ProgramTypeCode.choices, unique=True)
     name = models.CharField(max_length=100)
@@ -80,9 +91,23 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     )
     sectors = models.ManyToManyField("reference.Sector", blank=True, related_name="programs")
     next_panel_at = models.DateTimeField(null=True, blank=True, help_text="Next review panel date shown to innovators.")
+    form = models.ForeignKey(
+        "programs.SubmissionForm",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="programs",
+        related_query_name="program",
+        help_text="The form applicants fill in. One form can be used by several programmes.",
+    )
 
     class Meta:
         indexes = [models.Index(fields=["status", "program_type"]), models.Index(fields=["opening_date", "closing_date"])]
+
+    @property
+    def submission_form(self):
+        """The programme's form (kept so code written for the old one-to-one link keeps working)."""
+        return self.form
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -197,17 +222,91 @@ class EligibilityRule(UUIDModel, TimeStampedModel):
 
 
 class SubmissionForm(UUIDModel, TimeStampedModel):
-    program = models.OneToOneField(Program, on_delete=models.CASCADE, related_name="submission_form")
+    """A reusable form. Programmes point at it through ``Program.form``.
+
+    The live tables (sections, fields, options, rules) are the staff draft. Publishing
+    copies them into a ``FormVersion``; applicants always get the latest published version.
+    English text is kept in the plain columns; other languages live in ``translations``.
+    """
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        LIVE = "live", "Live"
+        CLOSED = "closed", "Closed"
+        ARCHIVED = "archived", "Archived"
+
     title = models.CharField(max_length=255)
     code = models.SlugField(max_length=120, blank=True)
     description = models.TextField(blank=True)
-    version = models.PositiveIntegerField(default=1)
+    version = models.PositiveIntegerField(default=1, help_text="Draft edit counter; bumps on every structure change.")
     active = models.BooleanField(default=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    languages = models.JSONField(default=default_form_languages, blank=True)
+    is_template = models.BooleanField(default=False, db_index=True)
+    template_meta = models.JSONField(default=dict, blank=True, help_text="description, estimated_minutes, works_on_ussd")
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"title": "...", "description": "..."}}')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_forms")
+
+    TRANSLATABLE = ("title", "description")
+
+    def __init__(self, *args, **kwargs):
+        self._pending_program = None
+        super().__init__(*args, **kwargs)
+
+    # Old code and tests create a form with ``SubmissionForm(program=...)`` and read
+    # ``form.program``. That still works: the program is linked to the form on save.
+    @property
+    def program(self):
+        if self._pending_program is not None:
+            return self._pending_program
+        if not self.pk or self._state.adding:
+            return None
+        return self.programs.order_by("created_at").first()
+
+    @program.setter
+    def program(self, value):
+        self._pending_program = value
+
+    @property
+    def program_id(self):
+        program = self.program
+        return program.pk if program else None
 
     def save(self, *args, **kwargs):
         if not self.code:
-            self.code = slugify(self.title or self.program.title)
+            program = self._pending_program
+            self.code = slugify(self.title or (program.title if program else "")) or "form"
         super().save(*args, **kwargs)
+        program = self._pending_program
+        if program is not None:
+            self._pending_program = None
+            if program.form_id != self.pk:
+                program.form = self
+                program.save(update_fields=["form", "updated_at"])
+
+    @property
+    def latest_version(self):
+        return self.versions.order_by("-number").first()
+
+    def __str__(self) -> str:
+        return self.title
+
+
+class FormVersion(UUIDModel, TimeStampedModel):
+    """A published, frozen copy of a form's sections, fields, options, rules and layout."""
+
+    form = models.ForeignKey(SubmissionForm, on_delete=models.CASCADE, related_name="versions")
+    number = models.PositiveIntegerField()
+    schema = models.JSONField(default=dict)
+    published_at = models.DateTimeField(default=timezone.now)
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="published_form_versions")
+
+    class Meta:
+        ordering = ("-number",)
+        constraints = [models.UniqueConstraint(fields=["form", "number"], name="uq_form_version_number")]
+
+    def __str__(self) -> str:
+        return f"{self.form.title} v{self.number}"
 
 
 class FormSection(UUIDModel, TimeStampedModel):
@@ -217,6 +316,9 @@ class FormSection(UUIDModel, TimeStampedModel):
     description = models.TextField(blank=True)
     ordering = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"title": "...", "description": "..."}}')
+
+    TRANSLATABLE = ("title", "description")
 
     class Meta:
         unique_together = ("form", "code")
@@ -242,6 +344,11 @@ class SubmissionFormField(UUIDModel, TimeStampedModel):
     media_config = models.JSONField(default=dict, blank=True)
     ordering = models.PositiveIntegerField(default=1)
     is_active = models.BooleanField(default=True)
+    width = models.CharField(max_length=20, choices=FieldWidth.choices, default=FieldWidth.FULL)
+    row = models.PositiveIntegerField(default=1, help_text="Row within the section; fields in one row sit side by side, left to right by ordering.")
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"label": "...", "help_text": "...", "placeholder": "..."}}')
+
+    TRANSLATABLE = ("label", "help_text", "placeholder")
 
     class Meta:
         unique_together = ("form", "key")
@@ -275,6 +382,9 @@ class SubmissionFormFieldOption(UUIDModel, TimeStampedModel):
     label = models.CharField(max_length=120)
     value = models.CharField(max_length=120)
     ordering = models.PositiveIntegerField(default=1)
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"label": "..."}}')
+
+    TRANSLATABLE = ("label",)
 
     class Meta:
         ordering = ("ordering",)

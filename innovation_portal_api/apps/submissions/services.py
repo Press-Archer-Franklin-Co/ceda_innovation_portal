@@ -4,7 +4,7 @@ from rest_framework.exceptions import ValidationError
 
 from apps.audit.services import AuditService
 from apps.communications.services import CommunicationService
-from apps.core.constants import RoleType, ScoreSheetStatus, SubmissionFormFieldType, SubmissionStatus
+from apps.core.constants import LAYOUT_FIELD_TYPES, RoleType, ScoreSheetStatus, SubmissionFormFieldType, SubmissionStatus
 from apps.documents.models import SubmissionDocument
 from apps.programs.condition_services import FormConditionService
 from apps.notifications.services import NotificationService
@@ -92,6 +92,8 @@ class SubmissionService:
         from apps.submissions.draft_services import ApplicationDraftService
 
         for field in fields:
+            if field.field_type in LAYOUT_FIELD_TYPES:
+                continue
             state = FormConditionService.field_state(field, values)
             if not state["visible"] or not state["enabled"]:
                 continue
@@ -174,8 +176,13 @@ class SubmissionService:
         if not submission.reference_number:
             submission.reference_number = ReferenceNumberService.generate(submission.program)
         submission.submitted_at = timezone.now()
-        submission.form_version_number = getattr(getattr(submission.program, "submission_form", None), "version", 1)
-        submission.save(update_fields=["reference_number", "submitted_at", "form_version_number", "updated_at"])
+        form = getattr(submission.program, "submission_form", None)
+        published = form.latest_version if form else None
+        # Record the published version the applicant answered. Forms that were never
+        # published (older test and seed data) keep the draft edit counter as before.
+        submission.form_version = published
+        submission.form_version_number = published.number if published else getattr(form, "version", 1)
+        submission.save(update_fields=["reference_number", "submitted_at", "form_version", "form_version_number", "updated_at"])
         if submission.program.is_innovation_challenge:
             from apps.programs.challenge_judging import ChallengeJudgingService
 

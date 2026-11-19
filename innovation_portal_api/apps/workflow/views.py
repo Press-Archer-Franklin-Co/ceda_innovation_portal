@@ -99,7 +99,7 @@ class WorkflowDefinitionViewSet(viewsets.ModelViewSet):
         queryset = WorkflowDefinition.objects.select_related("program", "previous_version").prefetch_related("steps").all()
         program_id = self.request.query_params.get("program")
         if program_id:
-            queryset = queryset.filter(program_id=program_id)
+            queryset = queryset.filter(program__id=program_id)
         return queryset
 
     def get_serializer_class(self):
@@ -617,7 +617,7 @@ class NodeAssignmentBindingView(generics.GenericAPIView):
 
 class WorkflowFormDefinitionViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOfficerOrAdmin]
-    queryset = SubmissionForm.objects.select_related("program").prefetch_related("sections__fields__field_rules", "sections__fields__options").all()
+    queryset = SubmissionForm.objects.prefetch_related("sections__fields__field_rules", "sections__fields__options").all()
     serializer_class = WorkflowFormDefinitionSerializer
 
     def get_queryset(self):

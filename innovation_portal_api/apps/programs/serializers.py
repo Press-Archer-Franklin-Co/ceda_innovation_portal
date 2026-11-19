@@ -124,6 +124,7 @@ class ProgramSerializer(serializers.ModelSerializer):
     entry = serializers.SerializerMethodField()
     marking_criteria_title = serializers.CharField(source="marking_criteria.title", read_only=True, default=None)
     sectors = serializers.PrimaryKeyRelatedField(many=True, queryset=Sector.objects.filter(active=True), required=False)
+    form_id = serializers.UUIDField(read_only=True, allow_null=True, help_text="The form applicants fill in. Change it with PUT /api/programs/{id}/form/.")
 
     class Meta:
         model = Program
@@ -168,8 +169,9 @@ class ProgramSerializer(serializers.ModelSerializer):
             "is_general_intake",
             "sectors",
             "next_panel_at",
+            "form_id",
         )
-        read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake")
+        read_only_fields = ("owner", "status", "published_at", "slug", "results_announced_at", "results_hold_reason", "is_general_intake", "form_id")
 
     def create(self, validated_data):
         program_type_id = validated_data.pop("program_type_id")

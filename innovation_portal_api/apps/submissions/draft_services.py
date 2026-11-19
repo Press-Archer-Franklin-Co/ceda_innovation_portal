@@ -13,6 +13,7 @@ from apps.core.constants import SubmissionFormFieldType
 from apps.documents.models import SubmissionDocument
 from apps.programs.access import ProgramAccessService
 from apps.programs.condition_services import FormConditionService
+from apps.programs.field_types import answer_errors, is_layout
 from apps.programs.models import FieldValidationRule, SubmissionFormField
 from apps.profiles.models import InnovatorProfile
 from apps.submissions.models import ApplicationDraft, Submission, SubmissionResponse
@@ -91,6 +92,8 @@ class ApplicationDraftService:
     @classmethod
     def field_errors(cls, field: SubmissionFormField, values: dict) -> list[str]:
         """Problems with one field's answer, given all answers (for visible_if/required_if)."""
+        if is_layout(field.field_type):
+            return []
         state = cls._field_state(field, values)
         if not state["visible"] or not state["enabled"]:
             return []
@@ -107,6 +110,8 @@ class ApplicationDraftService:
                 errors.append(f"No more than {max_files} files are allowed.")
         if state["required"] and value in (None, "", []):
             return ["This field is required."]
+        if value not in (None, "", []):
+            errors.extend(answer_errors(field, value))
         rule_qs = field.field_rules.filter(is_active=True)
         if field.field_type == SubmissionFormFieldType.FILE and isinstance(value, list):
             for file_item in value:
@@ -159,6 +164,8 @@ class ApplicationDraftService:
             section_total = section_completed = section_required = section_required_completed = 0
             missing_required = []
             for field in section.fields.filter(is_active=True).order_by("ordering"):
+                if is_layout(field.field_type):
+                    continue
                 state = cls._field_state(field, effective_values)
                 if not state["visible"]:
                     continue
