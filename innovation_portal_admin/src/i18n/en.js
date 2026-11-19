@@ -21,6 +21,7 @@ const en = {
   'common.somethingWrong': 'Something went wrong',
   'common.charsLeft': '{count} characters left',
   'common.charsOver': '{count} characters too many',
+  'common.removeItem': 'Remove {item}',
   'common.dismiss': 'Dismiss',
   'common.notifications': 'Notifications',
   'common.unread': '{count} unread',
@@ -56,6 +57,16 @@ const en = {
   'status.cancelled': 'Cancelled',
   'status.withdrawn': 'Withdrawn',
   'status.unknown': 'Not known',
+
+  'table.selectAll': 'Select all rows',
+  'table.selectRow': 'Select row',
+  'table.search': 'Search this list',
+
+  'error.page': 'This page could not load',
+  'error.pageBody': 'This is on our side. Your work is safe. Try again in a moment.',
+  'error.newVersion': 'There is a new version of the console',
+  'error.newVersionBody': 'Reload to get the latest version. Anything you saved is kept.',
+  'error.reload': 'Reload',
 
   'pager.label': 'Pages',
   'pager.previous': 'Previous',

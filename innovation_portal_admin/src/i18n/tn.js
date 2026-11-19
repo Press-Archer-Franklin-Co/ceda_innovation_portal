@@ -21,6 +21,7 @@ const tn = {
   'common.somethingWrong': 'Go na le se se sa tsamaeng sentle',
   'common.charsLeft': 'Ditlhaka di le {count} di setse',
   'common.charsOver': 'Ditlhaka di feta ka {count}',
+  'common.removeItem': 'Tlosa {item}', // TODO tn-review
   'common.dismiss': 'Tlosa',
   'common.notifications': 'Dikitsiso',
   'common.unread': 'Di le {count} tse di sa balwang',
@@ -56,6 +57,16 @@ const tn = {
   'status.cancelled': 'E khanseletswe', // TODO tn-review
   'status.withdrawn': 'E gogilwe morago', // TODO tn-review
   'status.unknown': 'Ga go itsiwe', // TODO tn-review
+
+  'table.selectAll': 'Tlhopha mela yotlhe', // TODO tn-review
+  'table.selectRow': 'Tlhopha mola', // TODO tn-review
+  'table.search': 'Batla mo lenaaneng le', // TODO tn-review
+
+  'error.page': 'Tsebe e e ga e a kgona go bulega', // TODO tn-review
+  'error.pageBody': 'Bothata bo kwa go rona. Tiro ya gago e babalesegile. Leka gape morago ga nakwana.', // TODO tn-review
+  'error.newVersion': 'Go na le kgatiso e ntšhwa ya kgolo', // TODO tn-review
+  'error.newVersionBody': 'Simolola sesha go bona kgatiso ya bosheng. Se o se bolokileng se a bolokwa.', // TODO tn-review
+  'error.reload': 'Simolola sesha', // TODO tn-review
 
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',

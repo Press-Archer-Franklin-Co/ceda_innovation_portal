@@ -26,6 +26,7 @@ const tn: Record<StringKey, string> = {
   'common.charsLeft': 'Ditlhaka di le {count} di setse',
   'common.charsOver': 'Ditlhaka di feta ka {count}',
   'common.skip': 'Tlolela kwa diteng',
+  'common.removeItem': 'Tlosa {item}', // TODO tn-review
   'common.dismiss': 'Tlosa',
   'common.notifications': 'Dikitsiso',
   'common.unread': 'Di le {count} tse di sa balwang',

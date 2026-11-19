@@ -3,6 +3,7 @@ import { Check, ChevronDown, Search } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import { useT } from '../../i18n/context'
 import Field from './Field'
+import { anchorStyle } from './anchor'
 import { CONTROL_HEIGHT, controlClasses, useField } from './fieldContext'
 
 /**
@@ -26,6 +27,20 @@ export function SelectControl({ options, value, onChange, placeholder, searchabl
   const buttonRef = useRef(null)
   const searchRef = useRef(null)
   const listRef = useRef(null)
+
+  // The list is fixed next to the button (so a scrolling Modal body cannot clip it) but stays in
+  // this DOM, inside the Modal. Re-place it when anything scrolls or the window resizes.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!open) return
+    const again = () => setTick((n) => n + 1)
+    window.addEventListener('scroll', again, true)
+    window.addEventListener('resize', again)
+    return () => {
+      window.removeEventListener('scroll', again, true)
+      window.removeEventListener('resize', again)
+    }
+  }, [open])
 
   const selected = options.find((o) => o.value === value)
   const shown = useMemo(() => {
@@ -114,7 +129,10 @@ export function SelectControl({ options, value, onChange, placeholder, searchabl
       {name && <input type="hidden" name={name} value={value ?? ''} />}
 
       {open && (
-        <div className="absolute z-40 mt-1 w-full min-w-[200px] rounded-card bg-surface border border-border shadow-pop overflow-hidden">
+        <div
+          style={anchorStyle(buttonRef.current, { width: Math.max(buttonRef.current?.offsetWidth ?? 0, 200), maxHeight: 320 })}
+          className="fixed z-[60] flex flex-col rounded-card bg-surface border border-border shadow-pop overflow-hidden"
+        >
           {withSearch && (
             <div className="p-1.5 border-b border-border">
               <div className="relative">
@@ -142,7 +160,7 @@ export function SelectControl({ options, value, onChange, placeholder, searchabl
             aria-labelledby={buttonId}
             aria-activedescendant={!withSearch && shown[active] ? `${listId}-${active}` : undefined}
             onKeyDown={withSearch ? undefined : onListKey}
-            className="max-h-60 overflow-y-auto py-1 focus:outline-none"
+            className="flex-1 min-h-0 overflow-y-auto py-1 focus:outline-none"
           >
             {shown.length === 0 && <li className="px-3 py-2 text-[13px] text-muted">{t('common.noMatches')}</li>}
             {shown.map((o, i) => {

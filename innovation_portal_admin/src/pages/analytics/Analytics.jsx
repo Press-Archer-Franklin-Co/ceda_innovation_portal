@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import Chart from 'chart.js/auto'
+import { ChartCanvas } from '../../components/charts/lazy'
 import { BarChart3, TrendingUp, Trophy, ClipboardList, Database, Archive, ListChecks } from 'lucide-react'
 import PageHeader  from '../../components/ui/PageHeader'
 import SectionCard from '../../components/ui/SectionCard'
@@ -48,28 +48,6 @@ function BarChart({ data, valueKey = 'count', labelKey = 'month', color = 'bg-ce
 
 function AnalyticsEmpty({ children = 'No data available yet.' }) {
   return <p className="text-xs text-ceda-muted text-center py-8">{children}</p>
-}
-
-function ChartCanvas({ config, height = 260 }) {
-  const canvasRef = useRef(null)
-  const chartRef = useRef(null)
-
-  useEffect(() => {
-    if (!canvasRef.current) return undefined
-    chartRef.current?.destroy()
-    chartRef.current = new Chart(canvasRef.current, config)
-
-    return () => {
-      chartRef.current?.destroy()
-      chartRef.current = null
-    }
-  }, [config])
-
-  return (
-    <div style={{ height }}>
-      <canvas ref={canvasRef} />
-    </div>
-  )
 }
 
 function truncateTick(value, limit = 18) {

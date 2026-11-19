@@ -24,6 +24,7 @@ const en = {
   'common.charsLeft': '{count} characters left',
   'common.charsOver': '{count} characters too many',
   'common.skip': 'Skip to content',
+  'common.removeItem': 'Remove {item}',
   'common.dismiss': 'Dismiss',
   'common.notifications': 'Notifications',
   'common.unread': '{count} unread',
