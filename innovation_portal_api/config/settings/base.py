@@ -242,6 +242,8 @@ REST_FRAMEWORK = {
 # and which version of the consent text the submit screen shows.
 DRAFT_RESUME_TOKEN_MAX_AGE = int(os.getenv("INNOVATION_PORTAL_DRAFT_RESUME_TOKEN_MAX_AGE", str(30 * 24 * 3600)))
 IDEA_SUBMISSION_CONSENT_VERSION = os.getenv("INNOVATION_PORTAL_IDEA_SUBMISSION_CONSENT_VERSION", "2026-11")
+# Sign-in codes (R-4): seconds the screen waits before offering "Resend code".
+LOGIN_CODE_RESEND_AFTER_SECONDS = int(os.getenv("INNOVATION_PORTAL_LOGIN_CODE_RESEND_AFTER_SECONDS", "60"))
 
 from datetime import timedelta
 
