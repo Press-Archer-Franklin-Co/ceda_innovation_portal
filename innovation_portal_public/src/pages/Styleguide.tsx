@@ -71,6 +71,7 @@ export default function Styleguide() {
   const [district, setDistrict] = useState<string | null>(null)
   const [sector, setSector] = useState<'yes' | 'no' | null>('yes')
   const [toggle, setToggle] = useState(true)
+  const [stage, setStage] = useState<'idea' | 'tested' | 'selling' | null>('tested')
   const [page, setPage] = useState(5)
   const [step, setStep] = useState(1)
   const [modal, setModal] = useState<'none' | 'form' | 'confirm'>('none')
@@ -197,6 +198,10 @@ export default function Styleguide() {
             <Toggle label="Email me updates" checked={toggle} onChange={setToggle} />
           </div>
         </div>
+      </Section>
+
+      <Section figma="2.3 Submit an idea · How far along are you? (R-17)" title="RadioGroup variant=&quot;cards&quot;">
+        <RadioGroup name="sg-stage" legend="How far along are you?" variant="cards" options={[{ value: 'idea', label: 'Just an idea', description: 'Not tried yet' }, { value: 'tested', label: 'Tested', description: 'Made a few, got feedback' }, { value: 'selling', label: 'Already selling', description: 'Some customers pay' }] as const} value={stage} onChange={setStage} />
       </Section>
 
       <Section figma="Components › Tabs" title="Tabs">
