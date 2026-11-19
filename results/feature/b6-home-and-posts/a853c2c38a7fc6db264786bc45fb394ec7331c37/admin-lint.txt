@@ -1,0 +1,33 @@
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/components/assignments/AssignmentStatusBadge.jsx
+  28:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/components/ui/WorkflowTimeline.jsx
+  46:31  error  React Hook "React.useState" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?  react-hooks/rules-of-hooks
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/lib/auth/AuthContext.jsx
+  167:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/analytics/Analytics.jsx
+  443:9  warning  The 'programs' conditional could make the dependencies of useEffect Hook (at line 459) change on every render. To fix this, wrap the initialization of 'programs' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/assignments/AssignmentDetail.jsx
+  174:9  warning  The 'groupedDocuments' logical expression could make the dependencies of useMemo Hook (at line 222) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'groupedDocuments' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/content/ContentList.jsx
+  123:6  warning  React Hook useEffect has a missing dependency: 'tab'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/content/HackathonContentEditor.jsx
+  237:6  warning  React Hook useEffect has a missing dependency: 'originProgram'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/evaluate/EvaluationView.jsx
+  1689:9  warning  The 'criteria' logical expression could make the dependencies of useCallback Hook (at line 1767) change on every render. To fix this, wrap the initialization of 'criteria' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/evaluation/EvaluationForm.jsx
+  26:9  warning  The 'evaluations' logical expression could make the dependencies of useMemo Hook (at line 32) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'evaluations' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin/src/pages/programs/ProgramDetail.jsx
+  65:9  warning  The 'submissions' conditional could make the dependencies of useMemo Hook (at line 76) change on every render. To fix this, wrap the initialization of 'submissions' in its own useMemo() Hook  react-hooks/exhaustive-deps
+
+✖ 10 problems (1 error, 9 warnings)
+
