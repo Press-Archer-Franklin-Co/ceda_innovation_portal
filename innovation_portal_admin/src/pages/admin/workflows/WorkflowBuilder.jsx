@@ -616,7 +616,7 @@ function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelet
             <p className="text-sm font-medium text-ceda-dark">Step Scoring</p>
             <p className="mt-1 text-xs text-ceda-muted">
               Choose how this step reviews submissions. Criteria-based steps score against a linked
-              criteria set — any assignee role can be used. Manual steps rely on direct actions only.
+              criteria set, so any assignee role can be used. Manual steps rely on direct actions only.
             </p>
           </div>
 

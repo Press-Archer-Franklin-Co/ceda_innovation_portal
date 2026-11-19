@@ -12,6 +12,7 @@ import { useFormResponseAnalytics, useReportsDashboard } from '../../lib/queries
 import { useSubmissions } from '../../lib/queries/submissions'
 import { usePrograms }    from '../../lib/queries/programs'
 import { cn } from '../../lib/cn'
+import { EMPTY_CELL } from '../../lib/format'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -513,7 +514,7 @@ export default function Analytics() {
               />
               <StatCard
                 title="Communications"
-                value={reports?.communications_total ?? '—'}
+                value={reports?.communications_total ?? EMPTY_CELL}
                 icon={TrendingUp}
                 color="indigo"
               />

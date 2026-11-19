@@ -165,7 +165,7 @@ export default function WinnersManager() {
             <div className="space-y-4">
               <Field label="Program / Challenge" required>
                 <select className="input w-full" value={form.program} onChange={set('program')}>
-                  <option value="">— Select a program —</option>
+                  <option value="">Choose a challenge</option>
                   {(allPrograms ?? []).map(p => (
                     <option key={p.id} value={p.id}>{p.title}</option>
                   ))}

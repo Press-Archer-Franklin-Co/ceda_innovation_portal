@@ -21,10 +21,11 @@ import VerificationRequired from '../components/ui/VerificationRequired'
 import StandardHero from '../components/ui/StandardHero'
 import { useAuth } from '../context/AuthContext'
 import { groupResponses, normalizeResponses } from '../utils/applicantDisplay'
+import { EMPTY_CELL } from '../lib/format'
 
 
 function fmt(iso: string | null | undefined) {
-  if (!iso) return '—'
+  if (!iso) return EMPTY_CELL
   try {
     return new Date(iso).toLocaleDateString('en-GB', {
       day: 'numeric', month: 'short', year: 'numeric',
@@ -34,7 +35,7 @@ function fmt(iso: string | null | undefined) {
 }
 
 function fmtDate(iso: string | null | undefined) {
-  if (!iso) return '—'
+  if (!iso) return EMPTY_CELL
   try {
     return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   } catch { return iso }
@@ -459,8 +460,8 @@ function StatusSidebar({
   const currentStage = journey.find(stage => ['current', 'returned', 'rejected'].includes((stage.state || '').toLowerCase()))
   const [openStageId, setOpenStageId] = useState<string | null>(currentStage?.id ?? journey[0]?.id ?? null)
   const progName = typeof sub.program_detail === 'object' && sub.program_detail
-    ? (sub.program_detail as { title?: string }).title ?? '—'
-    : '—'
+    ? (sub.program_detail as { title?: string }).title ?? EMPTY_CELL
+    : EMPTY_CELL
 
   useEffect(() => {
     setOpenStageId(currentStage?.id ?? journey[0]?.id ?? null)
@@ -482,7 +483,7 @@ function StatusSidebar({
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
           <div className="min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Reference</p>
-            <p className="truncate font-mono font-semibold text-gray-800">{sub.reference_number ?? '—'}</p>
+            <p className="truncate font-mono font-semibold text-gray-800">{sub.reference_number ?? EMPTY_CELL}</p>
           </div>
           <div className="min-w-0">
             <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Submitted</p>
@@ -638,8 +639,8 @@ export default function SubmissionDetail() {
           title={sub.title || 'Untitled'}
           subtitle={
             typeof sub.program_detail === 'object' && sub.program_detail
-              ? (sub.program_detail as { title?: string }).title ?? '—'
-              : '—'
+              ? (sub.program_detail as { title?: string }).title ?? EMPTY_CELL
+              : EMPTY_CELL
           }
           gradient="linear-gradient(125deg, #2E1E18 0%, #5A3C32 55%, #6B4A3E 100%)"
         />

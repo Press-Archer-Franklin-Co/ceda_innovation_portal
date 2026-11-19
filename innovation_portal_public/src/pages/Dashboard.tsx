@@ -13,6 +13,7 @@ import Badge from '../components/ui/Badge'
 import Modal from '../components/ui/Modal'
 import VerificationRequired from '../components/ui/VerificationRequired'
 import type { Submission, Program } from '../types/api'
+import { EMPTY_CELL } from '../lib/format'
 
 
 function formatDate(iso: string): string {
@@ -202,11 +203,11 @@ export default function Dashboard() {
       const d = sub.program_detail as Record<string, unknown>
       if (typeof d.title === 'string') return d.title
     }
-    return programMap[sub.program] ?? sub.program ?? '—'
+    return programMap[sub.program] ?? sub.program ?? EMPTY_CELL
   }
 
   function draftProgramName(d: ApplicationDraft): string {
-    return d.program_title ?? programMap[d.program] ?? '—'
+    return d.program_title ?? programMap[d.program] ?? EMPTY_CELL
   }
 
   const active    = useMemo(() => submissions.filter(isSubmitted), [submissions])
@@ -361,7 +362,7 @@ export default function Dashboard() {
                       <Clock size={20} className="text-gray-200" />
                     </div>
                     <p className="text-sm font-semibold text-gray-500 mb-1">No drafts yet</p>
-                    <p className="text-xs text-gray-400 mb-4">Start an application — it will be auto-saved as you go.</p>
+                    <p className="text-xs text-gray-400 mb-4">Start an application. We save it as you go.</p>
                     <button
                       type="button"
                       onClick={() => handleVerifyGate('/innovate')}
@@ -394,7 +395,7 @@ export default function Dashboard() {
                               {pct < 100 && pct > 0 && <AlertTriangle size={12} className="text-amber-400 shrink-0" />}
                             </div>
                             <div className="flex items-center justify-between pt-1">
-                              <span className="text-[11px] text-gray-400">{d.updated_at ? formatDate(d.updated_at) : '—'}</span>
+                              <span className="text-[11px] text-gray-400">{d.updated_at ? formatDate(d.updated_at) : EMPTY_CELL}</span>
                               <div className="flex items-center gap-2">
                                 <button
                                   type="button"
@@ -442,7 +443,7 @@ export default function Dashboard() {
                                   </div>
                                 </td>
                                 <td className="px-5 py-3.5 text-[12px] text-gray-400 whitespace-nowrap">
-                                  {d.updated_at ? formatDate(d.updated_at) : '—'}
+                                  {d.updated_at ? formatDate(d.updated_at) : EMPTY_CELL}
                                 </td>
                                 <td className="px-5 py-3.5">
                                   <div className="flex items-center gap-1 justify-end">
@@ -500,7 +501,7 @@ export default function Dashboard() {
                           >
                             <div className="flex items-start justify-between gap-2 mb-1.5">
                               <div className="min-w-0">
-                                <p className="font-semibold text-gray-900 text-[13px] truncate">{sub.title || '—'}</p>
+                                <p className="font-semibold text-gray-900 text-[13px] truncate">{sub.title || EMPTY_CELL}</p>
                                 <p className="text-[11px] text-gray-400 truncate mt-0.5">{programName(sub)}</p>
                               </div>
                               <Badge status={sub.current_status} className="shrink-0" />
@@ -509,8 +510,8 @@ export default function Dashboard() {
                               <span className="text-[11px] font-medium text-amber-600 block mb-1">Action required →</span>
                             )}
                             <div className="flex items-center justify-between mt-1">
-                              <span className="text-[10px] font-mono text-gray-400">{sub.reference_number || '—'}</span>
-                              <span className="text-[11px] text-gray-400">{sub.submitted_at ? formatDate(sub.submitted_at) : '—'}</span>
+                              <span className="text-[10px] font-mono text-gray-400">{sub.reference_number || EMPTY_CELL}</span>
+                              <span className="text-[11px] text-gray-400">{sub.submitted_at ? formatDate(sub.submitted_at) : EMPTY_CELL}</span>
                             </div>
                           </div>
                         )
@@ -535,7 +536,7 @@ export default function Dashboard() {
                                 onClick={() => navigate(`/submissions/${sub.id}`)}
                               >
                                 <td className="px-5 py-3.5">
-                                  <p className="font-semibold text-gray-900 text-[13px] max-w-[180px] truncate">{sub.title || '—'}</p>
+                                  <p className="font-semibold text-gray-900 text-[13px] max-w-[180px] truncate">{sub.title || EMPTY_CELL}</p>
                                   {isReturned && (
                                     <span className="text-[11px] font-medium text-amber-600 mt-0.5 block">Action required →</span>
                                   )}
@@ -545,9 +546,9 @@ export default function Dashboard() {
                                 </td>
                                 <td className="px-5 py-3.5"><Badge status={sub.current_status} /></td>
                                 <td className="px-5 py-3.5 text-gray-400 text-[12px] whitespace-nowrap">
-                                  {sub.submitted_at ? formatDate(sub.submitted_at) : '—'}
+                                  {sub.submitted_at ? formatDate(sub.submitted_at) : EMPTY_CELL}
                                 </td>
-                                <td className="px-5 py-3.5 text-gray-400 text-[12px] font-mono">{sub.reference_number || '—'}</td>
+                                <td className="px-5 py-3.5 text-gray-400 text-[12px] font-mono">{sub.reference_number || EMPTY_CELL}</td>
                               </tr>
                             )
                           })}
@@ -581,7 +582,7 @@ export default function Dashboard() {
             <PlaceholderCard
               icon={<Bell size={18} />}
               title="Recent Activity"
-              body="Your activity feed will appear here — submissions, status updates, and announcements."
+              body="Your activity shows here: ideas, status updates and announcements."
             />
           </div>
         </div>

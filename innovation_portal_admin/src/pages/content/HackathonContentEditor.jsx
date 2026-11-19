@@ -359,7 +359,7 @@ export default function HackathonContentEditor() {
                     value={form.program}
                     onChange={e => setForm(f => ({ ...f, program: e.target.value }))}
                   >
-                    <option value="">— Select a hackathon or challenge —</option>
+                    <option value="">Choose a hackathon or challenge</option>
                     {(hackathonPrograms ?? []).map(p => (
                       <option key={p.id} value={p.id}>{p.title}</option>
                     ))}

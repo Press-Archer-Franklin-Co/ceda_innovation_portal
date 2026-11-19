@@ -13,6 +13,7 @@ import SearchInput from '../components/ui/SearchInput'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonGrid } from '../components/ui/SkeletonCard'
 import clsx from 'clsx'
+import { EMPTY_CELL } from '../lib/format'
 
 
 type DisplayStatus = 'open' | 'upcoming' | 'closed'
@@ -214,7 +215,7 @@ export default function Challenges() {
                         <Calendar size={11} />
                         {ds === 'upcoming' && challenge && p.opening_date
                           ? `Opens ${formatDate(p.opening_date)}`
-                          : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : '—'}
+                          : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : EMPTY_CELL}
                       </p>
                       <div className="flex items-center gap-2">
                         <Link

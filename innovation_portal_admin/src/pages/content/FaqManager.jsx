@@ -117,7 +117,7 @@ export default function FaqList({ embedded = false }) {
 
               <div className="flex items-center gap-2 shrink-0">
                 <button
-                  title={faq.is_public ? 'Visible to public — click to hide' : 'Hidden — click to publish'}
+                  title={faq.is_public ? 'Visible to the public. Click to hide.' : 'Hidden. Click to publish.'}
                   onClick={() => toggleMut.mutate({ id: faq.id, is_public: !faq.is_public })}
                   disabled={toggleMut.isPending}
                   className={`p-1.5 rounded-lg transition-colors ${faq.is_public ? 'text-ceda-green hover:bg-green-50' : 'text-ceda-muted hover:bg-ceda-surface'}`}

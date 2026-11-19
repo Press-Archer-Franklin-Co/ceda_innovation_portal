@@ -216,7 +216,7 @@ export default function ContentEditor() {
                 />
                 <p className="text-[11px] text-ceda-muted text-right">{form.excerpt.length}/500</p>
               </Field>
-              <Field label="Body" hint="Full article body — supports plain text or Markdown">
+              <Field label="Body" hint="Full article body. Plain text or Markdown both work.">
                 <textarea
                   className="input w-full resize-y font-mono text-sm"
                   rows={14}
@@ -245,7 +245,7 @@ export default function ContentEditor() {
                     <Image size={20} className="text-ceda-muted" />
                   </div>
                   <p className="text-sm text-ceda-muted">Click to upload a cover image or video</p>
-                  <p className="text-xs text-ceda-muted">PNG, JPG, WebP, MP4, WebM — max 200 MB</p>
+                  <p className="text-xs text-ceda-muted">PNG, JPG, WebP, MP4 or WebM, up to 200 MB</p>
                 </>
               )}
             </div>

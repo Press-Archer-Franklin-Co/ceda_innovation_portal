@@ -68,6 +68,22 @@ const tn = {
   'error.newVersionBody': 'Simolola sesha go bona kgatiso ya bosheng. Se o se bolokileng se a bolokwa.', // TODO tn-review
   'error.reload': 'Simolola sesha', // TODO tn-review
 
+  'partner.add': 'Oketsa molekane', // TODO tn-review
+  'partner.addBody': 'Balekane ba bonala mo moleng wa tsebe ya ntlha. O ka ba fitlha nako nngwe le nngwe.', // TODO tn-review
+  'partner.name': 'Leina la mokgatlho', // TODO tn-review
+  'partner.nameHint': 'Jaaka le tshwanetse go bonala mo webosaeteng', // TODO tn-review
+  'partner.website': 'Webosaete', // TODO tn-review
+  'partner.logo': 'Letshwao', // TODO tn-review
+  'partner.logoHint': 'PNG kgotsa SVG, go fitlha go 2 MB. Re a le kgaola gore le lekane.', // TODO tn-review
+  'partner.save': 'Boloka molekane', // TODO tn-review
+  'partner.saved': 'Molekane o bolokilwe', // TODO tn-review
+  'partner.savedBody': '{name} jaanong o bonala mo lenaaneng la balekane.', // TODO tn-review
+  'partner.undo': 'Busetsa', // TODO tn-review
+  'partner.nameError': 'Tsenya leina la mokgatlho.', // TODO tn-review
+  'partner.urlError': 'Tsenya aterese e e feletseng, e simolola ka https://', // TODO tn-review
+  'partner.fileError': 'Letshwao le feta 2 MB. Tlhopha faele e nnye.', // TODO tn-review
+  'partner.saveError': 'Ga re a kgona go boloka molekane. Leka gape.', // TODO tn-review
+
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',
   'pager.next': 'Pele',
