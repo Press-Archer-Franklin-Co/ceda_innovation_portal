@@ -1,0 +1,86 @@
+/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py:98: RuntimeWarning: Accessing the database during app initialization is discouraged. To fix this warning, avoid executing queries in AppConfig.ready() or when your app modules are imported.
+  warnings.warn(self.APPS_NOT_READY_WARNING_MSG, category=RuntimeWarning)
+Could not load the staff SSO connection; using environment settings.
+Traceback (most recent call last):
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedTable: relation "platform_config_integrationconnection" does not exist
+LINE 1: ...onfig_integrationconnection"."updated_by_id" FROM "platform_...
+                                                             ^
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_api/apps/accounts/identity_providers.py", line 545, in staff_provider
+    configured = IntegrationRuntimeSelector.staff_identity_provider()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_api/apps/platform_config/selectors.py", line 56, in staff_identity_provider
+    provider = IntegrationRuntimeSelector.active_provider(IntegrationConnection.Kind.SSO)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_api/apps/platform_config/selectors.py", line 50, in active_provider
+    connection = IntegrationRuntimeSelector.active_connection(kind)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_api/apps/platform_config/selectors.py", line 28, in active_connection
+    connection = IntegrationConnection.objects.filter(kind=kind, is_active=True).first()
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/models/query.py", line 1099, in first
+    for obj in queryset[:1]:
+               ~~~~~~~~^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/models/query.py", line 402, in __iter__
+    self._fetch_all()
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/models/query.py", line 1933, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1574, in execute_sql
+    cursor.execute(sql, params)
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py", line 122, in execute
+    return super().execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+django.db.utils.ProgrammingError: relation "platform_config_integrationconnection" does not exist
+LINE 1: ...onfig_integrationconnection"."updated_by_id" FROM "platform_...
+                                                             ^
+Google OAuth disabled: missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI
+GitHub OAuth disabled: missing GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI
+Microsoft OAuth disabled: missing MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI
+CEDA staff sign-in OAuth disabled: missing CEDA_SSO_CLIENT_ID, CEDA_SSO_CLIENT_SECRET, CEDA_SSO_REDIRECT_URI, CEDA_SSO_DISCOVERY_URL
+Migrations for 'accounts':
+  apps/accounts/migrations/0010_remove_user_user_sort_idx_and_more.py
+    - Remove index user_sort_idx from user
+    ~ Rename index accounts_mf_user_id_5aafc3_idx on mfachallenge to accounts_mf_user_id_a82881_idx
+    ~ Rename index accounts_us_user_id_2bca33_idx on usermfaprofile to accounts_us_user_id_0a6639_idx
+    ~ Alter field code on role
+Migrations for 'assignments':
+  apps/assignments/migrations/0007_alter_assignment_role_type_and_more.py
+    ~ Alter field role_type on assignment
+    ~ Alter field created_at on specialistinvitation
+Migrations for 'submissions':
+  apps/submissions/migrations/0010_rename_submission__stage__5c8de5_idx_submissions_submiss_761ff7_idx_and_more.py
+    ~ Rename index submission__stage__5c8de5_idx on submissionfeedbacksnapshot to submissions_submiss_761ff7_idx
+    ~ Rename index submission__release_35df56_idx on submissionfeedbacksnapshot to submissions_submiss_d61766_idx
+Migrations for 'workflow':
+  apps/workflow/migrations/0016_alter_workflowstep_assignment_role_and_more.py
+    ~ Alter field assignment_role on workflowstep
+    ~ Alter field role_required on workflowstep
+    ~ Alter field submission_status on workflowstep
