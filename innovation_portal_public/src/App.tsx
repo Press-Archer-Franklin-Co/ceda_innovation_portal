@@ -21,7 +21,6 @@ const MfaChallenge = lazy(() => import('./pages/MfaChallenge'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Security = lazy(() => import('./pages/Security'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
 const TermsOfAgreement = lazy(() => import('./pages/TermsOfAgreement'))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const TermsOfUse = lazy(() => import('./pages/TermsOfUse'))
@@ -32,6 +31,12 @@ const SubmissionDetail = lazy(() => import('./pages/SubmissionDetail'))
 const DocumentPage = lazy(() => import('./pages/DocumentPage'))
 const SpecialistInvite = lazy(() => import('./pages/SpecialistInvite'))
 const JudgeInvite = lazy(() => import('./pages/JudgeInvite'))
+const CodeSignIn = lazy(() => import('./pages/innovator/CodeSignIn'))
+const InnovatorHome = lazy(() => import('./pages/innovator/InnovatorHome'))
+const MyIdeas = lazy(() => import('./pages/innovator/MyIdeas'))
+const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
+const IdeaForm = lazy(() => import('./pages/innovator/IdeaForm'))
+const Notifications = lazy(() => import('./pages/innovator/Notifications'))
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -85,12 +90,18 @@ function AppRoutes() {
         <Route path="/news/:id"    element={<ArticleDetail />} />
         <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
+        <Route path="/sign-in"     element={<PublicOnlyRoute><CodeSignIn /></PublicOnlyRoute>} />
+
         <Route path="/terms-of-agreement" element={<TermsOfAgreement />} />
         <Route path="/privacy-policy"     element={<PrivacyPolicy />} />
         <Route path="/terms-of-use"       element={<TermsOfUse />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path="/dashboard"          element={<Dashboard />} />
+          <Route path="/dashboard"          element={<InnovatorHome />} />
+          <Route path="/my-ideas"           element={<MyIdeas />} />
+          <Route path="/my-ideas/draft/:id" element={<IdeaForm />} />
+          <Route path="/my-ideas/:id"       element={<TrackIdea />} />
+          <Route path="/notifications"      element={<Notifications />} />
           <Route path="/submissions/:id"    element={<SubmissionDetail />} />
           <Route path="/documents/:id"      element={<DocumentPage />} />
           <Route path="/profile"            element={<Profile />} />

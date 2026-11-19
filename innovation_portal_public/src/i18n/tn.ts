@@ -1,6 +1,7 @@
 // Setswana strings for UI chrome. Must have every key in en.ts (checked by TypeScript).
 // First draft: needs review by a Setswana speaker at CEDA before launch.
 import type { StringKey } from './en'
+import { innovatorTn } from './innovator'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -113,6 +114,7 @@ const tn: Record<StringKey, string> = {
   'tabs.label': 'Dikgolagano tse dipotlana',
   'tabs.news': 'Dikgang',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
+  ...innovatorTn,
 }
 
 export default tn
