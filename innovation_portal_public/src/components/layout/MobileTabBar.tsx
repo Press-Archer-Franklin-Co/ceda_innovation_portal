@@ -45,7 +45,7 @@ export default function MobileTabBar() {
         {t('tabs.news')}
       </NavLink>
       {isAuthenticated ? (
-        <NavLink to="/dashboard" className={tab}>
+        <NavLink to="/my-ideas" className={tab}>
           <LayoutDashboard size={22} aria-hidden />
           {t('nav.myIdeas')}
         </NavLink>
