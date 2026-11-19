@@ -34,6 +34,7 @@ class LoginCodeRequestResult:
     channel: str
     destination_hint: str
     expires_in_seconds: int
+    resend_after_seconds: int = 60
 
 
 @dataclass
@@ -170,14 +171,21 @@ class OTPService:
             channel=channel,
             destination_hint=OTPService._hint(target_type, target),
             expires_in_seconds=OTPService.LIFETIME_MINUTES * 60,
+            resend_after_seconds=int(getattr(settings, "LOGIN_CODE_RESEND_AFTER_SECONDS", 60)),
         )
         now = timezone.now()
-        recent = LoginCode.objects.filter(
+        window = LoginCode.objects.filter(
             target_type=target_type,
             target=target,
             created_at__gte=now - timezone.timedelta(hours=1),
-        ).count()
+        )
+        recent = window.count()
         if recent >= OTPService.codes_per_target_per_hour(target_type):
+            # Tell the screen when the hourly limit frees a slot (depends only on the target, not on any account).
+            oldest = window.order_by("created_at").values_list("created_at", flat=True).first()
+            if oldest:
+                wait = int((oldest + timezone.timedelta(hours=1) - now).total_seconds()) + 1
+                result.resend_after_seconds = max(result.resend_after_seconds, wait)
             # Same answer as a normal request so this cannot be used to probe accounts.
             AuditService.log_raw_action(
                 actor=None,

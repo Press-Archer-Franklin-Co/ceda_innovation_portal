@@ -51,6 +51,7 @@ class OTPLoginApiTests(TestCase):
         self.assertTrue(body["success"])
         self.assertEqual(body["data"]["channel"], "sms")
         self.assertEqual(body["data"]["expires_in_seconds"], 600)
+        self.assertEqual(body["data"]["resend_after_seconds"], 60)
         code = LoginCode.objects.get()
         self.assertEqual(code.target, "+26771234567")
         self.assertNotEqual(code.code_hash, CODE)
@@ -85,6 +86,17 @@ class OTPLoginApiTests(TestCase):
         statuses = [self._request(phone=f"7123456{i}").status_code for i in range(6)]
         self.assertEqual(statuses[:5], [200] * 5)
         self.assertEqual(statuses[5], 429)
+
+    @override_settings(LOGIN_CODE_RESEND_AFTER_SECONDS=45)
+    def test_resend_wait_is_configurable_and_longer_after_the_hourly_cap(self):
+        self.assertEqual(self._request(phone="71234567").json()["data"]["resend_after_seconds"], 45)
+        for _ in range(4):
+            cache.clear()
+            self._request(phone="71234567")
+        cache.clear()
+        capped = self._request(phone="71234567").json()["data"]["resend_after_seconds"]
+        self.assertGreater(capped, 45)
+        self.assertLessEqual(capped, 3601)
 
     def test_new_request_replaces_older_code(self):
         self._request(phone="71234567")

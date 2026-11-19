@@ -138,6 +138,7 @@ class LoginCodeRequestResponseSerializer(serializers.Serializer):
     channel = serializers.CharField()
     destination_hint = serializers.CharField()
     expires_in_seconds = serializers.IntegerField()
+    resend_after_seconds = serializers.IntegerField(help_text='Wait this long before offering "Resend code".')
 
 
 class LoginCodeVerifySerializer(_LoginCodeTargetSerializer):
