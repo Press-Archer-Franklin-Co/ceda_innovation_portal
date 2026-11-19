@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -39,6 +39,9 @@ const SIMILAR_MIN_CHARS = 40
 /** Screen 2.3: the full idea form, one step at a time, saved as you go. */
 export default function IdeaForm() {
   const { id = '' } = useParams()
+  const [params] = useSearchParams()
+  /** Set by "Link it" on 2.1: open at the first unanswered question's step. */
+  const askedStep = params.get('step')
   const { t, lang } = useI18n()
   const navigate = useNavigate()
   const toast = useToast()
@@ -111,9 +114,9 @@ export default function IdeaForm() {
   useEffect(() => {
     if (startedAt.current || !draft || steps.length === 0) return
     startedAt.current = true
-    const found = steps.findIndex((s) => s.code === draft.current_section_code)
+    const found = steps.findIndex((s) => s.code === (askedStep || draft.current_section_code))
     setStepIndex(found >= 0 ? found : 0)
-  }, [draft, steps])
+  }, [draft, steps, askedStep])
 
   // ── Save ─────────────────────────────────────────────────────────────────
   const saveStep = useCallback(
