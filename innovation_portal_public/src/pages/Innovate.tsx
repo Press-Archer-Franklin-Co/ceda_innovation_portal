@@ -16,6 +16,14 @@ import type { SubmissionDetail, SubmissionFileDocument } from '../services/submi
 import VerificationRequired from '../components/ui/VerificationRequired'
 import Countdown, { useNow } from '../components/challenges/Countdown'
 
+const CONSENT_MESSAGE = 'Please tick the box to agree to the terms and privacy notice before you send your idea.'
+
+/** True when the API refused the submission because consent was not given (code consent_required). */
+function isConsentRequired(err: unknown): boolean {
+  const data = (err as { response?: { data?: unknown } })?.response?.data
+  return JSON.stringify(data ?? '').includes('consent_required')
+}
+
 
 function asProgramType(program: Program) {
   const v = typeof program.program_type === 'string'
@@ -742,6 +750,7 @@ function SubmissionForm() {
   const [saving,          setSaving]         = useState(false)
   const [lastSaved,       setLastSaved]      = useState<Date | null>(null)
   const [error,           setError]          = useState('')
+  const [consent,         setConsent]        = useState(false)
   const [fieldErrors,     setFieldErrors]    = useState<Record<string, string>>({})
   const [refNumber,       setRefNumber]      = useState('')
   const [draftId,         setDraftId]        = useState<string | null>(null)
@@ -1121,16 +1130,20 @@ function SubmissionForm() {
         setSubmitted(true)
         return
       }
+      if (!consent) {
+        setError(CONSENT_MESSAGE)
+        return
+      }
       const id = await persistDraft(currentSection?.code ?? sections[0]?.code ?? '')
       for (const [key, fieldFiles] of Object.entries(files))
         for (const file of fieldFiles)
           await documentsService.uploadDraftDocument(id, key, file)
-      const final = await submissionsService.submitDraft(id)
+      const final = await submissionsService.submitDraft(id, { consent: true })
       setRefNumber((final as { reference_number?: string }).reference_number ?? '')
       setDraftId(null)
       setSubmitted(true)
     } catch (err) {
-      setError(parseApiError(err))
+      setError(isConsentRequired(err) ? CONSENT_MESSAGE : parseApiError(err))
     } finally {
       setSubmitting(false)
     }
@@ -1440,9 +1453,22 @@ function SubmissionForm() {
                         View Terms & Conditions
                       </a>
                     )}
+                    {!correctionMode && (
+                      <label className="flex items-start gap-2 text-sm text-gray-700 max-w-xs text-left cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={consent}
+                          onChange={(e) => { setConsent(e.target.checked); if (e.target.checked && error === CONSENT_MESSAGE) setError('') }}
+                          required
+                          aria-required="true"
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+                        />
+                        <span>I agree to the terms and privacy notice.</span>
+                      </label>
+                    )}
                   <button
                     onClick={handleSubmit}
-                    disabled={submitting || !programId || !title.trim()}
+                    disabled={submitting || !programId || !title.trim() || (!correctionMode && !consent)}
                     className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all cursor-pointer"
                     style={{ background: accent }}
                   >
