@@ -41,10 +41,70 @@ class FormConditionService:
     }
     GROUP_OPERATORS = {"AND", "OR"}
 
+    # The simple shape the form builder sends (B4):
+    #   {"all": [{"field": "has_company", "op": "equals", "value": "yes"}]}
+    # "any" instead of "all" means OR. It is mapped onto the older shape below.
+    SIMPLE_OPERATORS = {
+        "equals": "equals",
+        "not_equals": "not_equals",
+        "in": "in",
+        "is_empty": "not_exists",
+        "is_not_empty": "exists",
+    }
+
+    @classmethod
+    def normalize(cls, definition):
+        """Map the simple ``{"all"|"any": [...]}`` / ``{"op": ...}`` shape onto the internal one."""
+        if isinstance(definition, list):
+            return [cls.normalize(item) for item in definition]
+        if not isinstance(definition, dict):
+            return definition
+        for group_key, group_operator in (("all", "AND"), ("any", "OR")):
+            if group_key in definition:
+                items = definition.get(group_key)
+                if not isinstance(items, list) or not items:
+                    raise ValidationError({"condition": f"`{group_key}` must be a non-empty list of conditions."})
+                return {"operator": group_operator, "conditions": [cls.normalize(item) for item in items]}
+        if "op" in definition:
+            op = str(definition.get("op") or "").lower()
+            if op not in cls.SIMPLE_OPERATORS:
+                allowed = ", ".join(sorted(cls.SIMPLE_OPERATORS))
+                raise ValidationError({"condition": f"Unsupported condition op `{op}`. Use one of: {allowed}."})
+            leaf = {"field": definition.get("field"), "operator": cls.SIMPLE_OPERATORS[op]}
+            if op in {"equals", "not_equals", "in"}:
+                if "value" not in definition:
+                    raise ValidationError({"condition": f"Condition op `{op}` requires `value`."})
+                leaf["value"] = definition["value"]
+            return leaf
+        return definition
+
+    @classmethod
+    def referenced_fields(cls, definition) -> set[str]:
+        """Every field key a condition reads."""
+        found: set[str] = set()
+        normalized = cls.normalize(definition)
+
+        def walk(node):
+            if isinstance(node, list):
+                for item in node:
+                    walk(item)
+            elif isinstance(node, dict):
+                if node.get("conditions") is not None:
+                    walk(node["conditions"])
+                elif node.get("field"):
+                    found.add(str(node["field"]))
+
+        walk(normalized)
+        return found
+
     @classmethod
     def validate_schema(cls, definition, *, path="condition"):
         if not definition:
             return
+        try:
+            definition = cls.normalize(definition)
+        except ValidationError as exc:
+            raise ValidationError({path: exc.detail.get("condition") if isinstance(exc.detail, dict) else exc.detail})
         if isinstance(definition, list):
             for index, item in enumerate(definition):
                 cls.validate_schema(item, path=f"{path}[{index}]")
@@ -73,6 +133,7 @@ class FormConditionService:
     @classmethod
     def evaluate(cls, definition, values: dict, *, debug: bool = False):
         cls.validate_schema(definition)
+        definition = cls.normalize(definition)
         result, debug_data = cls._evaluate_node(definition, values, path="condition")
         if debug:
             return {

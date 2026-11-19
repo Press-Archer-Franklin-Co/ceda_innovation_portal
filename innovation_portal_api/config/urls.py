@@ -39,6 +39,7 @@ urlpatterns = [
     path("api/profile/", include("apps.profiles.urls")),
     path("api/teams/", include("apps.teams.urls")),
     path("api/programs/", include("apps.programs.urls")),
+    path("api/forms/", include("apps.programs.form_urls")),
     path("api/drafts/", include("apps.submissions.draft_urls")),
     path("api/me/", include("apps.submissions.me_urls")),
     path("api/ideas/", include("apps.submissions.idea_urls")),

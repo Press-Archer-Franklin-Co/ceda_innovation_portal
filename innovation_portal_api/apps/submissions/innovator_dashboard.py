@@ -94,6 +94,10 @@ def draft_item(draft, lang: str) -> dict:
         "last_change": _iso(draft.updated_at),
         "needs_action_reason": "",
         "reply_by": None,
+        "stages": [],
+        "submitted_at": None,
+        "decided_at": None,
+        "has_feedback": False,
     }
 
 
@@ -113,7 +117,30 @@ def submission_item(submission, lang: str) -> dict:
         "last_change": _iso(submission.updated_at),
         "needs_action_reason": "CEDA asked you for more information." if state == "needs_action" else "",
         "reply_by": _iso(instance.due_at) if state == "needs_action" and instance else None,
+        "stages": submission_stages(submission),
+        "submitted_at": _iso(submission.submitted_at),
+        "decided_at": _iso(decided_at(submission)) if state == "finished" else None,
+        "has_feedback": submission.feedback_snapshots.exists() if state == "finished" else False,
     }
+
+
+def submission_stages(submission) -> list[dict]:
+    """The stage bar on idea cards (R-5a): [{code, name, status: done|current|upcoming|skipped}]."""
+    from apps.submissions.timeline import SubmissionTimelineService
+
+    return [
+        {"code": stage["code"], "name": stage["name"], "status": stage["status"]}
+        for stage in SubmissionTimelineService.build(submission, public=True)["stages"]
+    ]
+
+
+def decided_at(submission):
+    """When a finished idea was decided: the current outcome, else the last status change."""
+    outcome = submission.outcomes.filter(is_current=True).order_by("-decided_at").first()
+    if outcome:
+        return outcome.decided_at
+    last = submission.status_history.order_by("-created_at").values_list("created_at", flat=True).first()
+    return last or submission.updated_at
 
 
 class InnovatorDashboardSelector:
@@ -216,6 +243,8 @@ class InnovatorDashboardSelector:
         items = [
             {
                 "type": "notification",
+                "notification_type": item.notification_type,
+                "link": None,  # TODO(R-8): notifications get a link in B3.
                 "id": str(item.id),
                 "title": item.title,
                 "body": item.body,
@@ -232,6 +261,8 @@ class InnovatorDashboardSelector:
         items += [
             {
                 "type": "status_change",
+                "notification_type": "status_change",
+                "link": {"type": "idea", "id": str(entry.submission_id)},
                 "id": str(entry.id),
                 "idea_id": str(entry.submission_id),
                 "reference": entry.submission.reference_number,

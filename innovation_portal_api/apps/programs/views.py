@@ -29,6 +29,8 @@ from apps.programs.serializers import (
 )
 from apps.submissions.serializers import SubmissionOutcomeSerializer
 from apps.programs.services import ProgramService, SubmissionFormLifecycleService
+from apps.programs.form_builder import FormLibraryService
+from apps.programs.form_serializers import AttachFormSerializer, FormListItemSerializer
 
 
 @extend_schema_view(
@@ -165,6 +167,24 @@ class ProgramViewSet(viewsets.ModelViewSet):
             return Response({"detail": "This program does not have a submission form configured."}, status=404)
         return Response(SubmissionFormSerializer(form).data)
 
+    @form.mapping.put
+    @extend_schema(
+        tags=["Programs"],
+        summary="Use a form for this programme",
+        description="Links a published form (from /api/forms/) to the programme. Applicants then get its latest "
+        "published version. Staff only.",
+        request=AttachFormSerializer,
+        responses={200: OpenApiResponse(description="{program_id, form}"), 400: OpenApiResponse(description="Form not published, archived or a template")},
+    )
+    def attach_form(self, request, pk=None):
+        program = self.get_object()
+        serializer = AttachFormSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        form = get_object_or_404(SubmissionForm, id=serializer.validated_data["form_id"])
+        FormLibraryService.attach_to_program(program, form, actor=request.user)
+        detail = FormLibraryService.annotated(SubmissionForm.objects.filter(id=form.id)).get()
+        return api_success(data={"program_id": str(program.id), "form": FormListItemSerializer(detail).data}, message="Form linked to the programme.")
+
     @action(detail=True, methods=["post"], url_path="form-fields")
     @extend_schema(
         tags=["Programs"],
@@ -219,7 +239,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
 
 class FormSectionDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [IsOfficerOrAdmin]
-    queryset = FormSection.objects.select_related("form", "form__program").all()
+    queryset = FormSection.objects.select_related("form").all()
     serializer_class = FormSectionSerializer
 
     def retrieve(self, request, *args, **kwargs):

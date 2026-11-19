@@ -288,6 +288,8 @@ class IdeaSubmitService:
         consent: bool = False,
         create_account: bool = True,
         name: str = "",
+        first_name: str = "",
+        last_name: str = "",
         ip_address: str | None = None,
     ) -> SubmitOutcome:
         """Submit as the owner (user owns the draft) or as a guest holding the resume token (user None)."""
@@ -306,9 +308,15 @@ class IdeaSubmitService:
                     raise ValidationError(
                         {"code": "phone_verification_required", "detail": "Confirm your phone number with the code we sent before sending your idea."}
                     )
+                first_name, last_name = (first_name or "").strip()[:150], (last_name or "").strip()[:150]
+                if first_name or last_name:
+                    name = " ".join(part for part in (first_name, last_name) if part)
                 guest_name = cls._guest_name(draft, name)
                 if create_account:
-                    first, _, last = guest_name.partition(" ")
+                    if first_name or last_name:
+                        first, last = first_name, last_name
+                    else:
+                        first, _, last = guest_name.partition(" ")
                     user, account_created = OTPService.user_for_verified_target(
                         target_type=LoginCode.TargetType.PHONE,
                         target=draft.guest_phone,
@@ -317,6 +325,10 @@ class IdeaSubmitService:
                         last_name=last,
                     )
                     DraftClaimService.claim(draft=draft, user=user)
+                    if account_created and (first_name or last_name):
+                        # The names typed on the submit screen win over earlier answers copied by claim.
+                        user.first_name, user.last_name = first or user.first_name, last or user.last_name
+                        user.save(update_fields=["first_name", "last_name", "updated_at"])
                 else:
                     if draft.program.is_innovation_challenge:
                         raise ValidationError({"code": "account_required", "detail": "Challenge entries need an account. Send with create_account set to true."})
@@ -361,4 +373,12 @@ class IdeaSubmitService:
             "next_steps": outcome.next_steps,
             "copy_sent_to": outcome.copy_sent_to,
             "account": account,
+            "first_name": IdeaSubmitService.first_name(submission),
         }
+
+    @staticmethod
+    def first_name(submission: Submission) -> str:
+        """For "Well done, Neo" on the confirmation screen."""
+        if submission.innovator_id and submission.innovator.first_name:
+            return submission.innovator.first_name
+        return (submission.guest_name or "").split(" ")[0]

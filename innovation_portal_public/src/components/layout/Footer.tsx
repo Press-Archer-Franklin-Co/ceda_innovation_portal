@@ -1,140 +1,97 @@
+import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import logoSrc from '../../assets/logo.png'
+import { useI18n } from '../../i18n'
+import Logo from '../ui/Logo'
+import { SUBMIT_PATH } from './Navbar'
+import { useShellSettings } from './shellData'
+import { TAB_BAR_SPACE } from './MobileTabBar'
 
-const platform = [
-  { to: '/challenges',  label: 'Challenges' },
-  { to: '/news',        label: 'News & Updates' },
-  { to: '/innovate',    label: 'Submit Idea' },
-  { to: '/skills',      label: 'Community' },
-  { to: '/suggestions', label: 'Feedback Xchange' },
-]
+// Figma 1 · Public home › Footer (10:762 website, 10:1324 phone). Chocolate banner, white headings,
+// heroMuted links, yellow tagline. Contact lines show only when the site settings have them.
 
-const company = [
-  { to: '/about',      label: 'About Us' },
-  { to: '/guidelines', label: 'Guidelines' },
-  { to: '/faq',        label: 'FAQ' },
-]
+const link =
+  'text-d-body-s text-banner-muted hover:text-on-banner hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner'
 
-const legal = [
-  { to: '/terms-of-use',       label: 'Terms of Use' },
-  { to: '/terms-of-agreement', label: 'Terms of Agreement' },
-  { to: '/privacy-policy',     label: 'Privacy Policy' },
-]
-
-const socials = [
-  {
-    href: 'https://www.ceda.co.bw', label: 'Website',
-    icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
-  },
-]
+function Group({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <h2 className="text-d-h5 font-heading text-on-banner">{title}</h2>
+      <ul className="mt-2.5 flex flex-col gap-2.5">{children}</ul>
+    </div>
+  )
+}
 
 export default function Footer() {
+  const { t } = useI18n()
+  const settings = useShellSettings()
+  const year = new Date().getFullYear()
+  const hasOtherWays = Boolean(settings.whatsapp_number || settings.ussd_code || settings.office_finder_url || settings.call_centre_number)
+
   return (
-    <footer className="bg-white border-t border-gray-100">
-
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-6">
-
-          <div className="sm:col-span-2 lg:col-span-1">
-            <Link to="/" className="inline-flex items-center gap-3 mb-5">
-              <img src={logoSrc} alt="CEDA" className="h-9 w-auto" />
-              <div className="w-px h-8 bg-gray-200" />
-              <div className="flex flex-col leading-none">
-                <span style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 22, color: '#A01E0A', lineHeight: 1 }}>ceda</span>
-                <span className="text-[10px] font-semibold text-gray-400 tracking-[0.05em] mt-[4px]">Innovation Portal</span>
-              </div>
-            </Link>
-            <p className="text-[13px] text-gray-400 leading-relaxed mb-6 max-w-[220px]">
-              Botswana's platform for innovation, collaboration, and digital transformation.
-            </p>
-            <div className="flex items-center gap-2.5">
-              {socials.map(({ href, label, icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={`CEDA on ${label}`}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-white transition-all duration-200 hover:scale-105"
-                  style={{ background: '#f3f4f6' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#A01E0A')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#f3f4f6')}
-                >
-                  {icon}
-                </a>
-              ))}
-            </div>
+    <footer className={`bg-banner text-banner-muted ${TAB_BAR_SPACE}`}>
+      <div className="max-w-[1200px] mx-auto px-5 lg:px-6 pt-10 lg:pt-14 pb-8">
+        <div className="grid gap-8 lg:gap-16 grid-cols-2 lg:grid-cols-[320px_1fr_1fr_1fr]">
+          <div className="col-span-2 lg:col-span-1 flex flex-col gap-3">
+            <Logo theme="dark" className="!p-0 self-start" />
+            <p className="text-d-h5 font-heading text-yellow">{t('footer.tagline')}</p>
+            <p className="text-d-body-s">{t('footer.about')}</p>
           </div>
 
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-gray-900 mb-5">Platform</p>
-            <ul className="space-y-3">
-              {platform.map(({ to, label }) => (
-                <li key={to}>
-                  <Link to={to} className="text-[13px] text-gray-500 hover:text-[#A01E0A] transition-colors duration-150">
-                    {label}
-                  </Link>
+          <Group title={t('footer.explore')}>
+            <li><Link className={link} to={SUBMIT_PATH}>{t('nav.submit')}</Link></li>
+            <li><Link className={link} to="/challenges">{t('nav.challenges')}</Link></li>
+            <li><Link className={link} to="/news">{t('nav.news')}</Link></li>
+            <li><Link className={link} to="/stories">{t('footer.stories')}</Link></li>
+          </Group>
+
+          <Group title={t('footer.support')}>
+            <li><Link className={link} to="/guidelines">{t('footer.howItWorks')}</Link></li>
+            <li><Link className={link} to="/guidelines#criteria">{t('footer.criteria')}</Link></li>
+            <li><Link className={link} to="/faq">{t('footer.faq')}</Link></li>
+            <li><Link className={link} to="/about#contact">{t('footer.contact')}</Link></li>
+          </Group>
+
+          {hasOtherWays && (
+            <Group title={t('footer.otherWays')}>
+              {settings.whatsapp_number && (
+                <li>
+                  <a className={link} href={`https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">
+                    {t('utility.whatsapp', { number: settings.whatsapp_number })}
+                  </a>
                 </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-gray-900 mb-5">Company</p>
-            <ul className="space-y-3">
-              {company.map(({ to, label }) => (
-                <li key={to}>
-                  <Link to={to} className="text-[13px] text-gray-500 hover:text-[#A01E0A] transition-colors duration-150">
-                    {label}
-                  </Link>
+              )}
+              {settings.ussd_code && <li className="text-d-body-s">{t('footer.ussd', { code: settings.ussd_code })}</li>}
+              {settings.office_finder_url && (
+                <li>
+                  <a className={link} href={settings.office_finder_url} target="_blank" rel="noreferrer">
+                    {t('footer.offices')}
+                  </a>
                 </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-gray-900 mb-5">Legal</p>
-            <ul className="space-y-3">
-              {legal.map(({ to, label }) => (
-                <li key={to}>
-                  <Link to={to} className="text-[13px] text-gray-500 hover:text-[#A01E0A] transition-colors duration-150">
-                    {label}
-                  </Link>
+              )}
+              {settings.call_centre_number && (
+                <li>
+                  <a className={link} href={`tel:${settings.call_centre_number.replace(/\s/g, '')}`}>
+                    {t('footer.callCentreNumber', { number: settings.call_centre_number })}
+                  </a>
                 </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.16em] uppercase text-gray-900 mb-5">Contact</p>
-            <ul className="space-y-3">
-              <li>
-                <a href="mailto:innovation@ceda.co.bw" className="text-[13px] text-gray-500 hover:text-[#A01E0A] transition-colors duration-150">
-                  innovation@ceda.co.bw
-                </a>
-              </li>
-              <li className="text-[13px] text-gray-500">Gaborone, Botswana</li>
-              <li className="text-[13px] text-gray-500">CEDA Head Office</li>
-            </ul>
-          </div>
+              )}
+            </Group>
+          )}
         </div>
-      </div>
 
-      <div className="border-t border-gray-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[12px] text-gray-400">
-            © {new Date().getFullYear()} Citizen Entrepreneurial Development Agency (CEDA). All rights reserved.
+        <div className="mt-10 pt-4 border-t border-banner-muted/30 flex flex-col-reverse gap-3 sm:flex-row sm:items-start sm:justify-between text-d-cap">
+          <p>{t('footer.rights', { year })}</p>
+          <p className="flex flex-wrap items-center gap-x-1.5">
+            <Link className={link + ' !text-d-cap'} to="/privacy-policy">{t('footer.privacy')}</Link>
+            <span aria-hidden>·</span>
+            <Link className={link + ' !text-d-cap'} to="/terms-of-use">{t('footer.terms')}</Link>
+            <span aria-hidden>·</span>
+            <Link className={link + ' !text-d-cap'} to="/privacy-policy#cookies">{t('footer.cookies')}</Link>
+            <span aria-hidden>·</span>
+            <Link className={link + ' !text-d-cap'} to={settings.accessibility_url ?? '/faq' /* TODO(U2): accessibility statement page */}>{t('utility.accessibility')}</Link>
           </p>
-          <div className="flex items-center gap-4">
-            {legal.map(({ to, label }) => (
-              <Link key={to} to={to} className="text-[12px] text-gray-400 hover:text-[#A01E0A] transition-colors duration-150">
-                {label}
-              </Link>
-            ))}
-          </div>
         </div>
       </div>
-
     </footer>
   )
 }

@@ -129,6 +129,31 @@ class MyIdeasApiTests(DashboardFixtureMixin, TestCase):
         self.assertEqual(len(self.client.get("/api/me/ideas/?filter=finished").json()["data"]["results"]), 2)
         self.assertEqual(self.client.get("/api/me/ideas/?filter=nonsense").status_code, 400)
 
+    def test_items_carry_stages_dates_and_feedback(self):
+        from apps.submissions.models import SubmissionFeedbackSnapshot, SubmissionOutcome
+
+        self.draft("Draft one")
+        reviewing = self.submission("Reviewing", SubmissionStatus.SCREENING, due_at=timezone.now() + timedelta(days=2))
+        approved = self.submission("Approved", SubmissionStatus.APPROVED)
+        decided = timezone.now() - timedelta(days=1)
+        SubmissionOutcome.objects.create(submission=approved, program=self.general, outcome_type="approved", decided_at=decided)
+        SubmissionFeedbackSnapshot.objects.create(submission=approved, stage_code="panel", stage_name="Panel", release_action="release", released_at=decided)
+
+        items = {item["title"]: item for item in self.client.get("/api/me/ideas/").json()["data"]["results"]}
+        draft = items["Draft one"]
+        self.assertEqual((draft["stages"], draft["submitted_at"], draft["decided_at"], draft["has_feedback"]), ([], None, None, False))
+
+        review = items["Reviewing"]
+        self.assertTrue(review["submitted_at"])
+        self.assertIsNone(review["decided_at"])
+        self.assertEqual(review["stages"][0], {"code": "submitted", "name": review["stages"][0]["name"], "status": "done"})
+        self.assertIn({"code": "screening", "name": "Screening", "status": "current"}, review["stages"])
+        self.assertTrue(all(set(stage) == {"code", "name", "status"} for stage in review["stages"]))
+
+        done = items["Approved"]
+        self.assertTrue(done["decided_at"].startswith(decided.date().isoformat()))
+        self.assertTrue(done["has_feedback"])
+
     def test_requires_sign_in(self):
         self.client.force_authenticate(None)
         for url in ("/api/me/summary/", "/api/me/ideas/", "/api/me/updates/", "/api/me/challenges/recommended/"):
@@ -171,6 +196,10 @@ class MySummaryAndUpdatesApiTests(DashboardFixtureMixin, TestCase):
         self.assertEqual(times, sorted(times, reverse=True))
         status_item = next(item for item in data["results"] if item["type"] == "status_change")
         self.assertEqual(status_item["status"], "Under review")
+        self.assertEqual(status_item["link"], {"type": "idea", "id": str(submission.id)})
+        self.assertEqual(status_item["notification_type"], "status_change")
+        note = next(item for item in data["results"] if item["type"] == "notification")
+        self.assertIn("notification_type", note)
 
         since = (timezone.now() - timedelta(days=90)).isoformat()
         everything = self.client.get("/api/me/updates/", {"since": since}).json()["data"]["results"]

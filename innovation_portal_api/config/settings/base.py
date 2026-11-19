@@ -235,6 +235,7 @@ REST_FRAMEWORK = {
         "platform_test": "10/minute",
         "draft_quick_start": "10/hour",
         "similar_ideas": "30/minute",
+        "form_published": "60/minute",
         "content_public": "120/minute",
     },
 }
@@ -243,6 +244,12 @@ REST_FRAMEWORK = {
 # and which version of the consent text the submit screen shows.
 DRAFT_RESUME_TOKEN_MAX_AGE = int(os.getenv("INNOVATION_PORTAL_DRAFT_RESUME_TOKEN_MAX_AGE", str(30 * 24 * 3600)))
 IDEA_SUBMISSION_CONSENT_VERSION = os.getenv("INNOVATION_PORTAL_IDEA_SUBMISSION_CONSENT_VERSION", "2026-11")
+# Sign-in codes (R-4): seconds the screen waits before offering "Resend code".
+LOGIN_CODE_RESEND_AFTER_SECONDS = int(os.getenv("INNOVATION_PORTAL_LOGIN_CODE_RESEND_AFTER_SECONDS", "60"))
+
+# Form builder (B4): dotted path to a class with translate(texts, source=, target=) for
+# Setswana suggestions. Empty means suggestions are off (the endpoint answers 501).
+FORM_TRANSLATION_PROVIDER = os.getenv("INNOVATION_PORTAL_FORM_TRANSLATION_PROVIDER", "")
 
 from datetime import timedelta
 

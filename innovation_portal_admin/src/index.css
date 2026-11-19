@@ -1,54 +1,14 @@
+@import './styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Poppins';
-  src: url('/staff/fonts/Poppins-Regular.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/staff/fonts/Poppins-Medium.ttf') format('truetype');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/staff/fonts/Poppins-SemiBold.ttf') format('truetype');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/staff/fonts/Poppins-Bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/staff/fonts/Poppins-ExtraBold.ttf') format('truetype');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Poppins';
-  src: url('/staff/fonts/Poppins-Black.ttf') format('truetype');
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
 
 
 :root {
-  --sidebar-width: 260px;
-  --topbar-height: 64px;
+  --sidebar-width: 216px;
+  --topbar-height: 52px;
   --ceda-green:     #F0641E;
   --ceda-forest:    #A01E0A;
   --ceda-indigo:    #1D6FA3;
@@ -56,84 +16,83 @@
 }
 
 
+@media (min-width: 1536px) {
+  :root {
+    --sidebar-width: 248px;
+    --topbar-height: 64px;
+  }
+}
+
 @layer base {
   html {
     @apply scroll-smooth;
   }
 
   body {
-    @apply font-sans text-ceda-dark bg-ceda-surface antialiased;
+    @apply font-body text-text bg-bg antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold leading-tight;
+    @apply font-heading font-semibold leading-tight;
   }
 
   *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-ceda-green;
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg;
   }
 }
 
 
 @layer components {
 
+  /* Figma Foundations › Button, staff density (32px, 36px from 2xl). New code uses <Button>. */
   .btn {
-    @apply inline-flex items-center gap-2 font-medium text-sm rounded-lg
-           transition-all duration-150 active:scale-[0.97]
-           focus-visible:ring-2 focus-visible:ring-offset-2
+    @apply inline-flex items-center justify-center gap-1.5 font-heading font-semibold text-[13px] leading-[18px] rounded-control
+           h-8 2xl:h-9 2xl:text-[14px] whitespace-nowrap
+           transition-colors duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   .btn-primary {
-    @apply btn px-4 py-2 bg-ceda-forest text-white
-           hover:bg-ceda-forest-dark
-           focus-visible:ring-ceda-forest;
+    @apply btn px-3.5 bg-primary text-on-primary hover:bg-primary-hover;
   }
 
   .btn-secondary {
-    @apply btn px-4 py-2 bg-white text-ceda-forest border border-ceda-border
-           hover:bg-ceda-green-pale hover:border-ceda-green
-           focus-visible:ring-ceda-green;
+    @apply btn px-3.5 bg-surface text-text border border-border hover:bg-surface2;
   }
 
   .btn-accent {
-    @apply btn px-4 py-2 bg-ceda-green text-white
-           hover:bg-ceda-green-dark
-           focus-visible:ring-ceda-green;
+    @apply btn px-3.5 bg-accent text-on-accent hover:bg-accent/90;
   }
 
   .btn-ghost {
-    @apply btn px-3 py-2 text-ceda-muted
-           hover:bg-ceda-surface hover:text-ceda-forest
-           focus-visible:ring-ceda-green;
+    @apply btn px-3 text-primary hover:bg-primary-soft;
   }
 
   .btn-danger {
-    @apply btn px-4 py-2 bg-ceda-red text-white
-           hover:bg-ceda-red-light
-           focus-visible:ring-ceda-red;
+    @apply btn px-3.5 bg-danger-soft text-danger hover:bg-danger hover:text-on-primary;
   }
 
-  .btn-sm   { @apply px-3 py-1.5 text-xs; }
-  .btn-icon { @apply btn p-2 text-ceda-muted hover:bg-ceda-surface hover:text-ceda-forest; }
+  .btn-sm   { @apply h-7 px-2.5 text-[12px]; }
+  .btn-icon { @apply btn w-8 px-0 text-muted hover:bg-surface2 hover:text-text; }
 
   .card {
-    @apply bg-white rounded-xl border border-ceda-border shadow-card min-w-0;
+    @apply bg-surface rounded-card border border-border min-w-0;
   }
   .card-hover {
     @apply card transition-shadow duration-200 hover:shadow-card-hover;
   }
 
   .label {
-    @apply block text-sm font-medium text-ceda-dark mb-1.5;
+    @apply block text-[13px] leading-5 font-bold text-text mb-1;
   }
 
   .input {
-    @apply w-full px-3 py-2.5 rounded-lg border border-ceda-border bg-white text-sm
-           text-ceda-dark placeholder:text-ceda-muted/60
-           focus:outline-none focus:ring-2 focus:ring-ceda-green focus:border-transparent
-           transition-colors duration-150
-           disabled:bg-ceda-surface disabled:cursor-not-allowed;
+    @apply w-full px-3 py-2 min-h-[34px] 2xl:min-h-[38px] rounded-control border border-border bg-surface text-[13px] 2xl:text-[14px]
+           text-text placeholder:text-muted
+           focus:outline-none focus:border-primary focus:shadow-focus
+           transition-[border-color,box-shadow] duration-150
+           disabled:bg-surface2 disabled:cursor-not-allowed;
   }
 
   .select {
@@ -149,12 +108,12 @@
   }
 
   .checkbox {
-    @apply w-4 h-4 rounded border-ceda-border text-ceda-forest
-           focus:ring-2 focus:ring-ceda-green focus:ring-offset-0 cursor-pointer;
+    @apply w-4 h-4 rounded border-border text-primary accent-[rgb(var(--c-primary))]
+           focus:ring-2 focus:ring-primary focus:ring-offset-0 cursor-pointer;
   }
 
   .badge {
-    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center gap-1.5 h-[22px] px-2 rounded-full text-d-label-s font-body whitespace-nowrap;
   }
 
   .nav-item {
@@ -175,20 +134,20 @@
   }
 
   .th {
-    @apply text-left text-xs font-semibold text-ceda-muted uppercase tracking-wider
-           py-2.5 px-3 bg-ceda-surface border-b border-ceda-border
+    @apply text-left text-[11px] leading-4 font-bold text-muted uppercase tracking-wider
+           h-8 2xl:h-9 py-0 px-3 bg-surface2 border-b border-border
            whitespace-nowrap overflow-hidden;
   }
 
   .td {
-    @apply py-2.5 px-3 text-sm text-ceda-dark align-middle border-b border-ceda-border/60;
+    @apply h-9 2xl:h-11 py-1.5 px-3 text-[13px] 2xl:text-[14px] text-text align-middle border-b border-border/60;
   }
 
   .tab-btn {
-    @apply px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap;
+    @apply px-3 h-9 2xl:h-10 font-heading text-[13px] 2xl:text-[14px] border-b-2 transition-colors whitespace-nowrap;
   }
-  .tab-active   { @apply tab-btn border-ceda-forest text-ceda-forest; }
-  .tab-inactive { @apply tab-btn border-transparent text-ceda-muted hover:text-ceda-dark hover:border-ceda-border; }
+  .tab-active   { @apply tab-btn font-bold border-primary text-text; }
+  .tab-inactive { @apply tab-btn font-medium border-transparent text-muted hover:text-text; }
 
   .section-divider {
     @apply border-t border-ceda-border my-6;
@@ -261,9 +220,9 @@
 
 
 ::-webkit-scrollbar        { width: 5px; height: 5px; }
-::-webkit-scrollbar-track  { background: #f1f5f9; }
-::-webkit-scrollbar-thumb  { background: #F0641E; border-radius: 3px; opacity: 0.5; }
-::-webkit-scrollbar-thumb:hover { background: #C94F12; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgb(var(--c-border)); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--c-muted) / 0.5); }
 
 
 .sidebar-scroll::-webkit-scrollbar { width: 0; }

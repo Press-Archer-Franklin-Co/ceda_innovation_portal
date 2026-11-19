@@ -243,6 +243,8 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
             consent=serializer.validated_data["consent"],
             create_account=serializer.validated_data["create_account"],
             name=serializer.validated_data.get("name", ""),
+            first_name=serializer.validated_data.get("first_name", ""),
+            last_name=serializer.validated_data.get("last_name", ""),
             ip_address=client_ip(request),
         )
         payload = IdeaSubmitService.response_payload(outcome, lang=resolve_request_language(request))

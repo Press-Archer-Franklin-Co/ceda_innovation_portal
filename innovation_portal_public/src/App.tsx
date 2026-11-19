@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
@@ -31,6 +32,11 @@ import SubmissionDetail   from './pages/SubmissionDetail'
 import DocumentPage       from './pages/DocumentPage'
 import SpecialistInvite  from './pages/SpecialistInvite'
 import JudgeInvite       from './pages/JudgeInvite'
+import { I18nProvider } from './i18n'
+import { ToastProvider } from './components/ui/Toast'
+
+// Dev-only component gallery; not part of the production bundle.
+const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -69,6 +75,8 @@ function AppRoutes() {
         <Route path="/innovate"    element={<Innovate />} />
         <Route path="/skills"      element={<Skills />} />
         <Route path="/news"        element={<News />} />
+        {/* TODO(U2): own Stories page; until then the news feed. */}
+        <Route path="/stories"     element={<News />} />
         <Route path="/news/:id"    element={<ArticleDetail />} />
         <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
@@ -84,6 +92,10 @@ function AppRoutes() {
           <Route path="/security"           element={<Security />} />
         </Route>
 
+        {Styleguide && (
+          <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />
+        )}
+
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
@@ -92,8 +104,12 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <I18nProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </ToastProvider>
+    </I18nProvider>
   )
 }
