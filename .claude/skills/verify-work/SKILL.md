@@ -32,7 +32,7 @@ python3 --version                      # need 3.12+
 command -v psql && pg_isready          # PostgreSQL reachable?
 command -v redis-server; redis-cli ping
 node --version                         # need v22
-docker compose version && docker info >/dev/null
+docker ps >/dev/null                   # Docker usable without sudo?
 command -v gh && gh auth status
 ```
 
@@ -63,16 +63,44 @@ cd innovation_portal_public && npm ci && npx tsc --noEmit && npm run build
 If Node is missing but the API ran locally, the frontend checks still have to come from CI (push and use the CI route for them).
 
 ### Docker
-When `docker compose` works, run the API checks in the existing compose services (database and Redis from `docker-compose.yml`, code from the backend image):
+When `docker ps` works (no sudo needed; if it says permission denied, the session needs restarting after the user was added to the `docker` group), run everything in **throwaway containers**. **Never start, stop, rebuild or exec into the production docker-compose stack** (`innovation_portal_*` containers, `innovation_portal_net`), and never read `.env.production`.
+
+One command runs the same checks as CI and prints the summary:
 
 ```bash
-docker compose up -d innovation_portal_db innovation_portal_redis
-docker compose run --rm -e DJANGO_SETTINGS_MODULE=config.settings.local innovation_portal_backend \
-  sh -c "pip install -r requirements/local.txt; python manage.py makemigrations --check --dry-run > mig.txt 2>&1; echo \$? > mig.code; \
-         pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf"
+.claude/skills/verify-work/scripts/docker_verify.sh            # all: api, admin, public
+.claude/skills/verify-work/scripts/docker_verify.sh api tests/api/test_x.py::Class::test_y   # while fixing
+.claude/skills/verify-work/scripts/docker_verify.sh admin      # or public
 ```
 
-Then run `check_migrations.py` (with `--exit-code $(cat mig.code)`) and `check_test_results.py` on the outputs as above. The compose file reads `.env.production`; never print or commit its contents.
+Results land in `test-reports/docker/<branch>-<sha>/` (`summary/summary.md`, `api-results/api-new-failures.txt` with full tracebacks, lint and build logs). A full API run takes several minutes, so run it in the background and wait for it to finish.
+
+What the script does, so you can run the steps by hand if needed:
+
+```bash
+docker network create ceda-test 2>/dev/null
+docker run -d --rm --name ceda-test-db --network ceda-test -e POSTGRES_USER=innovation -e POSTGRES_PASSWORD=innovation -e POSTGRES_DB=innovation_portal postgres:16-alpine
+docker run -d --rm --name ceda-test-redis --network ceda-test redis:7-alpine
+
+# API tests
+docker run --rm --network ceda-test -v "$PWD/innovation_portal_api":/app -w /app \
+  -e DJANGO_SETTINGS_MODULE=config.settings.local \
+  -e INNOVATION_PORTAL_POSTGRES_HOST=ceda-test-db -e REDIS_URL=redis://ceda-test-redis:6379/0 \
+  python:3.12-slim sh -c "pip install -q -r requirements/local.txt && pytest -q --create-db -p no:cacheprovider -rf"
+
+# Frontends
+docker run --rm -v "$PWD/innovation_portal_admin":/app -w /app node:22 sh -c "npm ci && npm run lint && npm run build"
+docker run --rm -v "$PWD/innovation_portal_public":/app -w /app node:22 sh -c "npm ci && npx tsc --noEmit && npm run build"
+```
+
+On top of those commands, the script:
+- runs as your user (`--user`, `HOME=/tmp`, `pip --user`), so `node_modules`, `dist` and the reports are not owned by root;
+- keeps pip and npm caches in `~/.cache/ceda-test-*`;
+- adds `--junitxml`, the migrations check, and the three checker scripts, because plain `npm run lint` and `pytest` exit non-zero on `main`'s known problems.
+
+`ceda-test-db` and `ceda-test-redis` can stay running between runs (`--create-db` gives each run a fresh test database). Stop them when you're done: `docker stop ceda-test-db ceda-test-redis`.
+
+The Docker route covers the PR gate. Pushing still runs CI, and the PR description links that run too.
 
 ### CI (GitHub Actions)
 Otherwise: commit to the feature branch, push, and wait for the Actions run for **that exact commit**.
