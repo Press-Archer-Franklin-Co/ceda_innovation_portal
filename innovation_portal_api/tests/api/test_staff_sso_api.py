@@ -9,6 +9,7 @@ from apps.accounts.models import SocialAccount, User
 from apps.accounts.services import RoleService
 from apps.audit.models import AuditLog
 from apps.core.constants import RoleType
+from apps.platform_config.testing import set_features
 
 SSO_SETTINGS = dict(
     CEDA_SSO_CLIENT_ID="staff-client",
@@ -45,6 +46,7 @@ class StaffSSOApiTests(TestCase):
     def setUp(self):
         cache.clear()
         RoleService.ensure_default_roles()
+        set_features(self, staff_sso=True)
         self.client = APIClient()
         patcher = patch.object(CedaStaffIdentityProvider, "_discovery", return_value=DISCOVERY)
         patcher.start()
@@ -125,6 +127,9 @@ class StaffSSOApiTests(TestCase):
 
 
 class StaffSSODisabledTests(TestCase):
+    def setUp(self):
+        set_features(self, staff_sso=True)
+
     @override_settings(CEDA_SSO_CLIENT_ID="", CEDA_SSO_CLIENT_SECRET="", CEDA_SSO_REDIRECT_URI="", CEDA_SSO_DISCOVERY_URL="")
     def test_start_is_refused_when_not_configured(self):
         response = APIClient().post("/api/auth/social/ceda_staff/start/", {}, format="json")

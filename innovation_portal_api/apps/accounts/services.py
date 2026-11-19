@@ -288,24 +288,44 @@ class StaffSSOService:
     )
 
     @staticmethod
-    def default_role() -> str:
+    def default_role(configured: str = "") -> str:
         from django.conf import settings
 
-        role = getattr(settings, "CEDA_SSO_DEFAULT_ROLE", "") or RoleType.STAFF_MEMBER
+        role = configured or getattr(settings, "CEDA_SSO_DEFAULT_ROLE", "") or RoleType.STAFF_MEMBER
         if role not in StaffSSOService.STAFF_ROLE_CODES or role == RoleType.ADMINISTRATOR:
-            logger.warning("CEDA_SSO_DEFAULT_ROLE=%r is not an allowed default; using staff_member.", role)
+            logger.warning("SSO default role %r is not allowed; using staff_member.", role)
             return RoleType.STAFF_MEMBER
         return role
 
     @staticmethod
+    def roles_for_groups(groups: list[str], group_role_map: dict[str, str]) -> list[str]:
+        """Roles mapped from the person's groups. Administrator is never handed out."""
+        lowered = {str(group).strip().lower() for group in groups or []}
+        roles = []
+        for group, role in (group_role_map or {}).items():
+            if str(group).strip().lower() in lowered and role in StaffSSOService.STAFF_ROLE_CODES and role != RoleType.ADMINISTRATOR:
+                roles.append(role)
+        return sorted(set(roles))
+
+    @staticmethod
     @transaction.atomic
-    def grant_staff_access(*, user: User, created: bool, allowed_by: str = "") -> User:
+    def grant_staff_access(
+        *,
+        user: User,
+        created: bool,
+        allowed_by: str = "",
+        default_role: str = "",
+        group_role_map: dict[str, str] | None = None,
+        groups: list[str] | None = None,
+    ) -> User:
         active_roles = set(user.roles.filter(user_roles__is_active=True).values_list("code", flat=True))
-        granted_role = None
+        granted_roles: list[str] = []
         if not active_roles & StaffSSOService.STAFF_ROLE_CODES:
-            granted_role = StaffSSOService.default_role()
-            RoleService.assign_roles(user, [granted_role])
-            UserRole.objects.filter(user=user, role__code=granted_role).update(is_active=True, updated_at=timezone.now())
+            granted_roles = StaffSSOService.roles_for_groups(groups or [], group_role_map or {}) or [
+                StaffSSOService.default_role(default_role)
+            ]
+            RoleService.assign_roles(user, granted_roles)
+            UserRole.objects.filter(user=user, role__code__in=granted_roles).update(is_active=True, updated_at=timezone.now())
             if created:
                 # A brand-new SSO account is a staff account, not an innovator account.
                 UserRole.objects.filter(user=user, role__code=RoleType.INNOVATOR).update(is_active=False, updated_at=timezone.now())
@@ -316,6 +336,6 @@ class StaffSSOService:
             actor=user,
             action_type="staff_sso_access_granted",
             target=user,
-            metadata={"created": created, "allowed_by": allowed_by, "granted_role": granted_role or ""},
+            metadata={"created": created, "allowed_by": allowed_by, "granted_roles": granted_roles},
         )
         return user

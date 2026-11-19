@@ -60,20 +60,24 @@ class LoginCodeDelivery:
         return f"Your CEDA Innovation Portal code is {code}. It expires in {minutes} minutes. Do not share it with anyone."
 
     @staticmethod
-    def send(*, channel: str, target: str, code: str) -> bool:
+    def send(*, channel: str, target: str, code: str, user=None) -> bool:
         if channel == LoginCode.Channel.EMAIL:
             from apps.communications.email_notifications import EmailNotificationService
 
             EmailNotificationService.send_login_code_email(to_email=target, code=code)
             return True
-        from apps.communications.senders import MessageSenderRegistry
+        from apps.communications.services import CommunicationService
 
-        return MessageSenderRegistry.send(
+        # The log keeps "sign-in code" only, never the code itself.
+        _, result = CommunicationService.record_text_message(
             channel=channel,
             to=target,
-            body=LoginCodeDelivery.message_body(code),
-            metadata={"purpose": "login_code"},
+            body_for_log="sign-in code",
+            subject="Sign-in code",
+            recipient=user,
+            real_body=LoginCodeDelivery.message_body(code),
         )
+        return result.sent
 
 
 class OTPService:
@@ -106,6 +110,31 @@ class OTPService:
     def _phone_channel() -> str:
         channel = getattr(settings, "LOGIN_CODE_PHONE_CHANNEL", LoginCode.Channel.SMS) or LoginCode.Channel.SMS
         return channel if channel in {LoginCode.Channel.SMS, LoginCode.Channel.WHATSAPP} else LoginCode.Channel.SMS
+
+    @staticmethod
+    def codes_per_target_per_hour(target_type: str) -> int:
+        """The per-number limit can be set on the active SMS connection."""
+        if target_type == LoginCode.TargetType.PHONE:
+            try:
+                from apps.platform_config.selectors import IntegrationRuntimeSelector
+
+                connection = IntegrationRuntimeSelector.active_connection("sms")
+            except Exception:
+                connection = None
+            configured = (connection.config or {}).get("codes_per_number_per_hour") if connection else None
+            if isinstance(configured, (int, float)) and configured > 0:
+                return int(configured)
+        return OTPService.MAX_CODES_PER_TARGET_PER_HOUR
+
+    @staticmethod
+    def assert_channel_available(target_type: str) -> None:
+        """Codes by phone need SMS (or WhatsApp) switched on as well as code sign-in."""
+        from apps.platform_config.flags import require_feature
+
+        require_feature("code_sign_in")
+        if target_type == LoginCode.TargetType.PHONE:
+            channel = OTPService._phone_channel()
+            require_feature("whatsapp_messages" if channel == LoginCode.Channel.WHATSAPP else "sms_messages")
 
     @staticmethod
     def _hint(target_type: str, target: str) -> str:
@@ -148,7 +177,7 @@ class OTPService:
             target=target,
             created_at__gte=now - timezone.timedelta(hours=1),
         ).count()
-        if recent >= OTPService.MAX_CODES_PER_TARGET_PER_HOUR:
+        if recent >= OTPService.codes_per_target_per_hour(target_type):
             # Same answer as a normal request so this cannot be used to probe accounts.
             AuditService.log_raw_action(
                 actor=None,
@@ -178,7 +207,7 @@ class OTPService:
                 requested_ip=OTPService._clean_ip(ip),
             )
         try:
-            delivered = LoginCodeDelivery.send(channel=channel, target=target, code=code)
+            delivered = LoginCodeDelivery.send(channel=channel, target=target, code=code, user=user)
         except Exception:
             logger.exception("Could not send login code", extra={"login_code_id": str(login_code.id), "channel": channel})
             delivered = False

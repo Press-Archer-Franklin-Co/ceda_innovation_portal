@@ -10,6 +10,7 @@ from apps.accounts.models import LoginCode, User, UserMFAProfile
 from apps.accounts.services import RoleService
 from apps.communications.senders import LocMemMessageSender
 from apps.core.constants import RoleType
+from apps.platform_config.testing import set_features
 
 REQUEST_URL = "/api/auth/otp/request/"
 VERIFY_URL = "/api/auth/otp/verify/"
@@ -29,6 +30,7 @@ class OTPLoginApiTests(TestCase):
         cache.clear()
         LocMemMessageSender.outbox = []
         RoleService.ensure_default_roles()
+        set_features(self, sms_messages=True, code_sign_in=True, password_sign_in=True)
         self.client = APIClient()
         patcher = patch("apps.accounts.otp_services.OTPService._generate_code", return_value=CODE)
         patcher.start()
@@ -226,6 +228,7 @@ class OTPLoginApiTests(TestCase):
 class OTPWithoutSmsProviderTests(TestCase):
     def setUp(self):
         cache.clear()
+        set_features(self, sms_messages=True)
 
     def test_request_still_answers_ok_when_no_sms_provider(self):
         response = APIClient().post(REQUEST_URL, {"phone": "71234567"}, format="json")

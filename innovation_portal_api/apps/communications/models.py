@@ -15,7 +15,12 @@ class MessageTemplate(UUIDModel, TimeStampedModel):
 
 
 class CommunicationLog(UUIDModel, TimeStampedModel):
-    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="communication_logs")
+    # Empty for messages to someone without an account yet (for example a sign-in code).
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name="communication_logs")
+    to_address = models.CharField(max_length=255, blank=True, help_text="Phone number or address the message went to.")
+    provider = models.CharField(max_length=60, blank=True, help_text="Provider key from Platform settings, or 'environment'.")
+    provider_message_id = models.CharField(max_length=255, blank=True, db_index=True)
+    provider_status = models.CharField(max_length=60, blank=True)
     notification = models.ForeignKey("communications.Notification", on_delete=models.SET_NULL, null=True, blank=True, related_name="delivery_logs")
     channel = models.CharField(max_length=20, choices=CommunicationChannel.choices)
     template = models.ForeignKey(MessageTemplate, on_delete=models.SET_NULL, null=True, blank=True, related_name="logs")

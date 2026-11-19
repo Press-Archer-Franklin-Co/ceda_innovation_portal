@@ -43,6 +43,7 @@ import WorkflowBuilder     from './pages/admin/workflows/WorkflowBuilder'
 import WorkflowInstances   from './pages/admin/workflows/WorkflowInstances'
 import MarkingCriteriaLibrary from './pages/admin/MarkingCriteriaLibrary'
 import TermsManager         from './pages/admin/TermsManager'
+import PlatformSettings     from './pages/admin/platform/PlatformSettings'
 import Users               from './pages/users/Users'
 import AuditLogs           from './pages/audit/AuditLogs'
 import ContentList         from './pages/content/ContentList'
@@ -106,6 +107,7 @@ export default function App() {
                   <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
                   <Route path="/marking-criteria"              element={<ErrorBoundary><MarkingCriteriaLibrary /></ErrorBoundary>} />
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
+                  <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
                 </Route>
 
                 <Route element={<AdminRoute />}>

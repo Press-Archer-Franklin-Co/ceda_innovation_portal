@@ -63,6 +63,23 @@ class LocMemMessageSender(BaseMessageSender):
         )
 
 
+@dataclass
+class DeliveryResult:
+    status: str  # "sent", "skipped" or "failed"
+    provider: str = ""
+    message_id: str = ""
+    provider_status: str = ""
+    reason: str = ""
+
+    @property
+    def sent(self) -> bool:
+        return self.status == "sent"
+
+
+# Each text channel can be switched off in Platform settings.
+CHANNEL_FEATURES = {"sms": "sms_messages", "whatsapp": "whatsapp_messages", "ussd": "ussd"}
+
+
 class MessageSenderRegistry:
     @staticmethod
     def get(channel: str) -> BaseMessageSender:
@@ -77,12 +94,37 @@ class MessageSenderRegistry:
         return bool((getattr(settings, "MESSAGE_SENDERS", {}) or {}).get(channel))
 
     @staticmethod
-    def send(*, channel: str, to: str, body: str, metadata: dict[str, Any] | None = None) -> bool:
-        """Send a message. Returns False (and logs) when the channel has no provider."""
+    def deliver(*, channel: str, to: str, body: str, metadata: dict[str, Any] | None = None, purpose: str = "") -> DeliveryResult:
+        """Send one message and say what happened. Never raises.
+
+        Order: the channel's feature switch, then the active connection saved in Platform
+        settings (SMS), then the sender named in environment variables.
+        """
+        from apps.platform_config.flags import is_enabled
+
+        feature = CHANNEL_FEATURES.get(channel)
+        if feature and not is_enabled(feature):
+            logger.info("Skipped %s message to %s: switched off.", channel, mask_phone(to))
+            return DeliveryResult("skipped", reason=f"Skipped: {channel} messages are switched off.")
+        if channel == "sms":
+            from apps.platform_config.services import SMSGateway
+
+            result = SMSGateway.send_via_active_connection(to=to, body=body, purpose=purpose)
+            if result is not None:
+                return result
         try:
             sender = MessageSenderRegistry.get(channel)
         except NoSenderConfigured:
             logger.warning("Skipped %s message to %s: no provider configured.", channel, mask_phone(to))
-            return False
-        sender.send(to=to, body=body, metadata=metadata)
-        return True
+            return DeliveryResult("skipped", reason=f"No {channel} provider is configured.")
+        try:
+            sender.send(to=to, body=body, metadata=metadata)
+        except Exception as exc:
+            logger.exception("%s sender failed", channel)
+            return DeliveryResult("failed", provider="environment", reason=str(exc)[:500])
+        return DeliveryResult("sent", provider="environment")
+
+    @staticmethod
+    def send(*, channel: str, to: str, body: str, metadata: dict[str, Any] | None = None) -> bool:
+        """Back-compatible wrapper: True when the message was sent."""
+        return MessageSenderRegistry.deliver(channel=channel, to=to, body=body, metadata=metadata).sent

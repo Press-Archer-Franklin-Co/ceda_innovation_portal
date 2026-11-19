@@ -141,10 +141,14 @@ class SocialAuthService:
         if provider == SocialAuthProvider.CEDA_STAFF:
             from apps.accounts.services import AuthTokenService, StaffSSOService
 
+            sso_values = provider_service.sso_settings() if hasattr(provider_service, "sso_settings") else {}
             StaffSSOService.grant_staff_access(
                 user=result["user"],
                 created=result["created"],
                 allowed_by=(identity.raw_claims or {}).get("allowed_by", ""),
+                default_role=sso_values.get("default_role", ""),
+                group_role_map=sso_values.get("group_role_map") or {},
+                groups=(identity.raw_claims or {}).get("groups") or [],
             )
             # Re-issue so the token's role claim includes the staff role.
             result["tokens"] = AuthTokenService.issue_tokens(result["user"])

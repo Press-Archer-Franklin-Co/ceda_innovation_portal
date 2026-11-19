@@ -31,6 +31,41 @@ export interface SocialProvider {
   recommended_for: string
 }
 
+export interface PublicConfig {
+  features: Record<string, boolean>
+  sign_in: {
+    password: boolean
+    code: boolean
+    code_by_sms: boolean
+    sso: { active: boolean; provider: string; label: string }
+  }
+}
+
+export interface SsoTrialStep {
+  step: string
+  ok: boolean
+  detail: string
+  ms: number
+  skipped?: boolean
+}
+
+export interface SsoTrialResult {
+  connection_id: string
+  ok: boolean
+  steps: SsoTrialStep[]
+  trial?: {
+    email: string
+    name: string
+    groups: string[]
+    allowed: boolean
+    allowed_by: string
+    reason: string
+    role: string
+  }
+}
+
+export const SSO_TRIAL_STATE_PREFIX = 'sso-trial.'
+
 export interface SocialAuthStartResponse {
   authorization_url?: string
   provider?: string
@@ -108,11 +143,26 @@ export const authService = {
     return unwrap(data)
   },
 
+  async getPublicConfig(): Promise<PublicConfig> {
+    const { data } = await axios.get<Envelope<PublicConfig>>(`${BASE_URL}/api/platform/public-config/`)
+    return unwrap(data)
+  },
+
+  async completeSsoTrial(code: string, state: string): Promise<SsoTrialResult> {
+    const { data } = await axios.post<Envelope<SsoTrialResult>>(
+      `${BASE_URL}/api/platform/sso-trial/complete/`,
+      { code, state },
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+    return unwrap(data)
+  },
+
   async getSocialProviders(): Promise<SocialProvider[]> {
     const { data } = await axios.get<{ providers: Array<{ id: string; name: string; enabled: boolean }> }>(
       `${BASE_URL}/api/auth/social/providers/`,
     )
-    return (data.providers ?? []).map(p => ({
+    // CEDA staff sign-in has its own button (see StaffSignInButton), driven by public config.
+    return (data.providers ?? []).filter(p => p.id !== 'ceda_staff').map(p => ({
       provider: p.id as SocialProvider['provider'],
       label:    p.name,
       enabled:  p.enabled,

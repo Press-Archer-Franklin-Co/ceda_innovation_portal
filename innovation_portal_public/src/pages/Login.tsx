@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 import SocialAuthButtons from '../components/ui/SocialAuthButtons'
 import AuthShell from '../components/auth/AuthShell'
+import StaffSignInButton from '../components/auth/StaffSignInButton'
 import VerificationRequired from '../components/ui/VerificationRequired'
 import { tokenStorage } from '../services/api'
 import { parseApiError, parseFieldErrors } from '../utils/apiError'
@@ -189,6 +190,8 @@ export default function Login() {
           {error}
         </div>
       )}
+
+      <StaffSignInButton />
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>

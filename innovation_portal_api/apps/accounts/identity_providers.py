@@ -142,8 +142,12 @@ class OIDCIdentityProvider(BaseIdentityProvider):
             "scope": self.scopes,
             "state": state,
             "nonce": nonce,
+            **self.extra_auth_params(),
         }
         return f'{discovery["authorization_endpoint"]}?{urlencode(params)}', config["redirect_uri"]
+
+    def extra_auth_params(self) -> dict[str, str]:
+        return {}
 
     def fetch_identity(self, *, code: str, state_record: SocialAuthState) -> NormalizedIdentity:
         claims = self.exchange_code_for_claims(code=code, state_record=state_record)
@@ -258,36 +262,61 @@ class StaffSSORefused(PermissionDenied):
 class CedaStaffIdentityProvider(OIDCIdentityProvider):
     """Single sign-on for CEDA staff through any OIDC provider (for example Microsoft Entra ID).
 
-    Configured only through environment variables (see .env.production.example):
-    CEDA_SSO_CLIENT_ID, CEDA_SSO_CLIENT_SECRET, CEDA_SSO_REDIRECT_URI, CEDA_SSO_DISCOVERY_URL,
-    and optionally CEDA_SSO_ISSUER, CEDA_SSO_SCOPES, CEDA_SSO_GROUPS_CLAIM.
+    Settings come from ``sso_settings()``. This class reads environment variables
+    (CEDA_SSO_*, see .env.production.example); ``ConfiguredStaffIdentityProvider`` is fed
+    a connection saved in Platform settings, which takes priority at runtime.
 
-    Sign-in is refused unless the email domain is in CEDA_SSO_ALLOWED_DOMAINS or one of the
-    user's groups is in CEDA_SSO_ALLOWED_GROUPS. With both lists empty, nobody is let in.
+    Sign-in is refused unless the email domain is in the allowed domains or one of the
+    user's groups is in the allowed groups. With both lists empty, nobody is let in.
     """
 
     provider = SocialAuthProvider.CEDA_STAFF
     display_name = "CEDA staff sign-in"
+    source = "environment"
+    connection_id = None
 
-    @property
-    def discovery_url(self) -> str:
-        return getattr(settings, "CEDA_SSO_DISCOVERY_URL", "")
-
-    @property
-    def issuer_allowlist(self) -> tuple[str, ...]:
-        issuer = getattr(settings, "CEDA_SSO_ISSUER", "")
-        return (issuer,) if issuer else ()
-
-    @property
-    def scopes(self) -> str:
-        return getattr(settings, "CEDA_SSO_SCOPES", "") or "openid email profile"
-
-    def config(self) -> dict[str, str]:
+    def sso_settings(self) -> dict[str, Any]:
         return {
             "client_id": getattr(settings, "CEDA_SSO_CLIENT_ID", ""),
             "client_secret": getattr(settings, "CEDA_SSO_CLIENT_SECRET", ""),
             "redirect_uri": getattr(settings, "CEDA_SSO_REDIRECT_URI", ""),
             "discovery_url": getattr(settings, "CEDA_SSO_DISCOVERY_URL", ""),
+            "issuer": getattr(settings, "CEDA_SSO_ISSUER", ""),
+            "scopes": getattr(settings, "CEDA_SSO_SCOPES", "") or "openid email profile",
+            "allowed_domains": getattr(settings, "CEDA_SSO_ALLOWED_DOMAINS", []) or [],
+            "allowed_groups": getattr(settings, "CEDA_SSO_ALLOWED_GROUPS", []) or [],
+            "group_role_map": {},
+            "default_role": getattr(settings, "CEDA_SSO_DEFAULT_ROLE", "") or "staff_member",
+            "groups_claim": getattr(settings, "CEDA_SSO_GROUPS_CLAIM", "") or "groups",
+            "email_claims": ("email", "preferred_username", "upn"),
+            "name_claim": "name",
+            "extra_auth_params": {},
+            "hosted_domain": "",
+        }
+
+    @property
+    def discovery_url(self) -> str:
+        return self.sso_settings().get("discovery_url", "")
+
+    @property
+    def issuer_allowlist(self) -> tuple[str, ...]:
+        issuer = self.sso_settings().get("issuer", "")
+        return (issuer,) if issuer else ()
+
+    @property
+    def scopes(self) -> str:
+        return self.sso_settings().get("scopes") or "openid email profile"
+
+    def extra_auth_params(self) -> dict[str, str]:
+        return dict(self.sso_settings().get("extra_auth_params") or {})
+
+    def config(self) -> dict[str, str]:
+        values = self.sso_settings()
+        return {
+            "client_id": values.get("client_id", ""),
+            "client_secret": values.get("client_secret", ""),
+            "redirect_uri": values.get("redirect_uri", ""),
+            "discovery_url": values.get("discovery_url", ""),
         }
 
     def required_config_keys(self) -> dict[str, str]:
@@ -299,55 +328,75 @@ class CedaStaffIdentityProvider(OIDCIdentityProvider):
         }
 
     @staticmethod
-    def _setting_list(name: str) -> list[str]:
-        raw = getattr(settings, name, []) or []
+    def _clean_list(raw) -> list[str]:
         if isinstance(raw, str):
             raw = raw.split(",")
-        return [item.strip().lower() for item in raw if item and item.strip()]
+        return [str(item).strip().lower() for item in (raw or []) if item and str(item).strip()]
 
-    @classmethod
-    def allowed_domains(cls) -> list[str]:
-        return [domain.lstrip("@") for domain in cls._setting_list("CEDA_SSO_ALLOWED_DOMAINS")]
+    def allowed_domains(self) -> list[str]:
+        return [domain.lstrip("@") for domain in self._clean_list(self.sso_settings().get("allowed_domains"))]
 
-    @classmethod
-    def allowed_groups(cls) -> list[str]:
-        return cls._setting_list("CEDA_SSO_ALLOWED_GROUPS")
+    def allowed_groups(self) -> list[str]:
+        return self._clean_list(self.sso_settings().get("allowed_groups"))
 
-    @staticmethod
-    def _email_from_claims(claims: dict[str, Any]) -> str:
+    def _email_from_claims(self, claims: dict[str, Any]) -> str:
         # Entra ID often leaves out `email` and puts the address in preferred_username / upn.
-        for key in ("email", "preferred_username", "upn"):
-            value = (claims.get(key) or "").strip()
+        for key in self.sso_settings().get("email_claims") or ("email",):
+            value = (claims.get(key) or "").strip() if isinstance(claims.get(key), str) else ""
             if "@" in value:
                 return value.lower()
         return ""
 
-    @staticmethod
-    def _groups_from_claims(claims: dict[str, Any]) -> list[str]:
-        claim_name = getattr(settings, "CEDA_SSO_GROUPS_CLAIM", "") or "groups"
+    def _groups_from_claims(self, claims: dict[str, Any]) -> list[str]:
+        claim_name = self.sso_settings().get("groups_claim") or "groups"
         groups = claims.get(claim_name) or []
         if isinstance(groups, str):
             groups = [groups]
         return [str(group).strip().lower() for group in groups if str(group).strip()]
 
-    @classmethod
-    def check_allow_list(cls, *, email: str, groups: list[str]) -> str:
+    def check_allow_list(self, *, email: str, groups: list[str]) -> str:
         """Return why the user is allowed (``domain`` or ``group``) or raise StaffSSORefused."""
         domain = email.rsplit("@", 1)[-1] if "@" in email else ""
-        if domain and domain in cls.allowed_domains():
+        if domain and domain in self.allowed_domains():
             return "domain"
-        if set(groups) & set(cls.allowed_groups()):
+        if set(groups) & set(self.allowed_groups()):
             return "group"
         raise StaffSSORefused()
 
-    def identity_from_claims(self, claims: dict[str, Any]) -> NormalizedIdentity:
+    def evaluate_claims(self, claims: dict[str, Any]) -> dict[str, Any]:
+        """Work out, without side effects, who this is and whether they may sign in."""
+        values = self.sso_settings()
         email = self._email_from_claims(claims)
         groups = self._groups_from_claims(claims)
+        name_claim = values.get("name_claim") or "name"
+        result = {
+            "email": email,
+            "name": (claims.get(name_claim) or "").strip() if isinstance(claims.get(name_claim), str) else "",
+            "groups": groups,
+            "allowed": False,
+            "allowed_by": "",
+            "reason": "",
+        }
+        if not email:
+            result["reason"] = "The directory did not supply an email address."
+            return result
+        hosted_domain = (values.get("hosted_domain") or "").strip().lower()
+        if hosted_domain and (claims.get("hd") or "").lower() != hosted_domain:
+            result["reason"] = f"The account is not in the {hosted_domain} Workspace."
+            return result
+        try:
+            result["allowed_by"] = self.check_allow_list(email=email, groups=groups)
+            result["allowed"] = True
+        except StaffSSORefused:
+            result["reason"] = "Neither the email domain nor any group is on the allow list."
+        return result
+
+    def identity_from_claims(self, claims: dict[str, Any]) -> NormalizedIdentity:
+        evaluation = self.evaluate_claims(claims)
+        email = evaluation["email"]
         if not email:
             raise ValidationError({"email": "The staff directory did not supply an email address."})
-        try:
-            matched_by = self.check_allow_list(email=email, groups=groups)
-        except StaffSSORefused:
+        if not evaluation["allowed"]:
             from apps.audit.services import AuditService
 
             AuditService.log_raw_action(
@@ -355,10 +404,15 @@ class CedaStaffIdentityProvider(OIDCIdentityProvider):
                 action_type="staff_sso_refused",
                 target_model="Identity",
                 target_id=str(claims.get("sub") or email),
-                metadata={"provider": self.provider, "email_domain": email.rsplit("@", 1)[-1], "group_count": len(groups)},
+                metadata={
+                    "provider": self.provider,
+                    "source": self.source,
+                    "email_domain": email.rsplit("@", 1)[-1],
+                    "group_count": len(evaluation["groups"]),
+                },
             )
-            raise
-        first_name, last_name = self._split_name(claims.get("name", ""), email)
+            raise StaffSSORefused()
+        first_name, last_name = self._split_name(evaluation["name"], email)
         return NormalizedIdentity(
             provider=self.provider,
             provider_user_id=str(claims.get("oid") or claims.get("sub")),
@@ -367,12 +421,33 @@ class CedaStaffIdentityProvider(OIDCIdentityProvider):
             email_verified=True,
             first_name=claims.get("given_name") or first_name,
             last_name=claims.get("family_name") or last_name,
-            display_name=(claims.get("name") or "").strip(),
+            display_name=evaluation["name"],
             username=email,
             avatar_url="",
-            raw_claims={"claims": claims, "groups": groups, "allowed_by": matched_by},
+            raw_claims={"claims": claims, "groups": evaluation["groups"], "allowed_by": evaluation["allowed_by"]},
             trust_level=IdentityTrustLevel.STRONG,
         )
+
+
+class ConfiguredStaffIdentityProvider(CedaStaffIdentityProvider):
+    """Staff SSO driven by a connection saved in Platform settings."""
+
+    source = "database"
+
+    def __init__(self, values: dict[str, Any], *, connection_id=None):
+        self._values = dict(values)
+        self.connection_id = connection_id
+
+    def sso_settings(self) -> dict[str, Any]:
+        return self._values
+
+    def required_config_keys(self) -> dict[str, str]:
+        return {
+            "client_id": "client ID",
+            "client_secret": "client secret",
+            "redirect_uri": "redirect URI",
+            "discovery_url": "discovery URL",
+        }
 
 
 class GitHubIdentityProvider(BaseIdentityProvider):
@@ -462,25 +537,59 @@ class IdentityProviderRegistry:
     LOCAL_PROVIDER = LocalPasswordIdentityProvider()
 
     @classmethod
+    def staff_provider(cls) -> CedaStaffIdentityProvider:
+        """The staff SSO provider in use: a saved, active connection, else environment variables."""
+        try:
+            from apps.platform_config.selectors import IntegrationRuntimeSelector
+
+            configured = IntegrationRuntimeSelector.staff_identity_provider()
+        except Exception:  # never let a settings problem break other sign-in methods
+            logger.exception("Could not load the staff SSO connection; using environment settings.")
+            configured = None
+        return configured or cls.PROVIDERS[SocialAuthProvider.CEDA_STAFF]
+
+    @classmethod
+    def _providers(cls) -> dict[str, BaseIdentityProvider]:
+        providers = dict(cls.PROVIDERS)
+        providers[SocialAuthProvider.CEDA_STAFF] = cls.staff_provider()
+        return providers
+
+    @staticmethod
+    def _feature_on(provider_id: str) -> bool:
+        if provider_id != SocialAuthProvider.CEDA_STAFF:
+            return True
+        from apps.platform_config.flags import is_enabled
+
+        return is_enabled("staff_sso")
+
+    @classmethod
     def get(cls, provider: str) -> BaseIdentityProvider:
         try:
-            return cls.PROVIDERS[provider]
+            return cls._providers()[provider]
         except KeyError as exc:
             raise ValidationError({"provider": f"Unsupported social login provider `{provider}`."}) from exc
 
     @classmethod
     def list_social_providers(cls) -> list[dict[str, Any]]:
         return [
-            {"id": provider_id, "name": provider.display_name, "enabled": provider.is_enabled()}
-            for provider_id, provider in cls.PROVIDERS.items()
+            {"id": provider_id, "name": provider.display_name, "enabled": provider.is_enabled() and cls._feature_on(provider_id)}
+            for provider_id, provider in cls._providers().items()
         ]
 
     @classmethod
     def enabled_providers(cls) -> list[str]:
-        return [provider_id for provider_id, provider in cls.PROVIDERS.items() if provider.is_enabled()]
+        return [
+            provider_id
+            for provider_id, provider in cls._providers().items()
+            if provider.is_enabled() and cls._feature_on(provider_id)
+        ]
 
     @classmethod
     def ensure_enabled(cls, provider: str) -> BaseIdentityProvider:
+        if provider == SocialAuthProvider.CEDA_STAFF:
+            from apps.platform_config.flags import require_feature
+
+            require_feature("staff_sso")
         identity_provider = cls.get(provider)
         missing_keys = identity_provider.missing_config_keys() if hasattr(identity_provider, "missing_config_keys") else []
         if missing_keys:
@@ -499,7 +608,7 @@ class IdentityProviderRegistry:
     @classmethod
     def provider_diagnostics(cls) -> list[dict[str, Any]]:
         diagnostics: list[dict[str, Any]] = []
-        for provider_id, provider in cls.PROVIDERS.items():
+        for provider_id, provider in cls._providers().items():
             missing_keys = provider.missing_config_keys()
             diagnostics.append(
                 {

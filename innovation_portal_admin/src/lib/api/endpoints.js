@@ -322,3 +322,20 @@ export const workflowInstances = {
   resume:  (id)     => client.post(`/api/workflow-instances/${id}/resume/`),
   cancel:  (id)     => client.post(`/api/workflow-instances/${id}/cancel/`),
 }
+
+export const platform = {
+  features:        ()            => client.get('/api/platform/features/'),
+  setFeature:      (key, body)   => client.patch(`/api/platform/features/${key}/`, body),
+  providers:       (kind)        => client.get('/api/platform/providers/', { kind }),
+  runtime:         ()            => client.get('/api/platform/integrations/runtime/'),
+  integrations:    (kind)        => client.get('/api/platform/integrations/', { kind }),
+  integration:     (id)          => client.get(`/api/platform/integrations/${id}/`),
+  createIntegration: (body)      => client.post('/api/platform/integrations/', body),
+  updateIntegration: (id, body)  => client.patch(`/api/platform/integrations/${id}/`, body),
+  deleteIntegration: (id)        => client.delete(`/api/platform/integrations/${id}/`),
+  testIntegration:   (id, body)  => client.post(`/api/platform/integrations/${id}/test/`, body ?? {}),
+  activate:          (id)        => client.post(`/api/platform/integrations/${id}/activate/`, {}),
+  deactivate:        (id)        => client.post(`/api/platform/integrations/${id}/deactivate/`, {}),
+  history:           (id)        => client.get(`/api/platform/integrations/${id}/history/`),
+  startSsoTrial:     (id)        => client.post(`/api/platform/integrations/${id}/sso-trial/start/`, {}),
+}
