@@ -73,10 +73,18 @@ jobs:
           python -m pip install --upgrade pip 2>&1 | tee ../ci-out/install.txt
           pip install -r requirements/local.txt 2>&1 | tee -a ../ci-out/install.txt
 
+      # Model changes already on main without a migration are listed in
+      # tests/known_migration_drift.txt; anything else fails.
       - name: Migrations up to date
         id: migrations
         continue-on-error: true
-        run: python manage.py makemigrations --check --dry-run 2>&1 | tee ../ci-out/migrations.txt
+        run: |
+          set +e
+          python manage.py makemigrations --check --dry-run 2>&1 | tee ../ci-out/migrations.txt
+          code=${PIPESTATUS[0]}
+          set -e
+          python ../scripts/check_migrations.py ../ci-out/migrations.txt --exit-code "$code" \
+            --known tests/known_migration_drift.txt --summary-json ../ci-out/migrations-summary.json
 
       - name: Run tests
         id: pytest
@@ -118,8 +126,8 @@ jobs:
       - name: Fail if migrations are missing
         if: ${{ steps.migrations.outcome == 'failure' }}
         run: |
-          echo "makemigrations --check found model changes without a migration:"
-          cat ../ci-out/migrations.txt
+          echo "makemigrations --check found model changes without a migration that are not known on main:"
+          python ../scripts/check_migrations.py ../ci-out/migrations.txt --exit-code 1 --known tests/known_migration_drift.txt || true
           exit 1
 
   admin:

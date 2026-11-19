@@ -63,7 +63,14 @@ def main() -> int:
     lint = read_json(folders["admin"] / "admin-lint-summary.json")
 
     rows = []
-    rows.append(("Migrations up to date", word(steps["api"].get("migrations")), ""))
+    migrations = read_json(folders["api"] / "migrations-summary.json")
+    if migrations.get("crashed"):
+        mig_detail = "makemigrations crashed, see migrations.txt"
+    elif "pending" in migrations:
+        mig_detail = f"{migrations['pending'] - len(migrations['new'])} known on main, {len(migrations['new'])} new"
+    else:
+        mig_detail = ""
+    rows.append(("Migrations up to date", word(steps["api"].get("migrations")), mig_detail))
     if tests and "passed" in tests:
         detail = (
             f"{tests['passed']} passed, {tests['failed']} failed "
@@ -98,6 +105,9 @@ def main() -> int:
         "New failures:",
         *([f"- {item['id']}: {item['reason']}" for item in tests.get("new_failures", [])] or ["- none"]),
         "",
+        "New missing migrations:",
+        *([f"- {op}" for op in migrations.get("new", [])] or ["- none"]),
+        "",
         "New lint problems:",
         *(
             [f"- {p['severity']} {p['file']}:{p['line']} {p['rule']}: {p['message']}" for p in lint.get("new", [])]
@@ -122,6 +132,7 @@ def main() -> int:
                 "steps": steps,
                 "tests": tests,
                 "lint": lint,
+                "migrations": migrations,
                 "rows": [{"check": n, "result": r, "details": d} for n, r, d in rows],
             },
             indent=2,

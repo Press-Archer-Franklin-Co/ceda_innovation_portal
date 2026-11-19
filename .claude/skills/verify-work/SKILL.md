@@ -14,14 +14,14 @@ The checks are the same everywhere, and match `.github/workflows/ci.yml`:
 
 | Check | Command (from the app folder) |
 | --- | --- |
-| Migrations up to date | `python manage.py makemigrations --check --dry-run` (innovation_portal_api) |
+| Migrations up to date | `python manage.py makemigrations --check --dry-run > mig.txt 2>&1; python ../scripts/check_migrations.py mig.txt --exit-code $? --known tests/known_migration_drift.txt` (innovation_portal_api) |
 | API tests | `pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf`, then `python ../scripts/check_test_results.py pytest-report.xml --known tests/known_failures.txt --root .` |
 | Admin lint | `npm run lint -- --format json --output-file lint.json`, then `python3 ../scripts/check_lint_baseline.py lint.json --baseline lint-baseline.json --root .` |
 | Admin build | `npm run build` (innovation_portal_admin) |
 | Public type check | `npx tsc --noEmit` (innovation_portal_public) |
 | Public build | `npm run build` (innovation_portal_public) |
 
-The API tests and admin lint pass when there is nothing **new** compared with `main`: 24 tests already fail on main (`innovation_portal_api/tests/known_failures.txt`) and admin lint has a baseline (`innovation_portal_admin/lint-baseline.json`). The checker scripts decide; do not judge by pytest's or ESLint's exit code.
+The migrations check, API tests and admin lint pass when there is nothing **new** compared with `main`: main has model changes without migrations (`innovation_portal_api/tests/known_migration_drift.txt`), 24 tests already fail on main (`innovation_portal_api/tests/known_failures.txt`), and admin lint has a baseline (`innovation_portal_admin/lint-baseline.json`). The checker scripts decide; do not judge by pytest's or ESLint's exit code.
 
 ## 1. Check what can run here
 
@@ -47,7 +47,7 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements/local.txt
 export DJANGO_SETTINGS_MODULE=config.settings.local REDIS_URL=redis://localhost:6379/0
 # plus INNOVATION_PORTAL_POSTGRES_{USER,PASSWORD,DB,HOST,PORT} if not innovation/innovation/innovation_portal on localhost:5432
-python manage.py makemigrations --check --dry-run
+python manage.py makemigrations --check --dry-run > mig.txt 2>&1; python ../scripts/check_migrations.py mig.txt --exit-code $? --known tests/known_migration_drift.txt
 pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf
 python ../scripts/check_test_results.py pytest-report.xml --known tests/known_failures.txt --root .
 ```
@@ -68,11 +68,11 @@ When `docker compose` works, run the API checks in the existing compose services
 ```bash
 docker compose up -d innovation_portal_db innovation_portal_redis
 docker compose run --rm -e DJANGO_SETTINGS_MODULE=config.settings.local innovation_portal_backend \
-  sh -c "pip install -r requirements/local.txt && python manage.py makemigrations --check --dry-run && \
+  sh -c "pip install -r requirements/local.txt; python manage.py makemigrations --check --dry-run > mig.txt 2>&1; echo \$? > mig.code; \
          pytest -q --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf"
 ```
 
-Then run `check_test_results.py` on the report as above. The compose file reads `.env.production`; never print or commit its contents.
+Then run `check_migrations.py` (with `--exit-code $(cat mig.code)`) and `check_test_results.py` on the outputs as above. The compose file reads `.env.production`; never print or commit its contents.
 
 ### CI (GitHub Actions)
 Otherwise: commit to the feature branch, push, and wait for the Actions run for **that exact commit**.
@@ -100,7 +100,7 @@ After a failure, re-run just the failing tests or step until it passes (for exam
 ## 4. Never
 
 - skip, delete, mark `xfail`/`skip`, or weaken a test (looser assertions, broader expected status codes) to get green;
-- add a test to `tests/known_failures.txt` or a problem to `lint-baseline.json` to hide a new failure. These files only shrink, except when `main` itself changes and the baseline is regenerated from `main`;
+- add a test to `tests/known_failures.txt`, a line to `tests/known_migration_drift.txt`, or a problem to `lint-baseline.json` to hide a new failure (a model change needs its migration). These files only shrink, except when `main` itself changes and the baseline is regenerated from `main`;
 - report work as done, or open a PR, without a report from the current commit.
 
 If a failure is truly unrelated to the change (it fails on `main` too and is not in the list), say so in the report with the evidence, and ask the user what to do.

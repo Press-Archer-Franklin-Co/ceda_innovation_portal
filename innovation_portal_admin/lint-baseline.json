@@ -1,0 +1,78 @@
+{
+  "totals": {
+    "errors": 1,
+    "warnings": 9
+  },
+  "problems": [
+    {
+      "file": "src/components/assignments/AssignmentStatusBadge.jsx",
+      "rule": "react-refresh/only-export-components",
+      "severity": "warning",
+      "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.",
+      "count": 1
+    },
+    {
+      "file": "src/components/ui/WorkflowTimeline.jsx",
+      "rule": "react-hooks/rules-of-hooks",
+      "severity": "error",
+      "message": "React Hook \"React.useState\" is called conditionally. React Hooks must be called in the exact same order in every component render. Did you accidentally call a React Hook after an early return?",
+      "count": 1
+    },
+    {
+      "file": "src/lib/auth/AuthContext.jsx",
+      "rule": "react-refresh/only-export-components",
+      "severity": "warning",
+      "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/analytics/Analytics.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "The 'programs' conditional could make the dependencies of useEffect Hook (at line 459) change on every render. To fix this, wrap the initialization of 'programs' in its own useMemo() Hook.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/assignments/AssignmentDetail.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "The 'groupedDocuments' logical expression could make the dependencies of useMemo Hook (at line 222) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'groupedDocuments' in its own useMemo() Hook.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/content/ContentList.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "React Hook useEffect has a missing dependency: 'tab'. Either include it or remove the dependency array.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/content/HackathonContentEditor.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "React Hook useEffect has a missing dependency: 'originProgram'. Either include it or remove the dependency array.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/evaluate/EvaluationView.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "The 'criteria' logical expression could make the dependencies of useCallback Hook (at line 1767) change on every render. To fix this, wrap the initialization of 'criteria' in its own useMemo() Hook.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/evaluation/EvaluationForm.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "The 'evaluations' logical expression could make the dependencies of useMemo Hook (at line 32) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'evaluations' in its own useMemo() Hook.",
+      "count": 1
+    },
+    {
+      "file": "src/pages/programs/ProgramDetail.jsx",
+      "rule": "react-hooks/exhaustive-deps",
+      "severity": "warning",
+      "message": "The 'submissions' conditional could make the dependencies of useMemo Hook (at line 76) change on every render. To fix this, wrap the initialization of 'submissions' in its own useMemo() Hook.",
+      "count": 1
+    }
+  ]
+}
