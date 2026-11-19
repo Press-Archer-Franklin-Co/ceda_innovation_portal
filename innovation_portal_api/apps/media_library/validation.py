@@ -142,6 +142,10 @@ def detect_file(upload, *, expected_kind: str | None = None) -> DetectedFile:
         allowed = ", ".join(sorted(EXTENSIONS))
         raise MediaValidationError(f"This file type is not allowed. Allowed types: {allowed}.", code="unsupported_type")
     kind, mime_type = EXTENSIONS[extension]
+    # R-7: WebM holds video or sound. Chrome records voice notes as audio/webm, so a WebM
+    # file the client calls audio (kind=audio or an audio/* type) is stored as audio.
+    if extension == ".webm" and (expected_kind == "audio" or str(getattr(upload, "content_type", "") or "").startswith("audio/")):
+        kind, mime_type = "audio", "audio/webm"
     if expected_kind and expected_kind != kind:
         raise MediaValidationError(f"Expected a {expected_kind} file but got a {kind} file.", code="kind_mismatch")
     if not _content_matches(extension, _head(upload), upload):

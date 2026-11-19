@@ -41,3 +41,12 @@ def purge_expired_tokens() -> dict:
     }
     logger.info("purge_expired_tokens: %s", result)
     return result
+
+
+@shared_task
+def send_question_reminders():
+    """B3, daily: remind applicants 2 days before a reply-by date; flag overdue questions to officers."""
+    from apps.communications.messaging import send_question_reminders as run
+
+    return run()
+

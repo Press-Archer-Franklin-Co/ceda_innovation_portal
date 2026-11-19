@@ -18,7 +18,17 @@ class NotificationListView(generics.ListAPIView):
     serializer_class = NotificationSerializer
 
     def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user).order_by("-created_at")
+        from apps.notifications.serializers import CATEGORIES, category_filter
+
+        queryset = Notification.objects.filter(recipient=self.request.user).order_by("-created_at")
+        category = self.request.query_params.get("category")
+        if category:
+            if category not in CATEGORIES:
+                from rest_framework.exceptions import ValidationError
+
+                raise ValidationError({"category": f"Use one of: {', '.join(CATEGORIES)}."})
+            queryset = queryset.filter(category_filter(category))
+        return queryset
 
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(self.get_queryset(), many=True)

@@ -37,6 +37,8 @@ PROFILE_FIELDS = (
 )
 
 
+from apps.communications.messaging import open_question, unread_messages, unread_updates
+
 def _iso(value):
     return value.isoformat() if value else None
 
@@ -90,6 +92,7 @@ def draft_item(draft, lang: str) -> dict:
         "sector": sector_payload(draft.sector, lang),
         "program": _program_payload(draft.program),
         "stage": "Draft",
+        "status": "draft",
         "percent_complete": int(progress.get("percent_complete") or 0),
         "last_change": _iso(draft.updated_at),
         "needs_action_reason": "",
@@ -98,6 +101,7 @@ def draft_item(draft, lang: str) -> dict:
         "submitted_at": None,
         "decided_at": None,
         "has_feedback": False,
+        "open_question": None,
     }
 
 
@@ -113,6 +117,7 @@ def submission_item(submission, lang: str) -> dict:
         "sector": sector_payload(submission.sector, lang),
         "program": _program_payload(submission.program),
         "stage": submission_stage(submission),
+        "status": submission.current_status,
         "percent_complete": 100,
         "last_change": _iso(submission.updated_at),
         "needs_action_reason": "CEDA asked you for more information." if state == "needs_action" else "",
@@ -121,6 +126,7 @@ def submission_item(submission, lang: str) -> dict:
         "submitted_at": _iso(submission.submitted_at),
         "decided_at": _iso(decided_at(submission)) if state == "finished" else None,
         "has_feedback": submission.feedback_snapshots.exists() if state == "finished" else False,
+        "open_question": open_question(submission),
     }
 
 
@@ -183,13 +189,20 @@ class InnovatorDashboardSelector:
         active_submission = next((s for s in submissions if submission_state(s) != "finished"), None)
         if active_submission:
             active = submission_item(active_submission, lang)
+            active_target = active_submission
         elif drafts:
             active = draft_item(drafts[0], lang)
+            active_target = drafts[0]
         else:
             active = None
+            active_target = None
+        if active is not None:
+            # R-5 (d)
+            active["unread_messages"] = unread_messages(active_target)
+            active["unread_updates"] = unread_updates(user, active_target.id)
 
         next_action = None
-        waiting = [s for s in submissions if submission_state(s) == "needs_action"]
+        waiting = [s for s in submissions if submission_state(s) == "needs_action" or open_question(s)]
         if waiting:
             far_future = timezone.now() + timedelta(days=36500)
             waiting.sort(key=lambda s: getattr(getattr(s, "workflow_instance", None), "due_at", None) or far_future)
@@ -201,6 +214,7 @@ class InnovatorDashboardSelector:
                 "title": item["title"],
                 "detail": item["needs_action_reason"],
                 "reply_by": item["reply_by"],
+                "open_question": item["open_question"],
             }
         elif drafts:
             draft = draft_item(drafts[0], lang)
