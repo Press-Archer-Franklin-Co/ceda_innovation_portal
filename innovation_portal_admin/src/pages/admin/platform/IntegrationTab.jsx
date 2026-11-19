@@ -20,7 +20,8 @@ import {
   useTestIntegration,
 } from '../../../lib/queries/platform'
 import ConnectionFields from './ConnectionFields'
-import { ConnectionStatusBadge, CopyField, ErrorBanner, SourceBadge, WarningList, formatWhen } from './shared'
+import { ConnectionStatusBadge, CopyField, ErrorBanner, SourceBadge, WarningList } from './shared'
+import { formatWhen } from './utils'
 
 const COPY = {
   sso: {

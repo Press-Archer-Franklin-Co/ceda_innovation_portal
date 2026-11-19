@@ -26,15 +26,6 @@ export function SourceBadge({ source }) {
   return <span className={cn('badge', item.cls)}>{item.label}</span>
 }
 
-export function formatWhen(value) {
-  if (!value) return 'Never'
-  try {
-    return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value))
-  } catch {
-    return String(value)
-  }
-}
-
 export function CopyField({ label, value, hint }) {
   const [copied, setCopied] = useState(false)
   const copy = async () => {

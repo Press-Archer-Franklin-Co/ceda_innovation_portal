@@ -5,7 +5,8 @@ import { SkeletonCards } from '../../../components/ui/LoadingSkeleton'
 import ErrorState from '../../../components/ui/ErrorState'
 import { cn } from '../../../lib/cn'
 import { useFeatureFlags, useSetFeatureFlag } from '../../../lib/queries/platform'
-import { ErrorBanner, formatWhen } from './shared'
+import { ErrorBanner } from './shared'
+import { formatWhen } from './utils'
 
 const GROUP_ORDER = ['sign_in', 'ideas', 'website', 'messaging', 'integrations']
 
