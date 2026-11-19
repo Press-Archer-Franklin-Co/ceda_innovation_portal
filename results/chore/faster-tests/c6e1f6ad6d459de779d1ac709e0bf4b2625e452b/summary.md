@@ -1,9 +1,9 @@
 ## CI results for `chore/faster-tests` @ `c6e1f6a`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44595453362
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44608094613
 Jobs: admin success, api success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 21s, job steps 3m 39s
+Timing (api job): Run tests 3m 26s, job steps 3m 51s
 
 | Check | Result | Details |
 | --- | --- | --- |

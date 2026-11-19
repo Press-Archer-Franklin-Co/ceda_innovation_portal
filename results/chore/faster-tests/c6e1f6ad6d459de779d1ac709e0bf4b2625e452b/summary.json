@@ -1,7 +1,7 @@
 {
   "branch": "chore/faster-tests",
   "sha": "c6e1f6ad6d459de779d1ac709e0bf4b2625e452b",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44595453362",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44608094613",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -14,8 +14,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 201,
-      "job_seconds_to_here": 219
+      "pytest_seconds": 206,
+      "job_seconds_to_here": 231
     },
     "admin": {
       "install": "success",
