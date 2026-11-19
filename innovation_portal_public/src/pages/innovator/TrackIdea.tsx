@@ -1,0 +1,185 @@
+import { useCallback, useEffect, useState } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
+import clsx from 'clsx'
+import { Check, Eye, Lock } from 'lucide-react'
+import Card from '../../components/ui/Card'
+import { ErrorState } from '../../components/ui/EmptyState'
+import Skeleton from '../../components/ui/Skeleton'
+import Tag from '../../components/ui/Tag'
+import { useShellSettings } from '../../components/layout/shellData'
+import MessageThread from '../../components/innovator/MessageThread'
+import { uploadedFiles } from '../../components/innovator/form/UploadField'
+import { formatDate, formatShortDate } from '../../components/innovator/format'
+import { statusWord } from '../../components/innovator/ideaStatus'
+import { useI18n } from '../../i18n'
+import { innovatorService } from '../../services/innovator.service'
+import type { SubmissionAnswer, TimelineStage, TrackedIdea } from '../../types/innovator'
+
+/** Screen 2.4: where the idea is, the conversation with the officer, and the idea read-only. */
+export default function TrackIdea() {
+  const { id = '' } = useParams()
+  const { t, lang } = useI18n()
+  const { hash } = useLocation()
+  const settings = useShellSettings()
+  const [idea, setIdea] = useState<TrackedIdea | null>(null)
+  const [state, setState] = useState<'loading' | 'ready' | 'error' | 'not_found'>('loading')
+
+  const load = useCallback(async () => {
+    setState('loading')
+    try {
+      setIdea(await innovatorService.trackedIdea(id))
+      setState('ready')
+    } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status
+      setState(status === 404 || status === 403 ? 'not_found' : 'error')
+    }
+  }, [id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useEffect(() => {
+    if (idea) document.title = `${idea.title} · CEDA Innovation`
+  }, [idea])
+
+  // Open at the messages when a "Reply" link was used.
+  useEffect(() => {
+    if (state === 'ready' && hash === '#messages') {
+      window.setTimeout(() => document.getElementById('messages')?.scrollIntoView(), 0)
+    }
+  }, [state, hash])
+
+  if (state === 'loading') return <TrackSkeleton />
+  if (state === 'not_found' || state === 'error' || !idea) {
+    return (
+      <div className="mx-auto max-w-[800px] px-4 py-12 sm:px-6">
+        <ErrorState title={state === 'not_found' ? t('track.notFound') : t('track.loadError')} onRetry={state === 'error' ? load : undefined} />
+      </div>
+    )
+  }
+
+  const word = statusWord(idea.current_status)
+  const program = idea.program_detail?.is_general_intake ? t('form.generalIdea') : idea.program_detail?.title
+  const stages = idea.timeline?.stages ?? []
+
+  return (
+    <div className="bg-bg">
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
+          <div className="flex flex-wrap gap-2">
+            <Tag tone={word.tone}>{t(word.key)}</Tag>
+            {program && <Tag tone="neutral">{program}</Tag>}
+          </div>
+          <h1 className="mt-3 font-heading text-d-mh1 sm:text-d-h2 text-text break-words">{idea.title}</h1>
+          <p className="mt-2 text-d-body-s text-muted">
+            {[idea.reference_number, idea.submitted_at ? t('track.sentOn', { date: formatDate(idea.submitted_at, lang) }) : ''].filter(Boolean).join(' · ')}
+          </p>
+
+          <h2 className="sr-only">{t('track.timeline')}</h2>
+          <ol className="mt-6 grid gap-4 rounded-card border border-border bg-surface p-5 sm:grid-cols-2 lg:grid-cols-5 lg:p-6">
+            {stages.map((stage) => (
+              <Stage key={stage.code} stage={stage} nextPanelAt={idea.timeline.next_panel_at} />
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <MessageThread ideaId={idea.id} />
+
+        <aside className="flex flex-col gap-4">
+          <Card padding="md">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-heading text-d-h5 text-text">{t('track.yourIdea')}</h2>
+              <span className="inline-flex items-center gap-1 text-d-cap text-muted">
+                <Lock size={14} aria-hidden />
+                {t('track.readOnly')}
+              </span>
+            </div>
+            <dl className="mt-4 flex flex-col gap-3">
+              {idea.responses.filter((answer) => !isLayout(answer)).map((answer) => (
+                <div key={answer.id}>
+                  <dt className="text-d-cap text-muted">{answer.field_label || answer.field_key}</dt>
+                  <dd className="text-d-body-s text-text whitespace-pre-line break-words">{answerText(answer, t('form.yes'), t('form.noAnswer'))}</dd>
+                </div>
+              ))}
+            </dl>
+          </Card>
+          {settings.ussd_code && (
+            <Card tone="soft" padding="md">
+              <h2 className="font-heading text-d-h5 text-text">{t('track.noDataTitle')}</h2>
+              <p className="mt-2 text-d-body-s text-muted">{t('track.noDataBody', { ussd: settings.ussd_code, reference: idea.reference_number })}</p>
+            </Card>
+          )}
+        </aside>
+      </div>
+    </div>
+  )
+}
+
+function Stage({ stage, nextPanelAt }: { stage: TimelineStage; nextPanelAt: string | null }) {
+  const { t, lang } = useI18n()
+  const done = stage.status === 'done'
+  const current = stage.status === 'current'
+  const skipped = stage.status === 'skipped'
+  // The next panel date belongs on the judging stage; workflow step codes name it (judging_review, under_judging, ...).
+  const isPanel = /panel|judg/i.test(stage.code)
+  let line = ''
+  if (done && stage.reached_at) line = formatShortDate(stage.reached_at, lang)
+  else if (skipped) line = t('track.skipped')
+  else if (isPanel && nextPanelAt && !done) line = t('track.nextPanel', { date: formatShortDate(nextPanelAt, lang) })
+  else if (stage.usual_duration) line = t('track.usual', { duration: stage.usual_duration })
+
+  return (
+    <li aria-current={current ? 'step' : undefined} className="flex gap-3 sm:flex-col">
+      <span
+        aria-hidden
+        className={clsx(
+          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2',
+          done ? 'border-primary bg-primary text-on-primary' : current ? 'border-amber bg-warning-soft text-text' : 'border-border bg-surface text-muted',
+        )}
+      >
+        {done ? <Check size={14} strokeWidth={3} /> : current ? <Eye size={14} /> : null}
+      </span>
+      <div className="min-w-0">
+        <p className={clsx('font-heading text-d-h5', skipped ? 'text-muted' : 'text-text')}>{stage.name}</p>
+        {line && <p className="text-d-cap text-muted">{line}</p>}
+        {current && stage.explanation && <p className="mt-1 text-d-body-s text-text">{stage.explanation}</p>}
+        {current && stage.officer && <p className="mt-1 text-d-body-s text-text">{t('track.officerReading', { officer: stage.officer })}</p>}
+        <span className="sr-only">{done ? t('common.done') : ''}</span>
+      </div>
+    </li>
+  )
+}
+
+function isLayout(answer: SubmissionAnswer): boolean {
+  return answer.field_type === 'heading' || answer.field_type === 'paragraph'
+}
+
+function answerText(answer: SubmissionAnswer, yes: string, none: string): string {
+  const value = answer.value
+  if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) return none
+  if (answer.field_type === 'file' || answer.field_type === 'media') {
+    const files = uploadedFiles(value)
+    if (files.length) return files.map((f) => f.filename).join(', ')
+  }
+  if (Array.isArray(value)) return value.map(String).join(', ')
+  if (typeof value === 'boolean') return value ? yes : none
+  if (typeof value === 'object') return none
+  return String(value)
+}
+
+function TrackSkeleton() {
+  return (
+    <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6" aria-busy="true">
+      <Skeleton className="h-6 w-40" />
+      <Skeleton className="mt-3 h-10 w-2/3" />
+      <Skeleton className="mt-6 h-[140px] w-full rounded-card" />
+      <div className="mt-10 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <Skeleton className="h-[300px] rounded-card" />
+        <Skeleton className="h-[300px] rounded-card" />
+      </div>
+    </div>
+  )
+}

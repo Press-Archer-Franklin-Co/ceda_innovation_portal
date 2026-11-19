@@ -126,7 +126,7 @@ function BellButton() {
   const count = typeof data?.unread_count === 'number' ? data.unread_count : undefined
   const label = count ? `${t('common.notifications')}, ${t('common.unread', { count })}` : t('common.notifications')
   return (
-    <Link to="/assignments" aria-label={label} className="btn-icon relative">
+    <Link to="/assignments" aria-label={label} className="btn-icon relative" data-toast-target>
       <Bell size={18} aria-hidden />
       {count > 0 && (
         <span aria-hidden className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-on-primary text-[10px] font-bold leading-4 text-center">

@@ -18,6 +18,8 @@ import {
 import { usePrograms } from '../../../lib/queries/programs'
 import ErrorState from '../../../components/ui/ErrorState'
 import { SkeletonTable } from '../../../components/ui/LoadingSkeleton'
+import { useConfirm } from '../../../components/ui/confirm'
+import { EMPTY_CELL } from '../../../lib/format'
 
 const STATUS_STYLE = {
   draft:     'bg-gray-100 text-gray-600',
@@ -30,7 +32,7 @@ const STATUS_STYLE = {
 function StatusBadge({ status }) {
   return (
     <span className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs capitalize', STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-600')}>
-      {status ?? '—'}
+      {status ?? EMPTY_CELL}
     </span>
   )
 }
@@ -162,7 +164,7 @@ function WorkflowRow({ wf, onAction }) {
 
   const createdDate = wf.published_at
     ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(wf.published_at))
-    : '—'
+    : EMPTY_CELL
 
   return (
     <tr
@@ -180,9 +182,9 @@ function WorkflowRow({ wf, onAction }) {
           </div>
         </div>
       </td>
-      <td className="px-4 py-3 text-xs text-ceda-muted">{wf.workflow_type || '—'}</td>
+      <td className="px-4 py-3 text-xs text-ceda-muted">{wf.workflow_type || EMPTY_CELL}</td>
       <td className="px-4 py-3"><StatusBadge status={wf.status} /></td>
-      <td className="px-4 py-3 text-xs text-ceda-muted">{wf.node_count ?? '—'} nodes</td>
+      <td className="px-4 py-3 text-xs text-ceda-muted">{wf.node_count ?? EMPTY_CELL} nodes</td>
       <td className="px-4 py-3 text-xs text-ceda-muted">v{wf.version ?? 1}</td>
       <td className="px-4 py-3 text-xs text-ceda-muted">{createdDate}</td>
       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
@@ -236,6 +238,7 @@ function WorkflowRow({ wf, onAction }) {
 }
 
 export default function AdminWorkflows() {
+  const confirm = useConfirm()
   const navigate = useNavigate()
   const [showCreate, setShowCreate] = useState(false)
   const [actionErr, setActionErr]   = useState(null)
@@ -267,7 +270,7 @@ export default function AdminWorkflows() {
         case 'archive':  await archiveMut.mutateAsync(id);  break
         case 'clone':    await cloneMut.mutateAsync(id);    break
         case 'delete':
-          if (window.confirm('Delete this workflow? This cannot be undone.')) {
+          if (await confirm({ title: 'Delete this workflow?', note: 'This cannot be undone.', confirmLabel: 'Delete workflow' })) {
             await deleteMut.mutateAsync(id)
           }
           break

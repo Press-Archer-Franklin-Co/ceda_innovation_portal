@@ -22,6 +22,7 @@ import {
 import ConnectionFields from './ConnectionFields'
 import { ConnectionStatusBadge, CopyField, ErrorBanner, SourceBadge, WarningList } from './shared'
 import { formatWhen } from './utils'
+import { useConfirm } from '../../../components/ui/confirm'
 
 const COPY = {
   sso: {
@@ -241,6 +242,7 @@ function defaultsFor(provider) {
 }
 
 function ConnectionEditor({ kind, connection, providers, onSaved, onDeleted }) {
+  const confirm = useConfirm()
   const isNew = !connection
   const [providerKey, setProviderKey] = useState(connection?.provider ?? providers[0]?.key ?? '')
   const provider = providers.find((p) => p.key === providerKey)
@@ -282,7 +284,7 @@ function ConnectionEditor({ kind, connection, providers, onSaved, onDeleted }) {
   const dirty = isNew || name !== connection.name || JSON.stringify(config) !== JSON.stringify(connection.config) ||
     Object.values(secretEdits).some((v) => v !== '' && v !== undefined)
 
-  const onSave = () => {
+  const onSave = async () => {
     setLocalError(null)
     let secrets
     try {
@@ -292,7 +294,7 @@ function ConnectionEditor({ kind, connection, providers, onSaved, onDeleted }) {
       return
     }
     if (!isNew && current.is_active && (JSON.stringify(config) !== JSON.stringify(connection.config) || Object.keys(secrets).length)) {
-      const ok = window.confirm('Changing settings switches this connection off until it is tested and activated again. Continue?')
+      const ok = await confirm({ title: 'Save and switch this connection off?', body: 'Changing settings switches it off until it is tested and activated again.', confirmLabel: 'Save changes', tone: 'primary' })
       if (!ok) return
     }
     const body = isNew
@@ -318,13 +320,15 @@ function ConnectionEditor({ kind, connection, providers, onSaved, onDeleted }) {
     })
   }
 
-  const onDeactivate = () => {
-    if (!window.confirm(`Switch off "${current.name}"? The portal will fall back to the server's environment settings, if any.`)) return
+  const onDeactivate = async () => {
+    const ok = await confirm({ title: `Switch off "${current.name}"?`, body: "The portal falls back to the server's environment settings, if any.", confirmLabel: 'Switch off' })
+    if (!ok) return
     deactivate.mutate(current.id)
   }
 
-  const onDelete = () => {
-    if (!window.confirm(`Delete "${current.name}"? This cannot be undone.`)) return
+  const onDelete = async () => {
+    const ok = await confirm({ title: `Delete the connection "${current.name}"?`, note: 'This cannot be undone.', confirmLabel: 'Delete connection' })
+    if (!ok) return
     remove.mutate(current.id, { onSuccess: () => onDeleted?.() })
   }
 

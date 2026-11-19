@@ -1,9 +1,10 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import MobileTabBar from './MobileTabBar'
 import { useT } from '../../i18n'
+import PageSkeleton from '../ui/PageSkeleton'
 
 /** Public shell: utility bar + nav, page, footer; on phone a sticky tab bar. Page background is always bg (white). */
 export default function Layout() {
@@ -24,7 +25,9 @@ export default function Layout() {
       </a>
       <Navbar />
       <main id="main" className="flex-1" tabIndex={-1}>
-        <Outlet />
+        <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>}>
+          <Outlet />
+        </Suspense>
       </main>
       <Footer />
       <MobileTabBar />

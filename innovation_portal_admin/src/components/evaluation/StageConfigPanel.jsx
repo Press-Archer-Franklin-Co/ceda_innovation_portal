@@ -5,6 +5,7 @@ import {
   useStageConfig, useSetStageConfig, useAddCriterion, useUpdateCriterion, useDeleteCriterion,
   useMarkingCriteriaList,
 } from '../../lib/queries/evaluations'
+import { useConfirm } from '../../components/ui/confirm'
 
 const AGGREGATION_OPTIONS = [
   { value: 'average', label: 'Average' },
@@ -14,6 +15,7 @@ const AGGREGATION_OPTIONS = [
 ]
 
 function CriterionRow({ criterion, stepId, onDelete }) {
+  const confirm = useConfirm()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
     name:                  criterion.name,
@@ -40,8 +42,9 @@ function CriterionRow({ criterion, stepId, onDelete }) {
     updateMutation.mutate({ stepId, crId: criterion.id, body }, { onSuccess: () => setEditing(false) })
   }
 
-  const handleDelete = () => {
-    if (!window.confirm(`Delete criterion "${criterion.name}"?`)) return
+  const handleDelete = async () => {
+    const ok = await confirm({ title: `Delete the criterion "${criterion.name}"?`, body: 'It is removed from this step.', confirmLabel: 'Delete criterion' })
+    if (!ok) return
     deleteMutation.mutate({ stepId, crId: criterion.id }, { onSuccess: onDelete })
   }
 
@@ -210,7 +213,7 @@ function LibraryCriteriaPicker({ currentId, onLink, onUnlink, saving }) {
             value={selected}
             onChange={e => setSelected(e.target.value)}
           >
-            <option value="">— No library criteria (use custom or manual) —</option>
+            <option value="">No library criteria (use custom or manual)</option>
             {allCriteria.map(c => (
               <option key={c.id} value={c.id}>
                 {c.title} ({c.items?.length ?? 0} items, max {c.total_max_score})
@@ -419,7 +422,7 @@ export default function StageConfigPanel({ stepId }) {
 
           {linkedCriteriaId && config.marking_criteria_detail && (
             <div className="mt-3 border border-blue-200 rounded-lg bg-blue-50/60 px-3 py-2 space-y-1">
-              <p className="text-xs font-semibold text-blue-800">{config.marking_criteria_detail.title} — Items</p>
+              <p className="text-xs font-semibold text-blue-800">{config.marking_criteria_detail.title}: items</p>
               {(config.marking_criteria_detail.items ?? []).map(item => (
                 <div key={item.id} className="flex items-center justify-between text-xs text-blue-700">
                   <span>{item.name}</span>

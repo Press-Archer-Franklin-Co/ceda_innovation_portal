@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import Chart from 'chart.js/auto'
+import { ChartCanvas } from '../../components/charts/lazy'
 import { BarChart3, TrendingUp, Trophy, ClipboardList, Database, Archive, ListChecks } from 'lucide-react'
 import PageHeader  from '../../components/ui/PageHeader'
 import SectionCard from '../../components/ui/SectionCard'
@@ -12,6 +12,7 @@ import { useFormResponseAnalytics, useReportsDashboard } from '../../lib/queries
 import { useSubmissions } from '../../lib/queries/submissions'
 import { usePrograms }    from '../../lib/queries/programs'
 import { cn } from '../../lib/cn'
+import { EMPTY_CELL } from '../../lib/format'
 
 const TABS = [
   { key: 'overview', label: 'Overview' },
@@ -48,28 +49,6 @@ function BarChart({ data, valueKey = 'count', labelKey = 'month', color = 'bg-ce
 
 function AnalyticsEmpty({ children = 'No data available yet.' }) {
   return <p className="text-xs text-ceda-muted text-center py-8">{children}</p>
-}
-
-function ChartCanvas({ config, height = 260 }) {
-  const canvasRef = useRef(null)
-  const chartRef = useRef(null)
-
-  useEffect(() => {
-    if (!canvasRef.current) return undefined
-    chartRef.current?.destroy()
-    chartRef.current = new Chart(canvasRef.current, config)
-
-    return () => {
-      chartRef.current?.destroy()
-      chartRef.current = null
-    }
-  }, [config])
-
-  return (
-    <div style={{ height }}>
-      <canvas ref={canvasRef} />
-    </div>
-  )
 }
 
 function truncateTick(value, limit = 18) {
@@ -440,7 +419,7 @@ export default function Analytics() {
   const { data: progsData, isLoading: progsLoading } = usePrograms()
 
   const submissions = Array.isArray(subsData)  ? subsData  : subsData?.results  ?? []
-  const programs    = Array.isArray(progsData) ? progsData : progsData?.results ?? []
+  const programs    = useMemo(() => (Array.isArray(progsData) ? progsData : progsData?.results ?? []), [progsData])
 
   useEffect(() => {
     const nextTab = searchParams.get('tab')
@@ -535,7 +514,7 @@ export default function Analytics() {
               />
               <StatCard
                 title="Communications"
-                value={reports?.communications_total ?? '—'}
+                value={reports?.communications_total ?? EMPTY_CELL}
                 icon={TrendingUp}
                 color="indigo"
               />

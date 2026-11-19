@@ -10,6 +10,8 @@ import Avatar from '../ui/Avatar'
 import LanguageSwitch from '../ui/LanguageSwitch'
 import { buttonClasses } from '../ui/Button'
 import { useFocusTrap } from '../ui/useFocusTrap'
+import Popover from '../ui/Popover'
+import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
 
 // Figma 1 · Public home › Header (10:190), Mobile header (10:801), Menu drawer (11:695).
@@ -39,7 +41,7 @@ const mainLinks: NavItem[] = [
   { to: '/faq', key: 'nav.help' },
 ]
 
-const myIdeas: NavItem = { to: '/dashboard', key: 'nav.myIdeas' }
+const myIdeas: NavItem = { to: '/my-ideas', key: 'nav.myIdeas' }
 
 export function UtilityBar() {
   const { t } = useI18n()
@@ -94,20 +96,32 @@ function DesktopLink({ item }: { item: NavItem }) {
 
 function BellButton({ count }: { count?: number }) {
   const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLButtonElement>(null)
   const label = count ? `${t('common.notifications')}, ${t('common.unread', { count })}` : t('common.notifications')
   return (
-    <Link
-      to="/dashboard?tab=updates"
-      aria-label={label}
-      className="relative w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-    >
-      <Bell size={18} aria-hidden />
-      {count !== undefined && count > 0 && (
-        <span aria-hidden className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold leading-[18px] text-center">
-          {count > 99 ? '99+' : count}
-        </span>
-      )}
-    </Link>
+    <>
+      <button
+        ref={ref}
+        type="button"
+        data-toast-target
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="relative w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <Bell size={18} aria-hidden />
+        {count !== undefined && count > 0 && (
+          <span aria-hidden className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold leading-[18px] text-center">
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
+      </button>
+      <Popover open={open} onClose={() => setOpen(false)} triggerRef={ref} align="end" width={420} maxHeight={560} label={t('common.notifications')}>
+        <NotificationsPanel compact onNavigate={() => setOpen(false)} />
+      </Popover>
+    </>
   )
 }
 
@@ -153,7 +167,7 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
             <p className="text-d-label text-text truncate">{name}</p>
             <p className="text-d-cap text-muted truncate">{user.email}</p>
           </div>
-          <Link role="menuitem" to="/dashboard" className={item} onClick={() => setOpen(false)}>
+          <Link role="menuitem" to="/my-ideas" className={item} onClick={() => setOpen(false)}>
             <LayoutDashboard size={16} aria-hidden className="text-muted" /> {t('nav.myIdeas')}
           </Link>
           <Link role="menuitem" to="/profile" className={item} onClick={() => setOpen(false)}>

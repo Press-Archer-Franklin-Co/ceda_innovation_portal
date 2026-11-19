@@ -24,6 +24,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  em-dash:
+    name: em-dash
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: No new em dashes (plain-writing skill)
+        run: |
+          git fetch --no-tags origin main
+          bash scripts/check_em_dash.sh origin/main
+
   api:
     name: api
     runs-on: ubuntu-latest
@@ -184,6 +198,11 @@ jobs:
             --baseline lint-baseline.json --root . \
             --summary-json ../ci-out/admin-lint-summary.json
 
+      - name: Tests
+        id: test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test 2>&1 | tee ../ci-out/admin-test.txt
+
       - name: Build
         id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -194,7 +213,7 @@ jobs:
         run: |
           mkdir -p ../ci-out
           cat > ../ci-out/admin-steps.json <<EOF
-          {"install": "${{ steps.install.outcome }}", "lint": "${{ steps.lint.outcome }}", "build": "${{ steps.build.outcome }}"}
+          {"install": "${{ steps.install.outcome }}", "lint": "${{ steps.lint.outcome }}", "test": "${{ steps.test.outcome }}", "build": "${{ steps.build.outcome }}"}
           EOF
 
       - uses: actions/upload-artifact@v4
@@ -232,6 +251,11 @@ jobs:
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: npx tsc --noEmit 2>&1 | tee ../ci-out/public-typecheck.txt
 
+      - name: Tests
+        id: test
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        run: npm test 2>&1 | tee ../ci-out/public-test.txt
+
       - name: Build
         id: build
         if: ${{ !cancelled() && steps.install.outcome == 'success' }}
@@ -242,7 +266,7 @@ jobs:
         run: |
           mkdir -p ../ci-out
           cat > ../ci-out/public-steps.json <<EOF
-          {"install": "${{ steps.install.outcome }}", "typecheck": "${{ steps.typecheck.outcome }}", "build": "${{ steps.build.outcome }}"}
+          {"install": "${{ steps.install.outcome }}", "typecheck": "${{ steps.typecheck.outcome }}", "test": "${{ steps.test.outcome }}", "build": "${{ steps.build.outcome }}"}
           EOF
 
       - uses: actions/upload-artifact@v4
@@ -261,7 +285,7 @@ jobs:
   # publishes a result.
   report:
     name: report
-    needs: [api, admin, public]
+    needs: [api, admin, public, em-dash]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

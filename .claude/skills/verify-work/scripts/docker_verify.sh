@@ -106,29 +106,31 @@ node_run() {  # app dir, command
 }
 
 run_admin() {
-  local dir="$out/admin-results" install=failure lint=skipped build=skipped
-  echo "== admin: npm ci, lint vs baseline, build"
+  local dir="$out/admin-results" install=failure lint=skipped test=skipped build=skipped
+  echo "== admin: npm ci, lint vs baseline, tests, build"
   if node_run innovation_portal_admin "npm ci --no-audit --no-fund > /out/admin-results/install.txt 2>&1 || { cat /out/admin-results/install.txt; exit 1; }"; then
     install=success
     node_run innovation_portal_admin "npm run lint -- --format json --output-file /out/admin-results/admin-lint.json >/dev/null 2>&1; npx eslint . --ext js,jsx --report-unused-disable-directives > /out/admin-results/admin-lint.txt 2>&1; true"
     if (cd innovation_portal_admin && python3 ../scripts/check_lint_baseline.py "$dir/admin-lint.json" --baseline lint-baseline.json \
           --root /app --summary-json "$dir/admin-lint-summary.json"); then lint=success; else lint=failure; fi
+    if node_run innovation_portal_admin "npm test > /out/admin-results/admin-test.txt 2>&1 || { tail -50 /out/admin-results/admin-test.txt; exit 1; }"; then test=success; else test=failure; fi
     if node_run innovation_portal_admin "npm run build > /out/admin-results/admin-build.txt 2>&1 || { tail -50 /out/admin-results/admin-build.txt; exit 1; }"; then build=success; else build=failure; fi
   fi
-  printf '{"install": "%s", "lint": "%s", "build": "%s"}\n' "$install" "$lint" "$build" > "$dir/admin-steps.json"
-  if [ "$install$lint$build" = successsuccesssuccess ]; then add_need admin success; else add_need admin failure; fi
+  printf '{"install": "%s", "lint": "%s", "test": "%s", "build": "%s"}\n' "$install" "$lint" "$test" "$build" > "$dir/admin-steps.json"
+  if [ "$install$lint$test$build" = successsuccesssuccesssuccess ]; then add_need admin success; else add_need admin failure; fi
 }
 
 run_public() {
-  local dir="$out/public-results" install=failure typecheck=skipped build=skipped
-  echo "== public: npm ci, tsc --noEmit, build"
+  local dir="$out/public-results" install=failure typecheck=skipped test=skipped build=skipped
+  echo "== public: npm ci, tsc --noEmit, tests, build"
   if node_run innovation_portal_public "npm ci --no-audit --no-fund > /out/public-results/install.txt 2>&1 || { cat /out/public-results/install.txt; exit 1; }"; then
     install=success
     if node_run innovation_portal_public "npx tsc --noEmit > /out/public-results/public-typecheck.txt 2>&1 || { cat /out/public-results/public-typecheck.txt; exit 1; }"; then typecheck=success; else typecheck=failure; fi
+    if node_run innovation_portal_public "npm test > /out/public-results/public-test.txt 2>&1 || { tail -50 /out/public-results/public-test.txt; exit 1; }"; then test=success; else test=failure; fi
     if node_run innovation_portal_public "npm run build > /out/public-results/public-build.txt 2>&1 || { tail -50 /out/public-results/public-build.txt; exit 1; }"; then build=success; else build=failure; fi
   fi
-  printf '{"install": "%s", "typecheck": "%s", "build": "%s"}\n' "$install" "$typecheck" "$build" > "$dir/public-steps.json"
-  if [ "$install$typecheck$build" = successsuccesssuccess ]; then add_need public success; else add_need public failure; fi
+  printf '{"install": "%s", "typecheck": "%s", "test": "%s", "build": "%s"}\n' "$install" "$typecheck" "$test" "$build" > "$dir/public-steps.json"
+  if [ "$install$typecheck$test$build" = successsuccesssuccesssuccess ]; then add_need public success; else add_need public failure; fi
 }
 
 case "$target" in
