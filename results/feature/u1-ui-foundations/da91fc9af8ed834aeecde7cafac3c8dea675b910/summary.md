@@ -1,9 +1,9 @@
 ## CI results for `feature/u1-ui-foundations` @ `da91fc9`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44610951953
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44612806321
 Jobs: admin success, api success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 31s, job steps 3m 59s
+Timing (api job): Run tests 3m 07s, job steps 3m 27s
 
 | Check | Result | Details |
 | --- | --- | --- |
