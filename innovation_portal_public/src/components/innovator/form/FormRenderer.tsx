@@ -12,7 +12,7 @@ import { referenceService, type ReferenceItem } from '../../../services/referenc
 import UploadField from './UploadField'
 import {
   type Answers, type FieldProblem, type MaybeBilingual, WIDTH_SPAN,
-  isEnabled, isLayoutField, isRequired, isVisible, maxChars, pick,
+  isEnabled, isRequired, isVisible, maxChars, pick,
 } from './logic'
 
 /**
@@ -316,9 +316,4 @@ function DistrictSelect(props: {
       invalid={props.invalid}
     />
   )
-}
-
-/** Exported for the read-only idea view and the review step. */
-export function isAnswerField(field: FormField): boolean {
-  return !isLayoutField(field)
 }
