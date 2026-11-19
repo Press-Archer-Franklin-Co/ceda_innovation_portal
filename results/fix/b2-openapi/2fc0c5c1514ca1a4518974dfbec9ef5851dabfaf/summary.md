@@ -1,9 +1,9 @@
 ## CI results for `fix/b2-openapi` @ `2fc0c5c`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44614892719
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44619169936
 Jobs: admin success, api success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 06s, job steps 3m 30s
+Timing (api job): Run tests 3m 12s, job steps 3m 36s
 
 | Check | Result | Details |
 | --- | --- | --- |
