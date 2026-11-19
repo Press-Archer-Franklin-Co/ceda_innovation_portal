@@ -1,0 +1,75 @@
+// Setswana strings for UI chrome. Must have every key in en.ts (checked by TypeScript).
+// First draft: needs review by a Setswana speaker at CEDA before launch.
+import type { StringKey } from './en'
+
+const tn: Record<StringKey, string> = {
+  'lang.en': 'English',
+  'lang.tn': 'Setswana',
+  'lang.label': 'Puo',
+
+  'common.close': 'Tswala',
+  'common.cancel': 'Khansela',
+  'common.save': 'Boloka',
+  'common.saving': 'E a boloka…',
+  'common.retry': 'Leka gape',
+  'common.loading': 'E a laola',
+  'common.optional': 'ga go patelesege',
+  'common.required': 'go a tlhokega',
+  'common.search': 'Batla',
+  'common.noMatches': 'Ga go se se tshwanang',
+  'common.choose': 'Tlhopha…',
+  'common.new': 'Sesha',
+  'common.done': 'Go weditswe',
+  'common.notKnown': 'Ga go itsiwe',
+  'common.somethingWrong': 'Go na le se se sa tsamaeng sentle',
+  'common.charsLeft': 'Ditlhaka di le {count} di setse',
+  'common.charsOver': 'Ditlhaka di feta ka {count}',
+  'common.dismiss': 'Tlosa',
+  'common.notifications': 'Dikitsiso',
+  'common.unread': 'Di le {count} tse di sa balwang',
+  'common.menu': 'Lenaane',
+  'common.account': 'Akhaonto ya gago',
+  'common.signIn': 'Tsena',
+  'common.signOut': 'Tswa',
+
+  'pager.label': 'Ditsebe',
+  'pager.previous': 'Morago',
+  'pager.next': 'Pele',
+  'pager.page': 'Tsebe {page}',
+  'pager.of': 'Tsebe {page} go {total}',
+
+  'steps.label': 'Kgatelopele',
+  'steps.step': 'Kgato {n} go {total}',
+  'steps.saved': 'Go bolokilwe',
+
+  'nav.home': 'Gae',
+  'nav.submit': 'Romela kakanyo',
+  'nav.challenges': 'Dikgwetlho',
+  'nav.news': 'Dikgang le makwalodikgang',
+  'nav.stories': 'Dikgang tsa katlego',
+  'nav.help': 'Thuso',
+  'nav.myIdeas': 'Dikakanyo tsa me',
+  'nav.main': 'Tsela e kgolo',
+
+  'utility.official': 'Polatefomo ya semmuso ya boitshimololedi ya CEDA',
+  'utility.whatsapp': 'WhatsApp {number}',
+  'utility.helpCentre': 'Lefelo la thuso',
+  'utility.accessibility': 'Phitlhelelo',
+
+  'footer.tagline': 'Finance. Develop. Sustain.',
+  'footer.explore': 'Tlhotlhomisa',
+  'footer.support': 'Thuso',
+  'footer.legal': 'Molao',
+  'footer.otherWays': 'Ditsela tse dingwe',
+  'footer.ussd': 'USSD {code}',
+  'footer.offices': 'Etela ofisi ya CEDA',
+  'footer.callCentre': 'Lefelo la megala {number}',
+  'footer.privacy': 'Pholisi ya sephiri',
+  'footer.terms': 'Melawana ya tiriso',
+  'footer.faq': 'Dipotso le dikarabo',
+  'footer.about': 'Ka ga polatefomo',
+  'footer.guidelines': 'Dikaelo',
+  'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
+}
+
+export default tn

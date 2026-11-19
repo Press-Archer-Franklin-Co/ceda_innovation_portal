@@ -131,5 +131,5 @@
 
 
 ::-webkit-scrollbar        { width: 4px; }
-::-webkit-scrollbar-track  { background: #f8fafc; }
-::-webkit-scrollbar-thumb  { background: #F0641E; border-radius: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: rgb(var(--c-border)); border-radius: 4px; }

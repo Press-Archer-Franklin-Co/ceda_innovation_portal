@@ -1,25 +1,21 @@
-import React from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
-import { cn } from '../../lib/cn'
+import { AlertCircle, RefreshCw } from 'lucide-react'
+import { useT } from '../../i18n/context'
+import Button from './Button'
+import StateCard from './StateCard'
 
-export default function ErrorState({ message, onRetry, className }) {
+/**
+ * Something failed: say what, in plain words, and offer Retry. Never show "empty" after a failure.
+ * Props: title ("We could not load the review queue"), message, onRetry, retrying, compact, framed.
+ */
+export default function ErrorState({ title, message, onRetry, retrying = false, compact = false, framed = false, className }) {
+  const t = useT()
   return (
-    <div className={cn('flex flex-col items-center justify-center py-16 px-6 text-center', className)}>
-      <div className="w-12 h-12 rounded-full bg-ceda-red-pale flex items-center justify-center mb-4">
-        <AlertTriangle size={22} className="text-ceda-red" strokeWidth={1.5} />
-      </div>
-      <p className="text-sm font-semibold text-ceda-dark mb-1">Something went wrong</p>
-      {message && (
-        <p className="text-xs text-ceda-muted max-w-sm mb-4">{message}</p>
-      )}
+    <StateCard icon={AlertCircle} tone="danger" title={title ?? t('common.somethingWrong')} body={message} compact={compact} framed={framed} className={className} role="alert">
       {onRetry && (
-        <button
-          onClick={onRetry}
-          className="btn-secondary btn-sm flex items-center gap-1.5"
-        >
-          <RefreshCw size={13} /> Try again
-        </button>
+        <Button variant="soft" size="sm" onClick={onRetry} loading={retrying} icon={<RefreshCw size={13} aria-hidden />}>
+          {t('common.retry')}
+        </Button>
       )}
-    </div>
+    </StateCard>
   )
 }

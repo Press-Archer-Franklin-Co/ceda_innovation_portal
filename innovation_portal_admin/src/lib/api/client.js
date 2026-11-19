@@ -1,3 +1,4 @@
+import { getLang } from '../../i18n/context'
 
 export const TOKEN_KEY   = 'ceda_access'
 export const REFRESH_KEY = 'ceda_refresh'
@@ -117,6 +118,8 @@ async function request(path, {
       headers: {
         ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // The API returns content text in this language (en or tn).
+        'Accept-Language': getLang(),
         ...headers,
       },
       ...(body   !== undefined ? { body: isFormData ? body : JSON.stringify(body) } : {}),
