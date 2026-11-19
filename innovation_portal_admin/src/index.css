@@ -7,14 +7,21 @@
 
 
 :root {
-  --sidebar-width: 260px;
-  --topbar-height: 64px;
+  --sidebar-width: 216px;
+  --topbar-height: 52px;
   --ceda-green:     #F0641E;
   --ceda-forest:    #A01E0A;
   --ceda-indigo:    #1D6FA3;
   --ceda-brand-green: #A01E0A;
 }
 
+
+@media (min-width: 1536px) {
+  :root {
+    --sidebar-width: 248px;
+    --topbar-height: 64px;
+  }
+}
 
 @layer base {
   html {
