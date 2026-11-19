@@ -1,9 +1,9 @@
 ## CI results for `fix/public-submit-consent` @ `791f09a`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44622774821
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44624455107
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 45s, job steps 4m 06s
+Timing (api job): Run tests 3m 40s, job steps 3m 59s
 
 | Check | Result | Details |
 | --- | --- | --- |

@@ -1,7 +1,7 @@
 {
   "branch": "fix/public-submit-consent",
   "sha": "791f09a04c5ca01bd494deaade5631b39b50eb78",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44622774821",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44624455107",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -15,8 +15,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 225,
-      "job_seconds_to_here": 246
+      "pytest_seconds": 220,
+      "job_seconds_to_here": 239
     },
     "admin": {
       "install": "success",
