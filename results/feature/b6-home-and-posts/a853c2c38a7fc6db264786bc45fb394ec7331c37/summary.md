@@ -1,9 +1,9 @@
 ## CI results for `feature/b6-home-and-posts` @ `a853c2c`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44615534097
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44619180759
 Jobs: admin success, api success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 43s, job steps 4m 03s
+Timing (api job): Run tests 3m 03s, job steps 3m 19s
 
 | Check | Result | Details |
 | --- | --- | --- |
