@@ -179,44 +179,91 @@ class CommunicationService:
             log.failure_reason = ""
             log.sent_at = timezone.now()
             AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_sent", target=log, metadata={"recipient_id": str(log.recipient_id)})
-        log.save(update_fields=["status", "failure_reason", "retry_count", "last_attempt_at", "sent_at", "updated_at"])
+        log.save(
+            update_fields=[
+                "status",
+                "failure_reason",
+                "retry_count",
+                "last_attempt_at",
+                "sent_at",
+                "to_address",
+                "provider",
+                "provider_message_id",
+                "provider_status",
+                "updated_at",
+            ]
+        )
         return log
 
     @staticmethod
     def _dispatch_text_message(log):
-        """Send an SMS / WhatsApp / USSD log through the configured sender.
+        """Send an SMS / WhatsApp / USSD log through the configured provider.
 
-        A channel without a provider is marked skipped, not sent.
+        A switched-off channel or a channel without a provider is marked skipped, not sent.
         """
-        metadata = {"recipient_id": str(log.recipient_id), "channel": log.channel}
-        phone = try_normalize_phone(getattr(log.recipient, "phone_number", ""))
+        metadata = {"recipient_id": str(log.recipient_id or ""), "channel": log.channel}
+        phone = try_normalize_phone(log.to_address or getattr(log.recipient, "phone_number", ""))
         if not phone:
             log.status = CommunicationStatus.SKIPPED
             log.failure_reason = "Recipient has no valid phone number."
             AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_skipped", target=log, metadata={**metadata, "reason": "no_phone"})
             return
-        try:
-            delivered = MessageSenderRegistry.send(
-                channel=log.channel,
-                to=phone,
-                body=log.rendered_body,
-                metadata={"communication_log_id": str(log.id)},
-            )
-        except Exception as exc:
-            logger.exception("Failed to dispatch %s communication log", log.channel, extra={"communication_log_id": str(log.id)})
-            log.status = CommunicationStatus.FAILED
-            log.failure_reason = str(exc)
-            AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_failed", target=log, metadata={**metadata, "error": str(exc)})
-            return
-        if not delivered:
+        log.to_address = phone
+        result = MessageSenderRegistry.deliver(
+            channel=log.channel,
+            to=phone,
+            body=log.rendered_body,
+            metadata={"communication_log_id": str(log.id)},
+        )
+        CommunicationService.apply_delivery_result(log, result)
+        action = {
+            "sent": "notification_delivery_sent",
+            "skipped": "notification_delivery_skipped",
+        }.get(result.status, "notification_delivery_failed")
+        AuditService.log_action(actor=log.sent_by, action_type=action, target=log, metadata={**metadata, "provider": result.provider, "reason": result.reason})
+
+    @staticmethod
+    def apply_delivery_result(log, result) -> None:
+        log.provider = result.provider or ""
+        log.provider_message_id = result.message_id or ""
+        log.provider_status = (result.provider_status or "")[:60]
+        if result.status == "sent":
+            log.status = CommunicationStatus.SENT
+            log.failure_reason = ""
+            log.sent_at = timezone.now()
+        elif result.status == "skipped":
             log.status = CommunicationStatus.SKIPPED
-            log.failure_reason = f"No {log.channel} provider is configured."
-            AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_skipped", target=log, metadata={**metadata, "reason": "no_provider"})
-            return
-        log.status = CommunicationStatus.SENT
-        log.failure_reason = ""
-        log.sent_at = timezone.now()
-        AuditService.log_action(actor=log.sent_by, action_type="notification_delivery_sent", target=log, metadata=metadata)
+            log.failure_reason = result.reason
+        else:
+            log.status = CommunicationStatus.FAILED
+            log.failure_reason = result.reason
+
+    @staticmethod
+    def record_text_message(*, channel: str, to: str, body_for_log: str, subject: str, recipient=None, real_body: str | None = None):
+        """Send a one-off text message and record it in CommunicationLog.
+
+        ``body_for_log`` is what is stored; ``real_body`` is what is sent (kept out of the
+        log for sign-in codes).
+        """
+        log = CommunicationLog.objects.create(
+            recipient=recipient,
+            channel=channel,
+            to_address=to,
+            subject=subject,
+            rendered_body=body_for_log,
+            last_attempt_at=timezone.now(),
+            retry_count=1,
+        )
+        result = MessageSenderRegistry.deliver(
+            channel=channel,
+            to=to,
+            body=real_body if real_body is not None else body_for_log,
+            metadata={"communication_log_id": str(log.id)},
+            purpose=subject,
+        )
+        CommunicationService.apply_delivery_result(log, result)
+        log.save()
+        return log, result
 
     @staticmethod
     def retry_log(log_id: str):

@@ -1,0 +1,143 @@
+from __future__ import annotations
+
+from django.conf import settings
+from django.core.cache import cache
+
+from apps.platform_config.crypto import decrypt_secrets
+from apps.platform_config.flags import FLAG_DEFINITIONS, all_flags
+from apps.platform_config.models import FeatureFlag, IntegrationConnection
+from apps.platform_config.providers import get_provider_class
+
+RUNTIME_CACHE_SECONDS = 30
+SSO_BUTTON_LABEL = "Sign in with CEDA account"
+
+
+def _runtime_cache_key(kind: str) -> str:
+    return f"platform_config:active_connection:{kind}:v1"
+
+
+class IntegrationRuntimeSelector:
+    """Which connection the running system uses for each kind."""
+
+    @staticmethod
+    def active_connection(kind: str) -> IntegrationConnection | None:
+        key = _runtime_cache_key(kind)
+        cached = cache.get(key)
+        if cached is not None:
+            return cached or None
+        connection = IntegrationConnection.objects.filter(kind=kind, is_active=True).first()
+        cache.set(key, connection or False, RUNTIME_CACHE_SECONDS)
+        return connection
+
+    @staticmethod
+    def clear_cache(kind: str | None = None) -> None:
+        for item in [kind] if kind else IntegrationConnection.Kind.values:
+            cache.delete(_runtime_cache_key(item))
+
+    @staticmethod
+    def provider_for(connection: IntegrationConnection, *, secrets: dict | None = None):
+        provider_class = get_provider_class(connection.provider)
+        if provider_class is None:
+            return None
+        return provider_class(
+            connection,
+            config=connection.config,
+            secrets=secrets if secrets is not None else decrypt_secrets(connection.secrets_encrypted),
+        )
+
+    @staticmethod
+    def active_provider(kind: str):
+        connection = IntegrationRuntimeSelector.active_connection(kind)
+        return IntegrationRuntimeSelector.provider_for(connection) if connection else None
+
+    @staticmethod
+    def staff_identity_provider():
+        """A staff OIDC identity provider built from the active SSO connection, or None."""
+        provider = IntegrationRuntimeSelector.active_provider(IntegrationConnection.Kind.SSO)
+        if provider is None or not hasattr(provider, "runtime_settings"):
+            return None
+        from apps.accounts.identity_providers import ConfiguredStaffIdentityProvider
+
+        return ConfiguredStaffIdentityProvider(provider.runtime_settings(), connection_id=provider.connection.id)
+
+    @staticmethod
+    def environment_configured(kind: str) -> bool:
+        if kind == IntegrationConnection.Kind.SSO:
+            from apps.accounts.identity_providers import CedaStaffIdentityProvider
+
+            return not CedaStaffIdentityProvider().missing_config_keys()
+        if kind == IntegrationConnection.Kind.SMS:
+            return bool((getattr(settings, "MESSAGE_SENDERS", {}) or {}).get("sms"))
+        return False
+
+    @staticmethod
+    def source(kind: str) -> str:
+        """``database`` (a saved connection), ``environment`` (B1 env variables) or ``none``."""
+        if IntegrationRuntimeSelector.active_connection(kind):
+            return "database"
+        if IntegrationRuntimeSelector.environment_configured(kind):
+            return "environment"
+        return "none"
+
+    @staticmethod
+    def status(kind: str) -> dict:
+        connection = IntegrationRuntimeSelector.active_connection(kind)
+        provider_class = get_provider_class(connection.provider) if connection else None
+        return {
+            "kind": kind,
+            "source": IntegrationRuntimeSelector.source(kind),
+            "connection": (
+                {
+                    "id": str(connection.id),
+                    "name": connection.name,
+                    "provider": connection.provider,
+                    "provider_label": provider_class.label if provider_class else connection.provider,
+                    "status": connection.status,
+                    "last_tested_at": connection.last_tested_at,
+                    "activated_at": connection.activated_at,
+                }
+                if connection
+                else None
+            ),
+        }
+
+    @staticmethod
+    def has_working_sso_connection() -> bool:
+        """An active SSO connection saved and tested in the console."""
+        connection = IntegrationConnection.objects.filter(kind=IntegrationConnection.Kind.SSO, is_active=True).first()
+        return bool(connection and connection.status == IntegrationConnection.Status.ACTIVE and connection.last_tested_at)
+
+
+class FeatureFlagSelector:
+    @staticmethod
+    def all():
+        return FeatureFlag.objects.select_related("updated_by").all()
+
+    @staticmethod
+    def public_config() -> dict:
+        flags = all_flags()
+        public_keys = set(FeatureFlag.objects.filter(is_public=True).values_list("key", flat=True)) or {
+            definition.key for definition in FLAG_DEFINITIONS if definition.is_public
+        }
+        sso_active = bool(flags.get("staff_sso")) and IntegrationRuntimeSelector.source(IntegrationConnection.Kind.SSO) != "none"
+        return {
+            "features": {key: bool(flags.get(key)) for key in sorted(public_keys)},
+            "sign_in": {
+                "password": bool(flags.get("password_sign_in")),
+                "code": bool(flags.get("code_sign_in")),
+                "code_by_sms": bool(flags.get("code_sign_in")) and bool(flags.get("sms_messages")),
+                "sso": {"active": sso_active, "provider": "ceda_staff", "label": SSO_BUTTON_LABEL},
+            },
+        }
+
+
+class IntegrationHistorySelector:
+    @staticmethod
+    def for_connection(connection: IntegrationConnection, limit: int = 20):
+        from apps.audit.models import AuditLog
+
+        return (
+            AuditLog.objects.filter(target_model="IntegrationConnection", target_id=str(connection.id))
+            .select_related("actor")
+            .order_by("-created_at")[:limit]
+        )

@@ -5,12 +5,14 @@ from apps.communications.models import CommunicationLog
 from apps.communications.senders import LocMemMessageSender
 from apps.communications.services import CommunicationService
 from apps.core.constants import CommunicationChannel, CommunicationStatus
+from apps.platform_config.testing import set_features
 
 
 @override_settings(MESSAGE_SENDERS={"sms": "apps.communications.senders.LocMemMessageSender", "whatsapp": "", "ussd": ""})
 class TextChannelDispatchTests(TestCase):
     def setUp(self):
         LocMemMessageSender.outbox = []
+        set_features(self, sms_messages=True, whatsapp_messages=True, ussd=True)
         self.user = User.objects.create_user(email="sms@example.com", password="StrongPass123!", first_name="S", last_name="M", phone_number="71234567")
 
     def _dispatch(self, channel):

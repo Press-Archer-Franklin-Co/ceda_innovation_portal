@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BriefcaseBusiness, Layers,
   ClipboardList, Star, GitBranch, BookOpen,
-  BarChart3, Users, Settings, ScrollText, ShieldCheck, Newspaper, History, FileText,
+  BarChart3, Users, Settings, ScrollText, ShieldCheck, Newspaper, History, FileText, SlidersHorizontal,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -31,6 +31,7 @@ const NAV = [
   { label: 'Analytics',            href: '/analytics',       icon: BarChart3,  adminOnly: true },
   { label: 'Users',                href: '/users',            icon: Users,      adminOnly: true },
   { label: 'Audit Logs',           href: '/audit',            icon: ScrollText, adminOnly: true },
+  { label: 'Platform settings',    href: '/admin/platform',   icon: SlidersHorizontal, adminOnly: true },
 
   { section: 'Account' },
   { label: 'Settings', href: '/settings', icon: Settings },

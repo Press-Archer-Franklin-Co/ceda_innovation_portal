@@ -54,6 +54,7 @@ from apps.audit.services import AuditService
 from apps.communications.email_notifications import EmailNotificationService
 from apps.core.api import api_success
 from apps.core.permissions import IsOfficerAdminOrManagementReadOnly, IsAdministrator, AuthRateThrottle
+from apps.platform_config.flags import require_feature
 
 
 def _login_backend() -> str:
@@ -92,6 +93,7 @@ class RegisterView(generics.CreateAPIView):
     throttle_classes = [AuthRateThrottle]
 
     def create(self, request, *args, **kwargs):
+        require_feature("password_sign_in")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
@@ -116,6 +118,7 @@ class LoginView(TokenObtainPairView):
     throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
+        require_feature("password_sign_in")
         serializer = self.get_serializer(data=request.data)
 
         if not serializer.is_valid():
@@ -780,10 +783,12 @@ class LoginCodeRequestView(generics.GenericAPIView):
     throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
+        require_feature("code_sign_in")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         from apps.accounts.otp_services import OTPService
 
+        OTPService.assert_channel_available(serializer.validated_data["target_type"])
         result = OTPService.request_code(
             target_type=serializer.validated_data["target_type"],
             target=serializer.validated_data["target"],
@@ -814,6 +819,7 @@ class LoginCodeVerifyView(generics.GenericAPIView):
     throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
+        require_feature("code_sign_in")
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         from apps.accounts.otp_services import OTPService

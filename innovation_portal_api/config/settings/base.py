@@ -139,6 +139,7 @@ INSTALLED_APPS = [
     "apps.content",
     "apps.reference",
     "apps.media_library",
+    "apps.platform_config",
 ]
 
 MIDDLEWARE = [
@@ -230,6 +231,8 @@ REST_FRAMEWORK = {
         "user": "120/minute",
         "ip_public": "20/minute",
         "auth": "5/minute",
+        "platform_admin": "60/minute",
+        "platform_test": "10/minute",
     },
 }
 
@@ -375,6 +378,14 @@ MESSAGE_SENDERS = {
     "whatsapp": env(_prefixed_name("WHATSAPP_SENDER"), default=""),
     "ussd": env(_prefixed_name("USSD_SENDER"), default=""),
 }
+# --- Platform settings: encryption of integration secrets ---------------------------------
+# One Fernet key, or several separated by commas with the newest first (for rotation).
+# Generate one with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+CONFIG_ENCRYPTION_KEYS = _csv_env("CONFIG_ENCRYPTION_KEY")
+# Only local development and tests may fall back to a key derived from SECRET_KEY.
+CONFIG_ENCRYPTION_ALLOW_DERIVED_KEY = False
+
 # Channel used for sign-in codes sent to a phone: "sms" or "whatsapp".
 LOGIN_CODE_PHONE_CHANNEL = env(_prefixed_name("LOGIN_CODE_PHONE_CHANNEL"), default="sms")
 
