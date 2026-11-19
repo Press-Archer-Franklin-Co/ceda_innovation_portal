@@ -1,0 +1,97 @@
+{
+  "branch": "feature/b3-messages",
+  "sha": "98e050414c8507f7591e90aadd2388536d63025f",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44626487842",
+  "jobs": {
+    "api": "success",
+    "admin": "success",
+    "public": "success",
+    "em-dash": "success"
+  },
+  "green": true,
+  "steps": {
+    "api": {
+      "install": "success",
+      "migrations": "success",
+      "pytest": "success",
+      "results": "success",
+      "pytest_seconds": 223,
+      "job_seconds_to_here": 243
+    },
+    "admin": {
+      "install": "success",
+      "lint": "success",
+      "test": "success",
+      "build": "success"
+    },
+    "public": {
+      "install": "success",
+      "typecheck": "success",
+      "test": "success",
+      "build": "success"
+    }
+  },
+  "tests": {
+    "passed": 502,
+    "failed": 24,
+    "skipped": 0,
+    "known_failing": 24,
+    "new_failures": [],
+    "known_now_passing": [],
+    "known_not_found": []
+  },
+  "lint": {
+    "errors": 1,
+    "warnings": 8,
+    "new": [],
+    "baseline_fixed": 1
+  },
+  "migrations": {
+    "pending": 11,
+    "new": [],
+    "known_gone": [],
+    "crashed": false
+  },
+  "rows": [
+    {
+      "check": "Migrations up to date",
+      "result": "pass",
+      "details": "11 known on main, 0 new"
+    },
+    {
+      "check": "API tests",
+      "result": "pass",
+      "details": "502 passed, 24 failed (24 known on main, 0 new)"
+    },
+    {
+      "check": "Admin lint",
+      "result": "pass",
+      "details": "1 errors, 8 warnings (0 new vs baseline)"
+    },
+    {
+      "check": "Admin tests",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Admin build",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public type check",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public tests",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public build",
+      "result": "pass",
+      "details": ""
+    }
+  ]
+}
