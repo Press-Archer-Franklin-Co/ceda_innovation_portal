@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react'
-import { useNavigate, Navigate } from 'react-router-dom'
+import React, { useState, useRef, useEffect } from 'react'
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { ClipboardList, FlaskConical, Award, Search, X } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import DataTable   from '../../components/ui/DataTable'
@@ -188,8 +188,15 @@ function SubmissionsTab() {
   const navigate = useNavigate()
   const [typeTab,   setTypeTab]   = useState('all')
   const [statusTab, setStatusTab] = useState('')
-  const [search,    setSearch]    = useState('')
+  const [params] = useSearchParams()
+  const [search,    setSearch]    = useState(() => params.get('search') ?? '')
   const [program,   setProgram]   = useState('')
+
+  // The top bar search sends people here with ?search=.
+  useEffect(() => {
+    const q = params.get('search')
+    if (q !== null) setSearch(q)
+  }, [params])
 
   const { data, isLoading, error, refetch } = useSubmissions()
   const { data: programsData } = usePrograms()

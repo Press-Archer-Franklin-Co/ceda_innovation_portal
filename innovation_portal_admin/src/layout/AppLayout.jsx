@@ -25,13 +25,13 @@ export default function AppLayout() {
 
   return (
     <LayoutContext.Provider value={{ sidebarOpen, setSidebarOpen, mobileSidebarOpen, setMobileSidebarOpen }}>
-      <div className="flex h-screen bg-ceda-surface overflow-hidden">
+      <div className="flex h-screen bg-bg overflow-hidden">
 
         <Sidebar />
 
         {mobileSidebarOpen && (
           <div
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+            className="fixed inset-0 z-30 bg-scrim/45 lg:hidden"
             onClick={() => setMobileSidebarOpen(false)}
           />
         )}
@@ -49,7 +49,7 @@ export default function AppLayout() {
             </main>
           ) : (
             <main className="flex-1 overflow-y-auto overflow-x-hidden">
-              <div className="p-6 min-w-0 w-full">
+              <div className="p-[14px] sm:p-4 2xl:p-[22px] min-w-0 w-full">
                 <Outlet />
               </div>
             </main>

@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios'
 import type { TokenRefreshResponse } from '../types/api'
+import { getLang } from '../i18n'
 
 const RAW_BASE_URL = import.meta.env.VITE_API_URL?.trim()
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, '') : ''
@@ -26,10 +27,12 @@ const api: AxiosInstance = axios.create({
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = tokenStorage.getAccess()
+  config.headers = config.headers ?? {}
   if (token) {
-    config.headers = config.headers ?? {}
     config.headers['Authorization'] = `Bearer ${token}`
   }
+  // The API returns content text in this language (en or tn).
+  config.headers['Accept-Language'] = getLang()
   return config
 })
 

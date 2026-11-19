@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider }    from './lib/auth/AuthContext'
@@ -54,6 +54,9 @@ import LeadershipList, { LeadershipCardEditor } from './pages/content/Leadership
 import FaqList, { FaqEditor } from './pages/content/FaqManager'
 import EvaluationView     from './pages/evaluate/EvaluationView'
 import History            from './pages/history/History'
+
+// Dev-only component gallery; not part of the production bundle.
+const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
 import HistorySnapshot    from './pages/history/HistorySnapshot'
 
 const queryClient = new QueryClient({
@@ -74,6 +77,10 @@ export default function App() {
         <BrowserRouter basename="/staff">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+            {Styleguide && (
+              <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />
+            )}
 
             <Route element={<ProtectedRoute />}>
               <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
@@ -134,6 +141,8 @@ export default function App() {
                 </Route>
 
                 <Route path="/settings" element={<Settings />} />
+
+
 
                 <Route path="*" element={
                   <div className="flex flex-col items-center justify-center py-24 text-center">

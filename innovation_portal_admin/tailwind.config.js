@@ -1,43 +1,53 @@
 
 
+import { optionDTheme } from "./tailwind.tokens.js"
+
+const v = (name) => `rgb(var(--c-${name}) / <alpha-value>)`
+
 export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: ["selector", '[data-theme="dark"]'],
   theme: {
     extend: {
+      ...optionDTheme,
       colors: {
+        ...optionDTheme.colors,
+        // Older names, kept so existing pages pick up Option D. Use the
+        // semantic names (primary, accent, surface2, border, text, muted,
+        // banner, success, warning, danger, info) in new code.
         ceda: {
-          forest:        "#A01E0A",
-          "forest-dark": "#7E1708",
+          forest:        v("primary"),
+          "forest-dark": v("primary-hover"),
           "forest-light":"#B8341E",
 
-          green:         "#F0641E",
+          green:         v("accent"),
           "green-dark":  "#C94F12",
-          "green-pale":  "#F5EEE8",
-          "green-muted": "#6B5248",
+          "green-pale":  v("surface2"),
+          "green-muted": v("muted"),
 
-          indigo:        "#1D6FA3",
+          indigo:        v("info"),
           "indigo-dark": "#175A85",
-          "indigo-pale": "#E6F0F7",
+          "indigo-pale": v("info-soft"),
 
-          gold:          "#9A5200",
-          "gold-light":  "#F0641E",
-          "gold-pale":   "#FBEEDD",
+          gold:          v("warning"),
+          "gold-light":  v("accent"),
+          "gold-pale":   v("warning-soft"),
 
-          red:           "#B42318",
+          red:           v("danger"),
           "red-light":   "#dc2626",
-          "red-pale":    "#fee2e2",
+          "red-pale":    v("danger-soft"),
 
-          surface:       "#F5EEE8",
-          border:        "#E6D9CF",
-          muted:         "#6B5248",
-          dark:          "#2E1E18",
+          surface:       v("surface2"),
+          border:        v("border"),
+          muted:         v("muted"),
+          dark:          v("text"),
 
-          "sidebar-bg":     "#5A3C32",
+          "sidebar-bg":     v("banner"),
           "sidebar-hover":  "rgba(255,255,255,0.08)",
-          "sidebar-active": "#3E2922",
+          "sidebar-active": v("banner-deep"),
         },
         status: {
           "draft-bg":    "#F1F5F9",
@@ -60,20 +70,13 @@ export default {
           "info-text":   "#A01E0A",
         },
       },
-      fontFamily: {
-        sans: [
-          "Poppins",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          '"Segoe UI"',
-          "Roboto",
-          "sans-serif",
-        ],
-      },
       fontSize: {
+        ...optionDTheme.fontSize,
         "2xs": ["10px", { lineHeight: "14px" }],
       },
+      borderRadius: optionDTheme.borderRadius,
       boxShadow: {
+        ...optionDTheme.boxShadow,
         card:        "0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04)",
         "card-hover":"0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06)",
         nav:         "0 4px 24px rgba(90,60,50,0.15)",

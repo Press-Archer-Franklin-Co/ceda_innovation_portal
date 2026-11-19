@@ -1,54 +1,39 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Menu, Search, Bell, ChevronDown, LogOut, User, Settings, X, LayoutDashboard } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { Menu, Search, Bell, ChevronDown, LogOut, User, BriefcaseBusiness, ExternalLink } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
 import { useAuth } from '../lib/auth/AuthContext'
+import { isInnovationOfficer } from '../lib/auth/permissions'
+import { notifications } from '../lib/api/endpoints'
+import { useT } from '../i18n/context'
+import Avatar from '../components/ui/Avatar'
+import LanguageSwitch from '../components/ui/LanguageSwitch'
+import { buttonClasses } from '../components/ui/buttonClasses'
 
-const ROUTE_LABELS = {
-  dashboard:   'Dashboard',
-  programs:    'Programs',
-  new:         'New Program',
-  submissions: 'Submissions',
-  tasks:       'My Tasks',
-  workflows:   'Workflow Setup',
-  analytics:   'Analytics',
-  users:       'Users',
-  audit:       'Audit Logs',
-  settings:    'Settings',
-}
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-function useBreadcrumbs() {
-  const location = useLocation()
-  const segments = location.pathname.split('/').filter(Boolean)
-  return segments
-    .filter((seg) => !UUID_RE.test(seg))
-    .map((seg, i, filtered) => ({
-      label:  ROUTE_LABELS[seg] ?? seg,
-      href:   '/' + segments.slice(0, segments.indexOf(seg) + 1).join('/'),
-      isLast: i === filtered.length - 1,
-    }))
-}
+// Staff top bar: menu toggle, search, "View public site", bell with the real unread count, the user.
+// Compact: 52px tall (64px from 2xl).
 
 function UserMenu() {
+  const t = useT()
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   const { user, logout } = useAuth()
 
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
+    if (!open) return
+    const onDown = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
 
-  const initials = user
-    ? ((user.first_name?.[0] ?? '') + (user.last_name?.[0] ?? '')) || user.username?.[0]?.toUpperCase() || '?'
-    : '?'
-  const displayName = user
-    ? [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username
-    : 'Staff User'
+  const displayName = user ? [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username || user.email : ''
 
   const handleLogout = async () => {
     setOpen(false)
@@ -56,71 +41,44 @@ function UserMenu() {
     window.location.href = window.location.origin + '/'
   }
 
+  const item = 'flex items-center gap-2.5 px-3 h-9 rounded-control text-[13px] text-text hover:bg-surface2 focus-visible:outline-none focus-visible:bg-surface2'
+
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-ceda-surface transition-colors"
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t('common.account')}
+        className="flex items-center gap-2 pl-1 pr-1.5 h-9 rounded-control hover:bg-surface2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <div className="w-8 h-8 rounded-full bg-ceda-forest flex items-center justify-center flex-shrink-0 ring-2 ring-ceda-green/30">
-          <span className="text-white text-xs font-semibold">{initials}</span>
-        </div>
-        <div className="hidden sm:block text-left">
-          <p className="text-sm font-medium text-ceda-dark leading-none truncate max-w-[120px]">{displayName}</p>
-          <p className="text-xs text-ceda-muted mt-0.5 truncate max-w-[120px]">{user?.email ?? ''}</p>
-        </div>
-        <ChevronDown size={14} className="text-ceda-muted hidden sm:block" />
+        <Avatar name={displayName || '?'} size="sm" decorative />
+        <span className="hidden md:block text-left">
+          <span className="block text-[13px] font-bold text-text leading-4 truncate max-w-[140px]">{displayName}</span>
+          <span className="block text-[11px] text-muted leading-4 truncate max-w-[140px]">{user?.email ?? ''}</span>
+        </span>
+        <ChevronDown size={14} aria-hidden className="text-muted hidden md:block" />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl border border-ceda-border shadow-modal z-50 py-1 animate-slide-down">
-          <div className="px-3 py-2.5 border-b border-ceda-border">
-            <p className="text-sm font-semibold text-ceda-dark">{displayName}</p>
-            <p className="text-xs text-ceda-muted">{user?.email}</p>
-            {user?.is_admin && (
-              <span className="mt-1.5 inline-block text-[10px] font-semibold px-2 py-0.5 bg-ceda-green-pale text-ceda-forest rounded-full">
-                Administrator
-              </span>
-            )}
+        <div role="menu" className="absolute right-0 top-full mt-1.5 w-60 bg-surface rounded-card border border-border shadow-pop z-50 p-1.5">
+          <div className="px-3 py-2 border-b border-border mb-1">
+            <p className="text-[13px] font-bold text-text truncate">{displayName}</p>
+            <p className="text-[12px] text-muted truncate">{user?.email}</p>
           </div>
-          <Link
-            to="/settings"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-ceda-dark hover:bg-ceda-surface transition-colors"
-          >
-            <User size={15} className="text-ceda-muted" />
-            My Profile
+          <Link role="menuitem" to="/settings" onClick={() => setOpen(false)} className={item}>
+            <User size={15} aria-hidden className="text-muted" /> {t('staff.nav.settings')}
           </Link>
-          <Link
-            to="/assignments"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-ceda-dark hover:bg-ceda-surface transition-colors"
-          >
-            <Settings size={15} className="text-ceda-muted" />
-            My Work
+          <Link role="menuitem" to="/assignments" onClick={() => setOpen(false)} className={item}>
+            <BriefcaseBusiness size={15} aria-hidden className="text-muted" /> {t('staff.nav.myWork')}
           </Link>
-
-          {user?.roles?.includes('innovator') && (
-            <>
-              <div className="border-t border-ceda-border mt-1 pt-1" />
-              <a
-                href="/"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium text-ceda-forest hover:bg-ceda-green-pale transition-colors"
-              >
-                <LayoutDashboard size={15} className="text-ceda-forest" />
-                Public Portal
-              </a>
-            </>
-          )}
-
-          <div className="border-t border-ceda-border mt-1 pt-1">
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm text-ceda-red hover:bg-ceda-red-pale transition-colors"
-            >
-              <LogOut size={15} />
-              Sign Out
+          <div className="px-3 py-2">
+            <LanguageSwitch />
+          </div>
+          <div className="border-t border-border mt-1 pt-1">
+            <button role="menuitem" type="button" onClick={handleLogout} className={cn(item, 'w-full text-danger')}>
+              <LogOut size={15} aria-hidden /> {t('common.signOut')}
             </button>
           </div>
         </div>
@@ -129,69 +87,82 @@ function UserMenu() {
   )
 }
 
+function SearchBox() {
+  const t = useT()
+  const navigate = useNavigate()
+  const [q, setQ] = useState('')
+  return (
+    <form
+      role="search"
+      className="relative w-full max-w-[360px]"
+      onSubmit={(e) => {
+        e.preventDefault()
+        const query = q.trim()
+        if (query) navigate(`/submissions?search=${encodeURIComponent(query)}`)
+      }}
+    >
+      <Search size={15} aria-hidden className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+      <input
+        type="search"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder={t('staff.search')}
+        aria-label={t('staff.search')}
+        className="w-full h-8 2xl:h-9 pl-8 pr-3 rounded-control bg-surface2 border border-transparent text-[13px] text-text placeholder:text-muted focus:outline-none focus:bg-surface focus:border-primary focus:shadow-focus"
+      />
+    </form>
+  )
+}
+
+function BellButton() {
+  const t = useT()
+  // Real count from GET /api/notifications/unread-count/. Nothing is shown while it is unknown.
+  const { data } = useQuery({
+    queryKey: ['notifications', 'unread-count'],
+    queryFn: () => notifications.unreadCount(),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  })
+  const count = typeof data?.unread_count === 'number' ? data.unread_count : undefined
+  const label = count ? `${t('common.notifications')}, ${t('common.unread', { count })}` : t('common.notifications')
+  return (
+    <Link to="/assignments" aria-label={label} className="btn-icon relative">
+      <Bell size={18} aria-hidden />
+      {count > 0 && (
+        <span aria-hidden className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-on-primary text-[10px] font-bold leading-4 text-center">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  )
+}
+
 export default function Topbar() {
-  const { setSidebarOpen, setMobileSidebarOpen } = useLayout()
-  const breadcrumbs = useBreadcrumbs()
-  const [searchOpen, setSearchOpen] = useState(false)
+  const t = useT()
+  const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen } = useLayout()
+  const { user } = useAuth()
+  const canSearch = isInnovationOfficer(user)
 
   const toggleSidebar = () => {
-    if (window.innerWidth < 1024) {
-      setMobileSidebarOpen(o => !o)
-    } else {
-      setSidebarOpen(o => !o)
-    }
+    if (window.innerWidth < 1024) setMobileSidebarOpen((o) => !o)
+    else setSidebarOpen((o) => !o)
   }
+  const open = typeof window !== 'undefined' && window.innerWidth < 1024 ? mobileSidebarOpen : sidebarOpen
 
   return (
-    <header
-      className="h-16 bg-white border-b border-ceda-border flex items-center px-4 gap-3 z-20 flex-shrink-0"
-      style={{ boxShadow: '0 1px 0 #E6D9CF' }}
-    >
-      <button
-        onClick={toggleSidebar}
-        className="btn-icon flex-shrink-0"
-        aria-label="Toggle sidebar"
-      >
-        <Menu size={20} />
+    <header className="h-[52px] 2xl:h-16 bg-bg border-b border-border flex items-center px-3 2xl:px-5 gap-3 z-20 flex-shrink-0">
+      <button type="button" onClick={toggleSidebar} className="btn-icon flex-shrink-0" aria-label={open ? t('staff.collapse') : t('staff.expand')} aria-expanded={open}>
+        <Menu size={18} aria-hidden />
       </button>
 
-      <nav className="flex-1 min-w-0 hidden sm:flex items-center gap-1.5 text-sm overflow-hidden">
-        {breadcrumbs.map((crumb, i) => (
-          <React.Fragment key={crumb.href}>
-            {i > 0 && <span className="text-ceda-border">/</span>}
-            {crumb.isLast
-              ? <span className="font-medium text-ceda-dark truncate">{crumb.label}</span>
-              : <Link to={crumb.href} className="text-ceda-muted hover:text-ceda-forest transition-colors truncate">{crumb.label}</Link>
-            }
-          </React.Fragment>
-        ))}
-      </nav>
+      <div className="flex-1 min-w-0 flex items-center">{canSearch && <SearchBox />}</div>
 
-      <div className="flex items-center gap-1 ml-auto">
-        {searchOpen ? (
-          <div className="flex items-center gap-2 bg-ceda-surface rounded-lg px-3 py-2 animate-fade-in">
-            <Search size={15} className="text-ceda-muted flex-shrink-0" />
-            <input
-              autoFocus
-              type="text"
-              placeholder="Search submissions, programs…"
-              className="bg-transparent text-sm text-ceda-dark placeholder:text-ceda-muted/60 outline-none w-52"
-            />
-            <button onClick={() => setSearchOpen(false)}>
-              <X size={15} className="text-ceda-muted hover:text-ceda-dark" />
-            </button>
-          </div>
-        ) : (
-          <button onClick={() => setSearchOpen(true)} className="btn-icon">
-            <Search size={18} />
-          </button>
-        )}
-
-        <button className="btn-icon relative">
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-ceda-red border border-white animate-pulse-dot" />
-        </button>
-
+      <div className="flex items-center gap-1.5 ml-auto">
+        <a href="/" target="_blank" rel="noreferrer" className={buttonClasses({ variant: 'secondary', size: 'sm', className: 'hidden sm:inline-flex' })}>
+          {t('staff.viewSite')}
+          <ExternalLink size={13} aria-hidden />
+        </a>
+        <BellButton />
         <UserMenu />
       </div>
     </header>

@@ -1,29 +1,34 @@
 import clsx from 'clsx'
-import { ReactNode } from 'react'
+import { HTMLAttributes, ReactNode } from 'react'
 
-interface CardProps {
+export interface CardProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
-  className?: string
+  /** Lifts on hover. Use when the whole card is a link. */
   hover?: boolean
   padding?: 'none' | 'sm' | 'md' | 'lg'
+  /** "plain": white with a border. "soft": cream panel. "banner": chocolate feature card. */
+  tone?: 'plain' | 'soft' | 'banner'
 }
 
-const paddings = {
-  none: '',
-  sm: 'p-4',
-  md: 'p-6',
-  lg: 'p-8',
+const paddings = { none: '', sm: 'p-4', md: 'p-6', lg: 'p-8' }
+const tones = {
+  plain: 'bg-surface border border-border',
+  soft: 'bg-surface2',
+  banner: 'bg-banner text-on-banner',
 }
 
-export default function Card({ children, className, hover = false, padding = 'md' }: CardProps) {
+/** Card: radius 12, white with a 1px border by default. */
+export default function Card({ children, className, hover = false, padding = 'md', tone = 'plain', ...props }: CardProps) {
   return (
     <div
       className={clsx(
-        'bg-white rounded-2xl border border-gray-100 shadow-card',
-        hover && 'transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1 cursor-pointer',
+        'rounded-card',
+        tones[tone],
+        hover && 'transition-[box-shadow,transform] duration-200 hover:shadow-pop hover:-translate-y-0.5 cursor-pointer',
         paddings[padding],
         className,
       )}
+      {...props}
     >
       {children}
     </div>

@@ -1,9 +1,18 @@
-import { useState, useRef, useEffect } from 'react'
-import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Menu, X, LogOut, ChevronDown, User, LayoutDashboard, ShieldCheck, Bell, Briefcase } from 'lucide-react'
-import { useAuth } from '../../context/AuthContext'
+import { useEffect, useRef, useState } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Bell, Briefcase, LayoutDashboard, LogOut, Menu, ShieldCheck, User, X } from 'lucide-react'
 import clsx from 'clsx'
-import logoSrc from '../../assets/logo.png'
+import { useAuth } from '../../context/AuthContext'
+import { useI18n } from '../../i18n'
+import type { StringKey } from '../../i18n'
+import Logo from '../ui/Logo'
+import Avatar from '../ui/Avatar'
+import LanguageSwitch from '../ui/LanguageSwitch'
+import { buttonClasses } from '../ui/Button'
+import { useFocusTrap } from '../ui/useFocusTrap'
+import { useShellSettings, useUnreadCount } from './shellData'
+
+// Figma 1 · Public home › Header (10:190), Mobile header (10:801), Menu drawer (11:695).
 
 const STAFF_PORTAL_ROLES = [
   'administrator', 'admin',
@@ -13,294 +22,284 @@ const STAFF_PORTAL_ROLES = [
   'mentor',
 ]
 
-const publicLinks = [
-  { to: '/',           label: 'Home' },
-  { to: '/challenges', label: 'Challenges' },
-  { to: '/news',       label: 'News' },
-  { to: '/skills',     label: 'Community' },
-  { to: '/about',      label: 'About' },
-  { to: '/faq',        label: 'FAQ' },
+export const SUBMIT_PATH = '/innovate'
+
+interface NavItem {
+  to: string
+  key: StringKey
+  end?: boolean
+}
+
+const mainLinks: NavItem[] = [
+  { to: '/', key: 'nav.home', end: true },
+  { to: SUBMIT_PATH, key: 'nav.submit' },
+  { to: '/challenges', key: 'nav.challenges' },
+  { to: '/news', key: 'nav.news' },
+  { to: '/stories', key: 'nav.stories' },
+  { to: '/faq', key: 'nav.help' },
 ]
 
-const authLinks = [
-  { to: '/',            label: 'Home' },
-  { to: '/challenges',  label: 'Challenges' },
-  { to: '/news',        label: 'News' },
-  { to: '/skills',      label: 'Community' },
-  { to: '/dashboard',   label: 'Dashboard' },
-  { to: '/about',       label: 'About' },
-  { to: '/faq',         label: 'FAQ' },
-]
+const myIdeas: NavItem = { to: '/dashboard', key: 'nav.myIdeas' }
 
-export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [userMenu,   setUserMenu]   = useState(false)
-  const { user, isAuthenticated, logout } = useAuth()
-  const navigate   = useNavigate()
-  const menuRef    = useRef<HTMLDivElement>(null)
+export function UtilityBar() {
+  const { t } = useI18n()
+  const settings = useShellSettings()
+  const linkCls = 'hover:text-on-banner hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner rounded'
+  return (
+    <div className="hidden lg:block bg-banner-deep text-banner-muted text-d-cap font-body">
+      <div className="max-w-[1200px] mx-auto px-6 h-[34px] flex items-center justify-between gap-6">
+        <p className="truncate">{t('utility.official')}</p>
+        <div className="flex items-center gap-6 shrink-0">
+          {settings.whatsapp_number && (
+            <a className={linkCls} href={`https://wa.me/${settings.whatsapp_number.replace(/\D/g, '')}`} target="_blank" rel="noreferrer">
+              {t('utility.whatsapp', { number: settings.whatsapp_number })}
+            </a>
+          )}
+          <Link className={linkCls} to={settings.help_centre_url ?? '/faq'}>
+            {t('utility.helpCentre')}
+          </Link>
+          <Link className={linkCls} to={settings.accessibility_url ?? '/faq' /* TODO(U2): accessibility statement page */}>
+            {t('utility.accessibility')}
+          </Link>
+          <LanguageSwitch tone="dark" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
-  const navLinks  = isAuthenticated ? authLinks : publicLinks
-  const canStaff  = isAuthenticated && (user?.roles ?? []).some(r => STAFF_PORTAL_ROLES.includes(r))
-  const staffPortalHref = '/staff/dashboard'
+function DesktopLink({ item }: { item: NavItem }) {
+  const { t } = useI18n()
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) =>
+        clsx(
+          'group relative flex flex-col items-center gap-1.5 pt-1.5 text-d-label font-body whitespace-nowrap rounded',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4',
+          isActive ? 'text-primary' : 'text-text hover:text-primary',
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {t(item.key)}
+          <span aria-hidden className={clsx('h-[3px] w-6 rounded-[2px]', isActive ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/30')} />
+        </>
+      )}
+    </NavLink>
+  )
+}
+
+function BellButton({ count }: { count?: number }) {
+  const { t } = useI18n()
+  const label = count ? `${t('common.notifications')}, ${t('common.unread', { count })}` : t('common.notifications')
+  return (
+    <Link
+      to="/dashboard?tab=updates"
+      aria-label={label}
+      className="relative w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      <Bell size={18} aria-hidden />
+      {count !== undefined && count > 0 && (
+        <span aria-hidden className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold leading-[18px] text-center">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  )
+}
+
+function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => void }) {
+  const { user } = useAuth()
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!userMenu) return
-    const handler = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setUserMenu(false)
-      }
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [userMenu])
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  if (!user) return null
+  const name = `${user.first_name} ${user.last_name}`.trim() || user.email
+  const item = 'flex items-center gap-2.5 px-3 py-2 rounded-control text-d-body-s text-text hover:bg-surface2 focus-visible:outline-none focus-visible:bg-surface2'
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t('common.account')}
+        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      >
+        <Avatar name={name} size="md" decorative />
+      </button>
+      {open && (
+        <div role="menu" className="absolute right-0 mt-2 w-64 rounded-card bg-surface border border-border shadow-pop p-2 z-50">
+          <div className="px-3 py-2 border-b border-border mb-1">
+            <p className="text-d-label text-text truncate">{name}</p>
+            <p className="text-d-cap text-muted truncate">{user.email}</p>
+          </div>
+          <Link role="menuitem" to="/dashboard" className={item} onClick={() => setOpen(false)}>
+            <LayoutDashboard size={16} aria-hidden className="text-muted" /> {t('nav.myIdeas')}
+          </Link>
+          <Link role="menuitem" to="/profile" className={item} onClick={() => setOpen(false)}>
+            <User size={16} aria-hidden className="text-muted" /> {t('nav.profile')}
+          </Link>
+          <Link role="menuitem" to="/security" className={item} onClick={() => setOpen(false)}>
+            <ShieldCheck size={16} aria-hidden className="text-muted" /> {t('nav.security')}
+          </Link>
+          {canStaff && (
+            <a role="menuitem" href="/staff/dashboard" className={item}>
+              <Briefcase size={16} aria-hidden className="text-muted" /> {t('nav.staff')}
+            </a>
+          )}
+          <button role="menuitem" type="button" onClick={onLogout} className={clsx(item, 'w-full text-danger')}>
+            <LogOut size={16} aria-hidden /> {t('common.signOut')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolean; onClose: () => void; links: NavItem[]; canStaff: boolean; onLogout: () => void }) {
+  const { t } = useI18n()
+  const { isAuthenticated } = useAuth()
+  const settings = useShellSettings()
+  const ref = useRef<HTMLDivElement>(null)
+  useFocusTrap(ref, open, onClose)
+  if (!open) return null
+  const row = 'flex items-center min-h-[48px] px-1 text-d-h5 font-heading text-text border-b border-border'
+  return (
+    <div className="lg:hidden fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-scrim/45" aria-hidden onClick={onClose} />
+      <div ref={ref} role="dialog" aria-modal="true" aria-label={t('common.menu')} className="absolute inset-y-0 right-0 w-full max-w-[390px] bg-bg flex flex-col animate-slide-in-right">
+        <div className="flex items-center justify-between px-5 h-[60px] border-b border-border shrink-0">
+          <Logo className="scale-[0.8] origin-left" />
+          <button type="button" onClick={onClose} aria-label={t('common.close')} className="w-11 h-11 -mr-2 flex items-center justify-center rounded-control text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <X size={22} aria-hidden />
+          </button>
+        </div>
+        <nav aria-label={t('nav.main')} className="flex-1 overflow-y-auto px-5 py-2">
+          {links.map((l) => (
+            <NavLink key={l.to} to={l.to} end={l.end} onClick={onClose} className={({ isActive }) => clsx(row, isActive && 'text-primary')}>
+              {t(l.key)}
+            </NavLink>
+          ))}
+          {isAuthenticated && (
+            <>
+              <Link to="/profile" onClick={onClose} className={row}>{t('nav.profile')}</Link>
+              {canStaff && <a href="/staff/dashboard" className={row}>{t('nav.staff')}</a>}
+              <button type="button" onClick={onLogout} className={clsx(row, 'w-full text-danger')}>{t('common.signOut')}</button>
+            </>
+          )}
+          <div className="py-5 space-y-3 text-d-body-s text-muted">
+            <LanguageSwitch />
+            {(settings.whatsapp_number || settings.ussd_code || settings.call_centre_number) && (
+              <div className="space-y-1.5">
+                <p className="text-d-label text-text">{t('footer.otherWays')}</p>
+                {settings.whatsapp_number && <p>{t('utility.whatsapp', { number: settings.whatsapp_number })}</p>}
+                {settings.ussd_code && <p>{t('footer.ussd', { code: settings.ussd_code })}</p>}
+                {settings.call_centre_number && <p>{t('footer.callCentreNumber', { number: settings.call_centre_number })}</p>}
+              </div>
+            )}
+          </div>
+        </nav>
+        <div className="p-5 border-t border-border shrink-0 space-y-3">
+          {!isAuthenticated && (
+            <Link to="/login" onClick={onClose} className={buttonClasses({ variant: 'secondary', block: true })}>
+              {t('common.signIn')}
+            </Link>
+          )}
+          <Link to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
+            {t('nav.submit')}
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function Navbar() {
+  const { user, isAuthenticated, logout } = useAuth()
+  const { t } = useI18n()
+  const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const unread = useUnreadCount(isAuthenticated)
+
+  const canStaff = isAuthenticated && (user?.roles ?? []).some((r) => STAFF_PORTAL_ROLES.includes(r))
+  const links = isAuthenticated ? [...mainLinks.slice(0, 2), myIdeas, ...mainLinks.slice(2)] : mainLinks
+
+  useEffect(() => setMenuOpen(false), [pathname])
 
   const handleLogout = async () => {
+    setMenuOpen(false)
     await logout()
-    setUserMenu(false)
     navigate('/')
   }
 
-  const initials = user
-    ? (user.first_name.charAt(0) + user.last_name.charAt(0)).toUpperCase()
-    : ''
-
   return (
-    <header
-      className="sticky top-0 z-40 bg-white border-b border-gray-100/80"
-      style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.06)' }}
-    >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center h-[62px] gap-8">
-
-          <Link to="/" className="shrink-0 flex items-center gap-3">
-            <img src={logoSrc} alt="CEDA Innovation Portal" className="h-9 w-auto" />
-            <div className="w-px h-8 bg-gray-200" />
-            <div className="flex flex-col leading-none">
-              <span style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 22, color: '#A01E0A', lineHeight: 1 }}>
-                ceda
-              </span>
-              <span className="text-[10px] font-semibold text-gray-400 tracking-[0.05em] mt-[4px]">
-                Innovation Portal
-              </span>
-            </div>
+    <header className="sticky top-0 z-40 bg-bg">
+      <UtilityBar />
+      <div className="border-b border-border">
+        <div className="max-w-[1200px] mx-auto px-5 lg:px-6 h-[60px] lg:h-[72px] flex items-center justify-between gap-6">
+          <Link to="/" className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4">
+            <Logo className="hidden lg:inline-flex" />
+            <Logo className="lg:hidden scale-[0.8] origin-left" />
           </Link>
 
-          <nav className="hidden md:flex items-center gap-5 flex-1 justify-center">
-            {navLinks.map(({ to, label }) => (
-              <NavLink
-                key={to + label}
-                to={to}
-                end={to === '/'}
-                className={({ isActive }) => isActive ? 'nav-link-active' : 'nav-link'}
-              >
-                {label}
-              </NavLink>
+          <nav aria-label={t('nav.main')} className="hidden lg:flex items-center gap-7">
+            {links.map((l) => (
+              <DesktopLink key={l.to} item={l} />
             ))}
           </nav>
 
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          <div className="hidden lg:flex items-center gap-3 shrink-0">
             {isAuthenticated ? (
               <>
-                <button
-                  className="relative w-9 h-9 flex items-center justify-center rounded-xl text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-                  title="Notifications"
-                  aria-label="Notifications"
-                >
-                  <Bell size={17} />
-                </button>
-
-                <div className="relative" ref={menuRef}>
-                  <button
-                    onClick={() => setUserMenu(!userMenu)}
-                    className="flex items-center gap-2 pl-1 pr-2.5 py-1.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[11px] font-bold shrink-0"
-                      style={{ background: '#A01E0A' }}
-                    >
-                      {initials}
-                    </div>
-                    <span className="max-w-[88px] truncate text-[13px]">{user?.first_name}</span>
-                    <ChevronDown
-                      size={13}
-                      className={clsx('text-gray-400 transition-transform duration-150', userMenu && 'rotate-180')}
-                    />
-                  </button>
-
-                  {userMenu && (
-                    <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-gray-100 py-1.5 z-50 overflow-hidden animate-fade-in">
-                      <div className="px-4 py-2.5 border-b border-gray-100">
-                        <p className="text-[11px] text-gray-400 mb-0.5">Signed in as</p>
-                        <p className="text-xs font-semibold text-gray-800 truncate">{user?.email}</p>
-                      </div>
-
-                      <Link
-                        to="/dashboard"
-                        onClick={() => setUserMenu(false)}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <LayoutDashboard size={13} className="text-gray-400" /> Dashboard
-                      </Link>
-                      <Link
-                        to="/profile"
-                        onClick={() => setUserMenu(false)}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <User size={13} className="text-gray-400" /> My Profile
-                      </Link>
-                      <Link
-                        to="/security"
-                        onClick={() => setUserMenu(false)}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        <ShieldCheck size={13} className="text-gray-400" /> Account Security
-                      </Link>
-
-                      {canStaff && (
-                        <>
-                          <div className="border-t border-gray-100 mt-1 pt-1" />
-                          <a
-                            href={staffPortalHref}
-                            onClick={() => setUserMenu(false)}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm font-medium text-[#A01E0A] hover:bg-[#A01E0A]/5 transition-colors"
-                          >
-                            <Briefcase size={13} className="text-[#A01E0A]" /> Staff Portal
-                          </a>
-                        </>
-                      )}
-
-                      <div className="border-t border-gray-100 mt-1 pt-1">
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
-                        >
-                          <LogOut size={13} /> Sign out
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <BellButton count={unread} />
+                <UserMenu canStaff={canStaff} onLogout={handleLogout} />
               </>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="text-[13px] font-medium text-gray-600 hover:text-[#A01E0A] px-3 py-1.5 rounded-xl hover:bg-gray-50 transition-colors"
-                >
-                  Sign in
-                </Link>
-                <Link to="/signup" className="btn-dark text-[13px] px-4 py-2">
-                  Register
-                </Link>
-              </>
+              <Link to="/login" className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
+                {t('common.signIn')}
+              </Link>
             )}
+            <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
+              {t('nav.submit')}
+            </Link>
           </div>
 
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden ml-auto p-2 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-          >
-            {mobileOpen ? <X size={19} /> : <Menu size={19} />}
-          </button>
+          <div className="flex lg:hidden items-center gap-1 -mr-2">
+            {isAuthenticated && <BellButton count={unread} />}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label={t('common.menu')}
+              aria-expanded={menuOpen}
+              className="w-11 h-11 flex items-center justify-center rounded-control text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <Menu size={22} aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
-
-      {mobileOpen && (
-        <div className="md:hidden bg-white border-t border-gray-100 animate-fade-in max-h-[85vh] overflow-y-auto">
-
-          {isAuthenticated && user && (
-            <div className="px-4 py-3.5 border-b border-gray-100 flex items-center gap-3 bg-gray-50/60">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-[12px] font-bold shrink-0"
-                style={{ background: '#A01E0A' }}
-              >
-                {initials}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-gray-900 truncate">{user.first_name} {user.last_name}</p>
-                <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
-              </div>
-            </div>
-          )}
-
-          <nav className="px-4 py-2 space-y-0.5">
-            {navLinks.map(({ to, label }) => (
-              <NavLink
-                key={to + label}
-                to={to}
-                end={to === '/'}
-                onClick={() => setMobileOpen(false)}
-                className={({ isActive }) =>
-                  clsx(
-                    'block px-4 py-2.5 rounded-xl text-[13.5px] font-medium transition-colors',
-                    isActive ? 'bg-[#A01E0A] text-white' : 'text-gray-700 hover:bg-gray-50'
-                  )
-                }
-              >
-                {label}
-              </NavLink>
-            ))}
-          </nav>
-
-          {isAuthenticated && (
-            <div className="px-4 pb-2 space-y-0.5 border-t border-gray-100 pt-2">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-1.5">Account</p>
-              <Link
-                to="/profile"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[13.5px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <User size={15} className="text-gray-400" /> My Profile
-              </Link>
-              <Link
-                to="/security"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[13.5px] font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                <ShieldCheck size={15} className="text-gray-400" /> Account Security
-              </Link>
-              {canStaff && (
-                <a
-                  href={staffPortalHref}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-[13.5px] font-medium text-[#A01E0A] hover:bg-[#A01E0A]/5 transition-colors"
-                >
-                  <Briefcase size={15} className="text-[#A01E0A]" /> Staff Portal
-                </a>
-              )}
-            </div>
-          )}
-
-          <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
-            {isAuthenticated ? (
-              <button
-                onClick={() => { handleLogout(); setMobileOpen(false) }}
-                className="flex-1 py-2.5 text-sm text-red-500 border border-red-100 rounded-xl bg-red-50 font-medium flex items-center justify-center gap-1.5"
-              >
-                <LogOut size={14} /> Sign out
-              </button>
-            ) : (
-              <>
-                <Link
-                  to="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex-1 py-2.5 text-[13px] text-center border border-gray-200 rounded-xl text-gray-700 font-medium"
-                >
-                  Sign in
-                </Link>
-                <Link
-                  to="/signup"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex-1 py-2.5 text-[13px] text-center bg-[#A01E0A] text-white rounded-xl font-semibold"
-                >
-                  Register
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} links={links} canStaff={canStaff} onLogout={handleLogout} />
     </header>
   )
 }
