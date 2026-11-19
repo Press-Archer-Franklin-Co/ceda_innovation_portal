@@ -8,7 +8,8 @@ import { cn } from '../../lib/cn'
  * Hide tabs the person cannot read, and keep the selected tab in the URL (?tab=).
  * Staff density: 36px strip, 40px from 2xl.
  */
-export default function Tabs({ tabs = [], active, onChange, variant = 'line', label, idPrefix, className }) {
+export default function Tabs({ tabs: allTabs = [], active, onChange, variant = 'line', label, idPrefix, className }) {
+  const tabs = allTabs.filter((t) => !t.hidden)
   const auto = useId().replace(/:/g, '')
   const prefix = idPrefix ?? `tabs${auto}`
   const refs = useRef({})

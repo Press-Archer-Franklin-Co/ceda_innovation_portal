@@ -1,11 +1,14 @@
 // English strings for UI chrome. Content text arrives translated from the API.
 // Keys are grouped by area. Every key here must also exist in tn.ts.
+import { innovatorEn } from './innovator'
+
 const en = {
   'lang.en': 'English',
   'lang.tn': 'Setswana',
   'lang.label': 'Language',
 
   'common.close': 'Close',
+  'common.confirm': 'Confirm',
   'common.cancel': 'Cancel',
   'common.save': 'Save',
   'common.saving': 'Saving…',
@@ -23,6 +26,7 @@ const en = {
   'common.charsLeft': '{count} characters left',
   'common.charsOver': '{count} characters too many',
   'common.skip': 'Skip to content',
+  'common.removeItem': 'Remove {item}',
   'common.dismiss': 'Dismiss',
   'common.notifications': 'Notifications',
   'common.unread': '{count} unread',
@@ -30,6 +34,35 @@ const en = {
   'common.account': 'Your account',
   'common.signIn': 'Sign in',
   'common.signOut': 'Sign out',
+
+  'status.draft': 'Draft',
+  'status.submitted': 'Submitted',
+  'status.in_review': 'In review',
+  'status.needs_input': 'Needs your input',
+  'status.shortlisted': 'Shortlisted',
+  'status.approved': 'Approved',
+  'status.winner': 'Winner',
+  'status.not_taken': 'Not taken forward',
+  'status.open': 'Open',
+  'status.closed': 'Closed',
+  'status.upcoming': 'Upcoming',
+  'status.published': 'Published',
+  'status.scheduled': 'Scheduled',
+  'status.waiting_approval': 'Waiting for approval',
+  'status.archived': 'Archived',
+  'status.assigned': 'Assigned',
+  'status.in_progress': 'In progress',
+  'status.done': 'Done',
+  'status.active': 'Active',
+  'status.inactive': 'Switched off',
+  'status.waiting': 'Waiting',
+  'status.not_started': 'Not started',
+  'status.declined': 'Declined',
+  'status.reassigned': 'Reassigned',
+  'status.locked': 'Locked',
+  'status.cancelled': 'Cancelled',
+  'status.withdrawn': 'Withdrawn',
+  'status.unknown': 'Not known',
 
   'pager.label': 'Pages',
   'pager.previous': 'Previous',
@@ -80,6 +113,7 @@ const en = {
   'tabs.label': 'Quick links',
   'tabs.news': 'News',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
+  ...innovatorEn,
 } as const
 
 export type StringKey = keyof typeof en

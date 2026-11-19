@@ -13,6 +13,7 @@ import SearchInput from '../components/ui/SearchInput'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonGrid } from '../components/ui/SkeletonCard'
 import clsx from 'clsx'
+import { EMPTY_CELL } from '../lib/format'
 
 
 type DisplayStatus = 'open' | 'upcoming' | 'closed'
@@ -179,9 +180,7 @@ export default function Challenges() {
                     to={`/hackathons/${p.id}`}
                     className={`h-36 bg-gradient-to-br ${gradientFor(typeCode)} flex items-center justify-center relative`}
                   >
-                    <Badge variant={ds} className="absolute top-3 left-3 z-10">
-                      {ds.charAt(0).toUpperCase() + ds.slice(1)}
-                    </Badge>
+                    <Badge status={ds} className="absolute top-3 left-3 z-10" />
                     {challenge && (
                       <span className="absolute top-3 right-3 z-10 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/90 text-[#A01E0A]">
                         {p.audience === 'internal' ? 'CEDA Staff Challenge' : 'Innovation Challenge'}
@@ -216,7 +215,7 @@ export default function Challenges() {
                         <Calendar size={11} />
                         {ds === 'upcoming' && challenge && p.opening_date
                           ? `Opens ${formatDate(p.opening_date)}`
-                          : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : '—'}
+                          : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : EMPTY_CELL}
                       </p>
                       <div className="flex items-center gap-2">
                         <Link

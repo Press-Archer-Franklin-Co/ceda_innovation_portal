@@ -17,8 +17,10 @@ The checks are the same everywhere, and match `.github/workflows/ci.yml`:
 | Migrations up to date | `python manage.py makemigrations --check --dry-run > mig.txt 2>&1; python ../scripts/check_migrations.py mig.txt --exit-code $? --known tests/known_migration_drift.txt` (innovation_portal_api) |
 | API tests | `pytest -q -n auto --dist loadfile --create-db -p no:cacheprovider --junitxml=pytest-report.xml -rf --durations=15`, then `python ../scripts/check_test_results.py pytest-report.xml --known tests/known_failures.txt --root .` |
 | Admin lint | `npm run lint -- --format json --output-file lint.json`, then `python3 ../scripts/check_lint_baseline.py lint.json --baseline lint-baseline.json --root .` |
+| Admin tests | `npm test` (innovation_portal_admin, Vitest) |
 | Admin build | `npm run build` (innovation_portal_admin) |
 | Public type check | `npx tsc --noEmit` (innovation_portal_public) |
+| Public tests | `npm test` (innovation_portal_public, Vitest) |
 | Public build | `npm run build` (innovation_portal_public) |
 
 Tests use `config.settings.test` (fast password hasher, in-memory email); `pytest.ini` sets it, and `config.settings.local` stays for running the server. The migrations check, API tests and admin lint pass when there is nothing **new** compared with `main`: main has model changes without migrations (`innovation_portal_api/tests/known_migration_drift.txt`), 24 tests already fail on main (`innovation_portal_api/tests/known_failures.txt`), and admin lint has a baseline (`innovation_portal_admin/lint-baseline.json`). The checker scripts decide; do not judge by pytest's or ESLint's exit code.

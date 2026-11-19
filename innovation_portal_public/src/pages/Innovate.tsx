@@ -16,6 +16,20 @@ import type { SubmissionDetail, SubmissionFileDocument } from '../services/submi
 import VerificationRequired from '../components/ui/VerificationRequired'
 import Countdown, { useNow } from '../components/challenges/Countdown'
 
+const CONSENT_MESSAGE = 'Please tick the box to agree to the terms and privacy notice before you send your idea.'
+
+/**
+ * The API's own message when it refused the submission because consent was not given
+ * (errors.consent = { code: "consent_required", detail: "..." }), else null.
+ */
+function consentRequiredMessage(err: unknown): string | null {
+  const data = (err as { response?: { data?: unknown } })?.response?.data
+  if (!JSON.stringify(data ?? '').includes('consent_required')) return null
+  const consent = (data as { errors?: { consent?: { detail?: unknown } } })?.errors?.consent
+  const detail = Array.isArray(consent?.detail) ? consent?.detail[0] : consent?.detail
+  return typeof detail === 'string' && detail.trim() ? detail : CONSENT_MESSAGE
+}
+
 
 function asProgramType(program: Program) {
   const v = typeof program.program_type === 'string'
@@ -742,6 +756,8 @@ function SubmissionForm() {
   const [saving,          setSaving]         = useState(false)
   const [lastSaved,       setLastSaved]      = useState<Date | null>(null)
   const [error,           setError]          = useState('')
+  const [consent,         setConsent]        = useState(false)
+  const [consentErrorShown, setConsentErrorShown] = useState(false)
   const [fieldErrors,     setFieldErrors]    = useState<Record<string, string>>({})
   const [refNumber,       setRefNumber]      = useState('')
   const [draftId,         setDraftId]        = useState<string | null>(null)
@@ -1121,16 +1137,23 @@ function SubmissionForm() {
         setSubmitted(true)
         return
       }
+      if (!consent) {
+        setError(CONSENT_MESSAGE)
+        setConsentErrorShown(true)
+        return
+      }
       const id = await persistDraft(currentSection?.code ?? sections[0]?.code ?? '')
       for (const [key, fieldFiles] of Object.entries(files))
         for (const file of fieldFiles)
           await documentsService.uploadDraftDocument(id, key, file)
-      const final = await submissionsService.submitDraft(id)
+      const final = await submissionsService.submitDraft(id, { consent: true })
       setRefNumber((final as { reference_number?: string }).reference_number ?? '')
       setDraftId(null)
       setSubmitted(true)
     } catch (err) {
-      setError(parseApiError(err))
+      const consentMessage = consentRequiredMessage(err)
+      setConsentErrorShown(Boolean(consentMessage))
+      setError(consentMessage ?? parseApiError(err))
     } finally {
       setSubmitting(false)
     }
@@ -1440,9 +1463,22 @@ function SubmissionForm() {
                         View Terms & Conditions
                       </a>
                     )}
+                    {!correctionMode && (
+                      <label className="flex items-start gap-2 text-sm text-gray-700 max-w-xs text-left cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={consent}
+                          onChange={(e) => { setConsent(e.target.checked); if (e.target.checked && consentErrorShown) { setError(''); setConsentErrorShown(false) } }}
+                          required
+                          aria-required="true"
+                          className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer"
+                        />
+                        <span>I agree to the terms and privacy notice.</span>
+                      </label>
+                    )}
                   <button
                     onClick={handleSubmit}
-                    disabled={submitting || !programId || !title.trim()}
+                    disabled={submitting || !programId || !title.trim() || (!correctionMode && !consent)}
                     className="inline-flex items-center gap-1.5 px-6 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50 transition-all cursor-pointer"
                     style={{ background: accent }}
                   >

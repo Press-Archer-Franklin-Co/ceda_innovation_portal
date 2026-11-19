@@ -7,6 +7,7 @@ import SectionCard from '../../components/ui/SectionCard'
 import ImageCropModal from '../../components/ui/ImageCropModal'
 import Tabs from '../../components/ui/Tabs'
 import { content, programs } from '../../lib/api/endpoints'
+import { useConfirm } from '../../components/ui/confirm'
 
 const EDITOR_TABS = [
   { key: 'overview',  label: 'Overview' },
@@ -78,6 +79,7 @@ function ListEditor({ items, onChange, fields, addLabel }) {
 }
 
 function MediaSection({ detailId, mediaItems, onRefresh }) {
+  const confirm = useConfirm()
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
   const [caption, setCaption] = useState('')
@@ -106,7 +108,7 @@ function MediaSection({ detailId, mediaItems, onRefresh }) {
   }
 
   async function handleDelete(mediaId) {
-    if (!confirm('Remove this media file?')) return
+    if (!(await confirm({ title: 'Remove this file?', body: 'It is taken off this hackathon page.', confirmLabel: 'Remove file' }))) return
     setMediaError(null)
     try {
       await content.deleteMedia(mediaId)
@@ -170,6 +172,7 @@ function MediaSection({ detailId, mediaItems, onRefresh }) {
 }
 
 export default function HackathonContentEditor() {
+  const confirm = useConfirm()
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const preselectedProgram = searchParams.get('program') ?? ''
@@ -308,7 +311,7 @@ export default function HackathonContentEditor() {
             {!isNew && savedId && (
               <button
                 className="btn-ghost text-red-500 hover:bg-red-50 flex items-center gap-1.5"
-                onClick={() => { if (confirm('Delete this hackathon page?')) deleteMutation.mutate() }}
+                onClick={async () => { if (await confirm({ title: 'Delete this hackathon page?', note: 'This cannot be undone.', confirmLabel: 'Delete page' })) deleteMutation.mutate() }}
                 disabled={deleteMutation.isPending}
               >
                 <Trash2 size={14} />Delete
@@ -356,7 +359,7 @@ export default function HackathonContentEditor() {
                     value={form.program}
                     onChange={e => setForm(f => ({ ...f, program: e.target.value }))}
                   >
-                    <option value="">— Select a hackathon or challenge —</option>
+                    <option value="">Choose a hackathon or challenge</option>
                     {(hackathonPrograms ?? []).map(p => (
                       <option key={p.id} value={p.id}>{p.title}</option>
                     ))}

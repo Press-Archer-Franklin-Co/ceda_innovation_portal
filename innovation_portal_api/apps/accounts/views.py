@@ -3,13 +3,13 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth import logout as django_logout
 from django.db import models
 from django.middleware.csrf import get_token
-from rest_framework import generics, status
+from rest_framework import generics, serializers, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema, inline_serializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -810,6 +810,22 @@ class LoginCodeRequestView(generics.GenericAPIView):
         "`created`. If the account has MFA switched on, returns an MFA challenge instead, as password login does."
     ),
     request=LoginCodeVerifySerializer,
+    responses={
+        200: inline_serializer(
+            "LoginCodeVerifyResponse",
+            fields={
+                "access": serializers.CharField(required=False, help_text="Missing when mfa_required is true."),
+                "refresh": serializers.CharField(required=False),
+                "user": AuthenticatedUserSerializer(required=False),
+                "created": serializers.BooleanField(help_text="A new innovator account was made for this phone or email."),
+                "mfa_required": serializers.BooleanField(required=False),
+                "challenge_id": serializers.UUIDField(required=False),
+                "method": serializers.CharField(required=False),
+                "email_hint": serializers.CharField(required=False),
+                "expires_at": serializers.DateTimeField(required=False),
+            },
+        )
+    },
     examples=[OpenApiExample("Verify", value={"phone": "+26771234567", "code": "123456"}, request_only=True)],
 )
 class LoginCodeVerifyView(generics.GenericAPIView):
