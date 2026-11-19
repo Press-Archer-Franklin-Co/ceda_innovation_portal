@@ -321,6 +321,10 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
     },
+    "question-reminders": {
+        "task": "apps.notifications.tasks.send_question_reminders",
+        "schedule": crontab(hour=7, minute=30),
+    },
     "purge-expired-tokens": {
         "task": "apps.notifications.tasks.purge_expired_tokens",
         "schedule": crontab(hour=2, minute=30),

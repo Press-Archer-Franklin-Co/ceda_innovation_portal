@@ -21,6 +21,7 @@ class _StaffRedocView(SpectacularRedocView):
 
 from apps.audit.views import SubmissionAuditLogListView
 from apps.assignments.views import OverdueAssignmentListView, ReviewerQueueStatsView, ReviewerQueueView, ReviewerSuggestionView
+from apps.communications.message_views import SubmissionMessagesView
 from apps.communications.views import SubmissionCommunicationListView
 from apps.documents.views import SubmissionDocumentListCreateView
 from apps.screening.views import ScreeningCreateView, ScreeningListView
@@ -43,6 +44,7 @@ urlpatterns = [
     path("api/drafts/", include("apps.submissions.draft_urls")),
     path("api/me/", include("apps.submissions.me_urls")),
     path("api/ideas/", include("apps.submissions.idea_urls")),
+    path("api/submissions/<uuid:submission_id>/messages/", SubmissionMessagesView.as_view(), name="submission-messages"),
     path("api/submissions/", include("apps.submissions.urls")),
     path("api/documents/", include("apps.documents.urls")),
     path("api/screening/", include("apps.screening.urls")),

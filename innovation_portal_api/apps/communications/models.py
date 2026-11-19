@@ -42,6 +42,11 @@ class Notification(UUIDModel, TimeStampedModel):
     title = models.CharField(max_length=255)
     body = models.TextField()
     is_read = models.BooleanField(default=False)
+    # R-8: where the notification leads and any deadline it mentions.
+    link_type = models.CharField(max_length=20, blank=True, help_text="idea, challenge, post or message")
+    link_id = models.CharField(max_length=64, blank=True, db_index=True)
+    link_slug = models.CharField(max_length=280, blank=True)
+    due_at = models.DateTimeField(null=True, blank=True)
 
 
 class NotificationPreference(UUIDModel, TimeStampedModel):
@@ -74,3 +79,42 @@ class NotificationTypePreference(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.user_id}:{self.notification_type}"
+
+
+class MessageThread(UUIDModel, TimeStampedModel):
+    """B3: the two-way conversation between officers and the applicant about one idea.
+
+    Internal notes (SubmissionInternalNote) never appear here.
+    """
+
+    submission = models.OneToOneField("submissions.Submission", on_delete=models.CASCADE, null=True, blank=True, related_name="message_thread")
+    draft = models.OneToOneField("submissions.ApplicationDraft", on_delete=models.CASCADE, null=True, blank=True, related_name="message_thread")
+    open_question = models.ForeignKey("communications.Message", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    moved_for_question = models.BooleanField(default=False, help_text="The question moved the submission to 'more information needed'.")
+
+    def applicant(self):
+        target = self.submission or self.draft
+        return getattr(target, "innovator", None)
+
+
+class Message(UUIDModel, TimeStampedModel):
+    class AuthorRole(models.TextChoices):
+        APPLICANT = "applicant", "Applicant"
+        OFFICER = "officer", "Officer"
+        SYSTEM = "system", "System"
+
+    thread = models.ForeignKey(MessageThread, on_delete=models.CASCADE, related_name="messages")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    author_role = models.CharField(max_length=20, choices=AuthorRole.choices)
+    body = models.TextField(blank=True)
+    attachments = models.ManyToManyField("media_assets.MediaAsset", blank=True, related_name="+")
+    reply_by = models.DateField(null=True, blank=True, help_text="A question the applicant should answer by this date.")
+    read_by_applicant_at = models.DateTimeField(null=True, blank=True)
+    read_by_staff_at = models.DateTimeField(null=True, blank=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+    reminder_sent_at = models.DateTimeField(null=True, blank=True)
+    overdue_flagged_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("created_at",)
+        indexes = [models.Index(fields=["reply_by", "answered_at"])]
