@@ -17,7 +17,8 @@ from apps.content.sections import describe_types
 from apps.content.services import ApprovalService, PageService, PartnerService, PostService, clear_home_cache, text_in
 from apps.core.api import api_success
 from apps.core.i18n import normalize_language
-from apps.core.permissions import IPRateThrottle, IsOfficerOrAdmin
+from apps.core.constants import RoleType
+from apps.core.permissions import HasRolePermission, IPRateThrottle, IsOfficerOrAdmin
 
 STAFF_TAGS = ["Website content"]
 PUBLIC_TAGS = ["Website content (public)"]
@@ -28,6 +29,12 @@ PAGE_SIZE = 12
 def _lang(request) -> str:
     lang = normalize_language(request.query_params.get("lang")) or "en"
     return "en" if lang == "all" else lang
+
+
+class IsContentStaffOrApprover(HasRolePermission):
+    """Officers and admins edit content; managers also see and decide approvals."""
+
+    allowed_roles = {RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER, RoleType.ADMINISTRATOR}
 
 
 class PublicContentThrottle(IPRateThrottle):
@@ -112,7 +119,7 @@ class PublicHomeView(APIView):
 
 
 class ApprovalListView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [IsContentStaffOrApprover]
 
     @extend_schema(
         tags=STAFF_TAGS,
@@ -134,7 +141,7 @@ class ApprovalListView(APIView):
 
 
 class ApprovalDecisionView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [IsContentStaffOrApprover]
     approve = True
 
     @extend_schema(tags=STAFF_TAGS, summary="Approve or reject a request", description="Only innovation managers and administrators decide. Rejecting needs a comment.", request=DecisionSerializer, responses=OpenApiTypes.OBJECT)

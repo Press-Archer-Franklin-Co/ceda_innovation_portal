@@ -437,7 +437,7 @@ class Page(UUIDModel, TimeStampedModel):
 
     def live_version(self, at=None):
         at = at or timezone.now()
-        return self.versions.filter(go_live_at__lte=at).order_by("-go_live_at", "-number").first()
+        return self.versions.filter(go_live_at__lte=at).order_by("-number").first()
 
 
 class PageSection(UUIDModel, TimeStampedModel):

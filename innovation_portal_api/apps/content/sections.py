@@ -88,7 +88,7 @@ SECTION_TYPES: dict[str, dict] = {
     },
     "cta_band": {
         "label": "Call to action band",
-        "settings": {"headline": _text(required=True, max_length=120), "text": _text(max_length=200), "button": BUTTON},
+        "settings": {"headline": _text("Have an idea? Start in two minutes.", required=True, max_length=120), "text": _text(max_length=200), "button": BUTTON},
     },
     "stories": {
         "label": "Stories",
