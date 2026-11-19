@@ -1,9 +1,9 @@
 ## CI results for `feature/b2-followups` @ `8042b6d`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44611106367
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44612822027
 Jobs: admin success, api success, public success
 Overall: **green**
-Timing (api job): Run tests 2m 47s, job steps 3m 02s
+Timing (api job): Run tests 2m 59s, job steps 3m 25s
 
 | Check | Result | Details |
 | --- | --- | --- |
