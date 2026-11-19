@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.core.constants import SubmissionFormFieldType
 from apps.documents.models import SubmissionDocument
+from apps.programs.models import Program
 from apps.programs.serializers import ProgramSerializer
 from apps.submissions.models import (
     ApplicationDraft,
@@ -11,6 +12,7 @@ from apps.submissions.models import (
     SubmissionResponse,
     SubmissionStatusHistory,
 )
+from apps.reference.models import Sector
 from apps.workflow.serializers import WorkflowInstanceSerializer
 
 
@@ -94,6 +96,12 @@ class SubmissionResponseSerializer(serializers.ModelSerializer):
 
 class ApplicationDraftSerializer(serializers.ModelSerializer):
     program_detail = ProgramSerializer(source="program", read_only=True)
+    # Optional: a draft without a programme goes to the general ideas programme.
+    program = serializers.PrimaryKeyRelatedField(queryset=Program.objects.all(), required=False)
+    submission_type = serializers.ChoiceField(choices=ApplicationDraft._meta.get_field("submission_type").choices, required=False)
+    sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True), required=False, allow_null=True)
+    percent_complete = serializers.SerializerMethodField()
+    guest_phone_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = ApplicationDraft
@@ -103,6 +111,10 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "program",
             "program_detail",
             "submission_type",
+            "sector",
+            "is_general_idea",
+            "percent_complete",
+            "guest_phone_verified",
             "innovator",
             "team",
             "title",
@@ -125,7 +137,56 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "progress_metadata",
             "submitted_submission",
             "submitted_at",
+            "is_general_idea",
         )
+
+    def get_percent_complete(self, obj):
+        return int((obj.progress_metadata or {}).get("percent_complete") or 0)
+
+    def get_guest_phone_verified(self, obj):
+        return bool(obj.guest_phone_verified_at)
+
+
+class QuickStartSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=255, trim_whitespace=True)
+    sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True))
+    program_id = serializers.UUIDField(required=False, allow_null=True)
+
+
+class QuickStartResponseSerializer(serializers.Serializer):
+    draft_id = serializers.UUIDField()
+    resume_token = serializers.CharField()
+    expires_in = serializers.IntegerField(help_text="Seconds until the resume token stops working.")
+
+
+class DraftSubmitSerializer(serializers.Serializer):
+    # Not required here so that the service can check programme access first and
+    # then answer with the consent_required code.
+    consent = serializers.BooleanField(required=False, default=False)
+    create_account = serializers.BooleanField(required=False, default=True)
+    name = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+
+class DraftStepSerializer(serializers.Serializer):
+    answers = serializers.DictField(child=serializers.JSONField(), allow_empty=True)
+
+
+class DraftPhoneVerifySerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=32)
+    code = serializers.RegexField(r"^\d{4,8}$", error_messages={"invalid": "Enter the code from the text message."})
+
+    def validate_phone(self, value):
+        from apps.core.phone import try_normalize_phone
+
+        normalized = try_normalize_phone(value)
+        if not normalized:
+            raise serializers.ValidationError("Enter a valid phone number.")
+        return normalized
+
+
+class SimilarIdeasRequestSerializer(serializers.Serializer):
+    text = serializers.CharField(min_length=3, max_length=2000)
+    sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True), required=False, allow_null=True)
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
@@ -157,8 +218,12 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "responses",
             "workflow",
             "channel",
+            "sector",
+            "is_guest",
+            "guest_name",
+            "guest_phone",
         )
-        read_only_fields = ("reference_number", "innovator", "current_status", "submitted_at", "locked_for_editing", "latest_version_number", "channel")
+        read_only_fields = ("reference_number", "innovator", "current_status", "submitted_at", "locked_for_editing", "latest_version_number", "channel", "sector", "is_guest", "guest_name", "guest_phone")
 
     def get_innovator_detail(self, obj):
         user = getattr(obj, "innovator", None)

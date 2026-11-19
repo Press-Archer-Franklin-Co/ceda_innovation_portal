@@ -252,11 +252,12 @@ class UserVerificationService:
     def assert_verified(*, user: User, reason: str = "submission_action") -> None:
         if user.is_staff or user.is_superuser:
             return
-        if not user.email_verified:
+        # A phone proved with a sign-in code counts too (people who sign up by phone).
+        if not user.email_verified and not getattr(user, "phone_verified", False):
             raise PermissionDenied(
                 {
                     "code": "email_verification_required",
-                    "detail": "Please verify your email address before submitting.",
+                    "detail": "Please verify your email address or phone number before submitting.",
                     "reason": reason,
                 }
             )

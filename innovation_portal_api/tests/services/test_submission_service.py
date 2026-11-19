@@ -53,7 +53,8 @@ class SubmissionServiceTests(TestCase):
 
         finalized = SubmissionService.finalize_submission(submission, self.user)
 
-        self.assertTrue(finalized.reference_number.startswith("CEDA-INNOV-"))
+        # B2: new submissions use CEDA-IP-YYYY-NNNNN for every programme type.
+        self.assertRegex(finalized.reference_number, r"^CEDA-IP-\d{4}-\d{5}$")
         self.assertEqual(finalized.current_status, SubmissionStatus.SUBMITTED)
         self.assertTrue(finalized.locked_for_editing)
 

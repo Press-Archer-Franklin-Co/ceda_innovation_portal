@@ -1569,7 +1569,9 @@ class WorkflowRuntimeService:
 
     @staticmethod
     def _locked_submission(submission: Submission) -> Submission:
-        return Submission.objects.select_for_update().select_related("program", "innovator").get(id=submission.id)
+        # Lock only the submission row: innovator is nullable (guest submissions), and
+        # PostgreSQL refuses FOR UPDATE on the nullable side of an outer join.
+        return Submission.objects.select_for_update(of=("self",)).select_related("program", "innovator").get(id=submission.id)
 
     @staticmethod
     def _locked_instance(instance: WorkflowInstance) -> WorkflowInstance:
