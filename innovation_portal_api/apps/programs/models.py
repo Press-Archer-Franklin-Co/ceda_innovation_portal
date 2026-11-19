@@ -51,11 +51,12 @@ class TermsAndConditions(UUIDModel, TimeStampedModel):
 class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     title = models.CharField(max_length=255)
     slug = models.SlugField(unique=True, max_length=280)
-    description = models.TextField()
+    description = models.TextField(blank=True, default="", help_text="Required to publish.")
     program_type = models.ForeignKey(ProgramType, on_delete=models.PROTECT, related_name="programs")
     status = models.CharField(max_length=30, choices=ProgramStatus.choices, default=ProgramStatus.DRAFT, db_index=True)
-    opening_date = models.DateTimeField()
-    closing_date = models.DateTimeField()
+    # A challenge can be saved as a draft without dates; publishing requires them (B5).
+    opening_date = models.DateTimeField(null=True, blank=True)
+    closing_date = models.DateTimeField(null=True, blank=True)
     screening_start = models.DateTimeField(null=True, blank=True)
     screening_end = models.DateTimeField(null=True, blank=True)
     judging_start = models.DateTimeField(null=True, blank=True)
@@ -100,6 +101,20 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
         related_query_name="program",
         help_text="The form applicants fill in. One form can be used by several programmes.",
     )
+    # B5: what the public challenge page shows. English in these columns, Setswana in translations.
+    summary = models.CharField(max_length=300, blank=True, default="")
+    problem_statement = models.TextField(blank=True, default="")
+    support_headline = models.CharField(max_length=160, blank=True, default="", help_text='For example "Up to P150 000 plus mentoring".')
+    support_package = models.JSONField(default=list, blank=True, help_text='[{"title": {en, tn}, "amount_label": "...", "description": {en, tn}}]')
+    who_can_enter = models.TextField(blank=True, default="")
+    where = models.CharField(max_length=255, blank=True, default="")
+    what_we_look_for = models.JSONField(default=list, blank=True, help_text='[{"en": "...", "tn": "..."}]')
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"summary": "...", "problem_statement": "...", ...}}')
+    cover = models.ForeignKey("media_assets.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    pass_mark = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="0 to 100 on the weighted score. Copied to the judging stage.")
+    reviewers_per_idea = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Judges who mark each entry. Default: every judge.")
+
+    TRANSLATABLE = ("summary", "problem_statement", "support_headline", "who_can_enter", "where")
 
     class Meta:
         indexes = [models.Index(fields=["status", "program_type"]), models.Index(fields=["opening_date", "closing_date"])]
@@ -116,6 +131,20 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
 
     def __str__(self) -> str:
         return self.title
+
+    def publish_problems(self) -> dict:
+        """What stops this programme from being published: {field: message}. Empty means it can be."""
+        problems = {}
+        if not (self.description or "").strip():
+            problems["description"] = "Add a description before publishing."
+        opens, closes = self.submission_opens_at, self.submission_closes_at
+        if not opens:
+            problems["opening_date"] = "Set when entries open before publishing."
+        if not closes:
+            problems["closing_date"] = "Set when entries close before publishing."
+        if opens and closes and closes <= opens:
+            problems["closing_date"] = "Entries must close after they open."
+        return problems
 
     @property
     def is_innovation_challenge(self):
@@ -173,6 +202,7 @@ class ChallengeJudge(UUIDModel, TimeStampedModel):
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="challenge_judges")
     name = models.CharField(max_length=255)
     email = models.EmailField()
+    organisation = models.CharField(max_length=255, blank=True, default="")
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="challenge_judgeships")
     invited_at = models.DateTimeField(null=True, blank=True)

@@ -9,6 +9,7 @@ class FAQ(UUIDModel, TimeStampedModel):
     answer = models.TextField()
     ordering = models.PositiveIntegerField(default=1)
     is_public = models.BooleanField(default=True)
+    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, null=True, blank=True, related_name="faqs", help_text="Shown on this challenge's page.")
 
     class Meta:
         ordering = ("ordering", "question")
