@@ -144,10 +144,10 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "is_general_idea",
         )
 
-    def get_percent_complete(self, obj):
+    def get_percent_complete(self, obj) -> int:
         return int((obj.progress_metadata or {}).get("percent_complete") or 0)
 
-    def get_guest_phone_verified(self, obj):
+    def get_guest_phone_verified(self, obj) -> bool:
         return bool(obj.guest_phone_verified_at)
 
     def get_form_id(self, obj) -> str | None:
