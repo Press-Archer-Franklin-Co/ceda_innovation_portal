@@ -3,7 +3,7 @@ import Modal from './Modal'
 import Button from './Button'
 import { useT } from '../../i18n'
 
-// Figma Foundations › Confirm dialog. Never use window.confirm.
+// Figma Foundations › Confirm dialog. Use it (or useConfirm) for every yes/no question; never the browser confirm box.
 // A destructive confirmation names the thing, says what happens, and puts the red action last.
 
 export interface ConfirmOptions {

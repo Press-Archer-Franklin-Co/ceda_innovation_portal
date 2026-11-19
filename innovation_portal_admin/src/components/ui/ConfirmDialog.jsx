@@ -3,7 +3,7 @@ import Button from './Button'
 import { useT } from '../../i18n/context'
 
 /**
- * Figma Foundations › Confirm dialog. Replaces window.confirm everywhere.
+ * Figma Foundations › Confirm dialog. Use it (or useConfirm) for every yes/no question; never the browser confirm box.
  * A destructive confirmation names the thing ("Delete the partner Debswana?"), says what happens,
  * and puts the red action last. `note` shows in a red band ("This cannot be undone.").
  *
