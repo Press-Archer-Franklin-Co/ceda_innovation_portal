@@ -260,6 +260,8 @@ DRAFT_RESUME_TOKEN_MAX_AGE = int(os.getenv("INNOVATION_PORTAL_DRAFT_RESUME_TOKEN
 IDEA_SUBMISSION_CONSENT_VERSION = os.getenv("INNOVATION_PORTAL_IDEA_SUBMISSION_CONSENT_VERSION", "2026-11")
 # Sign-in codes (R-4): seconds the screen waits before offering "Resend code".
 LOGIN_CODE_RESEND_AFTER_SECONDS = int(os.getenv("INNOVATION_PORTAL_LOGIN_CODE_RESEND_AFTER_SECONDS", "60"))
+# B7: the target for average days from submission to decision on the dashboard.
+ANALYTICS_DECISION_TARGET_DAYS = int(os.getenv("INNOVATION_PORTAL_ANALYTICS_DECISION_TARGET_DAYS", "10"))
 
 # Form builder (B4): dotted path to a class with translate(texts, source=, target=) for
 # Setswana suggestions. Empty means suggestions are off (the endpoint answers 501).

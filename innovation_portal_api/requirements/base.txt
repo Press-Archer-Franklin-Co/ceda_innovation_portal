@@ -15,3 +15,4 @@ cryptography
 Pillow>=10.0,<12
 pyotp>=2.9,<3
 qrcode>=7.4,<8
+fpdf2==2.7.9

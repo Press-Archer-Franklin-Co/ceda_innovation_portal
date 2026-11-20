@@ -26,5 +26,7 @@ class Sector(ReferenceItem):
 
 
 class District(ReferenceItem):
+    is_rural = models.BooleanField(default=False, help_text="Counts as rural in the inclusion numbers (B7).")
+
     class Meta(ReferenceItem.Meta):
         verbose_name = "district"
