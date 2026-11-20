@@ -154,10 +154,20 @@ class ApprovalService:
 class PageService:
     @staticmethod
     def home() -> Page:
-        page, created = Page.objects.get_or_create(slug=HOME, defaults={"title": "Home"})
-        if created or not page.sections.exists():
-            for order, section_type in enumerate(DEFAULT_ORDER):
-                PageSection.objects.create(page=page, type=section_type, order=order, enabled=True, settings=default_settings(section_type))
+        """The home page, with its default sections made exactly once (R-28).
+
+        Two first requests at the same time used to both make the defaults (two banners).
+        The page row is locked and the check repeated after the lock, so only one request
+        makes them; Page.slug is unique, so only one page exists.
+        """
+        page, _ = Page.objects.get_or_create(slug=HOME, defaults={"title": "Home"})
+        if page.sections.exists():
+            return page
+        with transaction.atomic():
+            page = Page.objects.select_for_update().get(pk=page.pk)
+            if not page.sections.exists():
+                for order, section_type in enumerate(DEFAULT_ORDER):
+                    PageSection.objects.create(page=page, type=section_type, order=order, enabled=True, settings=default_settings(section_type))
         return page
 
     @staticmethod
