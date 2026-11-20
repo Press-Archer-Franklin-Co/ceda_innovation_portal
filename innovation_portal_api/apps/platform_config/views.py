@@ -22,7 +22,7 @@ from apps.platform_config.serializers import (
 from apps.platform_config.services import FeatureFlagService, IntegrationService, SMSStatusService, SSOTrialService
 from apps.platform_config.throttles import PlatformAdminThrottle, PlatformTestThrottle
 
-KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso or sms.", required=False, enum=["sso", "sms"])
+KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms or ai.", required=False, enum=["sso", "sms", "ai"])
 TAGS = ["Platform settings"]
 
 
@@ -92,7 +92,7 @@ class ProviderListView(_AdminView):
 )
 class IntegrationRuntimeView(_AdminView):
     def get(self, request):
-        return api_success(data={kind: IntegrationRuntimeSelector.status(kind) for kind in ("sso", "sms")})
+        return api_success(data={kind: IntegrationRuntimeSelector.status(kind) for kind in ("sso", "sms", "ai")})
 
 
 @extend_schema_view(

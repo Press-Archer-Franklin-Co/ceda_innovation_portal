@@ -30,6 +30,7 @@ from apps.assistant.privacy import safe_fields, safe_submission_answers
 from apps.audit.services import AuditService
 from apps.core.i18n import get_text
 
+# TODO tn-review: Setswana first drafts by the ai lane, to be checked by a Setswana speaker at CEDA.
 SUGGESTION_LABEL = {"en": "Suggestion from the AI helper", "tn": "Kakantsho go tswa mo mothusing wa AI"}
 SUGGESTIONS_ONLY = {"en": "Suggestions only. You decide what to change.", "tn": "Dikakantsho fela. O swetsa ka bowena se o se fetolang."}
 CONFIG_KEYS = ("feature_draft_check", "feature_hints", "feature_related", "feature_help", "feature_web_chat", "allow_guests_help", "monthly_limit_usd", "timeout_seconds")

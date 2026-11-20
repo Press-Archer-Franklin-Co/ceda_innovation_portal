@@ -24,6 +24,7 @@ STOPWORDS = frozenset(
     "botswana idea ideas project business small local community products product service services market create help make".split()
 )
 
+# TODO tn-review: the Setswana text below is a first draft by the ai lane; a Setswana speaker at CEDA must check it.
 PRIVACY_NOTE = {
     "en": (
         "What is sent to Anthropic: your guidance and the user manual text; for innovator guidance, the answers on the form step being "

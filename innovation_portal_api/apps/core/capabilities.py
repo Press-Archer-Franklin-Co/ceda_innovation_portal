@@ -73,6 +73,7 @@ CATALOGUE: dict[str, dict] = {
     "content.approve": {"group": "website", "label": "Approve website content", "label_tn": "Dumelela diteng tsa webosaete"},
     "users.manage": {"group": "administration", "label": "Manage people and roles", "label_tn": "Laola batho le maemo", "locked_to": (R.ADMINISTRATOR,)},
     "settings.manage": {"group": "administration", "label": "Change platform settings", "label_tn": "Fetola ditlhophiso", "locked_to": (R.ADMINISTRATOR,)},
+    # TODO tn-review: the two assistant label_tn values are first drafts by the ai lane.
     "assistant.hints": {
         "group": "ideas",
         "label": "See AI helper hints and related ideas",

@@ -731,3 +731,13 @@ class ConnectionTests(AssistantTestCase):
         response = self.client.get(f"{BASE}/status/")
         self.assertEqual(response.status_code, 200)
         self.assertFalse(data(response)["available"])
+
+
+class RuntimeStatusTests(AssistantTestCase):
+    def test_runtime_status_lists_the_ai_connection(self):
+        self.connect()
+        self.as_user(self.admin)
+        runtime = data(self.client.get("/api/platform/integrations/runtime/"))
+        self.assertEqual(runtime["ai"]["source"], "database")
+        self.as_user(self.officer)
+        self.assertEqual(self.client.get("/api/platform/integrations/runtime/").status_code, 403)
