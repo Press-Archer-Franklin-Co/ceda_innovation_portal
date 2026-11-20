@@ -120,6 +120,7 @@ class WorkflowStepWriteSerializer(serializers.ModelSerializer):
             "due_in_hours",
             "execution_mode",
             "minimum_completions_required",
+            "advance_automatically",
             "requires_assignment",
             "assignment_role",
             "minimum_assignments",

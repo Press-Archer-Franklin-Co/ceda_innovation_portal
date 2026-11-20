@@ -159,6 +159,8 @@ services:
       args:
         PUBLIC_VITE_API_URL: ""
         STAFF_VITE_PUBLIC_URL: "${INNOVATION_PORTAL_PUBLIC_URL:-}"
+        # Build with: CEDA_GIT_SHA=$(git rev-parse HEAD) docker compose build innovation_portal_edge
+        CEDA_GIT_SHA: "${CEDA_GIT_SHA:-unknown}"
     container_name: innovation_portal_edge
     restart: unless-stopped
     depends_on:
