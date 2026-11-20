@@ -22,7 +22,7 @@ const GROUPS = [
     items: [
       { label: 'staff.nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'staff.nav.reports', href: '/analytics', icon: BarChart3, capability: 'analytics.view' },
-      { label: 'staff.nav.reviewQueue', href: '/submissions', icon: ClipboardList, capability: 'entries.search' /* TODO(R-25) */ },
+      { label: 'staff.nav.reviewQueue', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
       { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, match: ['/assignments', '/history', '/tasks', '/evaluate'] },
     ],
   },
@@ -111,7 +111,7 @@ export default function Sidebar({ previewUser } = {}) {
     ? 'Admin access'
     : can('entries.assign')
       ? 'Officer access'
-      : can('entries.score') // TODO(R-25)
+      : can('entries.score')
         ? 'Judge access'
         : capabilities.length > 0
           ? 'Staff access'

@@ -6,3 +6,15 @@ export const STAFF_WORKER_ROLES = [
   'mentor',
   'administrator', 'admin',
 ]
+
+/** The person's main role as a label on the dashboard greeting. Display only. */
+export function userRoleLabel(user) {
+  const roles = user?.roles ?? []
+  if (user?.is_superuser) return 'Super Admin'
+  if (roles.includes('administrator'))        return 'Administrator'
+  if (roles.includes('innovation_officer'))   return 'Innovation Officer'
+  if (roles.includes('judge'))                return 'Judge'
+  if (roles.includes('mentor'))               return 'Mentor'
+  if (roles.includes('innovator'))            return 'Innovator'
+  return 'Staff'
+}

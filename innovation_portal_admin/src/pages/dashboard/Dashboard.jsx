@@ -15,6 +15,7 @@ import ErrorState   from '../../components/ui/ErrorState'
 import { SkeletonStatCards, SkeletonTable } from '../../components/ui/LoadingSkeleton'
 import { useAuth }  from '../../lib/auth/AuthContext'
 import { useJudgeOnly } from '../../lib/auth/useJudgeOnly'
+import { userRoleLabel } from '../../lib/auth/roleNames'
 import {
   useOperationsDashboard,
   useReportsDashboard,
@@ -38,16 +39,6 @@ function userInitials(user) {
   return (first + last).toUpperCase() || (user.username?.[0] ?? '?').toUpperCase()
 }
 
-function userRoleLabel(user) {
-  const roles = user?.roles ?? []
-  if (user?.is_superuser) return 'Super Admin'
-  if (roles.includes('administrator'))        return 'Administrator'
-  if (roles.includes('innovation_officer'))   return 'Innovation Officer'
-  if (roles.includes('judge'))                return 'Judge'
-  if (roles.includes('mentor'))               return 'Mentor'
-  if (roles.includes('innovator'))            return 'Innovator'
-  return 'Staff'
-}
 
 
 const SUBMISSION_COLS = [
@@ -313,8 +304,8 @@ function OfficerDashboard({ user }) {
   const navigate    = useNavigate()
   const firstName   = user?.first_name ?? user?.username ?? 'Staff'
   const { can }     = useAuth()
-  const adminMode   = can('entries.search') // sees every programme. TODO(R-25)
-  const canEvaluate = can('entries.score')  // TODO(R-25)
+  const adminMode   = can('entries.search') // sees every programme
+  const canEvaluate = can('entries.score')
 
   const {
     data: opsData,

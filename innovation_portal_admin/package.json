@@ -9,7 +9,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "test": "vitest run"
+    "test": "vitest run && node scripts/check-capabilities.mjs",
+    "check:capabilities": "node scripts/check-capabilities.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
