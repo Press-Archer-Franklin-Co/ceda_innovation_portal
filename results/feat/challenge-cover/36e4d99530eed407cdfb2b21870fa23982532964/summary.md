@@ -1,9 +1,9 @@
 ## CI results for `feat/challenge-cover` @ `36e4d99`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44706221203
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44717162638
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 16s, job steps 3m 38s
+Timing (api job): Run tests 3m 58s, job steps 4m 20s
 
 | Check | Result | Details |
 | --- | --- | --- |
