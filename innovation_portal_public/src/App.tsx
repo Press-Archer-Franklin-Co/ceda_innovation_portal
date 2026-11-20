@@ -40,6 +40,7 @@ const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
 const IdeaForm = lazy(() => import('./pages/innovator/IdeaForm'))
 const Notifications = lazy(() => import('./pages/innovator/Notifications'))
 const PreviewForm = lazy(() => import('./pages/innovator/PreviewForm'))
+const PreviewHome = lazy(() => import('./pages/PreviewHome'))
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -92,6 +93,8 @@ function AppRoutes() {
 
       {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
       <Route path="/preview/form" element={<PreviewForm />} />
+      {/* Staff home page editor preview (U6, 3.8), same idea. */}
+      <Route path="/preview/home" element={<PreviewHome />} />
 
       <Route element={<Layout />}>
         <Route path="/"            element={<HomeOrDashboard />} />

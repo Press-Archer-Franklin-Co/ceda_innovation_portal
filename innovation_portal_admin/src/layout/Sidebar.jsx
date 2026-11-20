@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  ClipboardCheck, Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -13,7 +13,6 @@ import Logo from '../components/ui/Logo'
 // Compact by default (216px wide, 32px rows, 13px text), roomier from 2xl (248px, 38px, 14px).
 // Each item names the capability (S1) the API checks behind it; an item is hidden when the person does not
 // hold it, and a group with nothing left is hidden. No role names here (ceda-security).
-// Items whose screens do not exist yet (Home page 3.8, Partners 3.12) are added with U6.
 
 const GROUPS = [
   {
@@ -41,10 +40,13 @@ const GROUPS = [
     // The approvals entry (U6) takes `anyOf: ['content.edit', 'content.approve']`, so someone who only approves
     // still sees this group; editor items keep content.edit.
     items: [
-      { label: 'staff.nav.news', href: '/content?tab=news', icon: Newspaper, capability: 'content.edit', tab: 'news', defaultTab: true },
-      { label: 'staff.nav.stories', href: '/content?tab=winners', icon: Trophy, capability: 'content.edit', tab: 'winners' },
-      { label: 'staff.nav.quotes', href: '/content?tab=leadership', icon: Quote, capability: 'content.edit', tab: 'leadership' },
-      { label: 'staff.nav.faqs', href: '/content?tab=faqs', icon: HelpCircle, capability: 'content.edit', tab: 'faqs' },
+      { label: 'staff.nav.homePage', href: '/content/home', icon: LayoutTemplate, capability: 'content.edit' },
+      { label: 'staff.nav.news', href: '/content/news', icon: Newspaper, capability: 'content.edit' },
+      { label: 'staff.nav.stories', href: '/content/stories', icon: Trophy, capability: 'content.edit' },
+      { label: 'staff.nav.quotes', href: '/content/quotes', icon: Quote, capability: 'content.edit', match: ['/content/quotes', '/content/leadership'] },
+      { label: 'staff.nav.partners', href: '/content/partners', icon: Handshake, capability: 'content.edit' },
+      { label: 'staff.nav.faqs', href: '/content/faqs', icon: HelpCircle, capability: 'content.edit' },
+      { label: 'staff.nav.approvals', href: '/content/approvals', icon: ClipboardCheck, anyOf: ['content.edit', 'content.approve'] },
     ],
   },
   {
