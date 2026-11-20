@@ -188,6 +188,37 @@ const tn: Record<StringKey, string> = {
   'video.noVideo': 'Kgang e ga e na bidio.', // TODO tn-review
   'video.transcript': 'Mafoko a bidio', // TODO tn-review
 
+  'sent.title': 'Kakanyo ya gago e amogetswe.', // TODO tn-review
+  'sent.wellDone': 'O dirile sentle, {name}!', // TODO tn-review
+  'sent.wellDoneNoName': 'O dirile sentle!', // TODO tn-review
+  'sent.copyTo': 'Re rometse khopi go {to} ka {channel}.', // TODO tn-review
+  'sent.channel.sms': 'SMS', // TODO tn-review
+  'sent.channel.email': 'imeile', // TODO tn-review
+  'sent.channel.whatsapp': 'WhatsApp', // TODO tn-review
+  'sent.reference': 'Nomore ya gago ya tshupetso', // TODO tn-review
+  'sent.copy': 'Kopisa', // TODO tn-review
+  'sent.copied': 'E kopisitswe', // TODO tn-review
+  'sent.share': 'Abelana ka WhatsApp', // TODO tn-review
+  'sent.shareText': 'Kakanyo ya me e kwa CEDA. Nomore ya tshupetso: {ref}', // TODO tn-review
+  'sent.nextOver': 'Se se latelang', // TODO tn-review
+  'sent.nextTitle': 'Dikgato di le {n}, mme o ka bona nngwe le nngwe', // TODO tn-review
+  'sent.received': 'E amogetswe', // TODO tn-review
+  'sent.receivedWhen': 'Gompieno, {when}', // TODO tn-review
+  'sent.next': 'E e latelang', // TODO tn-review
+  'sent.addTitle': 'Oketsa dintlha jaanong', // TODO tn-review
+  'sent.addBody': 'Ditshwantsho, bidio e khutshwane kgotsa dikwalo di thusa batlhankedi go tlhaloganya kakanyo ya gago.', // TODO tn-review
+  'sent.addCta': 'Oketsa dintlha', // TODO tn-review
+  'sent.trackTitle': 'E latele ka tsela e o e ratang', // TODO tn-review
+  'sent.trackBody': 'Akhaonto ya gago, dikitsiso tsa WhatsApp, kgotsa leletsa {ussd} o bo o tsenya nomore ya gago ya tshupetso.', // TODO tn-review
+  'sent.trackBodyNoUssd': 'Akhaonto ya gago kgotsa dikitsiso tsa WhatsApp, ka nomore ya gago ya tshupetso.', // TODO tn-review
+  'sent.trackCta': 'Bula letlapa la me', // TODO tn-review
+  'sent.signInCta': 'Tsena go latela', // TODO tn-review
+  'sent.moreTitle': 'O na le kakanyo e nngwe?', // TODO tn-review
+  'sent.moreBody': 'Tlhola dikgwetlho tse di bulegileng. Dingwe di tla le dithuso tsa madi le kaelo.', // TODO tn-review
+  'sent.moreCta': 'Bona dikgwetlho', // TODO tn-review
+  'sent.missing': 'Ga re a bona kakanyo ya gago e e rometsweng mo tsebeng e', // TODO tn-review
+  'sent.missingBody': 'Fa o rometse kakanyo, e babalesegile. Nomore ya gago ya tshupetso e mo molaetseng o re o go romeletseng, le mo Dikakanyong tsa me fa o na le akhaonto.', // TODO tn-review
+
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',
   'pager.next': 'Pele',

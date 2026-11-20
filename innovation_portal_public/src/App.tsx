@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
 import PrivateRoute  from './components/ui/PrivateRoute'
 const Home = lazy(() => import('./pages/Home'))
+const IdeaSent = lazy(() => import('./pages/IdeaSent'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
@@ -90,6 +91,7 @@ function AppRoutes() {
       <Route element={<Layout />}>
         <Route path="/"            element={<HomeOrDashboard />} />
         <Route path="/home"        element={<Home />} />
+        <Route path="/idea-sent"   element={<IdeaSent />} />
         <Route path="/about"       element={<About />} />
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
