@@ -50,6 +50,7 @@ const GROUPS = [
     label: 'staff.group.admin',
     items: [
       { label: 'staff.nav.users', href: '/users', icon: Users, adminOnly: true },
+      { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, adminOnly: true },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, adminOnly: true },
       { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, adminOnly: true },
       { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, adminOnly: true },

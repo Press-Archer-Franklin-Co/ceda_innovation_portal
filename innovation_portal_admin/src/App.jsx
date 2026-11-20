@@ -33,6 +33,7 @@ const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
 const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 const Users = lazy(() => import('./pages/users/Users'))
+const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
 const ContentList = lazy(() => import('./pages/content/ContentList'))
 const ContentEditor = lazy(() => import('./pages/content/ContentEditor'))
@@ -110,6 +111,8 @@ export default function App() {
                 <Route element={<AdminRoute />}>
                   <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
                   <Route path="/users"     element={<ErrorBoundary><Users /></ErrorBoundary>} />
+                  {/* S2. TODO(S1): settings.manage once S1 is on main. */}
+                  <Route path="/admin/roles" element={<ErrorBoundary><RolesPermissions /></ErrorBoundary>} />
                   <Route path="/audit"     element={<ErrorBoundary><AuditLogs /></ErrorBoundary>} />
                 </Route>
 

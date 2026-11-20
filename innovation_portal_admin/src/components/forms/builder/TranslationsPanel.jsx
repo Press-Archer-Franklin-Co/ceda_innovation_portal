@@ -1,12 +1,30 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Users } from 'lucide-react'
 import Tag from '../../ui/Tag'
 import Button from '../../ui/Button'
 import { SelectControl } from '../../ui/Select'
-import { useT } from '../../../i18n/context'
+import { useI18n, useT } from '../../../i18n/context'
 import { cn } from '../../../lib/cn'
+import { useAuth } from '../../../lib/auth/AuthContext'
+import { useAdminRoles } from '../../../lib/queries/adminRoles'
+import { pickText } from '../../../lib/admin/roles'
 
 const REVIEWER_ROLES = ['innovation_officer', 'innovation_manager', 'staff_member']
+
+/**
+ * Roles that can be asked to review: the built-in reviewer roles, plus custom roles such as
+ * "Setswana reviewer" (S2). Only administrators may read the role list today, so others see the
+ * built-in ones. TODO(S1): ask can('settings.manage'); TODO(R-32): a list form editors can read.
+ */
+function useReviewerRoles(t, lang) {
+  const { user } = useAuth()
+  const roles = useAdminRoles({ enabled: !!user?.is_admin })
+  return useMemo(() => {
+    const builtIn = REVIEWER_ROLES.map((r) => ({ value: r, label: t(`tr.role.${r}`) }))
+    const custom = (roles.data ?? []).filter((r) => r.is_active && !r.is_system).map((r) => ({ value: r.code, label: pickText(r.name, lang) }))
+    return [...builtIn, ...custom]
+  }, [roles.data, t, lang])
+}
 
 /**
  * 3.5b right panel: every text with English beside Setswana. Edits go into the
@@ -15,6 +33,8 @@ const REVIEWER_ROLES = ['innovation_officer', 'innovation_manager', 'staff_membe
  */
 export default function TranslationsPanel({ rows, onText, suggestions, onSuggest, suggesting, suggestOff, onRequestReview, reviewing, focusKey }) {
   const t = useT()
+  const { lang } = useI18n()
+  const reviewerRoles = useReviewerRoles(t, lang)
   const [role, setRole] = useState('innovation_officer')
   const done = rows.filter((row) => (row.value?.tn ?? '').trim()).length
   const total = rows.length
@@ -73,7 +93,7 @@ export default function TranslationsPanel({ rows, onText, suggestions, onSuggest
             aria-label={t('tr.reviewRole')}
             value={role}
             onChange={setRole}
-            options={REVIEWER_ROLES.map((r) => ({ value: r, label: t(`tr.role.${r}`) }))}
+            options={reviewerRoles}
           />
           <Button size="sm" variant="secondary" onClick={() => onRequestReview(role)} loading={reviewing}>{t('tr.send')}</Button>
         </div>

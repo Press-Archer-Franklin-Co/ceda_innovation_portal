@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Users as UsersIcon,
@@ -20,6 +20,8 @@ import DataTable from '../../components/ui/DataTable'
 import ErrorState from '../../components/ui/ErrorState'
 import StatusPill from '../../components/ui/StatusPill'
 import { users as usersApi } from '../../lib/api/endpoints'
+import { useAdminRoles } from '../../lib/queries/adminRoles'
+import { pickText } from '../../lib/admin/roles'
 import ActionDrawer from '../../components/assignments/ActionDrawer'
 
 const ROLE_OPTIONS = [
@@ -32,8 +34,20 @@ const ROLE_OPTIONS = [
   { value: 'mentor', label: 'Mentor', description: 'Supports assigned innovation work.' },
 ]
 
-function roleLabel(value) {
-  return ROLE_OPTIONS.find(r => r.value === value)?.label ?? (value ? value.replace(/_/g, ' ') : '—')
+function roleLabel(value, options = ROLE_OPTIONS) {
+  return options.find(r => r.value === value)?.label ?? (value ? value.replace(/_/g, ' ') : '—')
+}
+
+/** Built-in roles plus the active custom roles an administrator made (S2, GET /api/admin/roles/). */
+function useRoleOptions() {
+  const custom = useAdminRoles()
+  return useMemo(() => {
+    const known = new Set(ROLE_OPTIONS.map((r) => r.value))
+    const extra = (custom.data ?? [])
+      .filter((r) => r.is_active && !r.is_system && !known.has(r.code))
+      .map((r) => ({ value: r.code, label: pickText(r.name, 'en'), description: pickText(r.description, 'en') }))
+    return [...ROLE_OPTIONS, ...extra]
+  }, [custom.data])
 }
 
 const AUTH_METHOD_LABELS = {
@@ -75,6 +89,7 @@ export default function Users() {
   const [pageSize, setPageSize] = useState(25)
   const [selectedUser, setSelectedUser] = useState(null)
   const [selectedRoles, setSelectedRoles] = useState([])
+  const roleOptions = useRoleOptions()
   const [drawerError, setDrawerError] = useState('')
   const [ccInput, setCcInput] = useState('')
   const [ccEmails, setCcEmails] = useState([])
@@ -182,7 +197,7 @@ export default function Users() {
           <div className="flex flex-wrap items-center gap-2">
             <select className="input h-9 py-0 text-sm w-36" value={role} onChange={(e) => resetPage(setRole)(e.target.value)}>
               <option value="">All roles</option>
-              {ROLE_OPTIONS.map((opt) => (
+              {roleOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
@@ -228,7 +243,7 @@ export default function Users() {
               render: (value, row) => (
                 <div>
                   <span className="inline-flex items-center gap-1 rounded-full bg-ceda-green-pale text-ceda-forest px-2.5 py-1 text-[11px] font-semibold">
-                    <ShieldCheck size={12} /> {roleLabel(value)}
+                    <ShieldCheck size={12} /> {roleLabel(value, roleOptions)}
                   </span>
                   {row.primary_role_source && row.primary_role_source !== value && (
                     <p className="text-[10px] text-ceda-muted mt-1">Legacy: {row.primary_role_source}</p>
@@ -237,7 +252,7 @@ export default function Users() {
                     <div className="mt-2 flex flex-wrap gap-1">
                       {row.roles.map((r) => (
                         <span key={r} className="inline-flex items-center rounded-full border border-ceda-border px-2 py-0.5 text-[10px] text-ceda-muted">
-                          {roleLabel(r)}
+                          {roleLabel(r, roleOptions)}
                         </span>
                       ))}
                     </div>
@@ -443,7 +458,7 @@ export default function Users() {
           <div>
             <label className="label">Roles</label>
             <div className="space-y-2">
-              {ROLE_OPTIONS.map((opt) => (
+              {roleOptions.map((opt) => (
                 <label
                   key={opt.value}
                   className={`flex items-start gap-3 rounded-xl border p-3 text-sm transition-colors ${
