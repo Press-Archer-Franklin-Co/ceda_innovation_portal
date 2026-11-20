@@ -38,6 +38,8 @@ const GROUPS = [
   {
     key: 'website',
     label: 'staff.group.website',
+    // Managers approve but do not edit (content.approve without content.edit). The approvals entry (U6) takes
+    // `anyOf: ['content.edit', 'content.approve']` so managers still see this group; editor items keep content.edit.
     items: [
       { label: 'staff.nav.news', href: '/content?tab=news', icon: Newspaper, capability: 'content.edit', tab: 'news', defaultTab: true },
       { label: 'staff.nav.stories', href: '/content?tab=winners', icon: Trophy, capability: 'content.edit', tab: 'winners' },
@@ -102,7 +104,7 @@ export default function Sidebar({ previewUser } = {}) {
 
   const groups = GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => !item.capability || can(item.capability)),
+    items: g.items.filter((item) => (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability))),
   })).filter((g) => g.items.length > 0)
 
   const roleLabel = can('settings.manage')
