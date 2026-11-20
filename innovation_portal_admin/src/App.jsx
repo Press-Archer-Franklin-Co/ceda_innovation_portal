@@ -34,7 +34,7 @@ const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 const Users = lazy(() => import('./pages/users/Users'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
-const ContentList = lazy(() => import('./pages/content/ContentList'))
+const ContentIndex = lazy(() => import('./pages/content/ContentIndex'))
 const HomePageEditor = lazy(() => import('./pages/content/HomePageEditor'))
 const NewsList = lazy(() => import('./pages/content/NewsList'))
 const PostEditor = lazy(() => import('./pages/content/PostEditor'))
@@ -124,7 +124,7 @@ export default function App() {
                   <Route path="/marking-criteria"               element={<ErrorBoundary><MarkingCriteria /></ErrorBoundary>} />
                   <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
                   <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
-                  <Route path="/content"                        element={<ErrorBoundary><ContentList /></ErrorBoundary>} />
+                  <Route path="/content"                        element={<ErrorBoundary><ContentIndex /></ErrorBoundary>} />
                   <Route path="/content/home"                   element={<ErrorBoundary><HomePageEditor /></ErrorBoundary>} />
                   <Route path="/content/news"                   element={<ErrorBoundary><NewsList /></ErrorBoundary>} />
                   <Route path="/content/news/new"               element={<ErrorBoundary><PostEditor /></ErrorBoundary>} />
