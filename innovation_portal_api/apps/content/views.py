@@ -33,7 +33,7 @@ class ContentItemViewSet(ModelViewSet):
     Public:  GET /api/content/           — published items only
              GET /api/content/{id}/      — published item detail
              GET /api/content/highlights/ — up to 5 highlighted published items
-    Staff:   POST / PATCH / DELETE       — requires the content.edit capability
+    Staff:   POST / PATCH / DELETE (needs the content.edit capability)
     """
 
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -98,7 +98,7 @@ class HackathonDetailViewSet(ModelViewSet):
 
     Public:  GET /api/content/hackathons/           — published details
              GET /api/content/hackathons/{id}/      — single hackathon detail
-    Staff:   POST / PATCH / DELETE                  — requires the content.edit capability
+    Staff:   POST / PATCH / DELETE (needs the content.edit capability)
     """
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -191,7 +191,7 @@ class LeadershipCardViewSet(ModelViewSet):
     Leadership / executive testimonial cards for the homepage carousel.
 
     Public:   GET /api/content/leadership/         — active cards in sort order
-    Staff:    POST / PATCH / DELETE                — requires the content.edit capability
+    Staff:    POST / PATCH / DELETE (needs the content.edit capability)
     Reorder:  POST /api/content/leadership/reorder/ — [{id, sort_order}, ...]
     """
 
@@ -277,7 +277,7 @@ class WinnerSpotlightViewSet(ModelViewSet):
     Featured winners.
 
     Public:  GET /api/content/winners/          — all winners (optionally ?featured=true)
-    Staff:   POST / PATCH / DELETE              — requires the content.edit capability
+    Staff:   POST / PATCH / DELETE (needs the content.edit capability)
     """
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
