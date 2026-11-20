@@ -1,9 +1,9 @@
 ## CI results for `feat/roles-and-approvals` @ `c49deb2`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44727884520
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44734587322
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 4m 02s, job steps 4m 23s
+Timing (api job): Run tests 3m 10s, job steps 3m 25s
 
 | Check | Result | Details |
 | --- | --- | --- |
