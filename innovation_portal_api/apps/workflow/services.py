@@ -922,7 +922,7 @@ class GraphAssignmentRuntimeService:
 
     @classmethod
     def _lock_assignment(cls, assignment_instance: AssignmentInstance) -> AssignmentInstance:
-        return AssignmentInstance.objects.select_for_update().select_related(
+        return AssignmentInstance.objects.select_for_update(of=("self",)).select_related(
             "assignee_user",
             "node_instance__node",
             "node_instance__workflow_instance",
@@ -1402,8 +1402,8 @@ class GraphWorkflowRuntimeService:
                             "required": field.required,
                             "field_type": field.field_type,
                         }
-                        for section in binding.form_definition.sections.all().order_by("order")
-                        for field in section.fields.all().order_by("order")
+                        for section in binding.form_definition.sections.all().order_by("ordering")
+                        for field in section.fields.all().order_by("ordering")
                     ],
                 }
                 for binding in bindings
@@ -1463,7 +1463,8 @@ class GraphWorkflowRuntimeService:
     @classmethod
     @transaction.atomic
     def perform_action(cls, *, instance: WorkflowInstance, actor, action_key: str, comment: str = "", payload_json: dict | None = None):
-        instance = WorkflowInstance.objects.select_for_update().select_related("workflow_definition", "current_node").get(id=instance.id)
+        # Lock only the instance row: PostgreSQL refuses FOR UPDATE on the nullable side of a join (current_node).
+        instance = WorkflowInstance.objects.select_for_update(of=("self",)).select_related("workflow_definition", "current_node").get(id=instance.id)
         if not instance.current_node_id:
             raise ValidationError({"detail": "This workflow instance is not currently executing a graph node."})
         if instance.status != WorkflowInstance.STATUS_IN_PROGRESS:

@@ -220,7 +220,7 @@ class RoleTaskVisibilityIsolationTests(TestCase):
             assigned_by=self.officer,
         )
 
-        RoleService.set_roles(dual_user, [RoleType.INNOVATION_OFFICER])
+        RoleService.set_roles(user=dual_user, role_codes=[RoleType.INNOVATION_OFFICER])
 
         ids = self._my_assignment_ids(dual_user)
         self.assertNotIn(

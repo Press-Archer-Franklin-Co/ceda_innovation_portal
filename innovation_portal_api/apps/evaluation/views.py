@@ -734,6 +734,14 @@ class MyCycleView(generics.GenericAPIView):
         if not step.requires_evaluation:
             if WorkflowRuntimeService.allowed_actions_for_user(submission.workflow_instance, request.user):
                 source_cycle = self._latest_completed_source_cycle(submission, step)
+                if source_cycle is None and EvaluationService._is_full_access_staff(request.user):
+                    # No mapped source step: show staff the latest finished review of this submission.
+                    source_cycle = (
+                        ReviewCycle.objects.filter(submission=submission, status=ReviewCycle.STATUS_COMPLETED)
+                        .select_related("workflow_step", "stage_config")
+                        .order_by("-closed_at", "-updated_at")
+                        .first()
+                    )
                 if source_cycle:
                     data = EvaluationService.get_scorecard_for_reviewer(
                         submission=submission,
