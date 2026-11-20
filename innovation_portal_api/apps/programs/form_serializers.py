@@ -2,7 +2,6 @@
 
 from rest_framework import serializers
 
-from apps.core.constants import RoleType
 from apps.programs.form_schema import bilingual
 from apps.programs.models import FormVersion, Program, SubmissionForm
 
@@ -149,9 +148,16 @@ class TranslationSuggestSerializer(serializers.Serializer):
 
 
 class TranslationReviewRequestSerializer(serializers.Serializer):
-    role = serializers.ChoiceField(choices=RoleType.choices, help_text="Everyone with this role is notified.")
+    role = serializers.CharField(max_length=50, help_text="Everyone with this role is notified: a built-in or custom role code (S2).")
     note = serializers.CharField(required=False, allow_blank=True, max_length=1000)
 
+
+    def validate_role(self, value):
+        from apps.accounts.models import Role
+
+        if not Role.objects.filter(code=value, is_active=True).exists():
+            raise serializers.ValidationError("Choose an active role.")
+        return value
 
 class AttachFormSerializer(serializers.Serializer):
     form_id = serializers.UUIDField()

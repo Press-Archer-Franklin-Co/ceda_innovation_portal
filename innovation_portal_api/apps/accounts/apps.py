@@ -9,6 +9,7 @@ class AccountsConfig(AppConfig):
     name = "apps.accounts"
 
     def ready(self):
+        from apps.accounts import signals  # noqa: F401  (clears the capability cache on role changes)
         from apps.accounts.identity_providers import IdentityProviderRegistry
 
         diagnostics = IdentityProviderRegistry.provider_diagnostics()
