@@ -291,7 +291,7 @@ export default function HomePageEditor() {
       return
     }
     const when = goLive.at ? t('home.sendWhen', { date: formatDate(goLive.at, uiLang, true) }) : ''
-    const ok = await confirm({ title: t('home.sendTitle'), body: t('home.sendBody', { when }), confirmLabel: t('home.send') })
+    const ok = await confirm({ title: t('home.sendTitle'), body: t('home.sendBody', { when }), confirmLabel: t('home.send'), tone: 'primary' })
     if (!ok) return
     try {
       await submit.mutateAsync(goLive.at ? new Date(goLive.at).toISOString() : null)
