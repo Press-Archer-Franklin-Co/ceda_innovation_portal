@@ -1,9 +1,9 @@
 ## CI results for `fix/submissions-migration-merge` @ `256cb1f`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44679615480
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44681124892
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 12s, job steps 3m 27s
+Timing (api job): Run tests 3m 23s, job steps 3m 40s
 
 | Check | Result | Details |
 | --- | --- | --- |
