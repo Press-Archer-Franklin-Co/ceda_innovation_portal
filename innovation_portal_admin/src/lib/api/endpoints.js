@@ -5,6 +5,8 @@ export const auth = {
   logout:        (body)   => client.post('/api/auth/logout/', body),
   refresh:       (body)   => client.post('/api/auth/refresh/', body, { skipAuthRedirect: true }),
   me:            (signal) => client.get('/api/profile/', undefined, signal),
+  // The signed-in user with `capabilities` (S1). /api/profile/ does not carry them.
+  whoami:        (signal) => client.get('/api/auth/me/', undefined, signal),
   changePassword:(body)   => client.post('/api/auth/change-password/', body),
   forgotPassword:(body)   => client.post('/api/auth/forgot-password/', body),
 }

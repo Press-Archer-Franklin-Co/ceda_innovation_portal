@@ -9,7 +9,7 @@ import { SkeletonTable } from '../../components/ui/LoadingSkeleton'
 import { useSubmissions }          from '../../lib/queries/submissions'
 import { usePrograms }             from '../../lib/queries/programs'
 import { useAuth }                 from '../../lib/auth/AuthContext'
-import { isPureJudge } from '../../lib/auth/permissions'
+import { useJudgeOnly } from '../../lib/auth/useJudgeOnly'
 
 
 const TYPE_TABS = [
@@ -290,7 +290,7 @@ function SubmissionsTab() {
 
 export default function Submissions() {
   const { user } = useAuth()
-  const judgeOnly = isPureJudge(user)
+  const judgeOnly = useJudgeOnly()
 
   if (judgeOnly) return <Navigate to="/assignments" replace />
 

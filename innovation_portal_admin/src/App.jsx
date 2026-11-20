@@ -1,8 +1,9 @@
 import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
-import { ProtectedRoute, AdminRoute, OfficerRoute }  from './lib/auth/ProtectedRoute'
+import { ProtectedRoute, CapabilityRoute }  from './lib/auth/ProtectedRoute'
 import AppLayout           from './layout/AppLayout'
 import PageErrorBoundary   from './components/ui/PageErrorBoundary'
 
@@ -42,6 +43,7 @@ const LeadershipQuotes = lazy(() => import('./pages/content/LeadershipQuotes'))
 const Partners = lazy(() => import('./pages/content/Partners'))
 const Faqs = lazy(() => import('./pages/content/Faqs'))
 const Stories = lazy(() => import('./pages/content/Stories'))
+const Approvals = lazy(() => import('./pages/content/Approvals'))
 const HackathonContentEditor = lazy(() => import('./pages/content/HackathonContentEditor'))
 const WinnersManager = lazy(() => import('./pages/content/WinnersManager'))
 const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
@@ -59,7 +61,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime:           30_000,
-      retry:               1,
+      retry:               retryUnlessRefused,
       refetchOnWindowFocus: true,
       refetchOnReconnect:   true,
     },
@@ -105,25 +107,38 @@ export default function App() {
                 <Route path="/evaluations/mine" element={<Navigate to="/assignments" replace />} />
                 <Route path="/evaluations/:id"  element={<ErrorBoundary><EvaluationForm /></ErrorBoundary>} />
 
-                <Route element={<AdminRoute />}>
+                {/* Each group asks for the capability the API checks on the endpoints behind it (S1). */}
+                <Route element={<CapabilityRoute need="entries.assign" />}>
                   <Route path="/admin/workflows"               element={<ErrorBoundary><AdminWorkflows /></ErrorBoundary>} />
                   <Route path="/admin/workflows/:id/builder"   element={<ErrorBoundary><WorkflowBuilder /></ErrorBoundary>} />
                   <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="challenges.manage" />}>
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
                 </Route>
-
-                <Route element={<AdminRoute />}>
+                <Route element={<CapabilityRoute need="analytics.view" />}>
                   <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="users.manage" />}>
                   <Route path="/users"     element={<ErrorBoundary><Users /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="audit.view" />}>
                   <Route path="/audit"     element={<ErrorBoundary><AuditLogs /></ErrorBoundary>} />
                 </Route>
 
-
-                <Route element={<OfficerRoute />}>
+                <Route element={<CapabilityRoute need="criteria.manage" />}>
                   <Route path="/marking-criteria"               element={<ErrorBoundary><MarkingCriteria /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="forms.manage" />}>
                   <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
                   <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
+                </Route>
+                {/* Website content editors (U6) need content.edit. Approving is its own capability (content.approve);
+                    the approvals list below opens for either, and its buttons follow can_approve / can_send_back. */}
+                <Route element={<CapabilityRoute need="content.edit" />}>
                   <Route path="/content"                        element={<ErrorBoundary><ContentIndex /></ErrorBoundary>} />
                   <Route path="/content/home"                   element={<ErrorBoundary><HomePageEditor /></ErrorBoundary>} />
                   <Route path="/content/news"                   element={<ErrorBoundary><NewsList /></ErrorBoundary>} />
@@ -142,6 +157,10 @@ export default function App() {
                   <Route path="/content/stories"                element={<ErrorBoundary><Stories /></ErrorBoundary>} />
                   <Route path="/content/faqs/new"               element={<ErrorBoundary><FaqEditor /></ErrorBoundary>} />
                   <Route path="/content/faqs/:id"               element={<ErrorBoundary><FaqEditor /></ErrorBoundary>} />
+                </Route>
+                {/* Approvers who do not edit (content.approve only) still reach the list; its buttons follow the API. */}
+                <Route element={<CapabilityRoute need={['content.edit', 'content.approve']} />}>
+                  <Route path="/content/approvals"              element={<ErrorBoundary><Approvals /></ErrorBoundary>} />
                 </Route>
 
                 <Route path="/settings" element={<Settings />} />

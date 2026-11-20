@@ -260,8 +260,7 @@ export default function PostEditor() {
   const title = quick ? t('post.quickTitle') : id ? t('post.editTitle') : t('post.newTitle')
 
   const actions = (
-    // TODO(R-24): PageHeader keeps actions on one line; cap them so they wrap on a phone.
-    <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-wrap items-center justify-end gap-2">
       {statusText && (
         <span role="status" className={cn('inline-flex items-center gap-1 text-[12px]', saveState === 'failed' || saveState === 'rejected' ? 'text-danger' : 'text-muted')}>
           {saveState === 'saved' && !dirty && <Check size={14} aria-hidden className="text-success" />}

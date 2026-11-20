@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 from apps.audit.services import AuditService
 from apps.core.api import api_success
 from apps.core.i18n import normalize_language
-from apps.core.permissions import IPRateThrottle, IsOfficerOrAdmin
+from apps.core.permissions import HasCapability, IPRateThrottle
 from apps.programs.form_builder import (
     FormDocumentService,
     FormLibraryService,
@@ -58,7 +58,7 @@ def _detail(form: SubmissionForm) -> dict:
 
 
 class FormListCreateView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -116,7 +116,7 @@ class FormListCreateView(APIView):
 
 
 class FormTemplateListView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(tags=TAGS, summary="List form templates", responses=FormTemplateSerializer(many=True))
     def get(self, request):
@@ -125,7 +125,7 @@ class FormTemplateListView(APIView):
 
 
 class FormDetailView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(tags=TAGS, summary="Get a form's summary", responses=FormListItemSerializer)
     def get(self, request, form_id):
@@ -165,7 +165,7 @@ class FormDetailView(APIView):
 
 
 class FormDraftView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -194,7 +194,7 @@ class FormDraftView(APIView):
 
 
 class FormPublishView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -222,7 +222,7 @@ class FormPublishView(APIView):
 
 
 class FormPublishCheckView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -234,7 +234,7 @@ class FormPublishCheckView(APIView):
 
 
 class FormVersionListView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(tags=TAGS, summary="List a form's published versions", responses=FormVersionSummarySerializer(many=True))
     def get(self, request, form_id):
@@ -266,7 +266,7 @@ class PublishedFormView(APIView):
 
 
 class FormTranslationsView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -304,7 +304,7 @@ class FormTranslationsView(APIView):
 
 
 class FormTranslationSuggestView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -326,7 +326,7 @@ class FormTranslationSuggestView(APIView):
 
 
 class FormTranslationReviewView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -348,7 +348,7 @@ class FormTranslationReviewView(APIView):
 
 
 class FormDuplicateView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(tags=TAGS, summary="Copy a form into a new draft", request=DuplicateFormSerializer, responses={201: FormListItemSerializer})
     def post(self, request, form_id):
@@ -361,7 +361,7 @@ class FormDuplicateView(APIView):
 
 
 class FormArchiveView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
 
     @extend_schema(
         tags=TAGS,
@@ -386,7 +386,7 @@ class CSVRenderer(BaseRenderer):
 
 
 class FormResponsesExportView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("forms.manage")]
     renderer_classes = [CSVRenderer, JSONRenderer]
 
     @extend_schema(

@@ -265,8 +265,7 @@ export default function FormBuilder() {
         title={pick(doc.name, 'en')}
         subtitle={t('builder.intro')}
         actions={
-          // TODO(R-24): max-w lets the actions wrap on a phone until PageHeader's actions can shrink.
-          <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {status && (
               <span role="status" className={cn('inline-flex items-center gap-1 text-[12px]', saveState === 'failed' || saveState === 'rejected' ? 'text-danger' : 'text-muted')}>
                 {saveState === 'saved' && <Check size={14} aria-hidden className="text-success" />}

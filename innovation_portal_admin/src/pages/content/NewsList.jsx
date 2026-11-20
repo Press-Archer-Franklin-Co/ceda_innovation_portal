@@ -204,8 +204,7 @@ export default function NewsList() {
         title={t('news.title')}
         subtitle={t('news.subtitle')}
         actions={
-          // TODO(R-24): PageHeader keeps actions on one line; cap them so they wrap on a phone.
-          <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link to="/content/news/new?type=notice&quick=1" className={buttonClasses({ variant: 'secondary' })}><Megaphone size={15} aria-hidden /> {t('news.quick')}</Link>
             <Link to="/content/news/new" className={buttonClasses({ variant: 'primary' })}>{t('news.new')}</Link>
           </div>

@@ -23,6 +23,7 @@ import ConnectionFields from './ConnectionFields'
 import { ConnectionStatusBadge, CopyField, ErrorBanner, SourceBadge, WarningList } from './shared'
 import { formatWhen } from './utils'
 import { useConfirm } from '../../../components/ui/confirm'
+import { pollEvery } from '../../../lib/api/refusals'
 
 const COPY = {
   sso: {
@@ -261,7 +262,7 @@ function ConnectionEditor({ kind, connection, providers, onSaved, onDeleted }) {
 
   // While a trial sign-in popup is open, poll until the result arrives (up to 5 minutes).
   const polling = !!trialStartedAt && Date.now() - trialStartedAt < 5 * 60 * 1000
-  const live = useIntegration(connection?.id, { refetchInterval: polling ? 2000 : false })
+  const live = useIntegration(connection?.id, { refetchInterval: polling ? pollEvery(2000) : false })
   const current = live.data ?? connection
   const lastResult = current?.last_test_result
   const trialDone =

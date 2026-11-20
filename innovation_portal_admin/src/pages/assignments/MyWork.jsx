@@ -13,7 +13,7 @@ import {
   useClaimSubmissionSlot,
 } from '../../lib/queries/assignmentInstances'
 import { useAuth }           from '../../lib/auth/AuthContext'
-import { ALL_STAFF_WORKER_ROLES, isAdminOrManager, isInnovationOfficer, isStaffWorker } from '../../lib/auth/permissions'
+import { STAFF_WORKER_ROLES } from '../../lib/auth/roleNames'
 import ErrorState            from '../../components/ui/ErrorState'
 import { SkeletonCards }     from '../../components/ui/LoadingSkeleton'
 
@@ -290,12 +290,12 @@ function RoleSelector({ roles = [], value, onChange }) {
 
 
 export default function MyWork() {
-  const { user, activeRole, setActiveRole }   = useAuth()
+  const { user, activeRole, setActiveRole, can } = useAuth()
   const navigate   = useNavigate()
-  const isAdmin    = isAdminOrManager(user)
-  const canWork    = isStaffWorker(user)
+  const isAdmin    = can('entries.assign') // assigns reviewers (IsOfficerOrAdmin)
+  const canWork    = can('entries.review') // claims queue work (IsStaffWorker)
   const staffRoles = useMemo(
-    () => (user?.roles ?? []).filter((role) => ALL_STAFF_WORKER_ROLES.includes(role)),
+    () => (user?.roles ?? []).filter((role) => STAFF_WORKER_ROLES.includes(role)),
     [user?.roles]
   )
   const workRole = staffRoles.includes(activeRole) ? activeRole : (staffRoles[0] ?? activeRole)
@@ -374,7 +374,7 @@ export default function MyWork() {
 
   const available = queueRaw.filter(q => q.can_claim && !q.requires_invitation)
 
-  const specialistPending = isInnovationOfficer(user)
+  const specialistPending = can('entries.assign')
     ? queueRaw.filter(q => q.requires_invitation && !q.my_assignment_id)
     : []
 

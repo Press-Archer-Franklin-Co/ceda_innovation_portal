@@ -10,7 +10,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from apps.core.permissions import IsOfficerOrAdmin
+from apps.core.capabilities import user_has
+from apps.core.permissions import HasCapability
 from apps.programs.access import ProgramAccessService
 
 from .models import ContentItem, HackathonDetail, HackathonMedia, LeadershipCard, SiteSettings, WinnerSpotlight
@@ -32,7 +33,7 @@ class ContentItemViewSet(ModelViewSet):
     Public:  GET /api/content/           — published items only
              GET /api/content/{id}/      — published item detail
              GET /api/content/highlights/ — up to 5 highlighted published items
-    Staff:   POST / PATCH / DELETE       — requires IsOfficerOrAdmin
+    Staff:   POST / PATCH / DELETE (needs the content.edit capability)
     """
 
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -60,7 +61,7 @@ class ContentItemViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve", "highlights"):
             return [AllowAny()]
-        return [IsOfficerOrAdmin()]
+        return [HasCapability.of("content.edit")()]
 
     def perform_create(self, serializer):
         published_at = serializer.validated_data.get("published_at")
@@ -97,7 +98,7 @@ class HackathonDetailViewSet(ModelViewSet):
 
     Public:  GET /api/content/hackathons/           — published details
              GET /api/content/hackathons/{id}/      — single hackathon detail
-    Staff:   POST / PATCH / DELETE                  — requires IsOfficerOrAdmin
+    Staff:   POST / PATCH / DELETE (needs the content.edit capability)
     """
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -122,7 +123,7 @@ class HackathonDetailViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
-        return [IsOfficerOrAdmin()]
+        return [HasCapability.of("content.edit")()]
 
     def perform_create(self, serializer):
         program_id = self.request.data.get("program")
@@ -150,7 +151,7 @@ class HackathonMediaViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
-        return [IsOfficerOrAdmin()]
+        return [HasCapability.of("content.edit")()]
 
 
 class SiteSettingsView(generics.RetrieveUpdateAPIView):
@@ -164,7 +165,7 @@ class SiteSettingsView(generics.RetrieveUpdateAPIView):
     def get_permissions(self):
         if self.request.method == "GET":
             return [AllowAny()]
-        return [IsOfficerOrAdmin()]
+        return [HasCapability.of("content.edit")()]
 
     def get_object(self):
         return SiteSettings.get()
@@ -190,7 +191,7 @@ class LeadershipCardViewSet(ModelViewSet):
     Leadership / executive testimonial cards for the homepage carousel.
 
     Public:   GET /api/content/leadership/         — active cards in sort order
-    Staff:    POST / PATCH / DELETE                — requires IsOfficerOrAdmin
+    Staff:    POST / PATCH / DELETE (needs the content.edit capability)
     Reorder:  POST /api/content/leadership/reorder/ — [{id, sort_order}, ...]
     """
 
@@ -215,7 +216,7 @@ class LeadershipCardViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
-        return [IsOfficerOrAdmin()]
+        return [HasCapability.of("content.edit")()]
 
     def perform_create(self, serializer):
         from django.core.exceptions import ValidationError as DjangoValidationError
@@ -254,7 +255,7 @@ class LeadershipCardViewSet(ModelViewSet):
             instance.photo.delete(save=False)
         instance.delete()
 
-    @action(detail=False, methods=["post"], permission_classes=[IsOfficerOrAdmin], url_path="reorder")
+    @action(detail=False, methods=["post"], permission_classes=[HasCapability.of("content.edit")], url_path="reorder")
     def reorder(self, request):
         """
         Bulk-update sort_order.  Body: [{"id": "<uuid>", "sort_order": <int>}, ...]
@@ -276,7 +277,7 @@ class WinnerSpotlightViewSet(ModelViewSet):
     Featured winners.
 
     Public:  GET /api/content/winners/          — all winners (optionally ?featured=true)
-    Staff:   POST / PATCH / DELETE              — requires IsOfficerOrAdmin
+    Staff:   POST / PATCH / DELETE (needs the content.edit capability)
     """
 
     parser_classes = [MultiPartParser, FormParser, JSONParser]
@@ -285,7 +286,7 @@ class WinnerSpotlightViewSet(ModelViewSet):
 
     def get_queryset(self):
         qs = WinnerSpotlight.objects.select_related("program")
-        if not IsOfficerOrAdmin().has_permission(self.request, self):
+        if not user_has(self.request.user, "content.edit"):
             qs = ProgramAccessService.exclude_hidden(qs, self.request.user, prefix="program__")
         featured = self.request.query_params.get("featured")
         if featured and featured.lower() == "true":
@@ -304,7 +305,7 @@ class WinnerSpotlightViewSet(ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
             return [AllowAny()]
-        return [IsOfficerOrAdmin()]
+        return [HasCapability.of("content.edit")()]
 
 
 class PublicStatsView(generics.GenericAPIView):

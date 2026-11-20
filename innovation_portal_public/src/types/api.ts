@@ -66,6 +66,8 @@ export interface AuthenticatedUser extends UserSummary {
   mfa_enabled?: boolean
   mfa_method?: string
   roles?: string[]
+  /** What this person may do (S1). Ask for these with can(), not for roles. */
+  capabilities?: string[]
   profile?: InnovatorProfile | null
 }
 

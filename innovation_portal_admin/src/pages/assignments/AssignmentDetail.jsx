@@ -11,7 +11,6 @@ import DocumentLink from '../../components/documents/DocumentLink'
 import { useSubmission, useSubmissionEvaluations, useSubmissionWorkflow, useWorkflowAction } from '../../lib/queries/submissions'
 import { useAssignmentInstance, useAcceptAssignment, useCompleteAssignment, useDeclineAssignment } from '../../lib/queries/assignmentInstances'
 import { useAuth } from '../../lib/auth/AuthContext'
-import { isAdminOrManager } from '../../lib/auth/permissions'
 import {
   formatDisplayLabel,
   formatResponseValue,
@@ -118,8 +117,8 @@ export default function AssignmentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { user } = useAuth()
-  const adminMode = isAdminOrManager(user)
+  const { user, can } = useAuth()
+  const adminMode = can('entries.assign') // assigns reviewers (IsOfficerOrAdmin)
   const [note, setNote] = useState('')
   const [reviewComment, setReviewComment] = useState('')
   const [reassignUser, setReassignUser] = useState('')
@@ -171,7 +170,6 @@ export default function AssignmentDetail() {
   })
 
   const history = Array.isArray(historyData) ? historyData : historyData?.results ?? []
-  const groupedDocuments = documentsData?.grouped_by_field ?? {}
   const evaluationList = evaluations?.items ?? []
   const suggestionItems = suggestionsData?.suggestions ?? []
   const responses = normalizeResponses(submission?.responses ?? [], submission?.title)
@@ -213,13 +211,13 @@ export default function AssignmentDetail() {
 
   const documents = useMemo(() => {
     const rows = []
-    for (const [fieldKey, items] of Object.entries(groupedDocuments)) {
+    for (const [fieldKey, items] of Object.entries(documentsData?.grouped_by_field ?? {})) {
       for (const item of items) {
         rows.push({ fieldKey, ...item })
       }
     }
     return rows
-  }, [groupedDocuments])
+  }, [documentsData])
 
   if (isLoading) {
     return <div className="h-32 rounded-xl bg-ceda-border/30 animate-pulse" />

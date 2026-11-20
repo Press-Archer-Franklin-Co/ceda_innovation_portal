@@ -2,6 +2,21 @@
 
 export const contentEn = {
   'staff.nav.homePage': 'Home page',
+  'staff.nav.approvals': 'Approvals',
+  'approvals.title': 'Waiting for approval',
+  'approvals.subtitle': 'Website changes that need a yes before visitors see them.',
+  'approvals.type.page': 'Home page',
+  'approvals.type.post': 'News post',
+  'approvals.type.quote': 'Leadership quote',
+  'approvals.sentBy': 'Sent by {name} on {date}',
+  'approvals.goesLive': 'goes live {date}',
+  'approvals.step': 'Step',
+  'approvals.stepCount': '{done} of {needed}',
+  'approvals.open': 'Open',
+  'approvals.approved': 'Approved',
+  'approvals.empty': 'Nothing is waiting',
+  'approvals.emptyBody': 'When someone sends website content for approval, it shows here.',
+  'approvals.loadError': 'The approvals could not load.',
   'staff.nav.partners': 'Partners & sponsors',
 
   'home.title': 'Home page',
@@ -491,6 +506,21 @@ export const contentEn = {
 
 export const contentTn = {
   'staff.nav.homePage': 'Tsebe ya ntlha',
+  'staff.nav.approvals': 'Go amogela',
+  'approvals.title': 'Di emetse go amogelwa',
+  'approvals.subtitle': 'Diphetogo tsa webosaete tse di tlhokang tetla pele baeti ba di bona.',
+  'approvals.type.page': 'Tsebe ya ntlha',
+  'approvals.type.post': 'Kwalo ya dikgang',
+  'approvals.type.quote': 'Lefoko la moeteledipele',
+  'approvals.sentBy': 'E rometswe ke {name} ka {date}',
+  'approvals.goesLive': 'e bonala ka {date}',
+  'approvals.step': 'Kgato',
+  'approvals.stepCount': '{done} mo go {needed}',
+  'approvals.open': 'Bula',
+  'approvals.approved': 'E amogetswe',
+  'approvals.empty': 'Ga go sepe se se emetseng',
+  'approvals.emptyBody': 'Fa mongwe a romela diteng tsa webosaete go amogelwa, di bonala fano.',
+  'approvals.loadError': 'Tse di emetseng go amogelwa ga di a kgona go tla.',
   'staff.nav.partners': 'Balekane le batshegetsi',
 
   'home.title': 'Tsebe ya ntlha',

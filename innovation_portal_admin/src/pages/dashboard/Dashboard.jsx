@@ -14,7 +14,8 @@ import DataTable    from '../../components/ui/DataTable'
 import ErrorState   from '../../components/ui/ErrorState'
 import { SkeletonStatCards, SkeletonTable } from '../../components/ui/LoadingSkeleton'
 import { useAuth }  from '../../lib/auth/AuthContext'
-import { isAdminOrManager, isInnovationOfficer, isPureJudge, isJudge } from '../../lib/auth/permissions'
+import { useJudgeOnly } from '../../lib/auth/useJudgeOnly'
+import { userRoleLabel } from '../../lib/auth/roleNames'
 import {
   useOperationsDashboard,
   useReportsDashboard,
@@ -38,16 +39,6 @@ function userInitials(user) {
   return (first + last).toUpperCase() || (user.username?.[0] ?? '?').toUpperCase()
 }
 
-function userRoleLabel(user) {
-  const roles = user?.roles ?? []
-  if (user?.is_superuser) return 'Super Admin'
-  if (roles.includes('administrator'))        return 'Administrator'
-  if (roles.includes('innovation_officer'))   return 'Innovation Officer'
-  if (roles.includes('judge'))                return 'Judge'
-  if (roles.includes('mentor'))               return 'Mentor'
-  if (roles.includes('innovator'))            return 'Innovator'
-  return 'Staff'
-}
 
 
 const SUBMISSION_COLS = [
@@ -312,8 +303,9 @@ function JudgeDashboard({ user }) {
 function OfficerDashboard({ user }) {
   const navigate    = useNavigate()
   const firstName   = user?.first_name ?? user?.username ?? 'Staff'
-  const adminMode   = isAdminOrManager(user)
-  const canEvaluate = isJudge(user)
+  const { can }     = useAuth()
+  const adminMode   = can('entries.search') // sees every programme
+  const canEvaluate = can('entries.score')
 
   const {
     data: opsData,
@@ -498,11 +490,12 @@ function OfficerDashboard({ user }) {
           <SectionCard title="Quick Access">
             <div className="space-y-1">
               {[
-                { label: 'Programs',        to: '/programs',    icon: Layers,        description: 'Manage programs' },
-                { label: 'All Submissions', to: '/submissions', icon: ClipboardList, description: 'View & filter' },
-                ...(canEvaluate ? [{ label: 'Evaluations', to: '/evaluations', icon: Award, description: 'Score submissions' }] : []),
-                { label: 'My Work',         to: '/assignments', icon: ListTodo,      description: 'Assignments & tasks' },
-              ].map(({ label, to, icon: Icon, description }) => (
+                // Same capabilities as the sidebar, so nobody is offered a page they cannot open (S1).
+                can('challenges.manage') && { label: 'Programs',        to: '/programs',    icon: Layers,        description: 'Manage programs' },
+                adminMode                && { label: 'All Submissions', to: '/submissions', icon: ClipboardList, description: 'View & filter' },
+                canEvaluate              && { label: 'Evaluations',     to: '/evaluations', icon: Award,         description: 'Score submissions' },
+                can('entries.review')    && { label: 'My Work',         to: '/assignments', icon: ListTodo,      description: 'Assignments & tasks' },
+              ].filter(Boolean).map(({ label, to, icon: Icon, description }) => (
                 <Link
                   key={to}
                   to={to}
@@ -556,7 +549,7 @@ function OfficerDashboard({ user }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const judgeOnly = isPureJudge(user)
+  const judgeOnly = useJudgeOnly()
 
   if (judgeOnly) return <JudgeDashboard user={user} />
   return <OfficerDashboard user={user} />

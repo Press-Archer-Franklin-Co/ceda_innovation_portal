@@ -8,7 +8,6 @@ import {
   useAcceptAssignment,
 } from '../../lib/queries/assignmentInstances'
 import { useAuth } from '../../lib/auth/AuthContext'
-import { isAdminOrManager } from '../../lib/auth/permissions'
 import AssignmentStatusBadge, { statusGroup } from '../../components/assignments/AssignmentStatusBadge'
 import ErrorState from '../../components/ui/ErrorState'
 import { SkeletonCards } from '../../components/ui/LoadingSkeleton'
@@ -189,8 +188,8 @@ function ContextHint({ isAdmin }) {
 
 export default function MyAssignments() {
   const { data: assignments = [], isLoading, error, refetch, isFetching } = useMyAssignmentInstances()
-  const { user } = useAuth()
-  const isAdmin  = isAdminOrManager(user)
+  const { user, can } = useAuth()
+  const isAdmin  = can('entries.assign') // assigns reviewers (IsOfficerOrAdmin)
   const claimMut   = useClaimAssignment()
   const acceptMut  = useAcceptAssignment()
 

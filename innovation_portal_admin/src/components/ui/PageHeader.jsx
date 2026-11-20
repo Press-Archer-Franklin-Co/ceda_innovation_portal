@@ -15,8 +15,9 @@ export default function PageHeader({ title, subtitle, actions, back, badge, clas
             <p className="mt-0.5 text-sm text-ceda-muted">{subtitle}</p>
           )}
         </div>
+        {/* min-w-0 and max-w-full let several actions wrap on a phone instead of running off the screen (R-24). */}
         {actions && (
-          <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full">
             {actions}
           </div>
         )}

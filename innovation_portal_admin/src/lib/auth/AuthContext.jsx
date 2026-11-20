@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { auth as authApi } from '../api/endpoints'
 import { TOKEN_KEY, REFRESH_KEY } from '../api/client'
 
@@ -23,8 +24,9 @@ function normaliseProfile(profile, token) {
   return {
     ...user,
     roles,
-    is_admin:     roles.includes('administrator') || user?.is_superuser,
-    is_staff:     roles.some(r => ['administrator', 'innovation_officer', 'innovation_manager', 'innovation_analyst', 'staff_member', 'specialist', 'exo', 'judge', 'mentor'].includes(r)) || user?.is_staff,
+    // From the server, for display only (Settings badge). Access uses can() (S1).
+    is_admin:     Boolean(user?.is_admin ?? user?.is_superuser),
+    is_staff:     Boolean(user?.is_staff),
     is_superuser: user?.is_superuser,
     profile: profileFields,
   }
@@ -37,11 +39,34 @@ function normaliseLoginUser(userData, token) {
   return {
     ...userData,
     roles,
-    is_admin:     roles.includes('administrator') || userData.is_superuser,
-    is_staff:     roles.some(r => ['administrator', 'innovation_officer', 'innovation_manager', 'innovation_analyst', 'staff_member', 'specialist', 'exo', 'judge', 'mentor'].includes(r)) || userData.is_staff,
+    // From the server, for display only (Settings badge). Access uses can() (S1).
+    is_admin:     Boolean(userData?.is_admin ?? userData?.is_superuser),
+    is_staff:     Boolean(userData?.is_staff),
     is_superuser: userData.is_superuser,
     profile:      userData.profile ?? {},
   }
+}
+
+/**
+ * What the person may do (S1), from GET /api/auth/me/. The API decides every request on its own; these only
+ * decide what the console shows, so nobody is offered something the server will refuse.
+ * `undefined` means "not known yet" (an old cached user, or me has not answered).
+ */
+function capabilitiesOf(data) {
+  return Array.isArray(data?.capabilities) ? data.capabilities : undefined
+}
+
+async function loadUser(token, signal) {
+  const [profile, me] = await Promise.all([
+    authApi.me(signal),
+    authApi.whoami(signal).catch((err) => {
+      if (err?.name === 'AbortError') throw err
+      return null
+    }),
+  ])
+  if (profile == null) return null
+  const normalised = normaliseProfile(profile, token)
+  return { ...normalised, is_admin: Boolean(me?.is_admin ?? normalised.is_admin), capabilities: capabilitiesOf(me) }
 }
 
 function loadCachedUser() {
@@ -62,6 +87,7 @@ function loadActiveRole() {
 }
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient()
   const [user, setUser]       = useState(() => loadCachedUser())
   const [activeRole, setActiveRole] = useState(() => loadActiveRole())
   const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY))
@@ -77,11 +103,9 @@ export function AuthProvider({ children }) {
     const timeoutId  = setTimeout(() => controller.abort(), 10_000)
     let   unmounted  = false
 
-    authApi.me(controller.signal)
-      .then(profile => {
-        if (profile == null) return
-        const freshToken  = localStorage.getItem(TOKEN_KEY)
-        const normalised  = normaliseProfile(profile, freshToken)
+    loadUser(localStorage.getItem(TOKEN_KEY), controller.signal)
+      .then(normalised => {
+        if (normalised == null) return
         setUser(normalised)
         localStorage.setItem(USER_KEY, JSON.stringify(normalised))
         if (normalised?.roles?.length) {
@@ -119,9 +143,12 @@ export function AuthProvider({ children }) {
     let normalised
     if (tokens.user) {
       normalised = normaliseLoginUser(tokens.user, tokens.access)
+      if (!capabilitiesOf(normalised)) {
+        const me = await authApi.whoami().catch(() => null)
+        normalised = { ...normalised, capabilities: capabilitiesOf(me) }
+      }
     } else {
-      const profile = await authApi.me()
-      normalised = normaliseProfile(profile, tokens.access)
+      normalised = await loadUser(tokens.access)
     }
 
     setUser(normalised)
@@ -145,20 +172,26 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(ROLE_KEY)
     setUser(null)
     setActiveRole(null)
-  }, [])
+    // Nothing the last person could see stays in memory for the next one (S1). Capabilities come from user.
+    queryClient.clear()
+  }, [queryClient])
 
   const refreshUser = useCallback(async () => {
     try {
-      const profile    = await authApi.me()
-      const token      = localStorage.getItem(TOKEN_KEY)
-      const normalised = normaliseProfile(profile, token)
+      const normalised = await loadUser(localStorage.getItem(TOKEN_KEY))
+      if (normalised == null) return
       setUser(normalised)
       localStorage.setItem(USER_KEY, JSON.stringify(normalised))
     } catch (_) {  }
   }, [])
 
+  // Ask for a capability, never a role name (ceda-security). Superusers get every capability from the API.
+  const capabilities = user?.capabilities
+  const can = useCallback((capability) => Array.isArray(capabilities) && capabilities.includes(capability), [capabilities])
+  const canAny = useCallback((list) => list.some((c) => can(c)), [can])
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, activeRole, setActiveRole }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, activeRole, setActiveRole, capabilities, can, canAny }}>
       {children}
     </AuthContext.Provider>
   )

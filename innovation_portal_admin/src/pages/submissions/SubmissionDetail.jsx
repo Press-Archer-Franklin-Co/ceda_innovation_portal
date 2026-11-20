@@ -26,7 +26,6 @@ import {
 import { assignments as assignmentsApi, documents as documentsApi, submissions as submissionsApi, evaluations, tasks as tasksApi, specialistInvitations as specialistInvitationsApi } from '../../lib/api/endpoints'
 import DocumentLink from '../../components/documents/DocumentLink'
 import { useAuth } from '../../lib/auth/AuthContext'
-import { isInnovationOfficer } from '../../lib/auth/permissions'
 import { cn } from '../../lib/cn'
 import {
   formatDisplayLabel,
@@ -435,7 +434,9 @@ export default function SubmissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { user } = useAuth()
+  const { user, can } = useAuth()
+  // Assignments, suggestions and specialist invitations are officer endpoints (entries.assign).
+  const canAssign = can('entries.assign')
   const [tab, setTab]         = useState('overview')
   const [rejectOpen, setRejectOpen] = useState(false)
   const [rejectReason, setRejectReason] = useState('')
@@ -454,7 +455,7 @@ export default function SubmissionDetail() {
   const { data: assignmentsData, refetch: refetchAssignments } = useQuery({
     queryKey: ['submissions', id, 'assignments'],
     queryFn: () => submissionsApi.assignments(id),
-    enabled: isInnovationOfficer(user),
+    enabled: canAssign,
   })
   const { data: documentsData } = useQuery({
     queryKey: ['submissions', id, 'documents'],
@@ -464,7 +465,7 @@ export default function SubmissionDetail() {
   const { data: suggestionsData } = useQuery({
     queryKey: ['submissions', id, 'assignment-suggestions', workflow?.assignment_summary?.required_role],
     queryFn: () => assignmentsApi.suggestions({ submission: id, role_type: workflow?.assignment_summary?.required_role || 'judge' }),
-    enabled: isInnovationOfficer(user) && !!workflow?.assignment_summary?.required,
+    enabled: canAssign && !!workflow?.assignment_summary?.required,
   })
   const assignMutation = useMutation({
     mutationFn: (body) => submissionsApi.assign(id, body),
@@ -479,7 +480,7 @@ export default function SubmissionDetail() {
   const { data: specialistInvitesData, refetch: refetchInvites } = useQuery({
     queryKey: ['submissions', id, 'specialist-invitations'],
     queryFn: () => submissionsApi.specialistInvites(id),
-    enabled: isInnovationOfficer(user),
+    enabled: canAssign,
   })
   const specialistInvites = Array.isArray(specialistInvitesData)
     ? specialistInvitesData
@@ -858,7 +859,7 @@ export default function SubmissionDetail() {
             )
           })()}
 
-          {isInnovationOfficer(user) && (
+          {canAssign && (
             <SectionCard title="Assignments" subtitle="Create or update the live reviewer assignment for this submission.">
               <div className="space-y-3">
                 {assignments.length > 0 ? (
@@ -909,7 +910,7 @@ export default function SubmissionDetail() {
             </SectionCard>
           )}
 
-          {isInnovationOfficer(user) && (
+          {canAssign && (
             <SectionCard
               title="Specialist Invitations"
               subtitle="Invite an external specialist to review this submission via magic link."
