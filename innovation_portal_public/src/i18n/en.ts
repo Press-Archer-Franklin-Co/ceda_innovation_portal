@@ -232,6 +232,7 @@ const en = {
   'news.featured': 'Featured',
   'news.readStory': 'Read the story',
   'news.loadMore': 'Load more',
+  'news.listTitle': 'Latest posts',
   'news.empty': 'Nothing here yet',
   'news.emptyBody': 'Try another type, or clear the search.',
   'news.emptySearch': 'Nothing matches “{q}”',
@@ -270,6 +271,7 @@ const en = {
   'chl.emptyBody': 'New calls are posted on the bulletin board. You can send a general idea any time.',
   'chl.loadError': 'We could not load the challenges',
   'chl.statusFilter': 'Challenge status',
+  'chl.listTitle': 'Current challenges',
 
   'chd.breadcrumb': 'Breadcrumb',
   'chd.support': 'Support',

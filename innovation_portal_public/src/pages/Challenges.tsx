@@ -110,6 +110,8 @@ export default function Challenges() {
           </Button>
         </div>
 
+        {/* Hidden heading keeps the order h1 > h2 > card h3 for screen readers. */}
+        <h2 className="sr-only">{t('chl.listTitle')}</h2>
         {list.loading ? (
           <div aria-hidden className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[300px] rounded-card" />)}

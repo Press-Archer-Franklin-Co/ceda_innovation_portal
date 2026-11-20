@@ -233,6 +233,7 @@ const tn: Record<StringKey, string> = {
   'news.featured': 'E e tlhagisitsweng', // TODO tn-review
   'news.readStory': 'Bala kgang', // TODO tn-review
   'news.loadMore': 'Bona tse dingwe', // TODO tn-review
+  'news.listTitle': 'Dikwalo tsa bosheng', // TODO tn-review
   'news.empty': 'Ga go ise go nne le sepe fa', // TODO tn-review
   'news.emptyBody': 'Leka mofuta o mongwe, kgotsa phimola go batla.', // TODO tn-review
   'news.emptySearch': 'Ga go na se se tshwanang le “{q}”', // TODO tn-review
@@ -271,6 +272,7 @@ const tn: Record<StringKey, string> = {
   'chl.emptyBody': 'Dikgwetlho tse dintšhwa di tlhagisiwa mo botong ya dikitsiso. O ka romela kakanyo ya kakaretso nako nngwe le nngwe.', // TODO tn-review
   'chl.loadError': 'Ga re a kgona go bula dikgwetlho', // TODO tn-review
   'chl.statusFilter': 'Maemo a kgwetlho', // TODO tn-review
+  'chl.listTitle': 'Dikgwetlho tsa jaanong', // TODO tn-review
 
   'chd.breadcrumb': 'Tsela', // TODO tn-review
   'chd.support': 'Thuso', // TODO tn-review

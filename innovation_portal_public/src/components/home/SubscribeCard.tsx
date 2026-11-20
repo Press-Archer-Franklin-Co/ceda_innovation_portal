@@ -12,7 +12,9 @@ import { subscriptionsService, SubscriptionsNotAvailable } from '../../services/
 
 type State = 'idle' | 'sending' | 'done' | 'not-yet' | 'error'
 
-export default function SubscribeCard({ className }: { className?: string }) {
+/** headingLevel: 3 inside a home section (h2 above it), 2 in a page rail next to other h2 cards. */
+export default function SubscribeCard({ className, headingLevel = 3 }: { className?: string; headingLevel?: 2 | 3 }) {
+  const H = headingLevel === 2 ? 'h2' : 'h3'
   const { t, lang } = useI18n()
   const [email, setEmail] = useState('')
   const [whatsapp, setWhatsapp] = useState(false)
@@ -43,15 +45,15 @@ export default function SubscribeCard({ className }: { className?: string }) {
       </span>
       {state === 'done' ? (
         <div role="status" className="flex flex-col gap-2">
-          <h3 className="text-d-h4 font-heading text-text flex items-center gap-2">
+          <H className="text-d-h4 font-heading text-text flex items-center gap-2">
             <CheckCircle2 size={20} aria-hidden className="text-success" />
             {t('sub.done')}
-          </h3>
+          </H>
           <p className="text-d-body-s text-muted">{t('sub.doneBody')}</p>
         </div>
       ) : (
         <form onSubmit={submit} noValidate className="flex flex-col gap-3.5">
-          <h3 className="text-d-h4 font-heading text-text">{t('sub.title')}</h3>
+          <H className="text-d-h4 font-heading text-text">{t('sub.title')}</H>
           <p className="text-d-body-s text-muted">{t('sub.body')}</p>
           <Input label={t('sub.email')} type="email" autoComplete="email" placeholder="you@example.co.bw" value={email} onChange={(e) => setEmail(e.target.value)} error={emailError} />
           <Toggle label={t('sub.whatsapp')} checked={whatsapp} onChange={setWhatsapp} />

@@ -292,6 +292,8 @@ export default function News() {
               <>
                 {q && <p role="status" className="text-d-body-s text-muted -mb-4">{t('news.results', { n: list.data?.total ?? posts.length })}</p>}
                 {featured && <FeaturedPost post={featured} onOpen={openStory} />}
+                {/* Hidden heading keeps the order h1 > h2 > card h3 for screen readers. */}
+                {posts.length > 0 && <h2 className="sr-only">{t('news.listTitle')}</h2>}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-2">
                   {posts.map((p) => <NewsCard key={p.id} post={p} onOpen={openStory} />)}
                 </div>
@@ -305,7 +307,7 @@ export default function News() {
           </div>
 
           <aside className="lg:w-[340px] shrink-0 flex flex-col gap-6">
-            <SubscribeCard />
+            <SubscribeCard headingLevel={2} />
             <UpcomingEvents />
             <NewsletterArchive />
           </aside>
