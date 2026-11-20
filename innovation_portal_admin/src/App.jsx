@@ -38,6 +38,10 @@ const ContentList = lazy(() => import('./pages/content/ContentList'))
 const HomePageEditor = lazy(() => import('./pages/content/HomePageEditor'))
 const NewsList = lazy(() => import('./pages/content/NewsList'))
 const PostEditor = lazy(() => import('./pages/content/PostEditor'))
+const LeadershipQuotes = lazy(() => import('./pages/content/LeadershipQuotes'))
+const Partners = lazy(() => import('./pages/content/Partners'))
+const Faqs = lazy(() => import('./pages/content/Faqs'))
+const Stories = lazy(() => import('./pages/content/Stories'))
 const HackathonContentEditor = lazy(() => import('./pages/content/HackathonContentEditor'))
 const WinnersManager = lazy(() => import('./pages/content/WinnersManager'))
 const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
@@ -129,10 +133,13 @@ export default function App() {
                   <Route path="/content/hackathons/:id"         element={<ErrorBoundary><HackathonContentEditor /></ErrorBoundary>} />
                   <Route path="/content/winners/new"            element={<ErrorBoundary><WinnersManager /></ErrorBoundary>} />
                   <Route path="/content/winners/:id"            element={<ErrorBoundary><WinnersManager /></ErrorBoundary>} />
-                  <Route path="/content/leadership"             element={<Navigate to="/content?tab=leadership" replace />} />
+                  <Route path="/content/leadership"             element={<Navigate to="/content/quotes" replace />} />
+                  <Route path="/content/quotes"                 element={<ErrorBoundary><LeadershipQuotes /></ErrorBoundary>} />
+                  <Route path="/content/partners"               element={<ErrorBoundary><Partners /></ErrorBoundary>} />
                   <Route path="/content/leadership/new"         element={<ErrorBoundary><LeadershipCardEditor /></ErrorBoundary>} />
                   <Route path="/content/leadership/:id"         element={<ErrorBoundary><LeadershipCardEditor /></ErrorBoundary>} />
-                  <Route path="/content/faqs"                   element={<Navigate to="/content?tab=faqs" replace />} />
+                  <Route path="/content/faqs"                   element={<ErrorBoundary><Faqs /></ErrorBoundary>} />
+                  <Route path="/content/stories"                element={<ErrorBoundary><Stories /></ErrorBoundary>} />
                   <Route path="/content/faqs/new"               element={<ErrorBoundary><FaqEditor /></ErrorBoundary>} />
                   <Route path="/content/faqs/:id"               element={<ErrorBoundary><FaqEditor /></ErrorBoundary>} />
                 </Route>

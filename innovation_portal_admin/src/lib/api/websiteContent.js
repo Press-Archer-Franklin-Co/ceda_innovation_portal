@@ -40,3 +40,64 @@ export function uploadCover(file, { captions, altText } = {}) {
   if (captions) body.append('captions', captions)
   return client.post('/api/media/', body)
 }
+
+export const quotes = {
+  list:    ()          => client.get('/api/content/leadership/'),
+  create:  (body)      => client.post('/api/content/leadership/', body),
+  update:  (id, body)  => client.patch(`/api/content/leadership/${id}/`, body),
+  remove:  (id)        => client.delete(`/api/content/leadership/${id}/`),
+  reorder: (items)     => client.post('/api/content/leadership/reorder/', items),
+  /** The photo goes as a file (multipart), on its own. */
+  photo:   (id, file)  => {
+    const body = new FormData()
+    body.append('photo', file)
+    return client.patch(`/api/content/leadership/${id}/`, body)
+  },
+}
+
+export const siteSettings = {
+  get:    ()     => client.get('/api/content/site-settings/'),
+  update: (body) => client.patch('/api/content/site-settings/', body),
+}
+
+export const partnersApi = {
+  list:   ()         => client.get('/api/content/partners/'),
+  create: (body)     => client.post('/api/content/partners/', body),
+  update: (id, body) => client.patch(`/api/content/partners/${id}/`, body),
+  remove: (id)       => client.delete(`/api/content/partners/${id}/`),
+}
+
+/** Upload a logo; the media library also stores a one-colour copy (B1 make_monochrome). */
+export function uploadLogo(file, name) {
+  const body = new FormData()
+  body.append('file', file)
+  body.append('kind', 'image')
+  body.append('make_monochrome', 'true')
+  if (name) body.append('alt_text', name)
+  return client.post('/api/media/', body)
+}
+
+export const faqsApi = {
+  list:          ()          => client.get('/api/support/admin/faqs/', { page_size: 500 }),
+  create:        (body)      => client.post('/api/support/admin/faqs/', body),
+  update:        (id, body)  => client.patch(`/api/support/admin/faqs/${id}/`, body),
+  remove:        (id)        => client.delete(`/api/support/admin/faqs/${id}/`),
+  reorder:       (items)     => client.post('/api/support/admin/faqs/reorder/', items),
+  groups:        ()          => client.get('/api/support/admin/faq-groups/', { page_size: 200 }),
+  createGroup:   (body)      => client.post('/api/support/admin/faq-groups/', body),
+  updateGroup:   (id, body)  => client.patch(`/api/support/admin/faq-groups/${id}/`, body),
+  removeGroup:   (id)        => client.delete(`/api/support/admin/faq-groups/${id}/`),
+  reorderGroups: (items)     => client.post('/api/support/admin/faq-groups/reorder/', items),
+  unanswered:    ()          => client.get('/api/support/admin/faqs/unanswered/'),
+  resolve:       (id, faqId) => client.patch(`/api/support/admin/faqs/unanswered/${id}/`, { resolved_by_faq: faqId }),
+}
+
+export const storiesApi = {
+  list:    ()         => client.get('/api/content/stories/'),
+  create:  (body)     => client.post('/api/content/stories/', body),
+  update:  (id, body) => client.patch(`/api/content/stories/${id}/`, body),
+  remove:  (id)       => client.delete(`/api/content/stories/${id}/`),
+  consent: (id)       => client.post(`/api/content/stories/${id}/consent-request/`),
+  /** Staff idea search, to link a story to an idea and its innovator. */
+  ideas:   (search)   => client.get('/api/submissions/', { search, page_size: 8 }),
+}

@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -13,7 +13,6 @@ import Logo from '../components/ui/Logo'
 // Staff sidebar: chocolate banner, grouped as Overview, Challenges, Website content, Admin.
 // Compact by default (216px wide, 32px rows, 13px text), roomier from 2xl (248px, 38px, 14px).
 // An item is hidden when the person's role cannot use it, and a group with nothing left is hidden.
-// Items whose screens do not exist yet (Partners 3.13) are added with U6.
 
 const GROUPS = [
   {
@@ -42,9 +41,10 @@ const GROUPS = [
       // TODO(S1): capability 'content.edit' once S1 is on main.
       { label: 'staff.nav.homePage', href: '/content/home', icon: LayoutTemplate, officerOrAbove: true },
       { label: 'staff.nav.news', href: '/content/news', icon: Newspaper, officerOrAbove: true },
-      { label: 'staff.nav.stories', href: '/content?tab=winners', icon: Trophy, officerOrAbove: true, tab: 'winners' },
-      { label: 'staff.nav.quotes', href: '/content?tab=leadership', icon: Quote, officerOrAbove: true, tab: 'leadership' },
-      { label: 'staff.nav.faqs', href: '/content?tab=faqs', icon: HelpCircle, officerOrAbove: true, tab: 'faqs' },
+      { label: 'staff.nav.stories', href: '/content/stories', icon: Trophy, officerOrAbove: true },
+      { label: 'staff.nav.quotes', href: '/content/quotes', icon: Quote, officerOrAbove: true, match: ['/content/quotes', '/content/leadership'] },
+      { label: 'staff.nav.partners', href: '/content/partners', icon: Handshake, officerOrAbove: true },
+      { label: 'staff.nav.faqs', href: '/content/faqs', icon: HelpCircle, officerOrAbove: true },
     ],
   },
   {
