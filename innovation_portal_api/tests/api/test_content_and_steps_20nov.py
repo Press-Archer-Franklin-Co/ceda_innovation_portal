@@ -1,12 +1,10 @@
 """R-28: home page defaults are made once; R-30: advance_automatically is saved through the step API."""
 
 import importlib
-import threading
 from datetime import timedelta
 
 from django.apps import apps as django_apps
-from django.db import connection
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -20,34 +18,38 @@ from apps.workflow.models import WorkflowStep
 from apps.workflow.services import WorkflowDefinitionService
 
 
-class HomeDefaultsRaceTests(TransactionTestCase):
-    """Two first requests at the same time must not both make the default sections."""
+class HomeDefaultsRaceTests(TestCase):
+    """Two first requests at the same time must not both make the default sections.
 
-    # Restore the rows migrations seeded (switches, sectors, templates) for the tests that run after this one.
-    serialized_rollback = True
+    No threads here (a TransactionTestCase would empty the seeded tables for later tests).
+    Instead: another request makes the defaults between this request's first check and its
+    lock, and home() must see them after the lock and make nothing.
+    """
 
-    def test_two_first_requests_make_one_set_of_sections(self):
-        barrier = threading.Barrier(2)
-        errors = []
+    def test_the_check_after_the_lock_stops_a_second_set(self):
+        from unittest.mock import patch
 
-        def first_open():
-            try:
-                barrier.wait()
-                PageService.home()
-            except Exception as exc:  # pragma: no cover - shown in the assertion below
-                errors.append(exc)
-            finally:
-                connection.close()
+        page = Page.objects.create(slug="home", title="Home")
+        real_select_for_update = Page.objects.select_for_update
 
-        threads = [threading.Thread(target=first_open) for _ in range(2)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join()
-        self.assertEqual(errors, [])
-        page = Page.objects.get(slug="home")
+        def other_request_wins(*args, **kwargs):
+            # The other request made the defaults while this one waited for the lock.
+            if not PageSection.objects.filter(page=page).exists():
+                for order, section_type in enumerate(["hero_banner", "news_flash"]):
+                    PageSection.objects.create(page=page, type=section_type, order=order, settings={})
+            return real_select_for_update(*args, **kwargs)
+
+        with patch.object(Page.objects, "select_for_update", side_effect=other_request_wins):
+            PageService.home()
         self.assertEqual(PageSection.objects.filter(page=page, type="hero_banner").count(), 1)
-        self.assertEqual(PageSection.objects.filter(page=page).count(), len(set(PageSection.objects.filter(page=page).values_list("type", flat=True))))
+        self.assertEqual(PageSection.objects.filter(page=page).count(), 2)
+
+    def test_first_open_makes_the_defaults_once(self):
+        PageService.home()
+        PageService.home()
+        page = Page.objects.get(slug="home")
+        self.assertEqual(page.sections.filter(type="hero_banner").count(), 1)
+        self.assertEqual(page.sections.count(), len(set(page.sections.values_list("type", flat=True))))
 
 
 class DuplicateCleanUpTests(TestCase):
