@@ -26,8 +26,10 @@ const ICON: Record<string, typeof Bell> = {
 
 function itemLink(item: NotificationItem): string | null {
   if (!item.link) return null
-  if (item.link.type === 'idea') return `/my-ideas/${item.link.id}`
-  if (item.link.url && item.link.url.startsWith('/')) return item.link.url
+  if (item.link.type === 'idea' && item.link.id) return `/my-ideas/${item.link.id}`
+  if (item.link.type === 'post') return item.link.id ? `/news/${item.link.id}` : '/news'
+  // TODO(U2): the challenge page by slug once 1.8 has a route; the list until then.
+  if (item.link.type === 'challenge') return '/challenges'
   return null
 }
 
@@ -74,7 +76,6 @@ export default function NotificationsPanel({ compact = false, onNavigate }: { co
 
   const shown = compact ? items?.slice(0, 6) : items
   const anyUnread = items?.some((item) => !item.is_read)
-  // TODO(R-8): items carry a category once B3 adds it. Until then the chips are not shown, because they could not filter.
   const filters: Array<{ value: Filter; label: string }> = [
     { value: 'all', label: t('notif.filterAll') },
     { value: 'ideas', label: t('notif.filterIdeas') },
@@ -92,9 +93,7 @@ export default function NotificationsPanel({ compact = false, onNavigate }: { co
           </button>
         )}
       </div>
-      {(filter !== 'all' || items?.some((item) => item.category)) && (
-        <FilterPills options={filters} value={filter} onChange={setFilter} className={compact ? 'px-5 pt-3' : 'pt-4'} />
-      )}
+      <FilterPills options={filters} value={filter} onChange={setFilter} className={compact ? 'px-5 pt-3' : 'pt-4'} />
       <div className={clsx('mt-3', compact && 'max-h-[360px] overflow-y-auto')}>
         {failed ? (
           <ErrorState title={t('notif.loadError')} onRetry={load} framed={!compact} />

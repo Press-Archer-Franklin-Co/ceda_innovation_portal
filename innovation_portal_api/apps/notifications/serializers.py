@@ -4,10 +4,59 @@ from apps.communications.models import Notification
 from apps.core.constants import NotificationDeliveryChannel, NotificationType
 
 
+# R-8: the bell panel's filter chips. A notification's category comes from its link,
+# else from its type.
+CATEGORY_TYPES = {
+    "challenges": ("new_challenge", "challenge_", "judge", "results_"),
+    "news": ("news", "digest", "post_"),
+}
+LINK_CATEGORIES = {"idea": "ideas", "message": "ideas", "challenge": "challenges", "post": "news"}
+CATEGORIES = ("ideas", "challenges", "news")
+
+
+def category_for(notification) -> str:
+    if notification.link_type in LINK_CATEGORIES:
+        return LINK_CATEGORIES[notification.link_type]
+    kind = notification.notification_type or ""
+    for category, prefixes in CATEGORY_TYPES.items():
+        if any(kind == prefix or kind.startswith(prefix) for prefix in prefixes):
+            return category
+    return "ideas"
+
+
+def category_filter(category: str):
+    from django.db.models import Q
+
+    link_types = [link for link, name in LINK_CATEGORIES.items() if name == category]
+    by_link = Q(link_type__in=link_types)
+    by_type = Q()
+    for prefix in CATEGORY_TYPES.get(category, ()):
+        by_type |= Q(notification_type__startswith=prefix)
+    unlinked = Q(link_type="") | ~Q(link_type__in=list(LINK_CATEGORIES))
+    if category == "ideas":
+        other = Q()
+        for prefixes in CATEGORY_TYPES.values():
+            for prefix in prefixes:
+                other |= Q(notification_type__startswith=prefix)
+        return by_link | (unlinked & ~other)
+    return by_link | (unlinked & by_type)
+
+
 class NotificationSerializer(serializers.ModelSerializer):
+    category = serializers.SerializerMethodField(help_text="ideas, challenges or news")
+    link = serializers.SerializerMethodField(help_text="{type, id, slug} or null")
+
     class Meta:
         model = Notification
-        fields = ("id", "notification_type", "title", "body", "is_read", "created_at")
+        fields = ("id", "notification_type", "category", "title", "body", "is_read", "link", "due_at", "created_at")
+
+    def get_category(self, obj) -> str:
+        return category_for(obj)
+
+    def get_link(self, obj) -> dict | None:
+        if not obj.link_type:
+            return None
+        return {"type": obj.link_type, "id": obj.link_id or None, "slug": obj.link_slug or None}
 
 
 class NotificationMarkReadSerializer(serializers.Serializer):
