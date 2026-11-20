@@ -3,14 +3,4 @@
 # any other missing migration. Adding the migrations is a separate task (note:
 # one of them drops the user_sort_idx index). Remove lines as they are fixed.
 # Never add a line to hide a change: write the migration instead.
-accounts: Remove index user_sort_idx from user
-accounts: Rename index accounts_mf_user_id_5aafc3_idx on mfachallenge to accounts_mf_user_id_a82881_idx
-accounts: Rename index accounts_us_user_id_2bca33_idx on usermfaprofile to accounts_us_user_id_0a6639_idx
-accounts: Alter field code on role
-assignments: Alter field role_type on assignment
-assignments: Alter field created_at on specialistinvitation
-submissions: Rename index submission__stage__5c8de5_idx on submissionfeedbacksnapshot to submissions_submiss_761ff7_idx
-submissions: Rename index submission__release_35df56_idx on submissionfeedbacksnapshot to submissions_submiss_d61766_idx
-workflow: Alter field assignment_role on workflowstep
-workflow: Alter field role_required on workflowstep
-workflow: Alter field submission_status on workflowstep
+# All fixed by chore/missing-migrations (Nov 2026): user_sort_idx kept on the model (option b), the rest migrated.
