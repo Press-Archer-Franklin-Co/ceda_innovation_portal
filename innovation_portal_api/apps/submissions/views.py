@@ -13,7 +13,7 @@ from apps.accounts.models import User
 from apps.accounts.services import UserVerificationService
 from apps.core.api import api_success
 from apps.core.constants import RoleType
-from apps.core.permissions import IsJudge, IsOfficerOrAdmin, IsStaffWorker
+from apps.core.permissions import HasCapability, IsOfficerOrAdmin, IsStaffWorker
 from apps.evaluation.models import ScoreSheet
 from apps.evaluation.selectors import EvaluationSelector
 from apps.evaluation.serializers import ScoreSheetSerializer, SubmissionEvaluationSerializer
@@ -74,7 +74,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         if self.action in {"workflow_action"}:
             return [IsStaffWorker()]
         if self.action in {"evaluate"}:
-            return [IsJudge()]
+            return [HasCapability.of("entries.score")()]
         return super().get_permissions()
 
     def get_queryset(self):

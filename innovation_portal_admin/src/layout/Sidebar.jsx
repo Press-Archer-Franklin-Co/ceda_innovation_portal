@@ -1,19 +1,18 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  ClipboardCheck, Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
 import { useAuth } from '../lib/auth/AuthContext'
-import { isAdminOrManager, isInnovationOfficer, isPureJudge, isJudge } from '../lib/auth/permissions'
 import { useT } from '../i18n/context'
 import Logo from '../components/ui/Logo'
 
 // Staff sidebar: chocolate banner, grouped as Overview, Challenges, Website content, Admin.
 // Compact by default (216px wide, 32px rows, 13px text), roomier from 2xl (248px, 38px, 14px).
-// An item is hidden when the person's role cannot use it, and a group with nothing left is hidden.
-// Items whose screens do not exist yet (Home page 3.8, Partners 3.12) are added with U6.
+// Each item names the capability (S1) the API checks behind it; an item is hidden when the person does not
+// hold it, and a group with nothing left is hidden. No role names here (ceda-security).
 
 const GROUPS = [
   {
@@ -21,39 +20,44 @@ const GROUPS = [
     label: 'staff.group.overview',
     items: [
       { label: 'staff.nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
-      { label: 'staff.nav.reports', href: '/analytics', icon: BarChart3, adminOnly: true },
-      { label: 'staff.nav.reviewQueue', href: '/submissions', icon: ClipboardList, officerOrAbove: true },
-      { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, match: ['/assignments', '/history', '/tasks', '/evaluate'] },
+      { label: 'staff.nav.reports', href: '/analytics', icon: BarChart3, capability: 'analytics.view' },
+      { label: 'staff.nav.reviewQueue', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
+      { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, capability: 'entries.review', match: ['/assignments', '/history', '/tasks', '/evaluate'] },
     ],
   },
   {
     key: 'challenges',
     label: 'staff.group.challenges',
     items: [
-      { label: 'staff.nav.challenges', href: '/programs', icon: Layers, officerOrAbove: true },
-      { label: 'staff.nav.criteria', href: '/marking-criteria', icon: BookOpen, officerOrAbove: true },
-      { label: 'staff.nav.forms', href: '/forms', icon: FileText, officerOrAbove: true },
+      { label: 'staff.nav.challenges', href: '/programs', icon: Layers, capability: 'challenges.manage' },
+      { label: 'staff.nav.criteria', href: '/marking-criteria', icon: BookOpen, capability: 'criteria.manage' },
+      { label: 'staff.nav.forms', href: '/forms', icon: FileText, capability: 'forms.manage' },
     ],
   },
   {
     key: 'website',
     label: 'staff.group.website',
+    // The approvals entry (U6) takes `anyOf: ['content.edit', 'content.approve']`, so someone who only approves
+    // still sees this group; editor items keep content.edit.
     items: [
-      { label: 'staff.nav.news', href: '/content?tab=news', icon: Newspaper, officerOrAbove: true, tab: 'news', defaultTab: true },
-      { label: 'staff.nav.stories', href: '/content?tab=winners', icon: Trophy, officerOrAbove: true, tab: 'winners' },
-      { label: 'staff.nav.quotes', href: '/content?tab=leadership', icon: Quote, officerOrAbove: true, tab: 'leadership' },
-      { label: 'staff.nav.faqs', href: '/content?tab=faqs', icon: HelpCircle, officerOrAbove: true, tab: 'faqs' },
+      { label: 'staff.nav.homePage', href: '/content/home', icon: LayoutTemplate, capability: 'content.edit' },
+      { label: 'staff.nav.news', href: '/content/news', icon: Newspaper, capability: 'content.edit' },
+      { label: 'staff.nav.stories', href: '/content/stories', icon: Trophy, capability: 'content.edit' },
+      { label: 'staff.nav.quotes', href: '/content/quotes', icon: Quote, capability: 'content.edit', match: ['/content/quotes', '/content/leadership'] },
+      { label: 'staff.nav.partners', href: '/content/partners', icon: Handshake, capability: 'content.edit' },
+      { label: 'staff.nav.faqs', href: '/content/faqs', icon: HelpCircle, capability: 'content.edit' },
+      { label: 'staff.nav.approvals', href: '/content/approvals', icon: ClipboardCheck, anyOf: ['content.edit', 'content.approve'] },
     ],
   },
   {
     key: 'admin',
     label: 'staff.group.admin',
     items: [
-      { label: 'staff.nav.users', href: '/users', icon: Users, adminOnly: true },
-      { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, adminOnly: true },
-      { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, adminOnly: true },
-      { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, adminOnly: true },
-      { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, adminOnly: true },
+      { label: 'staff.nav.users', href: '/users', icon: Users, capability: 'users.manage' },
+      { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
+      { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
+      { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, capability: 'challenges.manage' },
+      { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
     ],
   },
 ]
@@ -96,18 +100,24 @@ export default function Sidebar({ previewUser } = {}) {
   const { sidebarOpen, mobileSidebarOpen } = useLayout()
   const visible = sidebarOpen || mobileSidebarOpen
   const auth = useAuth()
-  const user = previewUser ?? auth?.user
-  const adminManager = isAdminOrManager(user)
-  const officerOrAbove = isInnovationOfficer(user)
-  const judgeOnly = isPureJudge(user)
-  const canEvaluate = isJudge(user)
+  // previewUser (styleguide) carries its own capabilities list.
+  const capabilities = previewUser ? previewUser.capabilities ?? [] : auth?.capabilities ?? []
+  const can = (c) => capabilities.includes(c)
 
   const groups = GROUPS.map((g) => ({
     ...g,
-    items: g.items.filter((item) => !(item.adminOnly && !adminManager) && !(item.officerOrAbove && !officerOrAbove)),
+    items: g.items.filter((item) => (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability))),
   })).filter((g) => g.items.length > 0)
 
-  const roleLabel = adminManager ? 'Admin access' : officerOrAbove ? 'Officer access' : judgeOnly ? 'Judge access' : canEvaluate ? 'Staff access' : null
+  const roleLabel = can('settings.manage')
+    ? 'Admin access'
+    : can('entries.assign')
+      ? 'Officer access'
+      : can('entries.score')
+        ? 'Judge access'
+        : capabilities.length > 0
+          ? 'Staff access'
+          : null
 
   return (
     <aside

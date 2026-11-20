@@ -18,9 +18,14 @@ export const tokenStorage = {
 }
 
 
+/** Sent on every API call so a refusal in the API log names the build (S1). */
+export const CEDA_CLIENT: string = import.meta.env.VITE_CEDA_CLIENT ?? 'public@unknown'
+// The sign-in calls in auth.service use axios directly; they go to the same API, so they carry it too.
+axios.defaults.headers.common['X-CEDA-Client'] = CEDA_CLIENT
+
 const api: AxiosInstance = axios.create({
   baseURL: `${BASE_URL}/api`,
-  headers: { 'Content-Type': 'application/json' },
+  headers: { 'Content-Type': 'application/json', 'X-CEDA-Client': CEDA_CLIENT },
   timeout: 15000,
 })
 

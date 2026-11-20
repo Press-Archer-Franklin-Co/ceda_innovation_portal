@@ -5,12 +5,9 @@ import { useAsync } from '../lib/useAsync'
 import { publicContent, HomeSection, ChallengeCard as Challenge, PostCard } from '../services/publicContent.service'
 import Skeleton, { SkeletonText } from '../components/ui/Skeleton'
 import { ErrorState } from '../components/ui/EmptyState'
-import HeroBanner, { HeroSettings } from '../components/home/HeroBanner'
 import QuickStartCard, { QuickStartDraft } from '../components/home/QuickStartCard'
 import QuickStartStep2 from '../components/home/QuickStartStep2'
-import {
-  BulletinBoard, ChallengesSection, CtaBand, HowItWorks, NewsFlash, PartnersStrip, QuotesSection, SectorsSection, StoriesSection,
-} from '../components/home/sections'
+import HomeSections from '../components/home/HomeSections'
 import VideoStoryDialog from '../components/home/VideoStoryDialog'
 import Modal from '../components/ui/Modal'
 import { useMediaQuery } from '../lib/useMediaQuery'
@@ -86,37 +83,12 @@ export default function Home() {
 
   return (
     <div aria-busy={home.fetching || undefined}>
-      {sections.map((section, i) => {
-        const key = section.id ?? `${section.type}-${i}`
-        switch (section.type) {
-          case 'hero_banner':
-            return <HeroBanner key={key} settings={section.settings as HeroSettings} card={card} />
-          case 'partners_strip':
-            return <PartnersStrip key={key} title={section.settings.title} items={section.data?.items ?? []} />
-          case 'challenges':
-            return <ChallengesSection key={key} title={section.settings.title} items={section.data?.items ?? []} />
-          case 'leadership_quotes':
-            return <QuotesSection key={key} title={section.settings.title} items={section.data?.items ?? []} rotationSeconds={section.data?.rotation_seconds ?? 0} />
-          case 'news_flash':
-            return <NewsFlash key={key} title={section.settings.title} items={section.data?.items ?? []} onOpenVideo={openStory} />
-          case 'bulletin_board':
-            return <BulletinBoard key={key} title={section.settings.title} items={section.data?.items ?? []} />
-          case 'sectors':
-            return <SectorsSection key={key} title={section.settings.title} items={section.data?.items ?? []} />
-          case 'how_it_works':
-            return <HowItWorks key={key} title={section.settings.title} steps={section.settings.steps ?? []} />
-          case 'cta_band':
-            return <CtaBand key={key} headline={section.settings.headline} text={section.settings.text} button={section.settings.button} />
-          case 'stories':
-            return <StoriesSection key={key} title={section.settings.title} items={section.data?.items ?? []} />
-          default:
-            return null // a section type this site does not know yet is skipped, not an error
-        }
-      })}
+      <HomeSections sections={sections} card={card} onOpenVideo={openStory} />
       <VideoStoryDialog post={video} onClose={() => openStory(null)} onOpenPost={openStory} />
       {!isDesktop && (
         <Modal open={Boolean(step)} onClose={() => setStep(null)} closeOnBackdrop={false} bodyClassName="!p-0" size="md">
-          {step2 && <div className="[&>form]:shadow-none [&>form]:rounded-none">{step2}</div>}
+          {/* pr-10 on the heading row keeps "Step 2 of 2" clear of the sheet's close button. */}
+          {step2 && <div className="[&>form]:shadow-none [&>form]:rounded-none [&>form>div:first-child]:pr-10">{step2}</div>}
         </Modal>
       )}
     </div>

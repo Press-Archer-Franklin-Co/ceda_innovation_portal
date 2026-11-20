@@ -57,7 +57,11 @@ const swatches = [
 ]
 const tones = ['neutral', 'red', 'orange', 'green', 'amber', 'blue', 'new', 'dark', 'cms', 'selected', 'unknown']
 const judges = ['Kabo Molefe', 'Lesego Dintwe', 'Mpho Seretse', 'Neo Mosweu', 'Onalenna Kgosi', 'Tebogo Ramotswa', 'Thato Phiri', 'Wame Sebego', 'Boitumelo Tau'].map((n) => ({ value: n, label: n }))
-const previewAdmin = { first_name: 'Preview', last_name: 'Admin', roles: ['administrator'] }
+// Every capability, so the shell preview shows the full menu.
+const previewAdmin = {
+  first_name: 'Preview', last_name: 'Admin',
+  capabilities: ['analytics.view', 'audit.view', 'challenges.manage', 'content.approve', 'content.edit', 'criteria.manage', 'dashboard.view', 'entries.assign', 'entries.review', 'entries.score', 'entries.search', 'forms.manage', 'reports.export', 'settings.manage', 'users.manage'],
+}
 
 export default function Styleguide() {
   const { lang, setLang } = useI18n()
@@ -112,6 +116,25 @@ export default function Styleguide() {
           }
         />
         <p className="text-d-cap text-muted">Setswana keys missing: {missing.length === 0 ? 'none' : missing.join(', ')}</p>
+
+        <Section figma="PageHeader" title="Many actions wrap on a phone (R-24)">
+          <div id="sg-pageheader-many" className="rounded-card border border-border p-4">
+            <PageHeader
+              title="Idea form"
+              subtitle="Six actions, like the form builder."
+              actions={
+                <>
+                  <span className="text-d-cap text-muted">Saved</span>
+                  <Button variant="ghost" size="sm">Undo</Button>
+                  <Button variant="ghost" size="sm">Redo</Button>
+                  <LanguageSwitch />
+                  <Button variant="secondary" size="sm">Preview</Button>
+                  <Button size="sm">Publish</Button>
+                </>
+              }
+            />
+          </div>
+        </Section>
 
         <Section figma="Shell" title="Sidebar (as an administrator) and top bar">
           <div className="relative h-[720px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)' }}>

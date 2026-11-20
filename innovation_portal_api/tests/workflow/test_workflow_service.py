@@ -68,64 +68,100 @@ class WorkflowBypassProtectionTests(TestCase):
 
 
 class ParallelStepCompletionEvaluatorTests(TestCase):
+    """Decision 6: review steps follow execution_mode, and move on by themselves only with advance_automatically."""
+
     def setUp(self):
         RoleService.ensure_default_roles()
         self.officer = User.objects.create_user(email="parallel-officer@example.com", password="StrongPass123", first_name="Parallel", last_name="Officer")
-        self.judge_one = User.objects.create_user(email="parallel-judge1@example.com", password="StrongPass123", first_name="Judge", last_name="One")
-        self.judge_two = User.objects.create_user(email="parallel-judge2@example.com", password="StrongPass123", first_name="Judge", last_name="Two")
+        self.judges = []
+        for number in range(3):
+            judge = User.objects.create_user(email=f"parallel-judge{number}@example.com", password="StrongPass123", first_name="Judge", last_name=str(number))
+            RoleService.assign_roles(judge, [RoleType.JUDGE])
+            self.judges.append(judge)
         self.innovator = User.objects.create_user(email="parallel-innovator@example.com", password="StrongPass123", first_name="Parallel", last_name="Innovator")
         RoleService.assign_roles(self.officer, [RoleType.INNOVATION_OFFICER])
-        RoleService.assign_roles(self.judge_one, [RoleType.JUDGE])
-        RoleService.assign_roles(self.judge_two, [RoleType.JUDGE])
         RoleService.assign_roles(self.innovator, [RoleType.INNOVATOR])
-        program_type = ProgramType.objects.get_or_create(code=ProgramTypeCode.HACKATHON, defaults={"name": "Hackathon"})[0]
-        self.program = Program.objects.create(
-            title="Parallel Flow Program",
-            slug="parallel-flow-program",
-            description="Desc",
-            program_type=program_type,
-            opening_date=timezone.now() - timezone.timedelta(days=1),
-            closing_date=timezone.now() + timezone.timedelta(days=5),
-            owner=self.officer,
-            status="published",
+        self.program_type = ProgramType.objects.get_or_create(code=ProgramTypeCode.HACKATHON, defaults={"name": "Hackathon"})[0]
+
+    def build(self, mode, *, minimum=1, auto=False):
+        program = Program.objects.create(
+            title=f"Parallel {mode} {minimum} {auto}", slug=f"parallel-{mode}-{minimum}-{int(auto)}", description="Desc", program_type=self.program_type,
+            opening_date=timezone.now() - timezone.timedelta(days=1), closing_date=timezone.now() + timezone.timedelta(days=5),
+            owner=self.officer, status="published",
         )
-        form = SubmissionForm.objects.create(program=self.program, title="Flow Form")
-        field = SubmissionFormField.objects.create(
-            form=form,
-            label="Problem",
-            key="problem",
-            field_type=SubmissionFormFieldType.TEXTAREA,
-            required=True,
-            ordering=1,
-        )
+        form = SubmissionForm.objects.create(program=program, title="Flow Form")
+        field = SubmissionFormField.objects.create(form=form, label="Problem", key="problem", field_type=SubmissionFormFieldType.TEXTAREA, required=True, ordering=1)
         WorkflowDefinitionService.create_definition(
-            program=self.program,
+            program=program,
             name="Parallel Flow",
             steps_data=[
                 {"name": "Intake", "code": "intake", "order": 1, "role_required": RoleType.INNOVATION_OFFICER, "actions_allowed": ["approve", "reject", "return"], "submission_status": "submitted"},
-                {"name": "Review", "code": "review", "order": 2, "role_required": RoleType.INNOVATION_OFFICER, "actions_allowed": ["approve", "reject", "return"], "submission_status": "judging_review", "execution_mode": "parallel_any", "minimum_completions_required": 1, "requires_assignment": True, "assignment_role": AssignmentRoleType.JUDGE, "minimum_assignments": 2},
+                {
+                    "name": "Review", "code": "review", "order": 2, "role_required": RoleType.INNOVATION_OFFICER,
+                    "actions_allowed": ["approve", "reject", "return"], "submission_status": "judging_review",
+                    "execution_mode": mode, "minimum_completions_required": minimum, "advance_automatically": auto,
+                    "requires_assignment": True, "assignment_role": AssignmentRoleType.JUDGE, "minimum_assignments": 3,
+                },
+                {"name": "Decision", "code": "decision", "order": 3, "role_required": RoleType.INNOVATION_OFFICER, "actions_allowed": ["approve", "reject", "return"], "submission_status": "shortlisted"},
             ],
             activate=True,
         )
-        self.submission = SubmissionService.create_draft(
-            innovator=self.innovator,
-            program=self.program,
-            submission_type=SubmissionType.HACKATHON_APPLICATION,
-            title="Parallel Submission",
-        )
-        SubmissionService.save_responses(self.submission, [{"form_field": field.id, "value": "A valid problem statement"}], actor=self.innovator)
-        self.submission = SubmissionService.finalize_submission(self.submission, self.innovator)
-        WorkflowRuntimeService.perform_action(submission=self.submission, actor=self.officer, action="approve", comment="To review.")
-        self.a1 = AssignmentService.create_assignment(submission=self.submission, assignee=self.judge_one, role_type=AssignmentRoleType.JUDGE, assigned_by=self.officer)
-        self.a2 = AssignmentService.create_assignment(submission=self.submission, assignee=self.judge_two, role_type=AssignmentRoleType.JUDGE, assigned_by=self.officer)
+        submission = SubmissionService.create_draft(innovator=self.innovator, program=program, submission_type=SubmissionType.HACKATHON_APPLICATION, title="Parallel Submission")
+        SubmissionService.save_responses(submission, [{"form_field": field.id, "value": "A valid problem statement"}], actor=self.innovator)
+        submission = SubmissionService.finalize_submission(submission, self.innovator)
+        WorkflowRuntimeService.perform_action(submission=submission, actor=self.officer, action="approve", comment="To review.")
+        for judge in self.judges:
+            AssignmentService.create_assignment(submission=submission, assignee=judge, role_type=AssignmentRoleType.JUDGE, assigned_by=self.officer)
+        return submission
 
-    def test_parallel_any_advances_after_one_successful_task(self):
-        task = self.a1.tasks.first()
+    def approve_by(self, submission, count):
         from apps.workflow.services import TaskExecutionService
 
-        TaskExecutionService.complete(task, self.judge_one, outcome="approve", comment="Approved.")
-        summary = StepCompletionEvaluator.evaluate(instance=self.submission.workflow_instance)
+        tasks = list(submission.workflow_instance.tasks.filter(workflow_step__code="review").order_by("created_at"))
+        for task in tasks[:count]:
+            TaskExecutionService.complete(task, task.assignee, outcome="approve", comment="Approved.")
+        submission.refresh_from_db()
+        return StepCompletionEvaluator.evaluate(instance=submission.workflow_instance)
+
+    def status(self, submission):
+        submission.refresh_from_db()
+        return submission.current_status
+
+    def test_parallel_any_advances_after_one_successful_task(self):
+        # Setting off: one approval is enough, but the officer moves the idea on.
+        submission = self.build("parallel_any")
+        summary = self.approve_by(submission, 1)
         self.assertTrue(summary["may_advance"])
-        WorkflowRuntimeService.perform_action(submission=self.submission, actor=self.officer, action="approve", comment="Advance on first successful review.")
-        self.submission.refresh_from_db()
-        self.assertEqual(self.submission.current_status, "judging_review")
+        self.assertFalse(summary["advance_automatically"])
+        self.assertEqual(self.status(submission), "judging_review")
+        WorkflowRuntimeService.perform_action(submission=submission, actor=self.officer, action="approve", comment="Advance on first successful review.")
+        self.assertEqual(self.status(submission), "shortlisted")
+
+    def test_parallel_any_moves_on_by_itself_when_set(self):
+        submission = self.build("parallel_any", auto=True)
+        self.approve_by(submission, 1)
+        self.assertEqual(self.status(submission), "shortlisted")
+
+    def test_parallel_all_waits_for_every_judge(self):
+        for auto in (False, True):
+            with self.subTest(auto=auto):
+                submission = self.build("parallel_all", auto=auto)
+                self.assertFalse(self.approve_by(submission, 2)["may_advance"])
+                self.assertEqual(self.status(submission), "judging_review")
+                summary = self.approve_by(submission, 3)
+                if auto:
+                    self.assertEqual(self.status(submission), "shortlisted")
+                else:
+                    self.assertTrue(summary["may_advance"])
+                    self.assertEqual(self.status(submission), "judging_review")
+
+    def test_parallel_minimum_needs_the_set_number(self):
+        for auto in (False, True):
+            with self.subTest(auto=auto):
+                submission = self.build("parallel_minimum", minimum=2, auto=auto)
+                self.assertFalse(self.approve_by(submission, 1)["may_advance"])
+                self.assertEqual(self.status(submission), "judging_review")
+                summary = self.approve_by(submission, 2)
+                self.assertEqual(self.status(submission), "shortlisted" if auto else "judging_review")
+                if not auto:
+                    self.assertTrue(summary["may_advance"])

@@ -6,7 +6,7 @@ from apps.assignments.models import Assignment
 from apps.core.constants import AssignmentRoleType, AssignmentStatus
 from apps.core.api import api_success
 from apps.core.constants import ScoreSheetStatus
-from apps.core.permissions import IsAdministrator, IsJudge, IsJudgeOrOfficer, IsOfficerOrAdmin, IsStaffWorker
+from apps.core.permissions import HasCapability, IsAdministrator, IsOfficerOrAdmin, IsStaffWorker
 from apps.evaluation.models import (
     EvaluationRound, MarkingCriteria, MarkingCriteriaItem,
     ReviewCycle, ScoreSheet, StageEvaluationConfig, StageCriterion,
@@ -44,7 +44,7 @@ from apps.workflow.services import WorkflowRuntimeService
 
 
 class MyAssignedEvaluationsView(generics.ListAPIView):
-    permission_classes = [IsJudge]
+    permission_classes = [HasCapability.of("entries.score")]
     serializer_class = MyAssignedEvaluationSerializer
 
     def get_queryset(self):
@@ -56,7 +56,7 @@ class MyAssignedEvaluationsView(generics.ListAPIView):
 
 
 class SubmissionRubricView(generics.RetrieveAPIView):
-    permission_classes = [IsJudge]
+    permission_classes = [HasCapability.of("entries.score")]
     serializer_class = RubricSerializer
 
     def get_object(self):
@@ -67,7 +67,7 @@ class SubmissionRubricView(generics.RetrieveAPIView):
 
 
 class SaveScoresView(generics.GenericAPIView):
-    permission_classes = [IsJudge]
+    permission_classes = [HasCapability.of("entries.score")]
     serializer_class = ScoreSheetSerializer
 
     def post(self, request, submission_id):
@@ -85,7 +85,7 @@ class SaveScoresView(generics.GenericAPIView):
 
 
 class SubmitScoresView(generics.GenericAPIView):
-    permission_classes = [IsJudge]
+    permission_classes = [HasCapability.of("entries.score")]
 
     def post(self, request, submission_id):
         submission = Submission.objects.get(id=submission_id)

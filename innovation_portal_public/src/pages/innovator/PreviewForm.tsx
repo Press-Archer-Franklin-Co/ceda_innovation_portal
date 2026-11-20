@@ -4,33 +4,19 @@ import FormRenderer from '../../components/innovator/form/FormRenderer'
 import { pick, type Answers, type MaybeBilingual } from '../../components/innovator/form/logic'
 import { useI18n } from '../../i18n'
 import type { FormStep, Lang } from '../../types/innovator'
+import { isStaffOrigin, postToStaff } from '../../lib/previewBridge'
 
 /**
  * Staff form builder preview (U5, 3.5). The staff console shows this page in an
  * iframe and posts the draft form document to it, so staff see exactly what
  * applicants see. It calls no API and keeps answers only in memory.
- *
- * Messages are accepted only from this site's origin (the staff console is
- * served under /staff) or the staff origin set in VITE_STAFF_SITE_URL for local
- * development.
+ * Messages are checked in lib/previewBridge.
  */
-const STAFF_ORIGIN = (import.meta.env.VITE_STAFF_SITE_URL as string | undefined)?.replace(/\/$/, '')
-
 interface PreviewMessage {
   type: 'ceda-form-preview:document'
   document: { steps?: FormStep[] }
   lang?: Lang
   stepIndex?: number
-}
-
-function allowed(origin: string): boolean {
-  if (origin === window.location.origin) return true
-  if (!STAFF_ORIGIN) return false
-  try {
-    return origin === new URL(STAFF_ORIGIN).origin
-  } catch {
-    return false
-  }
 }
 
 export default function PreviewForm() {
@@ -42,7 +28,7 @@ export default function PreviewForm() {
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
-      if (!allowed(event.origin) || event.source !== window.parent) return
+      if (!isStaffOrigin(event.origin) || event.source !== window.parent) return
       const data = event.data as PreviewMessage
       if (data?.type !== 'ceda-form-preview:document' || !data.document) return
       setDoc(data.document)
@@ -53,10 +39,7 @@ export default function PreviewForm() {
       if (typeof data.stepIndex === 'number') setStepIndex(data.stepIndex)
     }
     window.addEventListener('message', onMessage)
-    if (window.parent !== window) {
-      const target = STAFF_ORIGIN ? new URL(STAFF_ORIGIN).origin : window.location.origin
-      window.parent.postMessage({ type: 'ceda-form-preview:ready' }, target)
-    }
+    postToStaff({ type: 'ceda-form-preview:ready' })
     return () => window.removeEventListener('message', onMessage)
   }, [setLang])
 

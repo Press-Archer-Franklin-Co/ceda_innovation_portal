@@ -1,5 +1,6 @@
 // Setswana strings for staff console chrome. First draft: needs review by a Setswana speaker at CEDA.
 import { challengesTn } from './challenges'
+import { contentTn } from './content'
 import { formsTn } from './forms'
 
 const tn = {
@@ -7,6 +8,8 @@ const tn = {
   'lang.tn': 'Setswana',
   'lang.label': 'Puo',
   'common.close': 'Tswala',
+  'access.noPageTitle': 'Tsebe e ga se karolo ya tiro ya gago', // TODO tn-review
+  'access.noPageBody': 'Kopa motsamaisi fa o e tlhoka.', // TODO tn-review
   'common.confirm': 'Netefatsa',
   'common.cancel': 'Khansela',
   'common.save': 'Boloka',
@@ -124,8 +127,18 @@ const tn = {
   'staff.collapse': 'Fitlha lenaane',
   'staff.expand': 'Bontsha lenaane',
   'staff.console': 'Kgolo ya badiri',
+  // Crop dialog (components/ui/ImageCropModal)
+  'crop.title': 'Baya le go sega setshwantsho', // TODO tn-review
+  'crop.help': 'Goga setshwantsho go se baya, o dirise selaodi go se godisa. Lebokose le bontsha sentle se batho ba tla se bonang.', // TODO tn-review
+  'crop.drag': 'Goga go se baya', // TODO tn-review
+  'crop.zoom': 'Godisa', // TODO tn-review
+  'crop.apply': 'Dirisa go sega', // TODO tn-review
+  'crop.loadError': 'Setshwantsho se ga se a kgona go bulwa gore se segwe.', // TODO tn-review
+  'crop.createError': 'Ga re a kgona go dira setshwantsho se se segilweng. Tsweetswee leka gape.', // TODO tn-review
+  'crop.taintedError': 'Setshwantsho se ga se kgone go segelwa fano. Tsenya faele ya ntlha gape mme o e sege pele o boloka.', // TODO tn-review
   ...formsTn,
   ...challengesTn,
+  ...contentTn,
 }
 
 export default tn

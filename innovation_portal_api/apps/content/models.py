@@ -104,6 +104,7 @@ class ContentItem(UUIDModel, TimeStampedModel):
     event_place = models.CharField(max_length=255, blank=True, default="")
     newsletter_issue = models.PositiveIntegerField(null=True, blank=True)
     view_count = models.PositiveIntegerField(default=0)
+    send_to_subscribers = models.BooleanField(default=False, help_text="Email the post to subscribers when it goes live (R-29 b).")
     publish_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Publish automatically at this time (after approval).")
     unpublish_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Take down automatically at this time.")
 
@@ -427,6 +428,8 @@ class ApprovalRequest(UUIDModel, TimeStampedModel):
     approver_roles = models.JSONField(default=list, blank=True, help_text="Role codes allowed to decide.")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
     publish_at = models.DateTimeField(null=True, blank=True)
+    languages = models.JSONField(default=list, blank=True, help_text='Languages the change touches, e.g. ["en", "tn"] (S2).')
+    step_ids = models.JSONField(default=list, blank=True, help_text="The approval steps this change waits for (S2), frozen when it is sent.")
     comment = models.TextField(blank=True)
     decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="content_approvals_decided")
     decided_at = models.DateTimeField(null=True, blank=True)
@@ -591,3 +594,58 @@ class PostBlast(UUIDModel, TimeStampedModel):
     email_count = models.PositiveIntegerField(default=0)
     whatsapp_pending = models.PositiveIntegerField(default=0)
     sent_at = models.DateTimeField(null=True, blank=True)
+
+
+class ApprovalFlow(UUIDModel, TimeStampedModel):
+    """S2: how website content gets approved: ordered steps, per language."""
+
+    key = models.SlugField(max_length=40, unique=True, help_text='"content" for website content.')
+    approvers_can_approve_own_work = models.BooleanField(default=True, help_text="People who can approve a step may approve their own change.")
+
+    def __str__(self):
+        return self.key
+
+
+class ApprovalStep(UUIDModel, TimeStampedModel):
+    class Language(models.TextChoices):
+        ALL = "all", "All languages"
+        EN = "en", "English"
+        TN = "tn", "Setswana"
+
+    flow = models.ForeignKey(ApprovalFlow, on_delete=models.CASCADE, related_name="steps")
+    order = models.PositiveIntegerField(default=1)
+    name = models.CharField(max_length=120, blank=True)
+    capability = models.CharField(max_length=60, blank=True, help_text="Who may approve: a capability ...")
+    role = models.ForeignKey("accounts.Role", on_delete=models.PROTECT, null=True, blank=True, related_name="+", help_text="... or a role.")
+    approvals_needed = models.PositiveSmallIntegerField(default=1)
+    language = models.CharField(max_length=5, choices=Language.choices, default=Language.ALL)
+
+    class Meta:
+        ordering = ["order", "created_at"]
+
+
+class ApprovalDecision(UUIDModel, TimeStampedModel):
+    """One person's approval of one step of an approval request."""
+
+    request = models.ForeignKey(ApprovalRequest, on_delete=models.CASCADE, related_name="decisions")
+    step = models.ForeignKey(ApprovalStep, on_delete=models.SET_NULL, null=True, related_name="+")
+    step_order = models.PositiveIntegerField(default=1)
+    decided_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    own_work = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [models.UniqueConstraint(fields=["request", "step", "decided_by"], name="uq_approval_decision_person_step")]
+
+
+class PostMonthlyViews(UUIDModel, TimeStampedModel):
+    """Views per post per calendar month (R-29 a). view_count on the post stays the all-time total."""
+
+    post = models.ForeignKey(ContentItem, on_delete=models.CASCADE, related_name="monthly_views")
+    month = models.DateField(help_text="First day of the month.")
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["post", "month"], name="uq_post_month_views")]
+        indexes = [models.Index(fields=["month"])]
+

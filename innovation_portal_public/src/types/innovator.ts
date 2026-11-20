@@ -46,7 +46,8 @@ export interface OtpRequestResult {
 
 export interface QuickStartRequest {
   title: string
-  sector: string
+  /** null = "Not sure"; officers set the sector later (R-21). */
+  sector: string | null
   program_id?: string
 }
 
@@ -116,6 +117,10 @@ export interface SubmitRequest {
   name?: string
   first_name?: string
   last_name?: string
+  /** Reference district slug or id (R-22). */
+  district?: string
+  /** Guests only: also gets the confirmation copy (R-22). */
+  email?: string
 }
 
 export interface NextStep {

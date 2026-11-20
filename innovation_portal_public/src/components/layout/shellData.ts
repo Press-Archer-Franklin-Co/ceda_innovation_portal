@@ -58,13 +58,20 @@ export function useUnreadCount(enabled: boolean): number | undefined {
       return
     }
     let alive = true
+    let timer: number | undefined
     const load = () =>
       api
         .get<{ data?: { unread_count?: number } }>('/notifications/unread-count/')
         .then(({ data }) => alive && setCount(data?.data?.unread_count))
-        .catch(() => alive && setCount(undefined))
+        .catch((err: { response?: { status?: number } }) => {
+          if (!alive) return
+          setCount(undefined)
+          // Refused (S1): stop asking until the person signs in again.
+          const status = err?.response?.status
+          if (status === 401 || status === 403) window.clearInterval(timer)
+        })
+    timer = window.setInterval(load, 60_000)
     load()
-    const timer = window.setInterval(load, 60_000)
     return () => {
       alive = false
       window.clearInterval(timer)

@@ -41,8 +41,15 @@ export const optionDColors = {
   scrim: c('scrim'),
 }
 
+// Text only: the orange accent (#F0641E) is a fill. As text it fails WCAG AA (3.21 on bg, 2.79 on surface2), so
+// text-accent uses the darker accent-ink (#B4460F: 5.49 on bg, 4.78 on surface2). bg-accent and border-accent stay orange.
+export const optionDTextColors = {
+  accent: { DEFAULT: c('accent-ink'), soft: c('accent-soft'), ink: c('accent-ink') },
+}
+
 export const optionDTheme = {
   colors: optionDColors,
+  textColor: optionDTextColors,
   fontFamily: {
     sans: ['var(--font-body)'],
     body: ['var(--font-body)'],

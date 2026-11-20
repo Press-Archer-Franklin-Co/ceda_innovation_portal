@@ -1,5 +1,6 @@
 // English strings for staff console chrome. Every key must also exist in tn.js (checked in the styleguide).
 import { challengesEn } from './challenges'
+import { contentEn } from './content'
 import { formsEn } from './forms'
 
 const en = {
@@ -7,6 +8,8 @@ const en = {
   'lang.tn': 'Setswana',
   'lang.label': 'Language',
   'common.close': 'Close',
+  'access.noPageTitle': 'This page is not part of your work',
+  'access.noPageBody': 'Ask an administrator if you need it.',
   'common.confirm': 'Confirm',
   'common.cancel': 'Cancel',
   'common.save': 'Save',
@@ -124,8 +127,18 @@ const en = {
   'staff.collapse': 'Hide menu',
   'staff.expand': 'Show menu',
   'staff.console': 'Staff console',
+  // Crop dialog (components/ui/ImageCropModal)
+  'crop.title': 'Position and crop the picture',
+  'crop.help': 'Drag the picture to place it and use the slider to zoom. The box shows exactly what people will see.',
+  'crop.drag': 'Drag to place it',
+  'crop.zoom': 'Zoom',
+  'crop.apply': 'Apply crop',
+  'crop.loadError': 'This picture could not be opened for cropping.',
+  'crop.createError': 'We could not make the cropped picture. Please try again.',
+  'crop.taintedError': 'This picture cannot be cropped here. Upload the original file again and crop it before saving.',
   ...formsEn,
   ...challengesEn,
+  ...contentEn,
 }
 
 export default en

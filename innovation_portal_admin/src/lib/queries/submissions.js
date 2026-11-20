@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { submissions as api } from '../api/endpoints'
 import { qk } from './keys'
+import { pollEvery } from '../api/refusals'
 
 export function useSubmissions(params) {
   return useQuery({
@@ -14,7 +15,7 @@ export function useSubmission(id) {
     queryKey: qk.submission(id),
     queryFn:  () => api.get(id),
     enabled:  !!id,
-    refetchInterval: 30_000,
+    refetchInterval: pollEvery(30_000),
   })
 }
 
