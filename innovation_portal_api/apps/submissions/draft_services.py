@@ -128,8 +128,13 @@ class ApplicationDraftService:
 
     @staticmethod
     def allows_basics_only(draft: ApplicationDraft) -> bool:
-        """R-23: a quick-start idea for General ideas may be sent before the full form is answered."""
-        return bool((draft.metadata or {}).get("quick_start")) and bool(getattr(draft.program, "is_general_intake", False))
+        """R-23: a quick-start idea for General ideas may be sent before the full form is answered,
+        while the "Send ideas with just the basics" switch is on (Platform settings)."""
+        from apps.platform_config.flags import is_enabled
+
+        if not ((draft.metadata or {}).get("quick_start") and getattr(draft.program, "is_general_intake", False)):
+            return False
+        return is_enabled("quick_start_basics_only")
 
     @classmethod
     def _check_before_submit(cls, draft: ApplicationDraft) -> list[str]:
