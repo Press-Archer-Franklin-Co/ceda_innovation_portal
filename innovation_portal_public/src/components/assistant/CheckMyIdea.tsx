@@ -35,11 +35,23 @@ export default function CheckMyIdea({ draftId, stepCode, answers, fieldLabels }:
 
   function goTo(key: string) {
     setPanel({ kind: 'closed' })
-    window.setTimeout(() => {
+    // The genie gives focus back to its trigger when the close finishes, so move focus to the
+    // field only after the dialog has left the page (with a fallback in case it never does).
+    let done = false
+    const focusField = () => {
+      if (done) return
+      done = true
+      observer.disconnect()
+      window.clearTimeout(fallback)
       const el = document.querySelector<HTMLElement>(`[name="${CSS.escape(key)}"]`)
       el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
       el?.focus({ preventScroll: true })
-    }, 0)
+    }
+    const observer = new MutationObserver(() => {
+      if (!document.querySelector('[role="dialog"]')) window.requestAnimationFrame(focusField)
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    const fallback = window.setTimeout(focusField, 1500)
   }
 
   const open = panel.kind !== 'closed'

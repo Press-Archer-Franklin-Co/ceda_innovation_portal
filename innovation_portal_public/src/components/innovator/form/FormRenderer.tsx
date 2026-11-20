@@ -142,6 +142,7 @@ function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlo
           placeholder={placeholder}
           maxChars={maxChars(field)}
           rows={5}
+          name={field.key}
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => set(e.target.value)}
         />,
@@ -259,6 +260,7 @@ function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlo
         <Field label={label} hint={hint} error={errorText} required={required}>
           <InputControl
             type={inputType}
+            name={field.key}
             inputMode={inputMode}
             autoComplete={field.type === 'email' ? 'email' : field.type === 'phone' ? 'tel' : undefined}
             placeholder={placeholder}
