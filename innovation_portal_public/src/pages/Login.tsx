@@ -10,18 +10,8 @@ import VerificationRequired from '../components/ui/VerificationRequired'
 import { tokenStorage } from '../services/api'
 import { parseApiError, parseFieldErrors } from '../utils/apiError'
 import type { AuthUser } from '../context/AuthContext'
+import { isInnovator, isStaff as hasStaffAccess } from '../lib/roles'
 
-const STAFF_PORTAL_ROLES = [
-  'administrator', 'admin',
-  'innovation_officer', 'innovation_manager', 'innovation_analyst',
-  'staff_member', 'specialist', 'exo', 'management_viewer',
-  'judge', 'reviewer',
-  'mentor',
-]
-
-function hasStaffAccess(roles: string[]) {
-  return roles.some(r => STAFF_PORTAL_ROLES.includes(r))
-}
 
 function safeNextPath(search: string): string | null {
   const next = new URLSearchParams(search).get('next')
@@ -85,7 +75,7 @@ function PortalPicker({ user, from }: { user: AuthUser; from: string }) {
 export default function Login() {
   const navigate  = useNavigate()
   const location  = useLocation()
-  const { login, refreshProfile, user: authUser } = useAuth()
+  const { login, refreshProfile } = useAuth()
 
   const [email,           setEmail]           = useState('')
   const [password,        setPassword]        = useState('')
@@ -98,16 +88,16 @@ export default function Login() {
 
   const from = (location.state as { from?: { pathname?: string } })?.from?.pathname ?? safeNextPath(location.search) ?? '/'
 
-  function handlePortalRedirect(roles: string[], resolvedUser?: AuthUser) {
+  function handlePortalRedirect(resolvedUser: AuthUser) {
     if (from.startsWith('/judge-invite/') || from.startsWith('/specialist-invite/')) {
       navigate(from, { replace: true })
       return
     }
-    const isStaff     = hasStaffAccess(roles)
-    const isInnovator = roles.includes('innovator')
+    const isStaff     = hasStaffAccess(resolvedUser)
+    const alsoInnovator = isInnovator(resolvedUser)
 
-    if (isStaff && isInnovator) {
-      setDualRoleUser(resolvedUser ?? authUser)
+    if (isStaff && alsoInnovator) {
+      setDualRoleUser(resolvedUser)
       return
     }
     if (isStaff) {
@@ -141,7 +131,7 @@ export default function Login() {
         setUnverifiedEmail(email)
         return
       }
-      handlePortalRedirect(result.roles)
+      handlePortalRedirect(result.user)
     } catch (localErr) {
       setFieldErrors(parseFieldErrors(localErr))
       setError(parseApiError(localErr, 'Invalid email or password. Please try again.'))

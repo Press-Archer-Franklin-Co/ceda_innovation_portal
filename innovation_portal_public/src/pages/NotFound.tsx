@@ -1,18 +1,11 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-
-const STAFF_PORTAL_ROLES = [
-  'administrator', 'admin',
-  'innovation_officer', 'innovation_manager', 'innovation_analyst',
-  'staff_member', 'specialist', 'exo', 'management_viewer',
-  'judge', 'reviewer',
-  'mentor',
-]
+import { isStaff as isStaffUser } from '../lib/roles'
 
 export default function NotFound() {
   const { user } = useAuth()
   const location = useLocation()
-  const isStaff  = (user?.roles ?? []).some(r => STAFF_PORTAL_ROLES.includes(r))
+  const isStaff  = isStaffUser(user)
 
   const STAFF_PATHS = [
     '/dashboard', '/programs', '/submissions', '/assignments', '/history',

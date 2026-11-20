@@ -17,8 +17,7 @@ from apps.content.sections import describe_types
 from apps.content.services import ApprovalService, PageService, PartnerService, PostService, clear_home_cache, text_in
 from apps.core.api import api_success
 from apps.core.i18n import normalize_language
-from apps.core.constants import RoleType
-from apps.core.permissions import HasRolePermission, IPRateThrottle, IsOfficerOrAdmin
+from apps.core.permissions import HasAnyCapability, HasCapability, IPRateThrottle
 
 STAFF_TAGS = ["Website content"]
 PUBLIC_TAGS = ["Website content (public)"]
@@ -31,12 +30,6 @@ def _lang(request) -> str:
     return "en" if lang == "all" else lang
 
 
-class IsContentStaffOrApprover(HasRolePermission):
-    """Officers and admins edit content; managers also see and decide approvals."""
-
-    allowed_roles = {RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER, RoleType.ADMINISTRATOR}
-
-
 class PublicContentThrottle(IPRateThrottle):
     scope = "content_public"
 
@@ -45,7 +38,7 @@ class PublicContentThrottle(IPRateThrottle):
 
 
 class SectionTypeListView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="List home page section types and their settings", responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -53,7 +46,7 @@ class SectionTypeListView(APIView):
 
 
 class HomeDraftView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="Get the home page draft", responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -73,7 +66,7 @@ class HomeDraftView(APIView):
 
 
 class HomePreviewView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="Preview the home page draft", description="Same shape as the public home page.", parameters=[LANG_PARAM], responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -83,7 +76,7 @@ class HomePreviewView(APIView):
 
 
 class HomeSubmitView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(
         tags=STAFF_TAGS,
@@ -119,7 +112,7 @@ class PublicHomeView(APIView):
 
 
 class ApprovalListView(APIView):
-    permission_classes = [IsContentStaffOrApprover]
+    permission_classes = [HasAnyCapability.of("content.edit", "content.approve")]
 
     @extend_schema(
         tags=STAFF_TAGS,
@@ -141,7 +134,7 @@ class ApprovalListView(APIView):
 
 
 class ApprovalDecisionView(APIView):
-    permission_classes = [IsContentStaffOrApprover]
+    permission_classes = [HasCapability.of("content.approve")]
     approve = True
 
     @extend_schema(tags=STAFF_TAGS, summary="Approve or reject a request", description="Only innovation managers and administrators decide. Rejecting needs a comment.", request=DecisionSerializer, responses=OpenApiTypes.OBJECT)
@@ -164,7 +157,7 @@ class ApprovalRejectView(ApprovalDecisionView):
 class PostViewSet(viewsets.ModelViewSet):
     """Staff posts editor. The older /api/content/news/ endpoints keep working on the same rows."""
 
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = PostSerializer
     queryset = ContentItem.objects.select_related("cover", "author")
 
@@ -364,7 +357,7 @@ class PublicNewslettersView(APIView):
 
 @extend_schema(tags=STAFF_TAGS)
 class PartnerViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = PartnerSerializer
     queryset = Partner.objects.select_related("logo").prefetch_related("programs")
 

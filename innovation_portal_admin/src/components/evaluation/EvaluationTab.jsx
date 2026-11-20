@@ -8,7 +8,6 @@ import {
 import SectionCard from '../ui/SectionCard'
 import StatusPill  from '../ui/StatusPill'
 import { useAuth } from '../../lib/auth/AuthContext'
-import { isInnovationOfficer } from '../../lib/auth/permissions'
 import {
   useMyCycle, useSaveCycleScores, useSubmitCycle,
   useReviewCycles, useCycleSummary,
@@ -671,8 +670,8 @@ function SpecialistInvitePanel({ submissionId }) {
 }
 
 export default function EvaluationTab({ submissionId }) {
-  const { user } = useAuth()
-  const isStaff = isInnovationOfficer(user)
+  const { can } = useAuth()
+  const isStaff = can('entries.assign') // officer review tools (IsOfficerOrAdmin on the API)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

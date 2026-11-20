@@ -57,7 +57,11 @@ const swatches = [
 ]
 const tones = ['neutral', 'red', 'orange', 'green', 'amber', 'blue', 'new', 'dark', 'cms', 'selected', 'unknown']
 const judges = ['Kabo Molefe', 'Lesego Dintwe', 'Mpho Seretse', 'Neo Mosweu', 'Onalenna Kgosi', 'Tebogo Ramotswa', 'Thato Phiri', 'Wame Sebego', 'Boitumelo Tau'].map((n) => ({ value: n, label: n }))
-const previewAdmin = { first_name: 'Preview', last_name: 'Admin', roles: ['administrator'] }
+// Every capability, so the shell preview shows the full menu.
+const previewAdmin = {
+  first_name: 'Preview', last_name: 'Admin',
+  capabilities: ['analytics.view', 'audit.view', 'challenges.manage', 'content.approve', 'content.edit', 'criteria.manage', 'dashboard.view', 'entries.assign', 'entries.review', 'entries.score', 'entries.search', 'forms.manage', 'reports.export', 'settings.manage', 'users.manage'],
+}
 
 export default function Styleguide() {
   const { lang, setLang } = useI18n()

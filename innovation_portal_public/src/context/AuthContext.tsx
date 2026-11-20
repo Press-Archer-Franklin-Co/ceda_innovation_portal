@@ -21,6 +21,8 @@ export interface AuthUser {
   mfa_enabled?: boolean
   mfa_method?: string
   roles?: string[]
+  /** From GET /api/auth/me/ (S1). Empty for innovators. */
+  capabilities: string[]
   profile?: InnovatorProfile
 }
 
@@ -48,6 +50,8 @@ interface AuthContextType {
   signup: (data: SignupData) => Promise<void>
   logout: () => Promise<void>
   refreshProfile: () => Promise<void>
+  /** True when the signed-in person holds the capability. Only hides things: the API decides. */
+  can: (capability: string) => boolean
 }
 
 
@@ -59,7 +63,7 @@ interface PendingMfa {
 }
 
 type LoginOutcome =
-  | { status: 'ok'; email_verified: boolean; roles: string[] }
+  | { status: 'ok'; email_verified: boolean; user: AuthUser }
   | { status: 'mfa_required'; challenge: PendingMfa }
 
 const MFA_STORAGE_KEY = 'ceda_mfa_challenge'
@@ -94,6 +98,7 @@ function toAuthUser(user: AuthenticatedUser): AuthUser {
     mfa_enabled:  user.mfa_enabled,
     mfa_method:   user.mfa_method,
     roles:        user.roles ?? [],
+    capabilities: user.capabilities ?? [],
     profile:      user.profile ?? undefined,
   }
 }
@@ -160,8 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStorage.setAccess(result.access)
     tokenStorage.setRefresh(result.refresh)
     const authUser = result.user ? result.user : await authService.me()
-    setUser(toAuthUser(authUser))
-    return { status: 'ok', email_verified: authUser.email_verified ?? true, roles: authUser.roles ?? [] } as const
+    const signedIn = toAuthUser(authUser)
+    setUser(signedIn)
+    return { status: 'ok', email_verified: authUser.email_verified ?? true, user: signedIn } as const
   }, [])
 
   const login = useCallback(
@@ -228,6 +234,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const can = useCallback((capability: string) => !!user?.capabilities.includes(capability), [user])
+
   return (
     <AuthContext.Provider
       value={{
@@ -244,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         refreshProfile,
+        can,
       }}
     >
       {children}
