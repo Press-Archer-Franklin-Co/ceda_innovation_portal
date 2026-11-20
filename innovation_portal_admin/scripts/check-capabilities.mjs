@@ -18,7 +18,6 @@ const FRONTENDS = ['innovation_portal_admin/src', 'innovation_portal_public/src'
 const NOT_IN_UI = {
   'dashboard.view': 'the dashboard opens for every staff member; the API uses it for the overview numbers',
   'reports.export': 'no export button yet (B7)',
-  'content.approve': 'the approvals screen comes with U6',
 }
 
 // Role-name tests that are allowed: auth internals and display-only role pickers.
