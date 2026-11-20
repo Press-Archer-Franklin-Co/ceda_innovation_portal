@@ -1040,7 +1040,8 @@ class EvaluationService:
             }
 
         if show_aggregate:
-            reveal_peers = reveal_identities or bool(own_submitted)
+            # Judges never see each other's names, even after they submit; only staff views do.
+            reveal_peers = reveal_identities
             peer_sheets = (
                 ScoreSheet.objects
                 .filter(

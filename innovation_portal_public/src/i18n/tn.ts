@@ -179,6 +179,12 @@ const tn: Record<StringKey, string> = {
   'qs2.sendFail': 'Ga re a kgona go romela kakanyo ya gago. Kakanyetso ya gago e babalesegile. Leka gape morago ga nakwana.', // TODO tn-review
   'qs2.phoneFirst': 'Netefatsa nomore ya gago ka khoutu pele.', // TODO tn-review
   'qs2.needMore': 'Kakanyo ya gago e tlhoka dikarabo di le mmalwa pele re e romela. Thalo ya gago e bolokilwe.', // TODO tn-review
+  'qs.introFull': 'Dikgato tse pedi tse dikhutshwane. Pele o romela, re go botsa gore kakanyo ya gago e rarabolola bothata bofe le gore jang.', // TODO tn-review
+  'qs2.problem': 'Kakanyo ya gago e rarabolola bothata bofe?', // TODO tn-review
+  'qs2.solution': 'Kakanyo ya gago e bo rarabolola jang?', // TODO tn-review
+  'qs2.problemError': 'Re bolelele bothata ka polelo e le nngwe kgotsa tse pedi.', // TODO tn-review
+  'qs2.solutionError': 'Re bolelele gore kakanyo ya gago e bo rarabolola jang.', // TODO tn-review
+  'qs2.answerBelow': 'Araba dipotso tse pedi ka kakanyo ya gago, o bo o e romela. Thalo ya gago e bolokilwe.', // TODO tn-review
 
   'video.showTranscript': 'Bontsha mafoko', // TODO tn-review
   'video.hideTranscript': 'Fitlha mafoko', // TODO tn-review

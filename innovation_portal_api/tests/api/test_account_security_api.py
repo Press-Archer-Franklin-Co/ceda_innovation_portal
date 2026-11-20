@@ -292,6 +292,8 @@ class AccountSecurityApiTests(TestCase):
                 "linked_accounts",
                 "can_set_password",
                 "can_change_password",
+                "mfa_enabled",
+                "mfa_method",
             },
         )
 

@@ -18,6 +18,7 @@ class CedaDraftRuntimeAlignmentApiTests(TestCase):
             password="StrongPass123",
             first_name="Draft",
             last_name="User",
+            email_verified=True,  # drafts need a verified email or phone (B1)
         )
         self.officer = User.objects.create_user(
             email="draft-officer@example.com",

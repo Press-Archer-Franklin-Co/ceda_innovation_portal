@@ -16,6 +16,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import JudgingEditor from '../../components/challenges/JudgingEditor'
+import CoverPicker from '../../components/challenges/CoverPicker'
 import { useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
 import { client } from '../../lib/api/client'
@@ -50,6 +51,7 @@ function fromProgram(p) {
     problem_statement: p?.problem_statement ?? '',
     who_can_enter: p?.who_can_enter ?? '',
     where: p?.where ?? '',
+    cover: p?.cover ?? null,
     what_we_look_for: (p?.what_we_look_for ?? []).map((x) => (typeof x === 'string' ? { en: x, tn: '' } : { en: x.en ?? '', tn: x.tn ?? '' })),
     tn: Object.fromEntries(TN_KEYS.map((k) => [k, tn[k] ?? ''])),
     opening_date: toInput(p?.opening_date),
@@ -76,6 +78,7 @@ function payloadFor(step, f) {
       problem_statement: f.problem_statement,
       who_can_enter: f.who_can_enter,
       where: f.where,
+      cover: f.cover,
       what_we_look_for: f.what_we_look_for.filter((x) => x.en.trim()),
       translations,
     }
@@ -272,6 +275,7 @@ function DetailsStep({ form, set }) {
       <Bilingual label={t('cb.problem')} en={form.problem_statement} tn={form.tn.problem_statement} onEn={(v) => set({ problem_statement: v })} onTn={(v) => setTn('problem_statement', v)} multiline />
       <Bilingual label={t('cb.whoCanEnter')} en={form.who_can_enter} tn={form.tn.who_can_enter} onEn={(v) => set({ who_can_enter: v })} onTn={(v) => setTn('who_can_enter', v)} />
       <Bilingual label={t('cb.where')} en={form.where} tn={form.tn.where} onEn={(v) => set({ where: v })} onTn={(v) => setTn('where', v)} />
+      <CoverPicker value={form.cover} onChange={(v) => set({ cover: v })} altText={form.title.trim()} />
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-[13px] font-bold text-text">{t('cb.lookFor')}</legend>
         {points.map((point, i) => (
