@@ -33,6 +33,11 @@ const Forms = lazy(() => import('./pages/forms/Forms'))
 const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
 const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
+// C2: WhatsApp and USSD journeys (channels.manage)
+const ChannelJourneys = lazy(() => import('./pages/channels/Journeys'))
+const JourneyBuilder = lazy(() => import('./pages/channels/JourneyBuilder'))
+const ChannelConnections = lazy(() => import('./pages/channels/Connections'))
+const ChannelActivity = lazy(() => import('./pages/channels/Activity'))
 const Users = lazy(() => import('./pages/users/Users'))
 const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
@@ -116,6 +121,13 @@ export default function App() {
                 </Route>
                 <Route element={<CapabilityRoute need="challenges.manage" />}>
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="channels.manage" />}>
+                  <Route path="/channels" element={<Navigate to="/channels/journeys" replace />} />
+                  <Route path="/channels/journeys" element={<ErrorBoundary><ChannelJourneys /></ErrorBoundary>} />
+                  <Route path="/channels/journeys/:id" element={<ErrorBoundary><JourneyBuilder /></ErrorBoundary>} />
+                  <Route path="/channels/connections" element={<ErrorBoundary><ChannelConnections /></ErrorBoundary>} />
+                  <Route path="/channels/activity" element={<ErrorBoundary><ChannelActivity /></ErrorBoundary>} />
                 </Route>
                 <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />

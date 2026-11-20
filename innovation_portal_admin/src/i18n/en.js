@@ -3,6 +3,7 @@ import { challengesEn } from './challenges'
 import { rolesEn } from './roles'
 import { contentEn } from './content'
 import { formsEn } from './forms'
+import { channelsEn } from './channels'
 
 const en = {
   'lang.en': 'English',
@@ -138,6 +139,7 @@ const en = {
   'crop.createError': 'We could not make the cropped picture. Please try again.',
   'crop.taintedError': 'This picture cannot be cropped here. Upload the original file again and crop it before saving.',
   ...formsEn,
+  ...channelsEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,

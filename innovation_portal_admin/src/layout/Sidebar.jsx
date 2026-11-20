@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
   ClipboardCheck, Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  Route, Plug, Activity,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -47,6 +48,16 @@ const GROUPS = [
       { label: 'staff.nav.partners', href: '/content/partners', icon: Handshake, capability: 'content.edit' },
       { label: 'staff.nav.faqs', href: '/content/faqs', icon: HelpCircle, capability: 'content.edit' },
       { label: 'staff.nav.approvals', href: '/content/approvals', icon: ClipboardCheck, anyOf: ['content.edit', 'content.approve'] },
+    ],
+  },
+  {
+    // C2: WhatsApp and USSD.
+    key: 'channels',
+    label: 'staff.group.channels',
+    items: [
+      { label: 'ch.nav.journeys', href: '/channels/journeys', icon: Route, capability: 'channels.manage' },
+      { label: 'ch.nav.connections', href: '/channels/connections', icon: Plug, capability: 'channels.manage' },
+      { label: 'ch.nav.activity', href: '/channels/activity', icon: Activity, capability: 'channels.manage' },
     ],
   },
   {
