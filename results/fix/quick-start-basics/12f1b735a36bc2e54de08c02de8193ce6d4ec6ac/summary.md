@@ -1,9 +1,9 @@
 ## CI results for `fix/quick-start-basics` @ `12f1b73`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44675865150
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44678242901
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 24s, job steps 3m 44s
+Timing (api job): Run tests 3m 30s, job steps 3m 57s
 
 | Check | Result | Details |
 | --- | --- | --- |

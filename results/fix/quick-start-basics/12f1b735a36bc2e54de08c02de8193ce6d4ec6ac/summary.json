@@ -1,7 +1,7 @@
 {
   "branch": "fix/quick-start-basics",
   "sha": "12f1b735a36bc2e54de08c02de8193ce6d4ec6ac",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44675865150",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44678242901",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -15,8 +15,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 204,
-      "job_seconds_to_here": 224
+      "pytest_seconds": 210,
+      "job_seconds_to_here": 237
     },
     "admin": {
       "install": "success",
