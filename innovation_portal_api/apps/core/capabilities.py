@@ -34,14 +34,18 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     "audit.view": READERS,
     # Review work (was IsStaffWorker): claim and work on assigned tasks.
     "entries.review": STAFF_WORKERS,
+    # Search every idea and person (was IsFullAccessStaff on /api/staff-search/).
+    "entries.search": (R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
+    # Mark entries on a scorecard as a judge (was IsJudge on the scoring endpoints).
+    "entries.score": (R.JUDGE,),
     # Assign reviewers and run the workflow (was IsOfficerOrAdmin).
     "entries.assign": OFFICER_ADMIN,
     # Build challenges, forms and criteria (was IsOfficerOrAdmin).
     "challenges.manage": OFFICER_ADMIN,
     "forms.manage": OFFICER_ADMIN,
     "criteria.manage": OFFICER_ADMIN,
-    # Website content. innovation_manager does NOT edit (S1 default: the API wins; see the PR).
-    "content.edit": OFFICER_ADMIN,
+    # Website content. Innovation managers edit it too (decided by Nshathisi, 2026-11-20).
+    "content.edit": (R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     "content.approve": (R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     # Administration (was IsAdministrator).
     "users.manage": (R.ADMINISTRATOR,),

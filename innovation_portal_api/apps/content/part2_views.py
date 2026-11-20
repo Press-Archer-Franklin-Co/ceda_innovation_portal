@@ -13,7 +13,7 @@ from apps.content.b6_views import PublicContentThrottle, _lang
 from apps.content.models import ContentItem, Story, Subscriber
 from apps.content.part2_services import StoryService, SubscriptionService, site_search
 from apps.core.api import api_success
-from apps.core.permissions import IPRateThrottle, IsOfficerOrAdmin
+from apps.core.permissions import HasCapability, IPRateThrottle, IsOfficerOrAdmin
 from apps.media_library.models import MediaAsset
 
 STAFF_TAGS = ["Website content"]
@@ -83,7 +83,7 @@ class StorySerializer(serializers.ModelSerializer):
 class StoryViewSet(viewsets.ModelViewSet):
     """Stories (3.11). At most 3 featured. A story about a portal user needs their consent to publish."""
 
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = StorySerializer
     queryset = Story.objects.select_related("sector", "program", "cover", "user")
 
@@ -216,7 +216,7 @@ class PublicUnsubscribeView(APIView):
 
 
 class SubscriberCountsView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="Subscribers by channel", responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -224,7 +224,7 @@ class SubscriberCountsView(APIView):
 
 
 class PostBlastView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="Send a published post to subscribers now", description="Email goes out in the background; WhatsApp is recorded as pending until a provider exists.", request=None, responses={202: OpenApiTypes.OBJECT})
     def post(self, request, post_id):

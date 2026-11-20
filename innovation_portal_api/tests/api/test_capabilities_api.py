@@ -110,7 +110,10 @@ class CapabilityEndpointTests(TestCase):
     def test_areas(self):
         cases = [
             ("forms.manage", "get", "/api/forms/", self.officer, self.manager),
-            ("content.edit", "post", "/api/content/news/", self.officer, self.manager),
+            ("content.edit", "post", "/api/content/news/", self.manager, self.viewer),
+            ("content.edit", "get", "/api/content/pages/home/draft/", self.manager, self.viewer),
+            ("content.approve", "post", "/api/content/approvals/00000000-0000-0000-0000-000000000000/approve/", self.manager, self.officer),
+            ("entries.search", "get", "/api/staff-search/?q=solar", self.manager, self.viewer),
             ("audit.view", "get", "/api/audit/logs/", self.viewer, self.manager),
             ("settings.manage", "get", "/api/platform/features/", self.admin, self.officer),
         ]
@@ -123,7 +126,7 @@ class CapabilityEndpointTests(TestCase):
         self.client.force_authenticate(self.manager)
         data = self.client.get("/api/auth/me/").json()["data"]
         self.assertIn("roles", data)
-        self.assertEqual(data["capabilities"], ["content.approve", "entries.review"])
+        self.assertEqual(data["capabilities"], ["content.approve", "content.edit", "entries.review", "entries.search"])
         self.client.force_authenticate(self.officer)
         self.assertIn("content.edit", self.client.get("/api/auth/me/").json()["data"]["capabilities"])
 
@@ -159,3 +162,32 @@ class RefusalRecordingTests(TestCase):
     def test_allowed_requests_are_not_recorded(self):
         self.client.get("/api/platform/public-config/")
         self.assertFalse(AuthorizationRefusal.objects.exists())
+
+
+class CapabilityR25Tests(TestCase):
+    """R-25: approvals list for editors or approvers, judges score, managers edit content."""
+
+    def setUp(self):
+        RoleService.ensure_default_roles()
+        self.client = APIClient()
+        self.users = {}
+        for role in (RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER, RoleType.JUDGE, RoleType.INNOVATOR):
+            user = User.objects.create_user(email=f"r25-{role}@example.com", password="StrongPass123")
+            RoleService.assign_roles(user, [role])
+            self.users[role] = user
+
+    def status(self, role, method, url):
+        self.client.force_authenticate(self.users[role])
+        return getattr(self.client, method)(url, {}, format="json").status_code
+
+    def test_approvals_list_for_editors_and_approvers(self):
+        for role in (RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER):
+            self.assertEqual(self.status(role, "get", "/api/content/approvals/"), 200, role)
+        for role in (RoleType.JUDGE, RoleType.INNOVATOR):
+            self.assertEqual(self.status(role, "get", "/api/content/approvals/"), 403, role)
+
+    def test_only_judges_hold_entries_score(self):
+        self.assertTrue(user_has(self.users[RoleType.JUDGE], "entries.score"))
+        for role in (RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER, RoleType.INNOVATOR):
+            self.assertFalse(user_has(self.users[role], "entries.score"), role)
+

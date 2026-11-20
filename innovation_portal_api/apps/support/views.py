@@ -7,7 +7,7 @@ import uuid
 from django.db.models import F
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema
 
-from apps.core.permissions import IsOfficerOrAdmin
+from apps.core.permissions import HasCapability, IsOfficerOrAdmin
 from apps.support.models import FAQ, FAQGroup, UnansweredQuestion, Guideline, InternalTask, SupportRequest
 from apps.support.serializers import FAQGroupSerializer, FAQSerializer, PublicFAQSerializer, UnansweredQuestionSerializer, GuidelineSerializer, InternalTaskSerializer, SupportRequestSerializer
 
@@ -112,7 +112,7 @@ class SupportRequestAdminListView(generics.ListAPIView):
 
 @extend_schema(tags=["Support"], summary="Admin: list all FAQs / create FAQ")
 class FAQAdminListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = FAQSerializer
 
     def get_queryset(self):
@@ -121,14 +121,14 @@ class FAQAdminListCreateView(generics.ListCreateAPIView):
 
 @extend_schema(tags=["Support"], summary="Admin: get / update / delete a FAQ")
 class FAQAdminDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = FAQSerializer
     queryset = FAQ.objects.all()
 
 
 @extend_schema(tags=["Support"], summary="Admin: bulk-reorder FAQs")
 class FAQReorderView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     def post(self, request):
         """Body: [{"id": "<uuid>", "ordering": <int>}, ...]"""
@@ -143,21 +143,21 @@ class FAQReorderView(APIView):
 
 @extend_schema(tags=["Support"], summary="Admin: list or add FAQ groups")
 class FAQGroupListCreateView(generics.ListCreateAPIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = FAQGroupSerializer
     queryset = FAQGroup.objects.all().order_by("ordering", "name")
 
 
 @extend_schema(tags=["Support"], summary="Admin: get / update / delete a FAQ group (its questions stay, without a group)")
 class FAQGroupDetailView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = FAQGroupSerializer
     queryset = FAQGroup.objects.all()
 
 
 @extend_schema(tags=["Support"], summary="Admin: bulk-reorder FAQ groups")
 class FAQGroupReorderView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     def post(self, request):
         """Body: [{"id": "<uuid>", "ordering": <int>}, ...]"""
@@ -171,7 +171,7 @@ class FAQGroupReorderView(APIView):
 
 @extend_schema(tags=["Support"], summary="Admin: questions people searched for and found nothing, most asked first")
 class UnansweredQuestionListView(generics.ListAPIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = UnansweredQuestionSerializer
 
     def get_queryset(self):
@@ -183,7 +183,7 @@ class UnansweredQuestionListView(generics.ListAPIView):
 
 @extend_schema(tags=["Support"], summary="Admin: mark an unanswered question as answered by a FAQ")
 class UnansweredQuestionDetailView(generics.UpdateAPIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = UnansweredQuestionSerializer
     queryset = UnansweredQuestion.objects.all()
     http_method_names = ["patch"]

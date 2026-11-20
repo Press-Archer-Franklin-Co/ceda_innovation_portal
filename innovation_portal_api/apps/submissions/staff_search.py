@@ -6,16 +6,9 @@ from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework.views import APIView
 
 from apps.core.api import api_success
-from apps.core.constants import RoleType
-from apps.core.permissions import HasRolePermission
+from apps.core.permissions import HasCapability
 
 GROUP_LIMIT = 10
-
-
-class IsFullAccessStaff(HasRolePermission):
-    """Staff who can see every submission (judges and specialists only see their own)."""
-
-    allowed_roles = {RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER, RoleType.ADMINISTRATOR}
 
 
 def _matching_people(q):
@@ -28,7 +21,7 @@ def _matching_people(q):
 
 
 class StaffSearchView(APIView):
-    permission_classes = [IsFullAccessStaff]
+    permission_classes = [HasCapability.of("entries.search")]
 
     @extend_schema(
         tags=["Staff search"],

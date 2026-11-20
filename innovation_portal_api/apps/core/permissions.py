@@ -152,3 +152,23 @@ class HasCapability(BasePermission):
         from apps.core.capabilities import user_has
 
         return user_has(request.user, self.required(request))
+
+
+class HasAnyCapability(BasePermission):
+    """S1: allow users who hold at least one of several capabilities. Use ``HasAnyCapability.of("a", "b")``."""
+
+    capabilities: tuple[str, ...] = ()
+
+    @classmethod
+    def of(cls, *capabilities: str):
+        from apps.core.capabilities import roles_for
+
+        for capability in capabilities:
+            roles_for(capability)
+        name = "HasAnyCapability_" + "__".join(capabilities).replace(".", "_")
+        return type(name, (cls,), {"capabilities": tuple(capabilities)})
+
+    def has_permission(self, request, view):
+        from apps.core.capabilities import user_has
+
+        return any(user_has(request.user, capability) for capability in self.capabilities)
