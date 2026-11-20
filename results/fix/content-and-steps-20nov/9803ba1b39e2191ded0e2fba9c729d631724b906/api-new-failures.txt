@@ -1,0 +1,21 @@
+===== tests/services/test_text_channel_dispatch.py::TextChannelDispatchTests::test_sms_goes_through_configured_sender
+self = <test_text_channel_dispatch.TextChannelDispatchTests testMethod=test_sms_goes_through_configured_sender>
+
+    def test_sms_goes_through_configured_sender(self):
+        log = self._dispatch(CommunicationChannel.SMS)
+>       self.assertEqual(log.status, CommunicationStatus.SENT)
+E       AssertionError: CommunicationStatus.SKIPPED != CommunicationStatus.SENT
+
+tests/services/test_text_channel_dispatch.py:24: AssertionError
+
+===== tests/services/test_text_channel_dispatch.py::TextChannelDispatchTests::test_whatsapp_and_ussd_without_provider_are_skipped
+self = <test_text_channel_dispatch.TextChannelDispatchTests testMethod=test_whatsapp_and_ussd_without_provider_are_skipped>
+
+    def test_whatsapp_and_ussd_without_provider_are_skipped(self):
+        for channel in (CommunicationChannel.WHATSAPP, CommunicationChannel.USSD):
+            log = self._dispatch(channel)
+            self.assertEqual(log.status, CommunicationStatus.SKIPPED)
+>           self.assertIn("provider", log.failure_reason)
+E           AssertionError: 'provider' not found in 'Skipped: whatsapp messages are switched off.'
+
+tests/services/test_text_channel_dispatch.py:31: AssertionError

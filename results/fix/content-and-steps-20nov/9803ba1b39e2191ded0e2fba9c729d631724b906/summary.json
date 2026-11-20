@@ -1,0 +1,106 @@
+{
+  "branch": "fix/content-and-steps-20nov",
+  "sha": "9803ba1b39e2191ded0e2fba9c729d631724b906",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44737627084",
+  "jobs": {
+    "api": "failure",
+    "admin": "success",
+    "public": "success",
+    "em-dash": "success"
+  },
+  "green": false,
+  "steps": {
+    "api": {
+      "install": "success",
+      "migrations": "success",
+      "pytest": "success",
+      "results": "failure",
+      "pytest_seconds": 204,
+      "job_seconds_to_here": 221
+    },
+    "admin": {
+      "install": "success",
+      "lint": "success",
+      "test": "success",
+      "build": "success"
+    },
+    "public": {
+      "install": "success",
+      "typecheck": "success",
+      "test": "success",
+      "build": "success"
+    }
+  },
+  "tests": {
+    "passed": 575,
+    "failed": 2,
+    "skipped": 0,
+    "known_failing": 0,
+    "new_failures": [
+      {
+        "id": "tests/services/test_text_channel_dispatch.py::TextChannelDispatchTests::test_sms_goes_through_configured_sender",
+        "reason": "AssertionError: CommunicationStatus.SKIPPED != CommunicationStatus.SENT"
+      },
+      {
+        "id": "tests/services/test_text_channel_dispatch.py::TextChannelDispatchTests::test_whatsapp_and_ussd_without_provider_are_skipped",
+        "reason": "AssertionError: 'provider' not found in 'Skipped: whatsapp messages are switched off.'"
+      }
+    ],
+    "known_now_passing": [],
+    "known_not_found": []
+  },
+  "lint": {
+    "errors": 1,
+    "warnings": 7,
+    "new": [],
+    "baseline_fixed": 2
+  },
+  "migrations": {
+    "pending": 0,
+    "new": [],
+    "known_gone": [],
+    "crashed": false
+  },
+  "rows": [
+    {
+      "check": "Migrations up to date",
+      "result": "pass",
+      "details": "0 known on main, 0 new"
+    },
+    {
+      "check": "API tests",
+      "result": "fail",
+      "details": "575 passed, 2 failed (0 known on main, 2 new)"
+    },
+    {
+      "check": "Admin lint",
+      "result": "pass",
+      "details": "1 errors, 7 warnings (0 new vs baseline)"
+    },
+    {
+      "check": "Admin tests",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Admin build",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public type check",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public tests",
+      "result": "pass",
+      "details": ""
+    },
+    {
+      "check": "Public build",
+      "result": "pass",
+      "details": ""
+    }
+  ]
+}
