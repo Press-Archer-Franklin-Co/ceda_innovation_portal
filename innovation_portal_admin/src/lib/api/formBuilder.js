@@ -4,10 +4,8 @@ import { client } from './client'
  * Staff form builder and challenge builder calls (U5: screens 3.4 to 3.7).
  *
  * - forms: B4, on main. Document shape: apps/programs/form_schema.py.
- * - programSetup: setup-status is planned in B5 (TODO(B5)); attaching a form
- *   is B4, on main.
- * - programJudging: no endpoint is planned yet; the path is the one suggested
- *   in request R-10. TODO(R-10)
+ * - programSetup: setup status (B5) and attaching a form (B4), on main.
+ * - programJudging: B5 (R-10), on main.
  * Existing marking-criteria calls live in endpoints.js (evaluations).
  */
 
@@ -124,7 +122,7 @@ export const forms = {
 }
 
 export const programSetup = {
-  /** TODO(B5): which of the 6 steps are complete. */
+  /** Which of the 6 steps are complete (B5). */
   setupStatus: (programId)         => client.get(`/api/programs/${programId}/setup-status/`),
   /** Attach a form (its latest published version). */
   attachForm:  (programId, formId) => client.put(`/api/programs/${programId}/form/`, { form_id: formId }),
@@ -147,10 +145,12 @@ export const programSetup = {
  * @property {number|null} reviewers_per_idea
  */
 export const programJudging = {
-  /** TODO(R-10) @returns {Promise<ProgramJudging>} */
+  /** @returns {Promise<ProgramJudging>} */
   get:     (programId)       => client.get(`/api/programs/${programId}/judging/`),
-  /** TODO(R-10) @param {ProgramJudging} body */
+  /** Refused unless weights total 100 (errors.total). @param {ProgramJudging} body */
   save:    (programId, body) => client.put(`/api/programs/${programId}/judging/`, body),
-  /** TODO(R-10): shared criteria library across challenges. */
+  /** The shared criteria library across challenges (R-10, B5). */
   library: (params)          => client.get('/api/evaluations/criteria-library/', params),
+  /** Adds a criterion to the library: { name, description, score_meanings?, comment_required_scores? }. */
+  addToLibrary: (body)       => client.post('/api/evaluations/criteria-library/', body),
 }
