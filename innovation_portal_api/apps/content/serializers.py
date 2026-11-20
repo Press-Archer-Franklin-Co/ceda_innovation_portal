@@ -220,6 +220,7 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
             "prize_money_label",
             "solutions_deployed",
             "quote_rotation_seconds",
+            "social_links",
             "whatsapp_number",
             "ussd_code",
             "call_centre_number",
@@ -232,6 +233,12 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
         read_only_fields = ["hero_video_url"]
 
     footer_links = FlexibleJSONField(required=False)
+    social_links = FlexibleJSONField(required=False)
+
+    def validate_social_links(self, value):
+        if not isinstance(value, list) or any(not isinstance(item, dict) or not item.get("network") or not item.get("url") for item in value):
+            raise serializers.ValidationError('Social links are a list of {"network": "facebook", "url": "..."}.')
+        return [{"network": str(item["network"])[:40], "url": str(item["url"])[:500]} for item in value][:12]
     languages_enabled = FlexibleJSONField(required=False)
 
     def get_hero_video_url(self, obj):
@@ -260,6 +267,21 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
 
 class LeadershipCardSerializer(serializers.ModelSerializer):
     photo_url = serializers.SerializerMethodField()
+    translations = FlexibleJSONField(required=False, help_text='{"tn": {"quote": "..."}}')
+    needs_approval = serializers.SerializerMethodField(help_text="An official's quote that is not approved yet does not show.")
+
+    def get_needs_approval(self, obj) -> bool:
+        return bool(obj.is_official and not obj.approved_at)
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        request = self.context.get("request")
+        lang = (request.query_params.get("lang") if request else "") or ""
+        if lang.lower().startswith("tn"):
+            tn_quote = ((obj.translations or {}).get("tn") or {}).get("quote", "")
+            if tn_quote.strip():
+                data["quote"] = tn_quote
+        return data
     created_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -276,12 +298,16 @@ class LeadershipCardSerializer(serializers.ModelSerializer):
             "is_active",
             "start_at",
             "end_at",
+            "translations",
+            "is_official",
+            "approved_at",
+            "needs_approval",
             "created_by",
             "created_by_name",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "photo_url", "created_by", "created_by_name", "created_at", "updated_at"]
+        read_only_fields = ["id", "photo_url", "approved_at", "needs_approval", "created_by", "created_by_name", "created_at", "updated_at"]
 
     def get_photo_url(self, obj):
         return _media_url(obj.photo)

@@ -18,6 +18,16 @@ from .b6_views import (
     PublicUpcomingEventsView,
     SectionTypeListView,
 )
+from .part2_views import (
+    PostBlastView,
+    PublicConfirmSubscriptionView,
+    PublicSearchView,
+    PublicStoryListView,
+    PublicSubscribeView,
+    PublicUnsubscribeView,
+    StoryViewSet,
+    SubscriberCountsView,
+)
 from .views import ContentItemViewSet, HackathonDetailViewSet, HackathonMediaViewSet, LeadershipCardViewSet, PublicStatsView, SiteSettingsView, WinnerSpotlightViewSet
 
 news_router = DefaultRouter()
@@ -35,6 +45,7 @@ winners_router.register(r"winners", WinnerSpotlightViewSet, basename="winner-spo
 b6_router = DefaultRouter()
 b6_router.register(r"posts", PostViewSet, basename="content-post")
 b6_router.register(r"partners", PartnerViewSet, basename="content-partner")
+b6_router.register(r"stories", StoryViewSet, basename="content-story")
 
 leadership_router = DefaultRouter()
 leadership_router.register(r"leadership", LeadershipCardViewSet, basename="leadership-card")
@@ -60,6 +71,13 @@ urlpatterns = (
         path("public/events/upcoming/", PublicUpcomingEventsView.as_view(), name="content-public-events"),
         path("public/newsletters/", PublicNewslettersView.as_view(), name="content-public-newsletters"),
         path("public/partners/", PublicPartnerListView.as_view(), name="content-public-partners"),
+        path("public/stories/", PublicStoryListView.as_view(), name="content-public-stories"),
+        path("public/search/", PublicSearchView.as_view(), name="content-public-search"),
+        path("public/subscriptions/", PublicSubscribeView.as_view(), name="content-public-subscribe"),
+        path("public/subscriptions/confirm/<uuid:token>/", PublicConfirmSubscriptionView.as_view(), name="content-public-subscribe-confirm"),
+        path("public/unsubscribe/<uuid:token>/", PublicUnsubscribeView.as_view(), name="content-public-unsubscribe"),
+        path("subscribers/counts/", SubscriberCountsView.as_view(), name="content-subscriber-counts"),
+        path("posts/<uuid:post_id>/blast/", PostBlastView.as_view(), name="content-post-blast"),
         path("site-settings/", SiteSettingsView.as_view(), name="site-settings"),
         path("public-stats/", PublicStatsView.as_view(), name="public-stats"),
     ]

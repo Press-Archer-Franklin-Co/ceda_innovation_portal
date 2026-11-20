@@ -258,6 +258,21 @@ class IdeaSubmitService:
         return " ".join(part for part in (str(data.get("first_name") or "").strip(), str(data.get("last_name") or "").strip()) if part)[:255]
 
     @staticmethod
+    def _copy_contact_to_account(user, *, district=None, email: str = "") -> None:
+        """R-22: keep the district and email a guest gave when their account is made."""
+        from apps.accounts.models import User
+        from apps.profiles.models import InnovatorProfile
+
+        if email and not user.email and not User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+            user.email = email
+            user.save(update_fields=["email", "updated_at"])
+        if district is not None:
+            profile, _ = InnovatorProfile.objects.get_or_create(user=user)
+            if not profile.district_id:
+                profile.district = district
+                profile.save(update_fields=["district", "updated_at"])
+
+    @staticmethod
     def copy_sent_to(submission: Submission) -> dict | None:
         """Where the acknowledgement went, for the confirmation screen (masked)."""
         from apps.communications.models import CommunicationLog
@@ -290,6 +305,8 @@ class IdeaSubmitService:
         name: str = "",
         first_name: str = "",
         last_name: str = "",
+        district=None,
+        email: str = "",
         ip_address: str | None = None,
     ) -> SubmitOutcome:
         """Submit as the owner (user owns the draft) or as a guest holding the resume token (user None)."""
@@ -329,6 +346,7 @@ class IdeaSubmitService:
                         # The names typed on the submit screen win over earlier answers copied by claim.
                         user.first_name, user.last_name = first or user.first_name, last or user.last_name
                         user.save(update_fields=["first_name", "last_name", "updated_at"])
+                    cls._copy_contact_to_account(user, district=district, email=email)
                 else:
                     if draft.program.is_innovation_challenge:
                         raise ValidationError({"code": "account_required", "detail": "Challenge entries need an account. Send with create_account set to true."})
@@ -345,6 +363,8 @@ class IdeaSubmitService:
                 consent=consent,
                 ip_address=ip_address,
                 guest_name=guest_name,
+                district=district,
+                guest_email=email if user is None else "",
             )
         submission.refresh_from_db()
         return SubmitOutcome(
