@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Briefcase, LayoutDashboard, LogOut, Menu, ShieldCheck, User, X } from 'lucide-react'
+import { Bell, Briefcase, Globe, LayoutDashboard, LogOut, Menu, ShieldCheck, User, X } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../context/AuthContext'
 import { useI18n } from '../../i18n'
@@ -10,19 +10,18 @@ import Avatar from '../ui/Avatar'
 import LanguageSwitch from '../ui/LanguageSwitch'
 import { buttonClasses } from '../ui/Button'
 import { useFocusTrap } from '../ui/useFocusTrap'
+import Popover from '../ui/Popover'
+import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
+import { isStaff } from '../../lib/roles'
 
 // Figma 1 · Public home › Header (10:190), Mobile header (10:801), Menu drawer (11:695).
 
-const STAFF_PORTAL_ROLES = [
-  'administrator', 'admin',
-  'innovation_officer', 'innovation_manager', 'innovation_analyst',
-  'staff_member', 'specialist', 'exo', 'management_viewer',
-  'judge', 'reviewer',
-  'mentor',
-]
-
 export const SUBMIT_PATH = '/innovate'
+/** The code sign-in (2.0). Password sign-in stays at /login and is linked from there. */
+export const SIGN_IN_PATH = '/sign-in'
+/** The public home for everyone. "/" sends signed-in innovators to their dashboard. */
+export const WEBSITE_HOME_PATH = '/home'
 
 interface NavItem {
   to: string
@@ -39,7 +38,7 @@ const mainLinks: NavItem[] = [
   { to: '/faq', key: 'nav.help' },
 ]
 
-const myIdeas: NavItem = { to: '/dashboard', key: 'nav.myIdeas' }
+const myIdeas: NavItem = { to: '/my-ideas', key: 'nav.myIdeas' }
 
 export function UtilityBar() {
   const { t } = useI18n()
@@ -94,20 +93,32 @@ function DesktopLink({ item }: { item: NavItem }) {
 
 function BellButton({ count }: { count?: number }) {
   const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLButtonElement>(null)
   const label = count ? `${t('common.notifications')}, ${t('common.unread', { count })}` : t('common.notifications')
   return (
-    <Link
-      to="/dashboard?tab=updates"
-      aria-label={label}
-      className="relative w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-    >
-      <Bell size={18} aria-hidden />
-      {count !== undefined && count > 0 && (
-        <span aria-hidden className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold leading-[18px] text-center">
-          {count > 99 ? '99+' : count}
-        </span>
-      )}
-    </Link>
+    <>
+      <button
+        ref={ref}
+        type="button"
+        data-toast-target
+        aria-label={label}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="relative w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <Bell size={18} aria-hidden />
+        {count !== undefined && count > 0 && (
+          <span aria-hidden className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold leading-[18px] text-center">
+            {count > 99 ? '99+' : count}
+          </span>
+        )}
+      </button>
+      <Popover open={open} onClose={() => setOpen(false)} triggerRef={ref} align="end" width={420} maxHeight={560} label={t('common.notifications')}>
+        <NotificationsPanel compact onNavigate={() => setOpen(false)} />
+      </Popover>
+    </>
   )
 }
 
@@ -153,8 +164,11 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
             <p className="text-d-label text-text truncate">{name}</p>
             <p className="text-d-cap text-muted truncate">{user.email}</p>
           </div>
-          <Link role="menuitem" to="/dashboard" className={item} onClick={() => setOpen(false)}>
+          <Link role="menuitem" to="/my-ideas" className={item} onClick={() => setOpen(false)}>
             <LayoutDashboard size={16} aria-hidden className="text-muted" /> {t('nav.myIdeas')}
+          </Link>
+          <Link role="menuitem" to={WEBSITE_HOME_PATH} className={item} onClick={() => setOpen(false)}>
+            <Globe size={16} aria-hidden className="text-muted" /> {t('nav.websiteHome')}
           </Link>
           <Link role="menuitem" to="/profile" className={item} onClick={() => setOpen(false)}>
             <User size={16} aria-hidden className="text-muted" /> {t('nav.profile')}
@@ -202,6 +216,7 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
           ))}
           {isAuthenticated && (
             <>
+              <Link to={WEBSITE_HOME_PATH} onClick={onClose} className={row}>{t('nav.websiteHome')}</Link>
               <Link to="/profile" onClick={onClose} className={row}>{t('nav.profile')}</Link>
               {canStaff && <a href="/staff/dashboard" className={row}>{t('nav.staff')}</a>}
               <button type="button" onClick={onLogout} className={clsx(row, 'w-full text-danger')}>{t('common.signOut')}</button>
@@ -221,7 +236,7 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
         </nav>
         <div className="p-5 border-t border-border shrink-0 space-y-3">
           {!isAuthenticated && (
-            <Link to="/login" onClick={onClose} className={buttonClasses({ variant: 'secondary', block: true })}>
+            <Link to={SIGN_IN_PATH} onClick={onClose} className={buttonClasses({ variant: 'secondary', block: true })}>
               {t('common.signIn')}
             </Link>
           )}
@@ -242,8 +257,10 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const unread = useUnreadCount(isAuthenticated)
 
-  const canStaff = isAuthenticated && (user?.roles ?? []).some((r) => STAFF_PORTAL_ROLES.includes(r))
-  const links = isAuthenticated ? [...mainLinks.slice(0, 2), myIdeas, ...mainLinks.slice(2)] : mainLinks
+  const canStaff = isAuthenticated && isStaff(user)
+  // Signed-in innovators: "Home" is their dashboard ("/" sends them there); the website home is in the account menu.
+  const homeLink: NavItem = isAuthenticated && !canStaff ? { to: '/dashboard', key: 'nav.home' } : mainLinks[0]
+  const links = isAuthenticated ? [homeLink, mainLinks[1], myIdeas, ...mainLinks.slice(2)] : mainLinks
 
   useEffect(() => setMenuOpen(false), [pathname])
 
@@ -276,7 +293,7 @@ export default function Navbar() {
                 <UserMenu canStaff={canStaff} onLogout={handleLogout} />
               </>
             ) : (
-              <Link to="/login" className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
+              <Link to={SIGN_IN_PATH} className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
                 {t('common.signIn')}
               </Link>
             )}

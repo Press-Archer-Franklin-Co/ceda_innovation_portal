@@ -210,7 +210,7 @@ class LeadershipCardViewSet(ModelViewSet):
                 models.Q(start_at__isnull=True) | models.Q(start_at__lte=now)
             ).filter(
                 models.Q(end_at__isnull=True) | models.Q(end_at__gt=now)
-            )
+            ).exclude(is_official=True, approved_at__isnull=True)
         return qs
 
     def get_permissions(self):
@@ -222,9 +222,20 @@ class LeadershipCardViewSet(ModelViewSet):
         from django.core.exceptions import ValidationError as DjangoValidationError
         from rest_framework.exceptions import ValidationError as DRFValidationError
         try:
-            serializer.save(created_by=self.request.user)
+            card = serializer.save(created_by=self.request.user)
         except DjangoValidationError as exc:
             raise DRFValidationError(detail=list(exc.messages))
+        self._ask_approval_if_official(card, changed=True)
+
+    def _ask_approval_if_official(self, card, *, changed):
+        """B6 part 2: an official's quote shows only after approval; a changed quote needs it again."""
+        if not card.is_official or not changed:
+            return
+        from apps.content.services import ApprovalService, clear_home_cache
+
+        LeadershipCard.objects.filter(pk=card.pk).update(approved_at=None)
+        ApprovalService.create(card, actor=self.request.user, summary=f"Quote from {card.full_name}")
+        clear_home_cache()
 
     def perform_update(self, serializer):
         from django.core.exceptions import ValidationError as DjangoValidationError
@@ -232,10 +243,12 @@ class LeadershipCardViewSet(ModelViewSet):
         instance = self.get_object()
         if "photo" in self.request.FILES and instance.photo:
             instance.photo.delete(save=False)
+        before = (instance.quote, instance.translations, instance.is_official, instance.full_name)
         try:
-            serializer.save()
+            card = serializer.save()
         except DjangoValidationError as exc:
             raise DRFValidationError(detail=list(exc.messages))
+        self._ask_approval_if_official(card, changed=before != (card.quote, card.translations, card.is_official, card.full_name))
 
     def perform_destroy(self, instance):
         if instance.photo:

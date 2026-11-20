@@ -3,37 +3,49 @@ import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
 import PrivateRoute  from './components/ui/PrivateRoute'
-import Home          from './pages/Home'
-import NotFound      from './pages/NotFound'
-import About         from './pages/About'
-import Guidelines    from './pages/Guidelines'
-import FAQ           from './pages/FAQ'
-import Challenges    from './pages/Challenges'
-import Suggestions   from './pages/Suggestions'
-import Innovate      from './pages/Innovate'
-import Skills        from './pages/Skills'
-import Login           from './pages/Login'
-import SignUp          from './pages/SignUp'
-import ForgotPassword  from './pages/ForgotPassword'
-import ResetPassword   from './pages/ResetPassword'
-import VerifyEmail     from './pages/VerifyEmail'
-import MfaChallenge    from './pages/MfaChallenge'
-import AuthCallback    from './pages/AuthCallback'
-import Profile         from './pages/Profile'
-import Security        from './pages/Security'
-import Dashboard       from './pages/Dashboard'
-import TermsOfAgreement from './pages/TermsOfAgreement'
-import PrivacyPolicy    from './pages/PrivacyPolicy'
-import TermsOfUse       from './pages/TermsOfUse'
-import News               from './pages/News'
-import ArticleDetail      from './pages/ArticleDetail'
-import HackathonDetail    from './pages/HackathonDetail'
-import SubmissionDetail   from './pages/SubmissionDetail'
-import DocumentPage       from './pages/DocumentPage'
-import SpecialistInvite  from './pages/SpecialistInvite'
-import JudgeInvite       from './pages/JudgeInvite'
+const Home = lazy(() => import('./pages/Home'))
+const IdeaSent = lazy(() => import('./pages/IdeaSent'))
+const ChallengeDetail = lazy(() => import('./pages/ChallengeDetail'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+const About = lazy(() => import('./pages/About'))
+const Guidelines = lazy(() => import('./pages/Guidelines'))
+const FAQ = lazy(() => import('./pages/FAQ'))
+const Challenges = lazy(() => import('./pages/Challenges'))
+const Suggestions = lazy(() => import('./pages/Suggestions'))
+const Innovate = lazy(() => import('./pages/Innovate'))
+const Skills = lazy(() => import('./pages/Skills'))
+const Login = lazy(() => import('./pages/Login'))
+const SignUp = lazy(() => import('./pages/SignUp'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
+const MfaChallenge = lazy(() => import('./pages/MfaChallenge'))
+const AuthCallback = lazy(() => import('./pages/AuthCallback'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Security = lazy(() => import('./pages/Security'))
+const TermsOfAgreement = lazy(() => import('./pages/TermsOfAgreement'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+const TermsOfUse = lazy(() => import('./pages/TermsOfUse'))
+const News = lazy(() => import('./pages/News'))
+const ArticleDetail = lazy(() => import('./pages/ArticleDetail'))
+const HackathonDetail = lazy(() => import('./pages/HackathonDetail'))
+const SubmissionDetail = lazy(() => import('./pages/SubmissionDetail'))
+const DocumentPage = lazy(() => import('./pages/DocumentPage'))
+const SpecialistInvite = lazy(() => import('./pages/SpecialistInvite'))
+const JudgeInvite = lazy(() => import('./pages/JudgeInvite'))
+const CodeSignIn = lazy(() => import('./pages/innovator/CodeSignIn'))
+const InnovatorHome = lazy(() => import('./pages/innovator/InnovatorHome'))
+const MyIdeas = lazy(() => import('./pages/innovator/MyIdeas'))
+const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
+const IdeaForm = lazy(() => import('./pages/innovator/IdeaForm'))
+const Notifications = lazy(() => import('./pages/innovator/Notifications'))
+const PreviewForm = lazy(() => import('./pages/innovator/PreviewForm'))
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
+import { ConfirmProvider } from './components/ui/ConfirmDialog'
+import PageSkeleton from './components/ui/PageSkeleton'
+import PageErrorBoundary from './components/ui/PageErrorBoundary'
+import { isStaff } from './lib/roles'
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
@@ -48,8 +60,21 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/** "/" is the website home for visitors and staff; signed-in innovators go to their dashboard. */
+function HomeOrDashboard() {
+  const { isAuthenticated, isLoading, user } = useAuth()
+  if (isLoading) return <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>
+  if (isAuthenticated && !isStaff(user)) return <Navigate to="/dashboard" replace />
+  return <Home />
+}
+
 function AppRoutes() {
+  const { pathname } = useLocation()
   return (
+    // Pages outside the site layout (sign in and the like) load under this boundary;
+    // pages inside it load under the one in Layout, so the header and footer stay.
+    <PageErrorBoundary resetKey={pathname}>
+    <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 py-10"><PageSkeleton shape="form" /></div>}>
     <Routes>
       <Route path="/login"           element={<PublicOnlyRoute><Login          /></PublicOnlyRoute>} />
       <Route path="/signup"          element={<PublicOnlyRoute><SignUp         /></PublicOnlyRoute>} />
@@ -65,12 +90,18 @@ function AppRoutes() {
       <Route path="/judge-invite/:token" element={<JudgeInvite />} />
 
 
+      {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
+      <Route path="/preview/form" element={<PreviewForm />} />
+
       <Route element={<Layout />}>
-        <Route path="/"            element={<Home />} />
+        <Route path="/"            element={<HomeOrDashboard />} />
+        <Route path="/home"        element={<Home />} />
+        <Route path="/idea-sent"   element={<IdeaSent />} />
         <Route path="/about"       element={<About />} />
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
         <Route path="/challenges"  element={<Challenges />} />
+        <Route path="/challenges/:slug" element={<ChallengeDetail />} />
         <Route path="/suggestions" element={<Suggestions />} />
         <Route path="/innovate"    element={<Innovate />} />
         <Route path="/skills"      element={<Skills />} />
@@ -80,12 +111,18 @@ function AppRoutes() {
         <Route path="/news/:id"    element={<ArticleDetail />} />
         <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
+        <Route path="/sign-in"     element={<PublicOnlyRoute><CodeSignIn /></PublicOnlyRoute>} />
+
         <Route path="/terms-of-agreement" element={<TermsOfAgreement />} />
         <Route path="/privacy-policy"     element={<PrivacyPolicy />} />
         <Route path="/terms-of-use"       element={<TermsOfUse />} />
 
         <Route element={<PrivateRoute />}>
-          <Route path="/dashboard"          element={<Dashboard />} />
+          <Route path="/dashboard"          element={<InnovatorHome />} />
+          <Route path="/my-ideas"           element={<MyIdeas />} />
+          <Route path="/my-ideas/draft/:id" element={<IdeaForm />} />
+          <Route path="/my-ideas/:id"       element={<TrackIdea />} />
+          <Route path="/notifications"      element={<Notifications />} />
           <Route path="/submissions/:id"    element={<SubmissionDetail />} />
           <Route path="/documents/:id"      element={<DocumentPage />} />
           <Route path="/profile"            element={<Profile />} />
@@ -99,6 +136,8 @@ function AppRoutes() {
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
+    </Suspense>
+    </PageErrorBoundary>
   )
 }
 
@@ -106,9 +145,11 @@ export default function App() {
   return (
     <I18nProvider>
       <ToastProvider>
-        <AuthProvider>
-          <AppRoutes />
-        </AuthProvider>
+        <ConfirmProvider>
+          <AuthProvider>
+            <AppRoutes />
+          </AuthProvider>
+        </ConfirmProvider>
       </ToastProvider>
     </I18nProvider>
   )

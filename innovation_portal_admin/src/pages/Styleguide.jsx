@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { Bell, Copy, Pencil, Trash2 } from 'lucide-react'
 import { Inbox, Plus } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Tag, { NewCue } from '../components/ui/Tag'
@@ -24,6 +25,15 @@ import Logo, { CedaMark } from '../components/ui/Logo'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import Sidebar from '../layout/Sidebar'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import Popover from '../components/ui/Popover'
+import DropdownMenu from '../components/ui/DropdownMenu'
+import StatusPill from '../components/ui/StatusPill'
+import DataTable from '../components/ui/DataTable'
+import MultiSelect from '../components/ui/MultiSelect'
+import PageSkeleton from '../components/ui/PageSkeleton'
+import AddPartnerDialog from '../components/content/AddPartnerDialog'
+import { STATUS_VALUES } from '../lib/status'
 import { LayoutContext } from '../layout/LayoutContext'
 import { missingTranslations, useI18n } from '../i18n/context'
 
@@ -57,11 +67,28 @@ export default function Styleguide() {
   const [judge, setJudge] = useState(null)
   const [yes, setYes] = useState('yes')
   const [toggle, setToggle] = useState(true)
+  const [stage, setStage] = useState('tested')
   const [page, setPage] = useState(3)
   const [step, setStep] = useState(1)
   const [modal, setModal] = useState('none')
   const [note, setNote] = useState('Strong local demand; needs a costed plan.')
   const missing = missingTranslations()
+  const addRef = useRef(null)
+  const deleteRef = useRef(null)
+  const bellRef = useRef(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [bellOpen, setBellOpen] = useState(false)
+  const [panel, setPanel] = useState([])
+  const [tableState, setTableState] = useState('rows')
+  const [skeleton, setSkeleton] = useState('list')
+  const fakeApi = {
+    uploadImage: async () => ({ id: 'logo-1' }),
+    partners: {
+      create: (body) => new Promise((resolve) => setTimeout(() => resolve({ id: 'p-1', ...body }), 600)),
+      remove: async () => null,
+    },
+  }
 
   const switchTheme = () => {
     const next = !dark
@@ -161,6 +188,44 @@ export default function Styleguide() {
           </div>
         </Section>
 
+        <Section figma="Components › Status chips" title="StatusPill: every API value and its word">
+          <div className="flex flex-wrap gap-2">
+            {[...Object.keys(STATUS_VALUES), 'something_new'].map((v) => (
+              <span key={v} className="inline-flex flex-col items-start gap-0.5">
+                <StatusPill status={v} />
+                <code className="text-[10px] text-muted">{v}</code>
+              </span>
+            ))}
+          </div>
+        </Section>
+
+        <Section figma="Components › Data table (compact)" title="DataTable: rows, loading, empty, error (phone: cards below md)">
+          <Tabs className="mb-3" variant="segment" tabs={['rows', 'loading', 'empty', 'error'].map((k) => ({ key: k, label: k }))} active={tableState} onChange={setTableState} />
+          <div className="rounded-card border border-border overflow-hidden">
+            <DataTable
+              toolbar={<span className="text-[13px] text-muted">Toolbar: search and filters on the left, actions on the right</span>}
+              columns={[
+                { key: 'title', label: 'Idea', sortable: true, link: (r) => `/submissions/${r.id}` },
+                { key: 'district', label: 'District', sortable: true, width: 140 },
+                { key: 'status', label: 'Status', width: 170, render: (v) => <StatusPill status={v} /> },
+                { key: 'score', label: 'Score', width: 90, align: 'right', sortable: true },
+              ]}
+              data={tableState === 'rows' ? [
+                { id: 'a', title: 'Shared cold room for Gabane farmers', district: 'Kweneng', status: 'under_review', score: 78 },
+                { id: 'b', title: 'Solar water pumps for cattle posts', district: 'Central', status: 'shortlisted', score: 84 },
+                { id: 'c', title: 'Mobile tailoring school', district: 'South East', status: 'requires_more_information', score: null },
+                { id: 'd', title: 'Mophane worm packaging', district: 'North East', status: 'winner', score: 91 },
+              ] : []}
+              loading={tableState === 'loading'}
+              error={tableState === 'error' ? 'We could not load the review queue.' : null}
+              onRetry={() => setTableState('rows')}
+              emptyTitle="No ideas yet for this challenge"
+              emptyMessage="Share the challenge link to invite entries."
+              pageSize={3}
+            />
+          </div>
+        </Section>
+
         <Section figma="Components › Inputs" title="Fields">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <Input label="Label" placeholder="Placeholder" hint="Hint" />
@@ -169,6 +234,7 @@ export default function Styleguide() {
             <Input label="Label" placeholder="Disabled" disabled />
             <Textarea label="Note to the applicant" maxChars={50} value={note} onChange={(e) => setNote(e.target.value)} />
             <Select label="Judge" options={judges} value={judge} onChange={setJudge} hint="Type to search" required />
+            <MultiSelect label="Panel" options={judges} value={panel} onChange={setPanel} hint="Choose several. Backspace removes the last." />
             <RadioGroup name="sg-yes" legend="Visible on the home page?" options={[{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} value={yes} onChange={setYes} inline />
             <div>
               <Checkbox label="Notify the applicant" description="They get an SMS and an email." defaultChecked />
@@ -180,6 +246,10 @@ export default function Styleguide() {
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
             <label className="block"><span className="label">.input (older pages)</span><input className="input" placeholder="Placeholder" /></label>
           </div>
+        </Section>
+
+        <Section figma="2.3 Submit an idea · How far along are you? (R-17)" title="RadioGroup variant=&quot;cards&quot;">
+          <RadioGroup name="sg-stage" legend="How far along are you?" variant="cards" options={[{ value: 'idea', label: 'Just an idea', description: 'Not tried yet' }, { value: 'tested', label: 'Tested', description: 'Made a few, got feedback' }, { value: 'selling', label: 'Already selling', description: 'Some customers pay' }]} value={stage} onChange={setStage} />
         </Section>
 
         <Section figma="Components › Tabs" title="Tabs">
@@ -215,35 +285,46 @@ export default function Styleguide() {
           </div>
         </Section>
 
-        <Section figma="Components › Modal and confirm dialog" title="Modal">
-          <div className="flex gap-2.5">
-            <Button variant="secondary" onClick={() => setModal('form')}>Add partner</Button>
-            <Button variant="danger" onClick={() => setModal('confirm')}>Delete partner</Button>
+        <Section figma="Components › Modal and confirm dialog · Genie motion" title="Modal and ConfirmDialog (genie from the button)">
+          <p className="text-[13px] text-muted mb-3">Add partner saves through a fake API here and shows a toast with Undo. Set DevTools Animations to 10% to watch the genie.</p>
+          <div className="flex flex-wrap gap-2.5">
+            <Button ref={addRef} icon={<Plus size={14} aria-hidden />} onClick={() => setAddOpen(true)}>Add partner</Button>
+            <Button ref={deleteRef} variant="danger" icon={<Trash2 size={14} aria-hidden />} onClick={() => setConfirmOpen(true)}>Delete partner</Button>
           </div>
-          <Modal
-            open={modal === 'form'}
-            onClose={() => setModal('none')}
-            title="Add partner"
-            description="Partners show in the strip on the home page. You can hide them at any time."
-            closeOnBackdrop={false}
-            footer={<><Button variant="ghost" onClick={() => setModal('none')}>Cancel</Button><Button onClick={() => setModal('none')}>Save partner</Button></>}
-          >
-            <div className="space-y-3.5">
-              <Input label="Organisation name" hint="As it should appear on the site" />
-              <Input label="Website" placeholder="https://" optional />
-            </div>
-          </Modal>
-          <Modal
-            open={modal === 'confirm'}
-            onClose={() => setModal('none')}
-            alert
-            size="sm"
+          <AddPartnerDialog open={addOpen} onClose={() => setAddOpen(false)} triggerRef={addRef} api={fakeApi} />
+          <ConfirmDialog
+            open={confirmOpen}
+            triggerRef={deleteRef}
+            onCancel={() => setConfirmOpen(false)}
+            onConfirm={() => setConfirmOpen(false)}
             title="Delete the partner Debswana?"
-            description="It disappears from the home page straight away. You can add it again later, but its logo will need uploading again."
-            footer={<><Button variant="ghost" onClick={() => setModal('none')}>Keep it</Button><Button variant="danger" onClick={() => setModal('none')}>Delete partner</Button></>}
-          >
-            <p className="rounded-control bg-danger-soft text-danger text-d-label-s px-3 py-2.5">This cannot be undone.</p>
-          </Modal>
+            body="It disappears from the home page straight away. You can add it again later, but its logo will need uploading again."
+            note="This cannot be undone."
+            confirmLabel="Delete partner"
+            cancelLabel="Keep it"
+          />
+        </Section>
+
+        <Section figma="Components › Dropdown menu and popover" title="DropdownMenu and Popover">
+          <div className="flex flex-wrap items-center gap-4">
+            <DropdownMenu
+              label="Actions for Debswana"
+              items={[
+                { key: 'edit', label: 'Edit partner', icon: <Pencil size={14} />, onSelect: () => {} },
+                { key: 'copy', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => {} },
+                { key: 'hidden', label: 'Only for admins', hidden: true },
+                { key: 'delete', label: 'Delete partner', icon: <Trash2 size={14} />, danger: true, onSelect: () => setConfirmOpen(true) },
+              ]}
+            />
+            <DropdownMenu label="More" trigger={(props) => <Button {...props} variant="secondary" size="sm">More actions</Button>} items={[{ key: 'a', label: 'Archive challenge' }, { key: 'b', label: 'Export entries (CSV)' }]} />
+            <button ref={bellRef} type="button" className="btn-icon" aria-expanded={bellOpen} aria-label="Notifications" onClick={() => setBellOpen((o) => !o)}>
+              <Bell size={18} aria-hidden />
+            </button>
+            <Popover open={bellOpen} onClose={() => setBellOpen(false)} triggerRef={bellRef} align="end" label="Notifications" className="p-3">
+              <p className="text-[14px] font-bold text-text mb-2">Notifications</p>
+              <p className="text-[13px] text-muted">Nothing new. We will show replies from applicants and judges here.</p>
+            </Popover>
+          </div>
         </Section>
 
         <Section figma="Components › Toast" title="Toast">
@@ -264,6 +345,11 @@ export default function Styleguide() {
             <Card><Skeleton className="h-3 w-1/3 mb-3" /><Skeleton className="h-7 w-1/2 mb-3" /><SkeletonText lines={2} /></Card>
           </div>
           <EmptyState compact icon={Inbox} title="No entries yet" message="Share the challenge link to invite entries." steps={[{ label: 'Publish the challenge' }, { label: 'Share the link', description: 'WhatsApp works well.' }]} />
+        </Section>
+
+        <Section figma="States · page loading" title="PageSkeleton (the fallback while a page loads)">
+          <Tabs className="mb-3" variant="segment" tabs={['list', 'detail', 'stats', 'form'].map((k) => ({ key: k, label: k }))} active={skeleton} onChange={setSkeleton} />
+          <PageSkeleton shape={skeleton} />
         </Section>
 
         <Section figma="Avatar · Pagination · LanguageSwitch" title="Small parts">

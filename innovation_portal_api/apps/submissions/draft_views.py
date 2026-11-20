@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 
+from apps.submissions import openapi as docs
 from apps.accounts.services import UserVerificationService
 from apps.core.api import api_success
 from apps.core.i18n import resolve_request_language
@@ -164,7 +165,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
         tags=["Drafts"],
         summary="Start an idea without signing in (screens 1.1, 1.2)",
         request=QuickStartSerializer,
-        responses={201: QuickStartResponseSerializer},
+        responses={201: docs.QUICK_START},
     )
     @action(detail=False, methods=["post"], url_path="quick-start", permission_classes=[AllowAny], authentication_classes=[])
     def quick_start(self, request):
@@ -173,7 +174,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         draft, token = QuickStartService.start(
             title=serializer.validated_data["title"],
-            sector=serializer.validated_data["sector"],
+            sector=serializer.validated_data.get("sector"),
             program_id=serializer.validated_data.get("program_id"),
             ip_address=client_ip(request),
         )
@@ -182,7 +183,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
             status_code=status.HTTP_201_CREATED,
         )
 
-    @extend_schema(tags=["Drafts"], summary="Attach a guest draft to my account after signing in", request=None, parameters=[DRAFT_TOKEN_PARAMETER])
+    @extend_schema(tags=["Drafts"], summary="Attach a guest draft to my account after signing in", request=None, parameters=[DRAFT_TOKEN_PARAMETER], responses=docs.DRAFT)
     @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated])
     def claim(self, request, pk=None):
         token = DraftTokenService.token_from_request(request)
@@ -197,7 +198,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
         draft = DraftClaimService.claim(draft=draft, user=request.user)
         return api_success(data=ApplicationDraftSerializer(draft, context={"request": request}).data)
 
-    @extend_schema(tags=["Drafts"], summary="Confirm a guest's phone with a sign-in code, without creating an account", request=DraftPhoneVerifySerializer, parameters=[DRAFT_TOKEN_PARAMETER])
+    @extend_schema(tags=["Drafts"], summary="Confirm a guest's phone with a sign-in code, without creating an account", request=DraftPhoneVerifySerializer, parameters=[DRAFT_TOKEN_PARAMETER], responses=docs.DRAFT)
     @action(detail=True, methods=["post"], url_path="verify-phone")
     def verify_phone(self, request, pk=None):
         draft = self.get_object()
@@ -210,7 +211,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
 
     # One step at a time ------------------------------------------------------
 
-    @extend_schema(tags=["Drafts"], summary="Save and check one step of the form (screen 2.3)", request=DraftStepSerializer, parameters=[DRAFT_TOKEN_PARAMETER])
+    @extend_schema(tags=["Drafts"], summary="Save and check one step of the form (screen 2.3)", request=DraftStepSerializer, parameters=[DRAFT_TOKEN_PARAMETER], responses=docs.STEP)
     @action(detail=True, methods=["put"], url_path=r"steps/(?P<section_code>[^/]+)")
     def steps(self, request, pk=None, section_code=None):
         draft = self.get_object()
@@ -228,7 +229,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
 
     # Submit ------------------------------------------------------------------
 
-    @extend_schema(tags=["Drafts"], summary="Send the idea (owner or resume token)", request=DraftSubmitSerializer, parameters=[DRAFT_TOKEN_PARAMETER])
+    @extend_schema(tags=["Drafts"], summary="Send the idea (owner or resume token)", description="Owners also get every field of the submission next to these.", request=DraftSubmitSerializer, parameters=[DRAFT_TOKEN_PARAMETER], responses=docs.SUBMIT)
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         draft = self.get_object()
@@ -245,6 +246,8 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
             name=serializer.validated_data.get("name", ""),
             first_name=serializer.validated_data.get("first_name", ""),
             last_name=serializer.validated_data.get("last_name", ""),
+            district=serializer.validated_data.get("district"),
+            email=serializer.validated_data.get("email", ""),
             ip_address=client_ip(request),
         )
         payload = IdeaSubmitService.response_payload(outcome, lang=resolve_request_language(request))

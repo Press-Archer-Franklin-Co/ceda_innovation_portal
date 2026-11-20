@@ -48,7 +48,12 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     REQUIRED_FIELDS = []
 
     class Meta:
-        indexes = [models.Index(fields=["email"]), models.Index(fields=["last_name"])]
+        indexes = [
+            models.Index(fields=["email"]),
+            models.Index(fields=["last_name"]),
+            # Kept on purpose (migration 0008): sorts the staff user list by name.
+            models.Index(fields=["first_name", "last_name", "email"], name="user_sort_idx"),
+        ]
 
     def __str__(self) -> str:
         return self.email or self.phone_number or str(self.pk)

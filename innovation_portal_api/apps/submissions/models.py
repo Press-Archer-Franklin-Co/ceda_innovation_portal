@@ -68,6 +68,8 @@ class Submission(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     is_guest = models.BooleanField(default=False)
     guest_name = models.CharField(max_length=255, blank=True)
     guest_phone = models.CharField(max_length=32, blank=True)
+    guest_email = models.EmailField(blank=True, help_text="Optional email a guest gave for the confirmation copy (R-22).")
+    district = models.ForeignKey("reference.District", on_delete=models.SET_NULL, null=True, blank=True, related_name="submissions", help_text="Where the idea is; officers route by it.")
     title = models.CharField(max_length=255)
     current_status = models.CharField(max_length=40, choices=SubmissionStatus.choices, default=SubmissionStatus.DRAFT, db_index=True)
     submitted_at = models.DateTimeField(null=True, blank=True)

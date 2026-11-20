@@ -5,8 +5,8 @@
  * - main: code sign-in, notifications, preferences, media (B1).
  * - B2 (on main since 4facb3b): quick start, drafts, steps,
  *   /api/me/*, similar ideas, timeline.
- * - B3 and B4 are not built yet. Their types follow the prompts and are marked
- *   TODO(B3) / TODO(B4) until the backend lane publishes the schema.
+ * - B4 (on main): the published form.
+ * - B3 (on main): messages, open questions, notification categories.
  * - Fields the screens need but no prompt plans are optional and marked
  *   TODO(R-<n>) with the request number in ~/ceda-coord/requests.md.
  */
@@ -38,8 +38,8 @@ export interface OtpRequestResult {
   /** Masked destination, for example "+267 71 ••• 567". */
   destination_hint: string
   expires_in_seconds: number
-  /** TODO(R-4): not returned yet; the screen falls back to 60 seconds. */
-  resend_after_seconds?: number
+  /** Wait this long before offering "Resend code" (R-4). */
+  resend_after_seconds: number
 }
 
 // ── Quick start and drafts (B2) ────────────────────────────────────────────
@@ -103,19 +103,18 @@ export interface IntakeDraft {
   submitted_at: string | null
   metadata: Record<string, unknown>
   channel: 'web' | 'whatsapp' | 'ussd' | 'office'
-  /** TODO(R-6): which published form to load for this draft. */
-  form_id?: string
-  /** TODO(R-6) */
-  form_version_id?: string
+  /** Load GET /api/forms/{form_id}/published/ for this draft (R-6). */
+  form_id: string | null
+  /** Latest published version; null if the form was never published. */
+  form_version_id: string | null
 }
 
 export interface SubmitRequest {
   consent: true
   create_account?: boolean
+  /** Still accepted; prefer first_name and last_name (R-1). */
   name?: string
-  /** TODO(R-1): two boxes on screen 1.2; until then they are joined into `name`. */
   first_name?: string
-  /** TODO(R-1) */
   last_name?: string
 }
 
@@ -134,8 +133,7 @@ export interface SubmitResult {
   next_steps: NextStep[]
   copy_sent_to: { channel: 'email' | 'sms' | 'whatsapp' | string; to: string } | null
   account: { created: boolean; sign_in_with: 'phone_code' | 'email' } | null
-  /** TODO(R-1) */
-  first_name?: string
+  first_name: string
 }
 
 // ── Similar ideas (B2) ─────────────────────────────────────────────────────
@@ -154,13 +152,14 @@ export type IdeasFilter = 'all' | IdeaState
 
 export type StageStatus = 'done' | 'current' | 'upcoming' | 'skipped'
 
-/** TODO(R-5): the short 5-step bar on idea cards. */
+/** The short 5-step bar on idea cards (R-5 a). Empty for drafts. */
 export interface StageDot {
+  code: string
   name: string
   status: StageStatus
 }
 
-/** TODO(R-5): the officer's open question; B3 fills it. */
+/** The officer's open question (R-5 c). */
 export interface OpenQuestion {
   officer_first_name: string
   excerpt: string
@@ -177,23 +176,22 @@ export interface IdeaItem {
   sector: SectorRef | null
   program: { id: string; title: string; is_general_intake: boolean }
   stage: string
+  /** The raw status ("draft" for drafts), R-16. */
+  status: string
   percent_complete: number
   last_change: string | null
   needs_action_reason: string
   reply_by: string | null
-  /** TODO(R-5) */
-  stages?: StageDot[]
-  /** TODO(R-5) */
-  submitted_at?: string | null
-  /** TODO(R-5) */
-  decided_at?: string | null
-  /** TODO(R-5) */
-  has_feedback?: boolean
-  /** TODO(R-5) */
-  open_question?: OpenQuestion | null
-  /** TODO(R-5): only on summary.active_idea. */
+  stages: StageDot[]
+  submitted_at: string | null
+  /** Set for finished ideas only. */
+  decided_at: string | null
+  /** True for finished ideas with feedback. */
+  has_feedback: boolean
+  open_question: OpenQuestion | null
+  /** Only on summary.active_idea (R-5 d). */
   unread_messages?: number
-  /** TODO(R-5): only on summary.active_idea. */
+  /** Only on summary.active_idea (R-5 d). */
   unread_updates?: number
 }
 
@@ -211,8 +209,7 @@ export type NextAction =
       title: string
       detail: string
       reply_by: string | null
-      /** TODO(R-5) */
-      open_question?: OpenQuestion
+      open_question: OpenQuestion | null
     }
   | {
       type: 'finish_draft'
@@ -230,11 +227,11 @@ export interface MySummary {
   unread_notifications: number
 }
 
+/** What a notification or update is about: {type, id, slug}, null where not set. */
 export interface UpdateLink {
   type: 'idea' | 'challenge' | 'post' | string
-  id: string
-  slug?: string
-  url?: string
+  id: string | null
+  slug?: string | null
 }
 
 export type UpdateItem =
@@ -245,10 +242,9 @@ export type UpdateItem =
       body: string
       is_read: boolean
       at: string
-      /** TODO(R-5): picks the icon. */
-      notification_type?: string
-      /** TODO(R-5) */
-      link?: UpdateLink | null
+      /** Picks the icon (R-5 f). */
+      notification_type: string
+      link: UpdateLink | null
     }
   | {
       type: 'status_change'
@@ -258,6 +254,8 @@ export type UpdateItem =
       title: string
       status: string
       at: string
+      notification_type: 'status_change'
+      link: UpdateLink
     }
 
 export interface UpdatesFeed {
@@ -265,7 +263,8 @@ export interface UpdatesFeed {
   results: UpdateItem[]
 }
 
-export interface RecommendedChallenge {
+/** Fields every challenge list item has (challenge matches send only these). */
+export interface ChallengeBase {
   id: string
   title: string
   slug: string
@@ -274,16 +273,19 @@ export interface RecommendedChallenge {
   sectors: SectorRef[]
   matched_sectors: SectorRef[]
   can_enter: boolean
-  /** TODO(R-5): the B5 public list item fields. */
-  summary?: string
-  support_headline?: string
-  status?: 'open' | 'upcoming' | 'closed'
-  opens_at?: string | null
-  days_left?: number | null
-  window_progress?: number | null
 }
 
-export interface ChallengeMatch extends RecommendedChallenge {
+/** /api/me/challenges/recommended/: the base fields plus the B5 public card (R-5 e). */
+export interface RecommendedChallenge extends ChallengeBase {
+  summary: string
+  support_headline: string
+  status: 'open' | 'upcoming' | 'closed'
+  opens_at: string | null
+  days_left: number | null
+  window_progress: number | null
+}
+
+export interface ChallengeMatch extends ChallengeBase {
   answers_reused: number
   questions_left: number
 }
@@ -331,21 +333,59 @@ export interface Timeline {
   next_panel_at: string | null
 }
 
-// ── 2.4 Messages (B3, not built) ───────────────────────────────────────────
+/** One answer as the submission stored it (label and type are snapshots). */
+export interface SubmissionAnswer {
+  id: string
+  field_key: string
+  field_label: string
+  field_type: string
+  value: unknown
+}
 
-/** TODO(B3): shape from the B3 prompt; confirm against the backend schema. */
+/** GET /api/submissions/{id}/tracking-detail/: the Submission plus its timeline. Only fields 2.4 uses. */
+export interface TrackedIdea {
+  id: string
+  reference_number: string
+  title: string
+  current_status: string
+  submitted_at: string | null
+  sector: string | null
+  program_detail: { id: string; title: string; is_general_intake: boolean } & Record<string, unknown>
+  responses: SubmissionAnswer[]
+  timeline: Timeline
+}
+
+// ── 2.4 Messages (B3, apps/communications/messaging.py) ───────────────────
+
+export interface MessageAttachment {
+  id: string
+  kind: 'image' | 'video' | 'document' | 'audio'
+  url: string
+  mime_type: string
+  duration_seconds: number | null
+  original_filename: string
+}
+
 export interface IdeaMessage {
   id: string
   author_role: 'applicant' | 'officer' | 'system'
+  /** label: "Kago T., Innovation officer"; the system's is "CEDA Innovation". */
+  author: { name: string; role: string; label: string }
   body: string
-  attachments: MediaAsset[]
+  attachments: MessageAttachment[]
   reply_by: string | null
+  is_question: boolean
+  answered_at: string | null
+  /** Read by the person viewing. */
+  read: boolean
   created_at: string
-  read_at?: string | null
-  /** TODO(R-7): "Kago T." or "CEDA Innovation". */
-  author_name?: string
-  /** TODO(R-7): "Innovation officer". */
-  author_title?: string
+}
+
+/** GET /api/me/ideas/{id}/messages/ */
+export interface MessageThreadPayload {
+  idea_id: string
+  open_question: IdeaMessage | null
+  results: IdeaMessage[]
 }
 
 export interface NewMessage {
@@ -354,12 +394,19 @@ export interface NewMessage {
   attachments?: string[]
 }
 
-/** TODO(B3): latest message per idea, for the 2.2 side panel. */
+/** One idea in GET /api/me/messages/recent/ (the 2.2 side panel). */
 export interface RecentThread {
   idea_id: string
-  idea_title: string
-  last_message: IdeaMessage
+  reference: string
+  title: string
   unread: number
+  has_open_question: boolean
+  latest: IdeaMessage
+}
+
+export interface RecentMessages {
+  total_unread: number
+  results: RecentThread[]
 }
 
 // ── Media (main, B1) ───────────────────────────────────────────────────────
@@ -392,12 +439,10 @@ export interface NotificationItem {
   body: string
   is_read: boolean
   created_at: string
-  /** TODO(R-8) */
-  category?: NotificationCategory
-  /** TODO(R-8) */
-  link?: UpdateLink | null
-  /** TODO(R-8): for the "Reply by 25 Nov" tag. */
-  due_at?: string | null
+  category: NotificationCategory
+  link: UpdateLink | null
+  /** Questions with a reply-by date, for the "Reply by 25 Nov" tag. */
+  due_at: string | null
 }
 
 export type NotificationChannel = 'web' | 'whatsapp' | 'sms' | 'email'
@@ -408,74 +453,97 @@ export interface NotificationPreferences {
   channels: Array<{ code: NotificationChannel; label: string }>
 }
 
-// ── 2.3 Published form (B4, not built) ─────────────────────────────────────
+// ── 2.3 Published form (B4, on main) ───────────────────────────────────────
+// GET /api/forms/{id}/published/?lang= returns the latest FormVersion with
+// every text already in one language (English when a translation is missing).
+// Shape: apps/programs/form_schema.py.
 
 export type FieldWidth = 'quarter' | 'half' | 'three_quarter' | 'full'
 
 export type FormFieldType =
   | 'text' | 'textarea' | 'number' | 'date' | 'email' | 'phone' | 'url'
   | 'boolean' | 'select' | 'multiselect' | 'file'
-  // Added by B4:
   | 'radio' | 'checkboxes' | 'yes_no' | 'district' | 'omang_id' | 'media'
   | 'heading' | 'paragraph'
 
+/** Layout-only types store no answer. */
+export const LAYOUT_FIELD_TYPES: ReadonlySet<FormFieldType> = new Set(['heading', 'paragraph'])
+
 export type ConditionOp = 'equals' | 'not_equals' | 'in' | 'is_empty' | 'is_not_empty'
 
-/** The one condition shape B4 documents. */
+export interface ConditionClause {
+  field: string
+  op: ConditionOp
+  value?: unknown
+}
+
+/** The shape B4 documents. An unset condition comes as {}. */
 export interface Condition {
-  all: Array<{ field: string; op: ConditionOp; value?: unknown }>
+  all?: ConditionClause[]
 }
 
 export interface FormOption {
+  id: string
   value: string
   label: string
-  /** TODO(R-6): second line on radio cards. */
-  description?: string
+  /** Second line on radio cards; empty string when not set. */
+  description: string
 }
 
 export interface FormValidationRule {
   rule_type: 'min_length' | 'max_length' | 'min_value' | 'max_value' | 'regex'
-    | 'file_type' | 'file_size_mb' | 'exact_length' | 'required_extension'
+    | 'file_type' | 'file_size_mb' | 'exact_length' | 'required_extension' | string
   rule_value: string
   error_message: string
 }
 
 export interface FormField {
+  id: string
   key: string
-  field_type: FormFieldType
+  type: FormFieldType
   label: string
   help_text: string
   placeholder: string
   required: boolean
+  is_challenge_question: boolean
   width: FieldWidth
-  row: number
-  ordering: number
+  is_active: boolean
+  link_url: string
   options: FormOption[]
   rules: FormValidationRule[]
-  visible_if: Condition | null
-  required_if: Condition | null
-  enabled_if?: Condition | null
-  media_config?: Record<string, unknown>
-  /** TODO(R-6): "Challenge question" badge. */
-  is_challenge_question?: boolean
+  visible_if: Condition
+  required_if: Condition
+  enabled_if: Condition
+  validation_rules: Record<string, unknown>
+  media_config: Record<string, unknown>
+  default_value: unknown
+  example_value: unknown
+}
+
+export interface FormRow {
+  row: number
+  fields: FormField[]
 }
 
 export interface FormStep {
+  id: string
   code: string
   title: string
   description: string
-  ordering: number
-  fields: FormField[]
-  /** TODO(R-6): "Tips for this step". */
-  tips?: string[]
+  tips: string[]
+  is_active: boolean
+  rows: FormRow[]
 }
 
-/** TODO(B4): GET /api/forms/{id}/published/?lang= */
 export interface PublishedForm {
-  form_id: string
-  version_id: string
-  version_number: number
-  lang: Lang
+  id: string
+  name: string
+  description: string
   languages: Lang[]
+  /** The language the texts are in. */
+  language: Lang
   steps: FormStep[]
+  /** Old fields that are in no step. */
+  loose_fields: FormField[]
+  version: { id: string; number: number; published_at: string }
 }

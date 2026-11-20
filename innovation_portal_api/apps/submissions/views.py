@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from django.utils import timezone
 
+from apps.submissions.openapi import TRACKING as TRACKING_DOC
 from apps.assignments.models import Assignment
 from apps.assignments.serializers import AssignmentSerializer, SubmissionAssignmentActionSerializer
 from apps.assignments.services import AssignmentService
@@ -478,8 +479,8 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         note = submission.internal_notes.create(author=request.user, note=note_text)
         return api_success(data=SubmissionInternalNoteSerializer(note).data, status_code=status.HTTP_201_CREATED)
 
+    @extend_schema(tags=["Tracking"], summary="Get owner/internal tracking detail for a submission", responses=TRACKING_DOC)
     @action(detail=True, methods=["get"], url_path="tracking-detail")
-    @extend_schema(tags=["Tracking"], summary="Get owner/internal tracking detail for a submission")
     def tracking_detail(self, request, pk=None):
         submission = self.get_object()
         payload = {

@@ -1,5 +1,5 @@
-import { ReactNode, useState } from 'react'
-import { Inbox, Plus } from 'lucide-react'
+import { ReactNode, useRef, useState } from 'react'
+import { Bell, Inbox, Pencil, Plus, Share2, Trash2 } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Tag, { NewCue, TagTone } from '../components/ui/Tag'
 import Input from '../components/ui/Input'
@@ -18,6 +18,12 @@ import LanguageSwitch from '../components/ui/LanguageSwitch'
 import StepProgress from '../components/ui/StepProgress'
 import Logo, { CedaMark } from '../components/ui/Logo'
 import { useI18n } from '../i18n'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import Popover from '../components/ui/Popover'
+import DropdownMenu from '../components/ui/DropdownMenu'
+import Badge from '../components/ui/Badge'
+import PageSkeleton from '../components/ui/PageSkeleton'
+import { STATUS_VALUES } from '../lib/status'
 
 // Dev-only page (/styleguide). Every shared component and state, labelled with its Figma frame on
 // Foundations (https://www.figma.com/design/dzLeXDnM9ldZEurtYDcIh2). Sample text here is for display only.
@@ -65,10 +71,16 @@ export default function Styleguide() {
   const [district, setDistrict] = useState<string | null>(null)
   const [sector, setSector] = useState<'yes' | 'no' | null>('yes')
   const [toggle, setToggle] = useState(true)
+  const [stage, setStage] = useState<'idea' | 'tested' | 'selling' | null>('tested')
   const [page, setPage] = useState(5)
   const [step, setStep] = useState(1)
   const [modal, setModal] = useState<'none' | 'form' | 'confirm'>('none')
   const [pitch, setPitch] = useState('A cold room shared by farmers in Gabane.')
+  const formRef = useRef<HTMLButtonElement>(null)
+  const deleteRef = useRef<HTMLButtonElement>(null)
+  const bellRef = useRef<HTMLButtonElement>(null)
+  const [bellOpen, setBellOpen] = useState(false)
+  const [skeleton, setSkeleton] = useState<'list' | 'detail' | 'stats' | 'form'>('list')
 
   const switchTheme = () => {
     const next = !dark
@@ -159,6 +171,17 @@ export default function Styleguide() {
         </div>
       </Section>
 
+      <Section figma="Components › Status chips" title="Badge status: every API value and its word">
+        <div className="flex flex-wrap gap-2">
+          {[...Object.keys(STATUS_VALUES), 'something_new'].map((v) => (
+            <span key={v} className="inline-flex flex-col items-start gap-0.5">
+              <Badge status={v} />
+              <code className="text-[10px] text-muted">{v}</code>
+            </span>
+          ))}
+        </div>
+      </Section>
+
       <Section figma="Components › Inputs" title="Input, Textarea, Select, choices">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Input label="Label" placeholder="Placeholder" hint="Hint" />
@@ -175,6 +198,10 @@ export default function Styleguide() {
             <Toggle label="Email me updates" checked={toggle} onChange={setToggle} />
           </div>
         </div>
+      </Section>
+
+      <Section figma="2.3 Submit an idea · How far along are you? (R-17)" title="RadioGroup variant=&quot;cards&quot;">
+        <RadioGroup name="sg-stage" legend="How far along are you?" variant="cards" options={[{ value: 'idea', label: 'Just an idea', description: 'Not tried yet' }, { value: 'tested', label: 'Tested', description: 'Made a few, got feedback' }, { value: 'selling', label: 'Already selling', description: 'Some customers pay' }] as const} value={stage} onChange={setStage} />
       </Section>
 
       <Section figma="Components › Tabs" title="Tabs">
@@ -216,13 +243,14 @@ export default function Styleguide() {
         </div>
       </Section>
 
-      <Section figma="Components › Modal and confirm dialog" title="Modal">
+      <Section figma="Components › Modal and confirm dialog · Genie motion" title="Modal and ConfirmDialog (genie from the button)">
         <div className="flex gap-3">
-          <Button variant="secondary" onClick={() => setModal('form')}>Add partner</Button>
-          <Button variant="danger" onClick={() => setModal('confirm')}>Delete partner</Button>
+          <Button ref={formRef} variant="secondary" onClick={() => setModal('form')}>Add partner</Button>
+          <Button ref={deleteRef} variant="danger" onClick={() => setModal('confirm')}>Delete partner</Button>
         </div>
         <Modal
           open={modal === 'form'}
+          triggerRef={formRef}
           onClose={() => setModal('none')}
           title="Add partner"
           description="Partners show in the strip on the home page. You can hide them at any time."
@@ -234,17 +262,37 @@ export default function Styleguide() {
             <Input label="Website" placeholder="https://" optional />
           </div>
         </Modal>
-        <Modal
+        <ConfirmDialog
           open={modal === 'confirm'}
-          onClose={() => setModal('none')}
-          alert
-          size="sm"
+          triggerRef={deleteRef}
+          onCancel={() => setModal('none')}
+          onConfirm={() => setModal('none')}
           title="Delete the partner Debswana?"
-          description="It disappears from the home page straight away. You can add it again later, but its logo will need uploading again."
-          footer={<><Button variant="ghost" onClick={() => setModal('none')}>Keep it</Button><Button variant="danger" onClick={() => setModal('none')}>Delete partner</Button></>}
-        >
-          <p className="rounded-control bg-danger-soft text-danger text-d-label-s px-3 py-2.5">This cannot be undone.</p>
-        </Modal>
+          body="It disappears from the home page straight away. You can add it again later, but its logo will need uploading again."
+          note="This cannot be undone."
+          confirmLabel="Delete partner"
+          cancelLabel="Keep it"
+        />
+      </Section>
+
+      <Section figma="Components › Dropdown menu and popover" title="DropdownMenu and Popover">
+        <div className="flex flex-wrap items-center gap-4">
+          <DropdownMenu
+            label="Actions for this idea"
+            items={[
+              { key: 'edit', label: 'Edit idea', icon: <Pencil size={16} />, onSelect: () => undefined },
+              { key: 'share', label: 'Share on WhatsApp', icon: <Share2 size={16} />, onSelect: () => undefined },
+              { key: 'delete', label: 'Delete draft', icon: <Trash2 size={16} />, danger: true, onSelect: () => setModal('confirm') },
+            ]}
+          />
+          <button ref={bellRef} type="button" aria-expanded={bellOpen} aria-label="Notifications" onClick={() => setBellOpen((o) => !o)} className="w-10 h-10 rounded-full border border-border flex items-center justify-center">
+            <Bell size={18} aria-hidden />
+          </button>
+          <Popover open={bellOpen} onClose={() => setBellOpen(false)} triggerRef={bellRef} align="end" label="Notifications" className="p-4">
+            <p className="text-d-label text-text mb-1">Notifications</p>
+            <p className="text-d-body-s text-muted">Nothing new. Replies from CEDA officers show here.</p>
+          </Popover>
+        </div>
       </Section>
 
       <Section figma="Components › Toast" title="Toast">
@@ -254,7 +302,7 @@ export default function Styleguide() {
           <ToastCard toast={{ title: 'Some files are still uploading', body: 'Keep this page open until they finish.', tone: 'warning', duration: 0 }} onClose={() => undefined} />
           <ToastCard toast={{ title: 'We could not save this', body: 'Check your connection and try again.', tone: 'error', action: { label: 'Try again', onClick: () => undefined }, duration: 0 }} onClose={() => undefined} />
         </div>
-        <Button variant="secondary" size="sm" onClick={() => toast.show({ title: 'Partner saved', body: 'Debswana now shows on the home page.', tone: 'success' })}>Show a toast</Button>
+        <Button variant="secondary" size="sm" onClick={() => toast.show({ title: 'Partner saved', body: 'Debswana now shows on the home page.', tone: 'success', action: { label: 'Undo', onClick: () => undefined } })}>Show a toast</Button>
       </Section>
 
       <Section figma="Components › States" title="Empty, error, not allowed, loading">
@@ -268,6 +316,11 @@ export default function Styleguide() {
           <EmptyState icon={Inbox} framed={false} title="No ideas yet" body="Ideas you send show here." />
           <div className="space-y-2"><Skeleton className="h-10 w-full" /><SkeletonText lines={3} /></div>
         </div>
+      </Section>
+
+      <Section figma="States · page loading" title="PageSkeleton">
+        <Tabs className="mb-3" variant="segment" tabs={(['list', 'detail', 'stats', 'form'] as const).map((k) => ({ key: k, label: k }))} active={skeleton} onChange={setSkeleton} />
+        <PageSkeleton shape={skeleton} />
       </Section>
 
       <Section figma="Avatar · Pagination · LanguageSwitch" title="Small parts">

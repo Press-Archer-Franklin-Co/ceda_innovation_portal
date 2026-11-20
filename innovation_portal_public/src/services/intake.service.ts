@@ -86,11 +86,7 @@ export const intakeService = {
   },
 
   async submit(id: string, payload: SubmitRequest, token?: string): Promise<SubmitResult> {
-    // TODO(R-1): send first_name and last_name once submit accepts them.
-    const { first_name, last_name, ...rest } = payload
-    const name = rest.name ?? [first_name, last_name].filter(Boolean).join(' ')
-    const body = name ? { ...rest, name } : rest
-    const { data } = await api.post<Envelope<SubmitResult>>(`/drafts/${id}/submit/`, body, tokenHeaders(token))
+    const { data } = await api.post<Envelope<SubmitResult>>(`/drafts/${id}/submit/`, payload, tokenHeaders(token))
     return unwrapData(data)
   },
 

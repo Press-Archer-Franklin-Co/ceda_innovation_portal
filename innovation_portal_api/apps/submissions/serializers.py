@@ -144,10 +144,10 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "is_general_idea",
         )
 
-    def get_percent_complete(self, obj):
+    def get_percent_complete(self, obj) -> int:
         return int((obj.progress_metadata or {}).get("percent_complete") or 0)
 
-    def get_guest_phone_verified(self, obj):
+    def get_guest_phone_verified(self, obj) -> bool:
         return bool(obj.guest_phone_verified_at)
 
     def get_form_id(self, obj) -> str | None:
@@ -162,7 +162,10 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
 
 class QuickStartSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255, trim_whitespace=True)
-    sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True))
+    sector = serializers.PrimaryKeyRelatedField(
+        queryset=Sector.objects.filter(active=True), required=False, allow_null=True,
+        help_text="Leave out or send null for \"not sure\"; officers set it later (R-21).",
+    )
     program_id = serializers.UUIDField(required=False, allow_null=True)
 
 
@@ -180,6 +183,27 @@ class DraftSubmitSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, allow_blank=True, max_length=255, help_text="Full name. first_name and last_name win when sent.")
     first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    district = serializers.CharField(required=False, allow_blank=True, max_length=80, help_text="Reference district id or slug (R-22).")
+    email = serializers.EmailField(required=False, allow_blank=True, help_text="Optional: also gets the confirmation copy (R-22).")
+
+    def validate_district(self, value):
+        from apps.reference.models import District
+
+        value = (value or "").strip()
+        if not value:
+            return None
+        district = District.objects.filter(active=True, slug=value).first()
+        if district is None:
+            try:
+                district = District.objects.filter(active=True, id=value).first()
+            except Exception:  # not a UUID
+                district = None
+        if district is None:
+            raise serializers.ValidationError("Choose a district from the list.")
+        return district
+
+    def validate_email(self, value):
+        return (value or "").strip().lower()
 
 
 class DraftStepSerializer(serializers.Serializer):

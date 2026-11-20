@@ -143,6 +143,7 @@ class ReviewerQueueView(generics.ListAPIView):
         queryset = Submission.objects.select_related(
             "workflow_instance__current_step"
         ).prefetch_related("assignments__assignee").filter(workflow_instance__isnull=False)
+        queryset = self._apply_filters(queryset)
 
         results = []
         for submission in queryset:
@@ -185,6 +186,28 @@ class ReviewerQueueView(generics.ListAPIView):
             if include:
                 results.append(submission)
         return results
+
+    def _apply_filters(self, queryset):
+        """B5 filters (also stored in saved views): program, sector, channel, stage, overdue."""
+        from django.utils import timezone
+
+        params = self.request.query_params
+        try:
+            if params.get("program"):
+                queryset = queryset.filter(program_id=params["program"])
+            if params.get("sector"):
+                queryset = queryset.filter(sector_id=params["sector"])
+        except Exception:  # not a UUID
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"detail": "program and sector must be ids."})
+        if params.get("channel"):
+            queryset = queryset.filter(channel=params["channel"])
+        if params.get("stage"):
+            queryset = queryset.filter(workflow_instance__current_step__code=params["stage"])
+        if params.get("overdue") == "true":
+            queryset = queryset.filter(workflow_instance__due_at__lt=timezone.now())
+        return queryset
 
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(self.get_queryset(), many=True)

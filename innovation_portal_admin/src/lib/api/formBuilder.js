@@ -3,11 +3,9 @@ import { client } from './client'
 /**
  * Staff form builder and challenge builder calls (U5: screens 3.4 to 3.7).
  *
- * - forms: planned in B4, not built yet. Paths follow the B4 prompt. TODO(B4)
- * - programSetup: setup-status is planned in B5 (TODO(B5)); attaching a form
- *   is planned in B4 (TODO(B4)).
- * - programJudging: no endpoint is planned yet; the path is the one suggested
- *   in request R-10. TODO(R-10)
+ * - forms: B4, on main. Document shape: apps/programs/form_schema.py.
+ * - programSetup: setup status (B5) and attaching a form (B4), on main.
+ * - programJudging: B5 (R-10), on main.
  * Existing marking-criteria calls live in endpoints.js (evaluations).
  */
 
@@ -26,17 +24,17 @@ import { client } from './client'
  * @property {number} step_count
  * @property {string[]} languages
  * @property {string} updated_at
- * @property {FieldWidth[][]} [layout_preview]  TODO(R-9): widths of the first rows, for the card picture.
+ * @property {FieldWidth[][]} layout_preview  Widths of the first rows, for the card picture.
  *
  * @typedef {Object} FormList
  * @property {FormListItem[]} results
- * @property {Record<'all'|FormStatus, number>} [counts]  TODO(R-9)
+ * @property {Record<'all'|FormStatus, number>} counts  Follows ?search, not ?status; 'all' leaves out archived.
  *
  * @typedef {Object} FormTemplate
  * @property {string} id
  * @property {string} name
  * @property {number} question_count
- * @property {number} [step_count]  TODO(R-9)
+ * @property {number} step_count
  * @property {{description?: string, estimated_minutes?: number, works_on_ussd?: boolean}} template_meta
  *
  * @typedef {Object} CreateFormRequest
@@ -52,35 +50,36 @@ import { client } from './client'
  * @typedef {Object} DraftField
  * @property {string} [id]
  * @property {string} key
- * @property {string} field_type
+ * @property {string} type
  * @property {BilingualText} label
  * @property {BilingualText} [help_text]
  * @property {BilingualText} [placeholder]
  * @property {boolean} required
  * @property {FieldWidth} width
- * @property {number} row
- * @property {number} ordering
- * @property {Array<{value: string, label: BilingualText, description?: BilingualText}>} options  description: TODO(R-6)
+ * @property {boolean} is_active
+ * @property {Array<{id?: string, value: string, label: BilingualText, description: BilingualText}>} options
  * @property {Array<{rule_type: string, rule_value: string, error_message: string}>} rules
- * @property {Condition|null} visible_if
- * @property {Condition|null} required_if
- * @property {boolean} [is_challenge_question]  TODO(R-6)
+ * @property {Condition|{}} visible_if   An unset condition is {}.
+ * @property {Condition|{}} required_if
+ * @property {Condition|{}} enabled_if
+ * @property {boolean} is_challenge_question
  *
  * @typedef {Object} DraftStep
  * @property {string} [id]
  * @property {string} code
  * @property {BilingualText} title
  * @property {BilingualText} [description]
- * @property {number} ordering
- * @property {DraftField[]} fields
- * @property {BilingualText[]} [tips]  TODO(R-6)
+ * @property {BilingualText[]} tips
+ * @property {boolean} is_active
+ * @property {Array<{row: number, fields: DraftField[]}>} rows   Order within a row is left to right.
  *
  * @typedef {Object} FormDraft  GET and PUT /api/forms/{id}/draft/ use the same document.
  * @property {string} id
- * @property {string} name
- * @property {FormStatus} status
+ * @property {BilingualText} name
+ * @property {BilingualText} description
  * @property {string[]} languages
  * @property {DraftStep[]} steps
+ * @property {DraftField[]} loose_fields  Old fields that are in no step.
  *
  * @typedef {Object} PublishProblem
  * @property {string} [field]
@@ -123,9 +122,9 @@ export const forms = {
 }
 
 export const programSetup = {
-  /** TODO(B5): which of the 6 steps are complete. */
+  /** Which of the 6 steps are complete (B5). */
   setupStatus: (programId)         => client.get(`/api/programs/${programId}/setup-status/`),
-  /** TODO(B4): attach a form (its latest published version). */
+  /** Attach a form (its latest published version). */
   attachForm:  (programId, formId) => client.put(`/api/programs/${programId}/form/`, { form_id: formId }),
 }
 
@@ -146,10 +145,12 @@ export const programSetup = {
  * @property {number|null} reviewers_per_idea
  */
 export const programJudging = {
-  /** TODO(R-10) @returns {Promise<ProgramJudging>} */
+  /** @returns {Promise<ProgramJudging>} */
   get:     (programId)       => client.get(`/api/programs/${programId}/judging/`),
-  /** TODO(R-10) @param {ProgramJudging} body */
+  /** Refused unless weights total 100 (errors.total). @param {ProgramJudging} body */
   save:    (programId, body) => client.put(`/api/programs/${programId}/judging/`, body),
-  /** TODO(R-10): shared criteria library across challenges. */
+  /** The shared criteria library across challenges (R-10, B5). */
   library: (params)          => client.get('/api/evaluations/criteria-library/', params),
+  /** Adds a criterion to the library: { name, description, score_meanings?, comment_required_scores? }. */
+  addToLibrary: (body)       => client.post('/api/evaluations/criteria-library/', body),
 }

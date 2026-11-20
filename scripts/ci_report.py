@@ -24,8 +24,10 @@ DETAIL_FILES = {
 # Logs copied only when their step failed: (file, job, step key).
 FAILURE_LOGS = [
     ("pytest-output.txt", "api", "pytest"),
+    ("admin-test.txt", "admin", "test"),
     ("admin-build.txt", "admin", "build"),
     ("public-typecheck.txt", "public", "typecheck"),
+    ("public-test.txt", "public", "test"),
     ("public-build.txt", "public", "build"),
     ("install.txt", "api", "install"),
     ("install.txt", "admin", "install"),
@@ -100,8 +102,10 @@ def main() -> int:
     else:
         lint_detail = lint.get("error", "no lint report")
     rows.append(("Admin lint", word(steps["admin"].get("lint")), lint_detail))
+    rows.append(("Admin tests", word(steps["admin"].get("test")), ""))
     rows.append(("Admin build", word(steps["admin"].get("build")), ""))
     rows.append(("Public type check", word(steps["public"].get("typecheck")), ""))
+    rows.append(("Public tests", word(steps["public"].get("test")), ""))
     rows.append(("Public build", word(steps["public"].get("build")), ""))
 
     all_green = all(result == "success" for result in jobs.values()) and bool(jobs)

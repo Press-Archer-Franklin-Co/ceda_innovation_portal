@@ -248,6 +248,9 @@ REST_FRAMEWORK = {
         "draft_quick_start": "10/hour",
         "similar_ideas": "30/minute",
         "form_published": "60/minute",
+        "content_public": "120/minute",
+        "subscribe": "10/hour",
+        "challenges_public": "120/minute",
     },
 }
 
@@ -332,6 +335,15 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.programs.tasks.announce_due_challenge_results",
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
+    },
+    "publish-due-content": {
+        "task": "apps.content.tasks.publish_due_content",
+        "schedule": crontab(minute="*/5"),
+        "options": {"expires": 240},
+    },
+    "question-reminders": {
+        "task": "apps.notifications.tasks.send_question_reminders",
+        "schedule": crontab(hour=7, minute=30),
     },
     "purge-expired-tokens": {
         "task": "apps.notifications.tasks.purge_expired_tokens",

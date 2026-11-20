@@ -4,6 +4,8 @@ import {
 } from 'react'
 import { authService }    from '../services/auth.service'
 import { tokenStorage }   from '../services/api'
+import { codeSignInService } from '../services/codeSignIn.service'
+import type { OtpTarget } from '../types/innovator'
 import type { InnovatorProfile, AuthenticatedUser } from '../types/api'
 
 
@@ -39,6 +41,7 @@ interface AuthContextType {
   pendingMfa: PendingMfa | null
   isLoading: boolean
   login: (email: string, password: string) => Promise<LoginOutcome>
+  signInWithCode: (target: OtpTarget, code: string) => Promise<LoginOutcome>
   completeMfa: (code: string) => Promise<void>
   updatePendingMfa: (challenge: PendingMfa) => void
   clearPendingMfa: () => void
@@ -138,8 +141,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user, pendingMfa])
 
-  const login = useCallback(async (email: string, password: string): Promise<LoginOutcome> => {
-    const result = await authService.login({ email, password })
+  /** Tokens or an MFA challenge, from password or code sign-in. */
+  const finishSignIn = useCallback(async (result: Awaited<ReturnType<typeof authService.login>>): Promise<LoginOutcome> => {
     if ('mfa_required' in result && result.mfa_required) {
       const challenge = {
         challenge_id: result.challenge_id,
@@ -160,6 +163,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(toAuthUser(authUser))
     return { status: 'ok', email_verified: authUser.email_verified ?? true, roles: authUser.roles ?? [] } as const
   }, [])
+
+  const login = useCallback(
+    async (email: string, password: string): Promise<LoginOutcome> => finishSignIn(await authService.login({ email, password })),
+    [finishSignIn],
+  )
+
+  /** Screen 2.0: sign in with a phone or email code (creates an innovator account if there is none). */
+  const signInWithCode = useCallback(
+    async (target: OtpTarget, code: string): Promise<LoginOutcome> => finishSignIn(await codeSignInService.verifyCode(target, code)),
+    [finishSignIn],
+  )
 
   const completeMfa = useCallback(async (code: string) => {
     if (!pendingMfa) throw new Error('No MFA challenge in progress.')
@@ -223,6 +237,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pendingMfa,
         isLoading,
         login,
+        signInWithCode,
         completeMfa,
         updatePendingMfa,
         clearPendingMfa,

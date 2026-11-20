@@ -213,15 +213,75 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SiteSettings
-        fields = ["hero_video", "hero_video_url", "hero_video_muted", "prize_money_label", "solutions_deployed"]
+        fields = [
+            "hero_video",
+            "hero_video_url",
+            "hero_video_muted",
+            "prize_money_label",
+            "solutions_deployed",
+            "quote_rotation_seconds",
+            "social_links",
+            "whatsapp_number",
+            "ussd_code",
+            "call_centre_number",
+            "office_finder_url",
+            "help_centre_url",
+            "accessibility_url",
+            "footer_links",
+            "languages_enabled",
+        ]
         read_only_fields = ["hero_video_url"]
+
+    footer_links = FlexibleJSONField(required=False)
+    social_links = FlexibleJSONField(required=False)
+
+    def validate_social_links(self, value):
+        if not isinstance(value, list) or any(not isinstance(item, dict) or not item.get("network") or not item.get("url") for item in value):
+            raise serializers.ValidationError('Social links are a list of {"network": "facebook", "url": "..."}.')
+        return [{"network": str(item["network"])[:40], "url": str(item["url"])[:500]} for item in value][:12]
+    languages_enabled = FlexibleJSONField(required=False)
 
     def get_hero_video_url(self, obj):
         return _media_url(obj.hero_video)
 
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        # Blank contact details come back as null so the shell hides them (R-13).
+        for key in ("whatsapp_number", "ussd_code", "call_centre_number", "office_finder_url", "help_centre_url", "accessibility_url"):
+            data[key] = data.get(key) or None
+        data["languages_enabled"] = data.get("languages_enabled") or ["en", "tn"]
+        return data
+
+    def validate_footer_links(self, value):
+        if not isinstance(value, list) or any(
+            not isinstance(item, dict) or not str(item.get("label") or "").strip() or not str(item.get("url") or "").strip() for item in value
+        ):
+            raise serializers.ValidationError('Footer links are a list of {"label": "...", "url": "..."}.')
+        return [{"label": str(item["label"])[:80], "url": str(item["url"])[:500]} for item in value][:20]
+
+    def validate_languages_enabled(self, value):
+        if not isinstance(value, list) or not value or any(lang not in ("en", "tn") for lang in value) or "en" not in value:
+            raise serializers.ValidationError('Use a list of language codes from en and tn, including en.')
+        return list(dict.fromkeys(value))
+
 
 class LeadershipCardSerializer(serializers.ModelSerializer):
     photo_url = serializers.SerializerMethodField()
+    translations = FlexibleJSONField(required=False, help_text='{"tn": {"quote": "..."}}')
+    needs_approval = serializers.SerializerMethodField(help_text="An official's quote that is not approved yet does not show.")
+
+    def get_needs_approval(self, obj) -> bool:
+        return bool(obj.is_official and not obj.approved_at)
+
+    def to_representation(self, obj):
+        data = super().to_representation(obj)
+        request = self.context.get("request")
+        lang = (request.query_params.get("lang") if request else "") or ""
+        if lang.lower().startswith("tn"):
+            tn_quote = ((obj.translations or {}).get("tn") or {}).get("quote", "")
+            if tn_quote.strip():
+                data["quote"] = tn_quote
+        return data
     created_by_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -238,12 +298,16 @@ class LeadershipCardSerializer(serializers.ModelSerializer):
             "is_active",
             "start_at",
             "end_at",
+            "translations",
+            "is_official",
+            "approved_at",
+            "needs_approval",
             "created_by",
             "created_by_name",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "photo_url", "created_by", "created_by_name", "created_at", "updated_at"]
+        read_only_fields = ["id", "photo_url", "approved_at", "needs_approval", "created_by", "created_by_name", "created_at", "updated_at"]
 
     def get_photo_url(self, obj):
         return _media_url(obj.photo)

@@ -4,60 +4,50 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider }    from './lib/auth/AuthContext'
 import { ProtectedRoute, AdminRoute, OfficerRoute }  from './lib/auth/ProtectedRoute'
 import AppLayout           from './layout/AppLayout'
+import PageErrorBoundary   from './components/ui/PageErrorBoundary'
 
-class ErrorBoundary extends React.Component {
-  constructor(props) { super(props); this.state = { error: null } }
-  static getDerivedStateFromError(error) { return { error } }
-  render() {
-    if (this.state.error) {
-      return (
-        <div style={{ padding: 32, fontFamily: 'monospace' }}>
-          <h2 style={{ color: '#B42318' }}>Render Error</h2>
-          <pre style={{ background: '#fee2e2', padding: 16, borderRadius: 8, overflow: 'auto', fontSize: 12 }}>
-            {this.state.error?.message}{'\n\n'}{this.state.error?.stack}
-          </pre>
-          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 12, padding: '8px 16px', cursor: 'pointer' }}>
-            Retry
-          </button>
-        </div>
-      )
-    }
-    return this.props.children
-  }
+// Page-level errors are caught by PageErrorBoundary inside AppLayout (shared ErrorState, no stack trace).
+function ErrorBoundary({ children }) {
+  return <PageErrorBoundary>{children}</PageErrorBoundary>
 }
 
-import Dashboard           from './pages/dashboard/Dashboard'
-import Programs            from './pages/programs/Programs'
-import ProgramDetail       from './pages/programs/ProgramDetail'
-import ProgramEditor       from './pages/programs/ProgramEditor'
-import Submissions         from './pages/submissions/Submissions'
-import SubmissionDetail    from './pages/submissions/SubmissionDetail'
-import MyWork              from './pages/assignments/MyWork'
-import EvaluationForm      from './pages/evaluation/EvaluationForm'
-import Analytics           from './pages/analytics/Analytics'
-import Settings            from './pages/settings/Settings'
-import AssignmentDetail    from './pages/assignments/AssignmentDetail'
-import DocumentPage        from './pages/documents/DocumentPage'
-import AdminWorkflows      from './pages/admin/workflows/AdminWorkflows'
-import WorkflowBuilder     from './pages/admin/workflows/WorkflowBuilder'
-import WorkflowInstances   from './pages/admin/workflows/WorkflowInstances'
-import MarkingCriteriaLibrary from './pages/admin/MarkingCriteriaLibrary'
-import TermsManager         from './pages/admin/TermsManager'
-import PlatformSettings     from './pages/admin/platform/PlatformSettings'
-import Users               from './pages/users/Users'
-import AuditLogs           from './pages/audit/AuditLogs'
-import ContentList         from './pages/content/ContentList'
-import ContentEditor       from './pages/content/ContentEditor'
-import HackathonContentEditor from './pages/content/HackathonContentEditor'
-import WinnersManager      from './pages/content/WinnersManager'
-import LeadershipList, { LeadershipCardEditor } from './pages/content/LeadershipManager'
-import FaqList, { FaqEditor } from './pages/content/FaqManager'
-import EvaluationView     from './pages/evaluate/EvaluationView'
-import History            from './pages/history/History'
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
+const Programs = lazy(() => import('./pages/programs/Programs'))
+const ProgramDetail = lazy(() => import('./pages/programs/ProgramDetail'))
+const ProgramEditor = lazy(() => import('./pages/programs/ProgramEditor'))
+const Submissions = lazy(() => import('./pages/submissions/Submissions'))
+const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail'))
+const MyWork = lazy(() => import('./pages/assignments/MyWork'))
+const EvaluationForm = lazy(() => import('./pages/evaluation/EvaluationForm'))
+const Analytics = lazy(() => import('./pages/analytics/Analytics'))
+const Settings = lazy(() => import('./pages/settings/Settings'))
+const AssignmentDetail = lazy(() => import('./pages/assignments/AssignmentDetail'))
+const DocumentPage = lazy(() => import('./pages/documents/DocumentPage'))
+const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows'))
+const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
+const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
+const MarkingCriteria = lazy(() => import('./pages/challenges/MarkingCriteria'))
+const ChallengeBuilder = lazy(() => import('./pages/challenges/ChallengeBuilder'))
+const Forms = lazy(() => import('./pages/forms/Forms'))
+const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
+const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
+const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
+const Users = lazy(() => import('./pages/users/Users'))
+const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
+const ContentList = lazy(() => import('./pages/content/ContentList'))
+const ContentEditor = lazy(() => import('./pages/content/ContentEditor'))
+const HackathonContentEditor = lazy(() => import('./pages/content/HackathonContentEditor'))
+const WinnersManager = lazy(() => import('./pages/content/WinnersManager'))
+const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
+const LeadershipCardEditor = lazy(() => import('./pages/content/LeadershipManager').then((m) => ({ default: m.LeadershipCardEditor })))
+const FaqList = lazy(() => import('./pages/content/FaqManager'))
+const FaqEditor = lazy(() => import('./pages/content/FaqManager').then((m) => ({ default: m.FaqEditor })))
+const EvaluationView = lazy(() => import('./pages/evaluate/EvaluationView'))
+const History = lazy(() => import('./pages/history/History'))
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
-import HistorySnapshot    from './pages/history/HistorySnapshot'
+const HistorySnapshot = lazy(() => import('./pages/history/HistorySnapshot'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -87,9 +77,10 @@ export default function App() {
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
 
                 <Route path="/programs"     element={<ErrorBoundary><Programs /></ErrorBoundary>} />
-                <Route path="/programs/new" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/new" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
                 <Route path="/programs/:id" element={<ErrorBoundary><ProgramDetail /></ErrorBoundary>} />
-                <Route path="/programs/:id/edit" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/:id/edit" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
+                <Route path="/programs/:id/settings" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
 
                 <Route path="/submissions"     element={<ErrorBoundary><Submissions /></ErrorBoundary>} />
                 <Route path="/submissions/:id" element={<ErrorBoundary><SubmissionDetail /></ErrorBoundary>} />
@@ -112,7 +103,6 @@ export default function App() {
                   <Route path="/admin/workflows"               element={<ErrorBoundary><AdminWorkflows /></ErrorBoundary>} />
                   <Route path="/admin/workflows/:id/builder"   element={<ErrorBoundary><WorkflowBuilder /></ErrorBoundary>} />
                   <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
-                  <Route path="/marking-criteria"              element={<ErrorBoundary><MarkingCriteriaLibrary /></ErrorBoundary>} />
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
                 </Route>
@@ -125,6 +115,9 @@ export default function App() {
 
 
                 <Route element={<OfficerRoute />}>
+                  <Route path="/marking-criteria"               element={<ErrorBoundary><MarkingCriteria /></ErrorBoundary>} />
+                  <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
+                  <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
                   <Route path="/content"                        element={<ErrorBoundary><ContentList /></ErrorBoundary>} />
                   <Route path="/content/news/new"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
                   <Route path="/content/news/:id"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />

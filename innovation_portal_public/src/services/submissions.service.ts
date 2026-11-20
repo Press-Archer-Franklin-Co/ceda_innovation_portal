@@ -57,8 +57,9 @@ export const submissionsService = {
     await api.delete(`/drafts/${id}/`)
   },
 
-  async submitDraft(id: string): Promise<Submission> {
-    const { data } = await api.post<{ data?: Submission } | Submission>(`/drafts/${id}/submit/`)
+  // The API refuses a submission without consent (400, code consent_required).
+  async submitDraft(id: string, options: { consent: boolean } = { consent: false }): Promise<Submission> {
+    const { data } = await api.post<{ data?: Submission } | Submission>(`/drafts/${id}/submit/`, { consent: options.consent })
     return Array.isArray(data) ? data[0] : ('data' in (data as object) ? (data as { data?: Submission }).data ?? (data as Submission) : (data as Submission))
   },
 
@@ -67,8 +68,8 @@ export const submissionsService = {
     return submissionsService.saveDraft(payload)
   },
 
-  async finalize(id: string): Promise<Submission> {
-    return submissionsService.submitDraft(id)
+  async finalize(id: string, options: { consent: boolean } = { consent: false }): Promise<Submission> {
+    return submissionsService.submitDraft(id, options)
   },
 
   async getMySubmissions(): Promise<Submission[]> {

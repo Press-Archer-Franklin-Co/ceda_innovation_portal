@@ -89,3 +89,21 @@ class MentorAssignment(UUIDModel, TimeStampedModel):
     submission = models.ForeignKey("submissions.Submission", on_delete=models.CASCADE, related_name="mentor_assignments")
     mentor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mentorships")
     assigned_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="mentor_assignments_created")
+
+
+class SavedView(UUIDModel, TimeStampedModel):
+    """A named set of filters on a staff list (B5). Shared views are visible to every staff member."""
+
+    class Scope(models.TextChoices):
+        REVIEW_QUEUE = "review_queue", "Review queue"
+
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_views")
+    name = models.CharField(max_length=120)
+    scope = models.CharField(max_length=40, choices=Scope.choices, default=Scope.REVIEW_QUEUE, db_index=True)
+    filters = models.JSONField(default=dict, blank=True)
+    is_shared = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("name",)
+        constraints = [models.UniqueConstraint(fields=["owner", "scope", "name"], name="uq_saved_view_owner_scope_name")]
+

@@ -5,10 +5,8 @@ import type { Envelope, NotificationCategory, NotificationItem, NotificationPref
 /** Screen 2.5 and the bell in the header (main). */
 export const notificationsService = {
   async list(category?: NotificationCategory): Promise<NotificationItem[]> {
-    // TODO(R-8): the API ignores `category` until R-8 is done; filter here meanwhile.
     const { data } = await api.get<Envelope<NotificationItem[]>>(`/notifications/${query({ category })}`)
-    const items = unwrapData<NotificationItem[]>(data)
-    return category ? items.filter(item => !item.category || item.category === category) : items
+    return unwrapData<NotificationItem[]>(data)
   },
 
   async unreadCount(): Promise<number> {
