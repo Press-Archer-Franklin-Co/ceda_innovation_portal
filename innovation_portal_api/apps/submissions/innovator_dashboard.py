@@ -304,6 +304,21 @@ class InnovatorDashboardSelector:
         return [program for program in programs if program.is_submission_open()]
 
     @staticmethod
+    def open_or_upcoming_challenges(user):
+        """Published calls that are open now or open later (R-5 e: "Opens 5 Jan 2027")."""
+        from apps.programs.challenge_public import challenge_status
+        from apps.programs.selectors import ProgramSelector
+
+        programs = (
+            ProgramSelector.public_programs(user)
+            .filter(status=ProgramStatus.PUBLISHED, is_general_intake=False)
+            .select_related("program_type", "cover")
+            .prefetch_related("sectors")
+            .order_by("closing_date")
+        )
+        return [program for program in programs if challenge_status(program) in ("open", "upcoming")]
+
+    @staticmethod
     def _challenge_payload(program, user, lang: str, matched: set) -> dict:
         entry = ProgramAccessService.entry_status(program, user)
         sectors = list(program.sectors.all())
@@ -328,12 +343,16 @@ class InnovatorDashboardSelector:
         sector_ids |= set(Submission.objects.filter(innovator=user, sector__isnull=False).values_list("sector_id", flat=True))
         if not sector_ids:
             return []
+        from apps.programs.challenge_public import card
+
         results = []
-        for program in cls.open_challenges(user):
+        for program in cls.open_or_upcoming_challenges(user):
             program_sector_ids = {sector.id for sector in program.sectors.all()}
             matched = program_sector_ids & sector_ids
             if matched:
-                results.append(cls._challenge_payload(program, user, lang, matched))
+                # The B5 public card (status, summary, support_headline, opens_at, days_left,
+                # window_progress, ...) plus the fields this list always had.
+                results.append({**card(program, lang), **cls._challenge_payload(program, user, lang, matched)})
         return results
 
     # One idea ----------------------------------------------------------------
