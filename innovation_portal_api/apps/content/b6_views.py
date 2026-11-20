@@ -203,6 +203,7 @@ class PostViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         found = dict(ContentItem.objects.values_list("status").annotate(total=Count("id")).values_list("status", "total"))
         counts = {
+            **PostService.monthly_view_counts(),
             "live": found.get("published", 0),
             "scheduled": found.get("scheduled", 0),
             "waiting_approval": found.get("pending_approval", 0),
@@ -227,8 +228,15 @@ class PostViewSet(viewsets.ModelViewSet):
     @extend_schema(summary="Change a post")
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = self.get_serializer(self.get_object(), data=request.data, partial=partial)
+        post = self.get_object()
+        serializer = self.get_serializer(post, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        if post.status == "published":
+            # R-29 c (Nshathisi): a change to a live post goes through approval; the live post stays until then.
+            approval = PostService.propose_edit(post, dict(request.data), actor=request.user, summary=f"Change to: {post.title}")
+            AuditService.log_action(actor=request.user, action_type="post_change_proposed", target=post, metadata={"approval_id": str(approval.id)})
+            data = self.get_serializer(ContentItem.objects.get(pk=post.pk)).data
+            return api_success(data=data, message="Your change is waiting for approval. The live post has not changed.", status_code=status.HTTP_202_ACCEPTED)
         post = serializer.save()
         if post.status == "published":
             clear_home_cache()
