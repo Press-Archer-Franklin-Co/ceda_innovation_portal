@@ -33,7 +33,9 @@ media/
 # Docker local overrides and runtime files
 docker-compose.yml
 docker-compose.override.yml
-docker/
+# The container entrypoint is part of the image build; keep it in git.
+docker/*
+!docker/entrypoint.sh
 .docker/
 *.pid
 *.log
