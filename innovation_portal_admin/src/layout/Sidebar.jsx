@@ -23,7 +23,7 @@ const GROUPS = [
       { label: 'staff.nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'staff.nav.reports', href: '/analytics', icon: BarChart3, capability: 'analytics.view' },
       { label: 'staff.nav.reviewQueue', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
-      { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, match: ['/assignments', '/history', '/tasks', '/evaluate'] },
+      { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, capability: 'entries.review', match: ['/assignments', '/history', '/tasks', '/evaluate'] },
     ],
   },
   {
@@ -38,8 +38,8 @@ const GROUPS = [
   {
     key: 'website',
     label: 'staff.group.website',
-    // Managers approve but do not edit (content.approve without content.edit). The approvals entry (U6) takes
-    // `anyOf: ['content.edit', 'content.approve']` so managers still see this group; editor items keep content.edit.
+    // The approvals entry (U6) takes `anyOf: ['content.edit', 'content.approve']`, so someone who only approves
+    // still sees this group; editor items keep content.edit.
     items: [
       { label: 'staff.nav.news', href: '/content?tab=news', icon: Newspaper, capability: 'content.edit', tab: 'news', defaultTab: true },
       { label: 'staff.nav.stories', href: '/content?tab=winners', icon: Trophy, capability: 'content.edit', tab: 'winners' },

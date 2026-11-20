@@ -490,11 +490,12 @@ function OfficerDashboard({ user }) {
           <SectionCard title="Quick Access">
             <div className="space-y-1">
               {[
-                { label: 'Programs',        to: '/programs',    icon: Layers,        description: 'Manage programs' },
-                { label: 'All Submissions', to: '/submissions', icon: ClipboardList, description: 'View & filter' },
-                ...(canEvaluate ? [{ label: 'Evaluations', to: '/evaluations', icon: Award, description: 'Score submissions' }] : []),
-                { label: 'My Work',         to: '/assignments', icon: ListTodo,      description: 'Assignments & tasks' },
-              ].map(({ label, to, icon: Icon, description }) => (
+                // Same capabilities as the sidebar, so nobody is offered a page they cannot open (S1).
+                can('challenges.manage') && { label: 'Programs',        to: '/programs',    icon: Layers,        description: 'Manage programs' },
+                adminMode                && { label: 'All Submissions', to: '/submissions', icon: ClipboardList, description: 'View & filter' },
+                canEvaluate              && { label: 'Evaluations',     to: '/evaluations', icon: Award,         description: 'Score submissions' },
+                can('entries.review')    && { label: 'My Work',         to: '/assignments', icon: ListTodo,      description: 'Assignments & tasks' },
+              ].filter(Boolean).map(({ label, to, icon: Icon, description }) => (
                 <Link
                   key={to}
                   to={to}

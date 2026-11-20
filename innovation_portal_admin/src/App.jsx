@@ -129,7 +129,7 @@ export default function App() {
                   <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
                   <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
                 </Route>
-                {/* Managers hold content.approve but NOT content.edit. An approvals screen (U6, GET /api/content/approvals/)
+                {/* Approving is its own capability (content.approve), even though managers now hold both. An approvals screen (U6, GET /api/content/approvals/)
                     goes in its own group with need={['content.edit', 'content.approve']}, never in this one, and its
                     Approve / Send back buttons check can('content.approve'). */}
                 <Route element={<CapabilityRoute need="content.edit" />}>
