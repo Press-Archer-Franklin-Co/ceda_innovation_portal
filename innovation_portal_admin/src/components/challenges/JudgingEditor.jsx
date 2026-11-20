@@ -180,9 +180,9 @@ function CriterionRow({ criterion, index, count, onChange, onNudge, onMove, onRe
   const commentRule = (criterion.comment_required_scores ?? []).length > 0
   return (
     <li className="rounded-control border border-border p-3">
-      <div className="flex items-start gap-2">
+      <div className="flex flex-wrap items-start gap-2">
         <OrderButtons index={index} count={count} name={criterion.name} onMove={onMove} />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-[60%] flex-1 sm:min-w-0">
           <p className="text-[13px] font-bold text-text">{criterion.name}</p>
           {criterion.description && <p className="text-[12px] text-muted">{criterion.description}</p>}
         </div>
@@ -212,7 +212,7 @@ function CriterionRow({ criterion, index, count, onChange, onNudge, onMove, onRe
                 <span className="sr-only">{t('mc.score', { n: score })}</span>
                 <textarea
                   value={meanings[i].en}
-                  rows={3}
+                  rows={5}
                   onChange={(e) => onChange({ ...criterion, score_meanings: meanings.map((m, j) => (j === i ? { ...m, en: e.target.value } : m)) })}
                   className="w-full resize-none rounded border border-border bg-surface p-1.5 text-[12px] text-text focus:outline-none focus:ring-2 focus:ring-primary"
                 />

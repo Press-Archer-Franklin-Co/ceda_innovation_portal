@@ -4,7 +4,7 @@ import { PALETTE } from '../../../lib/forms/document'
 import { cn } from '../../../lib/cn'
 import { TYPE_ICON } from './icons'
 
-/** 3.5 left panel: drag an element onto the page, or press Enter to add it at the end of the step. */
+/** 3.5 left panel: drag an element onto the page, or click (or press Enter) to add it at the end of the step. */
 export default function Palette({ onAdd, disabled }) {
   const t = useT()
   return (
@@ -35,6 +35,7 @@ function PaletteItem({ type, onAdd, disabled }) {
       type="button"
       {...attributes}
       {...listeners}
+      onClick={() => onAdd(type)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
@@ -45,13 +46,13 @@ function PaletteItem({ type, onAdd, disabled }) {
       }}
       disabled={disabled}
       className={cn(
-        'flex h-9 items-center gap-2 rounded-control border border-border bg-surface px-2 text-left text-[12px] text-text',
+        'flex min-h-9 items-center gap-1.5 rounded-control border border-border bg-surface px-2 py-1.5 text-left text-[12px] leading-tight text-text',
         'hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50',
         isDragging && 'opacity-40',
       )}
     >
       {Icon && <Icon size={14} aria-hidden className="shrink-0 text-muted" />}
-      <span className="truncate">{t(`builder.type.${type}`)}</span>
+      <span className="min-w-0">{t(`builder.type.${type}`)}</span>
     </button>
   )
 }

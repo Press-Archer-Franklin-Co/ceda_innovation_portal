@@ -66,7 +66,8 @@ export default function MarkingCriteria() {
         title={t('mc.title')}
         subtitle={t('mc.subtitle')}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          // TODO(R-24): max-w lets the actions wrap on a phone until PageHeader's actions can shrink.
+          <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2">
             <div className="w-[300px] max-w-full">
               <SelectControl
                 aria-label={t('mc.for')}

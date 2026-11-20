@@ -35,12 +35,12 @@ function targetFrom(id) {
   return null
 }
 
-/** Problems from a refused publish or save, as plain lines. */
+/** Problems from a refused publish or save: [{ message, field?, step? }]. */
 function problemsFrom(err) {
   const data = err?.data ?? {}
   const list = data.problems ?? data.errors?.problems ?? data.errors?.errors ?? data.errors ?? []
-  if (!Array.isArray(list)) return [err?.message].filter(Boolean)
-  return list.map((p) => (typeof p === 'string' ? p : p.message || p.detail || JSON.stringify(p)))
+  if (!Array.isArray(list)) return err?.message ? [{ message: err.message }] : []
+  return list.map((p) => (typeof p === 'string' ? { message: p } : { message: p.message || p.detail || '', field: p.field, step: p.step }))
 }
 
 /** 3.5 and 3.5b: the drag-and-drop form builder, in English or Setswana. */
@@ -93,7 +93,7 @@ export default function FormBuilder() {
     } catch (err) {
       if (err?.status === 400) {
         setSaveState('rejected')
-        setSaveMessage(problemsFrom(err)[0] || err.message)
+        setSaveMessage(problemsFrom(err)[0]?.message || err.message)
       } else {
         setSaveState('failed')
       }
@@ -214,7 +214,7 @@ export default function FormBuilder() {
       toast.show({ tone: 'success', title: t('builder.published', { n: version?.number ?? '' }) })
     } catch (err) {
       const list = problemsFrom(err)
-      setProblems(list.length ? list : [t('common.somethingWrong')])
+      setProblems(list.length ? list : [{ message: t('common.somethingWrong') }])
     }
   }
 
@@ -265,7 +265,8 @@ export default function FormBuilder() {
         title={pick(doc.name, 'en')}
         subtitle={t('builder.intro')}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          // TODO(R-24): max-w lets the actions wrap on a phone until PageHeader's actions can shrink.
+          <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center gap-2">
             {status && (
               <span role="status" className={cn('inline-flex items-center gap-1 text-[12px]', saveState === 'failed' || saveState === 'rejected' ? 'text-danger' : 'text-muted')}>
                 {saveState === 'saved' && <Check size={14} aria-hidden className="text-success" />}
@@ -304,7 +305,22 @@ export default function FormBuilder() {
         <div role="alert" className="rounded-card border border-danger/40 bg-danger-soft p-3">
           <p className="text-[13px] font-bold text-danger">{t('builder.publishProblems')}</p>
           <ul className="mt-1 list-disc pl-5 text-[13px] text-text">
-            {problems.map((p, i) => <li key={i}>{p}</li>)}
+            {problems.map((p, i) => {
+              const field = p.field ? findField(doc, p.field) : null
+              const stepAt = doc.steps.findIndex((s) => s.code === p.step || (field && s.rows.some((r) => r.fields.some((f) => f.key === field.key))))
+              const text = field ? `${pick(field.label, 'en') || field.key}: ${p.message}` : p.message
+              return (
+                <li key={i}>
+                  {field || stepAt >= 0 ? (
+                    <button type="button" className="text-left underline-offset-2 hover:underline" onClick={() => {
+                      if (stepAt >= 0) setStepIndex(stepAt)
+                      if (field) setSelectedKey(field.key)
+                      setPreviewing(false)
+                    }}>{text}</button>
+                  ) : text}
+                </li>
+              )
+            })}
           </ul>
         </div>
       )}
@@ -323,7 +339,7 @@ export default function FormBuilder() {
         <PreviewFrame doc={doc} lang={lang} device={device} stepIndex={stepIndex} />
       ) : (
         <DndContext sensors={sensors} onDragStart={(e) => setActive(String(e.active.id))} onDragCancel={() => setActive(null)} onDragEnd={onDragEnd}>
-          <div className="grid items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)_300px] 2xl:grid-cols-[256px_minmax(0,1fr)_310px]">
+          <div className="grid items-start gap-4 lg:grid-cols-[236px_minmax(0,1fr)_300px] 2xl:grid-cols-[256px_minmax(0,1fr)_310px]">
             <Palette onAdd={addAtEnd} disabled={archived} />
             <Canvas
               doc={doc}
