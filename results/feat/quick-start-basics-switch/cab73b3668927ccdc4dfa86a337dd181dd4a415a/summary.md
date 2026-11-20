@@ -1,9 +1,9 @@
 ## CI results for `feat/quick-start-basics-switch` @ `cab73b3`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44685685850
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44705743061
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 04s, job steps 3m 20s
+Timing (api job): Run tests 3m 57s, job steps 4m 17s
 
 | Check | Result | Details |
 | --- | --- | --- |
