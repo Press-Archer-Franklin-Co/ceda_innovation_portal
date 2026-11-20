@@ -61,7 +61,7 @@ class DuplicateCleanUpTests(TestCase):
             PageSection.objects.create(page=page, type=section_type, order=order, settings={})
         later = PageSection.objects.create(page=page, type="cta_band", order=99, settings={})
         PageSection.objects.filter(pk=later.pk).update(created_at=timezone.now() + timedelta(hours=1))
-        migration = importlib.import_module("apps.content.migrations.0012_remove_duplicate_home_sections")
+        migration = importlib.import_module("apps.content.migrations.0014_remove_duplicate_home_sections")
         migration.remove_duplicates(django_apps, None)
         remaining = set(page.sections.values_list("id", flat=True))
         self.assertEqual(remaining, first_ids | {later.id})
@@ -71,7 +71,7 @@ class DuplicateCleanUpTests(TestCase):
     def test_pages_without_duplicate_banners_are_left_alone(self):
         page = PageService.home()
         before = set(page.sections.values_list("id", flat=True))
-        migration = importlib.import_module("apps.content.migrations.0012_remove_duplicate_home_sections")
+        migration = importlib.import_module("apps.content.migrations.0014_remove_duplicate_home_sections")
         migration.remove_duplicates(django_apps, None)
         self.assertEqual(set(page.sections.values_list("id", flat=True)), before)
 

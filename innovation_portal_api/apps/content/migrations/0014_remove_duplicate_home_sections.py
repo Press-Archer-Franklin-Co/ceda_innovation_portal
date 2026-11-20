@@ -32,6 +32,6 @@ def remove_duplicates(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("content", "0011_b6_part2")]
+    dependencies = [("content", "0013_seed_content_approval_flow")]
 
     operations = [migrations.RunPython(remove_duplicates, migrations.RunPython.noop)]
