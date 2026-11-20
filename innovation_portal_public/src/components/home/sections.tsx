@@ -19,12 +19,13 @@ import type {
 // Home page sections (Figma 1 · Public home). Each takes the section's settings and data from
 // GET /api/content/public/home/; a section with nothing to show renders nothing.
 
-export const postPath = (p: Pick<PostCard, 'slug' | 'id'>) => `/news/${p.slug || p.id}`
+// The article page (/news/:id) loads by id from the content API.
+export const postPath = (p: Pick<PostCard, 'id'>) => `/news/${p.id}`
 export const postTypeTone: Record<PostType, TagTone> = {
   news: 'neutral', event: 'orange', opportunity: 'green', result: 'amber', notice: 'neutral', newsletter: 'blue',
 }
 
-function Cover({ post, className, big = false }: { post: PostCard; className?: string; big?: boolean }) {
+export function Cover({ post, className, big = false }: { post: PostCard; className?: string; big?: boolean }) {
   const { t } = useI18n()
   const cover = post.cover
   const isVideo = cover?.kind === 'video'

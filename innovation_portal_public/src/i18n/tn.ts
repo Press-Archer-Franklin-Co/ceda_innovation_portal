@@ -219,6 +219,31 @@ const tn: Record<StringKey, string> = {
   'sent.missing': 'Ga re a bona kakanyo ya gago e e rometsweng mo tsebeng e', // TODO tn-review
   'sent.missingBody': 'Fa o rometse kakanyo, e babalesegile. Nomore ya gago ya tshupetso e mo molaetseng o re o go romeletseng, le mo Dikakanyong tsa me fa o na le akhaonto.', // TODO tn-review
 
+  'news.over': 'Dikgang le makwalodikgang', // TODO tn-review
+  'news.title': 'Se sesha mo boitshimololeding jwa CEDA', // TODO tn-review
+  'news.sub': 'Dikgang, ditiragalo, malatsi a bofelo le dipoelo go tswa mo Botswana yotlhe, mo lefelong le le lengwe.', // TODO tn-review
+  'news.search': 'Batla dikgang, ditiragalo le dikitsiso', // TODO tn-review
+  'news.filters': 'Tlhopha ka mofuta', // TODO tn-review
+  'filter.news': 'Dikgang', // TODO tn-review
+  'news.sort': 'Rulaganya', // TODO tn-review
+  'news.sortNewest': 'Tse dintšhwa', // TODO tn-review
+  'news.sortOldest': 'Tsa bogologolo', // TODO tn-review
+  'news.sortPopular': 'Tse di badilweng thata', // TODO tn-review
+  'news.featured': 'E e tlhagisitsweng', // TODO tn-review
+  'news.readStory': 'Bala kgang', // TODO tn-review
+  'news.loadMore': 'Bona tse dingwe', // TODO tn-review
+  'news.empty': 'Ga go ise go nne le sepe fa', // TODO tn-review
+  'news.emptyBody': 'Leka mofuta o mongwe, kgotsa phimola go batla.', // TODO tn-review
+  'news.emptySearch': 'Ga go na se se tshwanang le “{q}”', // TODO tn-review
+  'news.clear': 'Phimola go batla', // TODO tn-review
+  'news.loadError': 'Ga re a kgona go bula dikgang', // TODO tn-review
+  'news.events': 'Ditiragalo tse di tlang', // TODO tn-review
+  'news.noEvents': 'Ga go ise go rulaganngwe ditiragalo. Re di tsenya fa fela fa malatsi a beilwe.', // TODO tn-review
+  'news.archive': 'Polokelo ya makwalodikgang', // TODO tn-review
+  'news.noArchive': 'Kgatiso ya ntlha e mo tseleng.', // TODO tn-review
+  'news.unread': 'Ga e ise e bulwe', // TODO tn-review
+  'news.results': 'Dipoelo di le {n}', // TODO tn-review
+
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',
   'pager.next': 'Pele',
