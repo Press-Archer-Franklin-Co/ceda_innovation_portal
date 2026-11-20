@@ -12,6 +12,8 @@ import { addHighlight, highlightList, missingSetswana, removeHighlight } from '.
 import { useSectionName } from './useSectionName'
 
 const list = (data) => (Array.isArray(data) ? data : data?.results ?? [])
+// Settings written as a sentence or two get a text box; headings and labels stay one line.
+const MULTILINE = new Set(['text'])
 
 function useFieldLabel() {
   const t = useT()
@@ -33,7 +35,7 @@ function TextField({ label, spec, value, lang, onChange, error, multiline, input
   if (multiline) {
     return <Textarea label={label} value={text} onChange={(e) => set(e.target.value)} maxChars={spec.max || undefined} rows={3} hint={hint} error={error} required={required} />
   }
-  return <Input ref={inputRef} label={label} value={text} onChange={(e) => set(e.target.value)} onSelect={onSelect} maxLength={spec.max ? spec.max + 50 : undefined} hint={hint} error={error} required={required} />
+  return <Input ref={inputRef} label={label} value={text} onChange={(e) => set(e.target.value)} onSelect={onSelect} maxLength={spec.max || undefined} hint={hint} error={error} required={required} />
 }
 
 /** Headline with "select words and press Highlight" (Figma 3.8 callout 3). */
@@ -180,7 +182,7 @@ export default function SectionSettings({ section, types, lang, onChange, errors
         if (section.type === 'hero_banner' && name === 'headline') {
           return <HeadlineField key={name} label={label(name)} spec={field} value={value} lang={lang} words={settings.highlighted_words ?? ''} onChange={set} onWords={(w) => onChange('highlighted_words', w)} error={errorOf(name) ?? errorOf('highlighted_words')} />
         }
-        if (field.kind === 'text') return <TextField key={name} label={label(name)} spec={field} value={value} lang={lang} onChange={set} error={errorOf(name)} multiline={(field.max ?? 0) > 150} />
+        if (field.kind === 'text') return <TextField key={name} label={label(name)} spec={field} value={value} lang={lang} onChange={set} error={errorOf(name)} multiline={MULTILINE.has(name)} />
         if (field.kind === 'bool') return <Toggle key={name} label={label(name)} checked={!!value} onChange={set} />
         if (field.kind === 'int') {
           return (
