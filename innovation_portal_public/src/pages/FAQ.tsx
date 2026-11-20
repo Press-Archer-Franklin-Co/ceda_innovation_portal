@@ -5,6 +5,7 @@ import type { ApiFAQ } from '../types/api'
 import { parseApiError } from '../utils/apiError'
 import clsx from 'clsx'
 import StandardHero from '../components/ui/StandardHero'
+import AskHelper from '../components/assistant/AskHelper'
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false)
@@ -68,6 +69,7 @@ export default function FAQ() {
       />
 
       <section className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-16">
+        <AskHelper className="mb-8" />
         {faqCategories.length > 1 && (
           <div className="flex flex-wrap gap-2 mb-8">
             {faqCategories.map((cat) => (

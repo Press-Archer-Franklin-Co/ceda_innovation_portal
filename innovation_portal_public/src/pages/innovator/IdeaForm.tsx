@@ -11,6 +11,7 @@ import StepProgress from '../../components/ui/StepProgress'
 import Tag from '../../components/ui/Tag'
 import { useToast } from '../../components/ui/Toast'
 import { useShellSettings } from '../../components/layout/shellData'
+import CheckMyIdea from '../../components/assistant/CheckMyIdea'
 import FormRenderer from '../../components/innovator/form/FormRenderer'
 import { showAnswer } from '../../components/innovator/form/showAnswer'
 import {
@@ -18,6 +19,7 @@ import {
   isLayoutField, isVisible, stepFields,
 } from '../../components/innovator/form/logic'
 import { useI18n } from '../../i18n'
+import { useAssistantStatus } from '../../services/assistant.service'
 import { formsService } from '../../services/forms.service'
 import { intakeService } from '../../services/intake.service'
 import type { FormStep, IntakeDraft, Lang, PublishedForm, SimilarIdea } from '../../types/innovator'
@@ -46,6 +48,7 @@ export default function IdeaForm() {
   const navigate = useNavigate()
   const toast = useToast()
   const settings = useShellSettings()
+  const assistant = useAssistantStatus()
 
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [forms, setForms] = useState<Partial<Record<Lang, PublishedForm>>>({})
@@ -361,6 +364,14 @@ export default function IdeaForm() {
         </section>
 
         <aside className="flex flex-col gap-4">
+          {!onReview && step && assistant?.features.draft_check && (
+            <CheckMyIdea
+              draftId={id}
+              stepCode={step.code}
+              answers={answersToSend(step, answers)}
+              fieldLabels={Object.fromEntries(stepFields(step).map((field) => [field.key, field.label]))}
+            />
+          )}
           {!onReview && similar.length > 0 && (
             <Card tone="soft" padding="md">
               <p className="flex items-center gap-2 font-heading text-d-h5 text-text">

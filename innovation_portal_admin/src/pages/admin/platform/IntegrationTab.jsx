@@ -54,7 +54,7 @@ function RuntimeCard({ kind }) {
   const status = data?.[kind]
   const connection = status?.connection
   return (
-    <SectionCard title={kind === 'sms' ? 'SMS in use now' : 'Single sign-on in use now'}>
+    <SectionCard title={kind === 'sms' ? 'SMS in use now' : kind === 'ai' ? 'AI helper in use now' : 'Single sign-on in use now'}>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
         <div>
           <p className="text-xs text-ceda-muted">Source</p>

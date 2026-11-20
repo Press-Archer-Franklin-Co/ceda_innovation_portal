@@ -16,6 +16,10 @@ import Modal             from '../../components/ui/Modal'
 import ErrorState        from '../../components/ui/ErrorState'
 import { SkeletonTable } from '../../components/ui/LoadingSkeleton'
 import EvaluationTab     from '../../components/evaluation/EvaluationTab'
+import AiHelperCard      from '../../components/assistant/AiHelperCard'
+import RelatedIdeas      from '../../components/assistant/RelatedIdeas'
+import { useAssistantStatus } from '../../lib/queries/assistant'
+import { useT }          from '../../i18n/context'
 import {
   useSubmission,
   useSubmissionWorkflow,
@@ -435,6 +439,9 @@ export default function SubmissionDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { user, can } = useAuth()
+  const t = useT()
+  const aiStatus = useAssistantStatus({ enabled: can('assistant.hints') })
+  const showRelated = can('assistant.hints') && Boolean(aiStatus.data?.features?.related)
   // Assignments, suggestions and specialist invitations are officer endpoints (entries.assign).
   const canAssign = can('entries.assign')
   const [tab, setTab]         = useState('overview')
@@ -603,6 +610,7 @@ export default function SubmissionDetail() {
     { key: 'workflow',    label: 'Workflow' },
     { key: 'evaluation',  label: 'Evaluation' },
     { key: 'notes',       label: 'Notes', count: notes.length },
+    ...(showRelated ? [{ key: 'related', label: t('ai.related.tab') }] : []),
   ]
 
   return (
@@ -686,6 +694,7 @@ export default function SubmissionDetail() {
           </div>
 
           <div className="space-y-5">
+            <AiHelperCard submissionId={id} />
             <SectionCard title="Innovator">
               <InfoRow icon={User}      label="Name"   value={innovatorName} />
               {innovatorEmail && (
@@ -1044,6 +1053,8 @@ export default function SubmissionDetail() {
           )}
         </div>
       )}
+
+      {tab === 'related' && showRelated && <RelatedIdeas submissionId={id} />}
 
       {tab === 'evaluation' && (
         <EvaluationTab submissionId={id} />

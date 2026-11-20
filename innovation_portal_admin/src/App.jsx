@@ -35,6 +35,7 @@ const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 const Users = lazy(() => import('./pages/users/Users'))
 const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions'))
+const AssistantPage = lazy(() => import('./pages/assistant/AssistantPage'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
 const ContentIndex = lazy(() => import('./pages/content/ContentIndex'))
 const HomePageEditor = lazy(() => import('./pages/content/HomePageEditor'))
@@ -120,6 +121,9 @@ export default function App() {
                 <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
                   <Route path="/admin/roles"                   element={<ErrorBoundary><RolesPermissions /></ErrorBoundary>} />
+                </Route>
+                <Route element={<CapabilityRoute need="assistant.manage" />}>
+                  <Route path="/admin/assistant"               element={<ErrorBoundary><AssistantPage /></ErrorBoundary>} />
                 </Route>
                 <Route element={<CapabilityRoute need="analytics.view" />}>
                   <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />

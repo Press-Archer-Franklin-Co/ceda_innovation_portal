@@ -1,6 +1,7 @@
 // Setswana strings for staff console chrome. First draft: needs review by a Setswana speaker at CEDA.
 import { challengesTn } from './challenges'
 import { rolesTn } from './roles'
+import { assistantTn } from './assistant'
 import { contentTn } from './content'
 import { formsTn } from './forms'
 
@@ -140,6 +141,7 @@ const tn = {
   ...formsTn,
   ...challengesTn,
   ...rolesTn,
+  ...assistantTn,
   ...contentTn,
 }
 

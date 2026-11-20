@@ -1,3 +1,4 @@
+import MyIntroductions from '../../components/assistant/MyIntroductions'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Bell, CheckCircle2, FileText, Megaphone, MessageCircle, Sparkles, Trophy } from 'lucide-react'
@@ -93,6 +94,7 @@ export default function InnovatorHome() {
           </Link>
         </div>
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <MyIntroductions />
           <UpdatesList state={updates} onRetry={reloadUpdates} />
           {profile.status === 'ready' && profile.data.percent_complete < 100 && <ProfileCard profile={profile.data} />}
         </div>

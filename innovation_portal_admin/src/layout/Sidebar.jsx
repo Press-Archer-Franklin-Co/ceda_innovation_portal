@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  ClipboardCheck, Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  ClipboardCheck, Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Sparkles,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -56,6 +56,7 @@ const GROUPS = [
       { label: 'staff.nav.users', href: '/users', icon: Users, capability: 'users.manage' },
       { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
+      { label: 'staff.nav.assistant', href: '/admin/assistant', icon: Sparkles, capability: 'assistant.manage' },
       { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
       { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, capability: 'challenges.manage' },
       { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
