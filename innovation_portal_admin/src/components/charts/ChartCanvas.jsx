@@ -2,7 +2,8 @@ import { useEffect, useRef } from 'react'
 import Chart from 'chart.js/auto'
 
 // The only place Chart.js is imported. Load it through ./lazy.js, never directly from a page.
-export default function ChartCanvas({ config, height = 260 }) {
+/** label: what the chart shows, read by screen readers. Pair every chart with a "View as table" choice. */
+export default function ChartCanvas({ config, height = 260, label }) {
   const canvasRef = useRef(null)
   const chartRef = useRef(null)
 
@@ -19,7 +20,7 @@ export default function ChartCanvas({ config, height = 260 }) {
 
   return (
     <div style={{ height }}>
-      <canvas ref={canvasRef} />
+      <canvas ref={canvasRef} role="img" aria-label={label} />
     </div>
   )
 }

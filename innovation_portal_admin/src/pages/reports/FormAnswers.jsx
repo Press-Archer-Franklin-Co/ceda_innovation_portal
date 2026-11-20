@@ -1,51 +1,14 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
 import { ChartCanvas } from '../../components/charts/lazy'
-import { BarChart3, TrendingUp, Trophy, ClipboardList, Database, Archive, ListChecks } from 'lucide-react'
-import PageHeader  from '../../components/ui/PageHeader'
-import SectionCard from '../../components/ui/SectionCard'
-import StatCard    from '../../components/ui/StatCard'
+import { TrendingUp, Database, Archive, ListChecks } from 'lucide-react'
 import ErrorState  from '../../components/ui/ErrorState'
-import Tabs        from '../../components/ui/Tabs'
-import { SkeletonStatCards } from '../../components/ui/LoadingSkeleton'
-import { useFormResponseAnalytics, useReportsDashboard } from '../../lib/queries/analytics'
-import { useSubmissions } from '../../lib/queries/submissions'
+import { useFormResponseAnalytics } from '../../lib/queries/analytics'
 import { usePrograms }    from '../../lib/queries/programs'
-import { cn } from '../../lib/cn'
-import { EMPTY_CELL } from '../../lib/format'
 
-const TABS = [
-  { key: 'overview', label: 'Overview' },
-  { key: 'responses', label: 'Form Responses' },
-]
 
 const CHART_COLORS = ['#A01E0A', '#F0641E', '#9A5200', '#1D6FA3', '#0f766e', '#b45309', '#475569', '#B42318']
 const TEXT_FIELD_TYPES = new Set(['text', 'textarea', 'rich_text', 'email', 'phone', 'url', 'number', 'date'])
 const CHOICE_FIELD_TYPES = new Set(['select', 'radio', 'checkbox', 'multiselect', 'multi_select'])
-
-function BarChart({ data, valueKey = 'count', labelKey = 'month', color = 'bg-ceda-green' }) {
-  if (!data?.length) return <p className="text-xs text-ceda-muted text-center py-8">No data</p>
-  const max = Math.max(...data.map(d => d[valueKey] ?? 0), 1)
-  return (
-    <div className="flex items-end gap-1.5 h-28">
-      {data.map((d, i) => {
-        const h = max > 0 ? Math.round(((d[valueKey] ?? 0) / max) * 100) : 0
-        return (
-          <div key={i} className="flex flex-col items-center gap-1 flex-1 min-w-0">
-            <span className="text-[10px] text-ceda-muted tabular-nums">{d[valueKey] ?? 0}</span>
-            <div
-              className={cn('w-full rounded-t-sm transition-all duration-300', color)}
-              style={{ height: `${h}%`, minHeight: h > 0 ? 4 : 0 }}
-            />
-            <span className="text-[9px] text-ceda-muted truncate w-full text-center">
-              {String(d[labelKey] ?? '').replace(' 2025', '').replace(' 2024', '')}
-            </span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
 
 function AnalyticsEmpty({ children = 'No data available yet.' }) {
   return <p className="text-xs text-ceda-muted text-center py-8">{children}</p>
@@ -350,46 +313,6 @@ function ChoiceDistributionChart({ field }) {
   )
 }
 
-function StatusBreakdown({ data }) {
-  if (!data?.length) return <p className="text-xs text-ceda-muted text-center py-4">No data</p>
-  const total = data.reduce((s, d) => s + (d.total ?? d.count ?? 0), 0)
-  const STATUS_COLORS = {
-    draft:        '#94a3b8',
-    submitted:    '#F0641E',
-    under_review: '#1D6FA3',
-    finalist:     '#9A5200',
-    winner:       '#A01E0A',
-    rejected:     '#B42318',
-  }
-  return (
-    <div className="space-y-2.5">
-      {data.map(d => {
-        const statusKey = d.current_status ?? d.status ?? ''
-        const label     = statusKey.replace(/_/g, ' ')
-        const count     = d.total ?? d.count ?? 0
-        const pct       = total > 0 ? Math.round((count / total) * 100) : 0
-        const color     = STATUS_COLORS[statusKey] ?? '#94a3b8'
-        return (
-          <div key={statusKey}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: color }} />
-                <span className="text-ceda-dark capitalize">{label || 'Unknown'}</span>
-              </span>
-              <span className="text-ceda-muted tabular-nums">
-                {count} <span className="text-[11px]">({pct}%)</span>
-              </span>
-            </div>
-            <div className="h-1.5 rounded-full bg-ceda-border overflow-hidden">
-              <div className="h-full rounded-full" style={{ width: `${pct}%`, background: color }} />
-            </div>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 function buildFieldList(formAnalytics) {
   return (formAnalytics?.sections ?? []).flatMap((section) => (
     (section.fields ?? []).map((field) => ({
@@ -400,36 +323,17 @@ function buildFieldList(formAnalytics) {
   ))
 }
 
-export default function Analytics() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const [tab, setTab] = useState(searchParams.get('tab') || 'overview')
+/**
+ * Reports › Form answers: how people filled in one challenge's form (completion, skipped questions,
+ * choices). Moved from the old Analytics page in U4; its overview tab is replaced by the B7 numbers.
+ */
+export default function FormAnswers() {
   const [selectedProgram, setSelectedProgram] = useState('')
   const [analyticsStatus, setAnalyticsStatus] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
-
-  const {
-    data: reports,
-    isLoading: reportsLoading,
-    error: reportsError,
-    refetch: refetchReports,
-  } = useReportsDashboard()
-
-  const { data: subsData,  isLoading: subsLoading  } = useSubmissions()
-  const { data: progsData, isLoading: progsLoading } = usePrograms()
-
-  const submissions = Array.isArray(subsData)  ? subsData  : subsData?.results  ?? []
-  const programs    = useMemo(() => (Array.isArray(progsData) ? progsData : progsData?.results ?? []), [progsData])
-
-  useEffect(() => {
-    const nextTab = searchParams.get('tab')
-    if (nextTab && nextTab !== tab) setTab(nextTab)
-  }, [searchParams, tab])
-
-  const handleTabChange = (nextTab) => {
-    setTab(nextTab)
-    setSearchParams({ tab: nextTab })
-  }
+  const { data: progsData } = usePrograms()
+  const programs = useMemo(() => (Array.isArray(progsData) ? progsData : progsData?.results ?? []), [progsData])
 
   useEffect(() => {
     if (!selectedProgram && programs.length) {
@@ -448,23 +352,7 @@ export default function Analytics() {
     isLoading: formAnalyticsLoading,
     error: formAnalyticsError,
     refetch: refetchFormAnalytics,
-  } = useFormResponseAnalytics(selectedProgram, formAnalyticsParams, { enabled: tab === 'responses' })
-
-  const activePrograms = programs.filter(p => p.status === 'active').length
-  const finalists      = submissions.filter(s => s.current_status === 'finalist').length
-
-  const statusBreakdown = reports?.submissions_by_status ?? []
-
-  const programRows = programs.map(p => {
-    const programSubs      = submissions.filter(s => s.program === p.id || s.program_detail?.id === p.id)
-    const programFinalists = programSubs.filter(s => s.current_status === 'finalist').length
-    return {
-      id:          p.id,
-      program:     p.title,
-      submissions: programSubs.length,
-      finalists:   programFinalists,
-    }
-  })
+  } = useFormResponseAnalytics(selectedProgram, formAnalyticsParams)
 
   const responseFields = useMemo(() => buildFieldList(formAnalytics), [formAnalytics])
   const textFields = useMemo(() => (
@@ -486,138 +374,8 @@ export default function Analytics() {
   }, [responseFields])
 
   return (
-    <div className="animate-fade-in">
-      <PageHeader
-        title="Analytics"
-        subtitle="Aggregate insights across all programs and submissions."
-      />
-
-      <Tabs tabs={TABS} active={tab} onChange={handleTabChange} className="mb-6" />
-
-      {tab === 'overview' && (
-        <>
-          {reportsLoading || subsLoading || progsLoading ? (
-            <SkeletonStatCards count={4} />
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              <StatCard
-                title="Total Submissions"
-                value={reports?.submissions_total ?? submissions.length}
-                icon={ClipboardList}
-                color="forest"
-              />
-              <StatCard
-                title="Active Programs"
-                value={activePrograms}
-                icon={BarChart3}
-                color="green"
-              />
-              <StatCard
-                title="Communications"
-                value={reports?.communications_total ?? EMPTY_CELL}
-                icon={TrendingUp}
-                color="indigo"
-              />
-              <StatCard
-                title="Finalists"
-                value={finalists}
-                icon={Trophy}
-                color="gold"
-              />
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-            <div className="lg:col-span-2">
-              <SectionCard
-                title="Judge Completion Rate"
-                subtitle="Evaluation completion across programs"
-              >
-                {reportsLoading ? (
-                  <div className="h-28 bg-ceda-border/30 rounded animate-pulse" />
-                ) : reportsError ? (
-                  <ErrorState message={reportsError.message} onRetry={refetchReports} className="py-6" />
-                ) : reports?.judge_completion_rate?.length > 0 ? (
-                  <BarChart
-                    data={reports.judge_completion_rate}
-                    valueKey="total"
-                    labelKey="status"
-                    color="bg-ceda-green"
-                  />
-                ) : (
-                  <p className="text-xs text-ceda-muted text-center py-8">No judge completion data available</p>
-                )}
-              </SectionCard>
-            </div>
-
-            <SectionCard title="Status Breakdown" subtitle="Current state of all submissions">
-              {reportsLoading ? (
-                <div className="space-y-3">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="h-8 bg-ceda-border/30 rounded animate-pulse" />
-                  ))}
-                </div>
-              ) : (
-                <StatusBreakdown data={statusBreakdown} />
-              )}
-            </SectionCard>
-          </div>
-
-          <SectionCard title="By Program" subtitle="Submission and finalist counts per program">
-            {progsLoading || subsLoading ? (
-              <div className="space-y-3">
-                {[1,2,3].map(i => (
-                  <div key={i} className="h-8 bg-ceda-border/30 rounded animate-pulse" />
-                ))}
-              </div>
-            ) : programRows.length === 0 ? (
-              <p className="text-xs text-ceda-muted text-center py-6">No programs to display</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="th text-left">Program</th>
-                      <th className="th text-right" style={{ width: 110 }}>Submissions</th>
-                      <th className="th text-right" style={{ width: 90 }}>Finalists</th>
-                      <th className="th text-right" style={{ width: 100 }}>Rate</th>
-                      <th className="th" style={{ width: 160 }}>Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {programRows.map(p => {
-                      const rate = p.submissions > 0 ? Math.round((p.finalists / p.submissions) * 100) : 0
-                      return (
-                        <tr key={p.id} className="hover:bg-ceda-surface/50 transition-colors">
-                          <td className="td">
-                            <p className="text-sm font-medium text-ceda-dark">{p.program}</p>
-                          </td>
-                          <td className="td text-right">
-                            <span className="text-sm font-semibold tabular-nums text-ceda-dark">{p.submissions}</span>
-                          </td>
-                          <td className="td text-right">
-                            <span className="text-sm font-semibold tabular-nums text-ceda-gold">{p.finalists}</span>
-                          </td>
-                          <td className="td text-right">
-                            <span className="text-sm text-ceda-muted">{rate}%</span>
-                          </td>
-                          <td className="td">
-                            <div className="h-1.5 rounded-full bg-ceda-border overflow-hidden">
-                              <div className="h-full rounded-full bg-ceda-green" style={{ width: `${rate}%` }} />
-                            </div>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </SectionCard>
-        </>
-      )}
-
-      {tab === 'responses' && (
+    <div>
+      {(
         <div className="space-y-5">
           <div className="rounded-2xl border border-ceda-border bg-white p-4 shadow-sm">
             <div className="flex flex-wrap items-center gap-2">
