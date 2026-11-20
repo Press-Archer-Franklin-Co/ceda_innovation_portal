@@ -76,3 +76,8 @@ export function useT(): TFunction {
 }
 
 export type { StringKey }
+
+/** True when the key exists, so a word from the API (a status, a type) can be shown only when we have it. */
+export function hasString(key: string): key is StringKey {
+  return key in en
+}

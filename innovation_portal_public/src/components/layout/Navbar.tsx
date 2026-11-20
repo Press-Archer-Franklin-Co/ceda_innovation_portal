@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Briefcase, Globe, LayoutDashboard, LogOut, Menu, ShieldCheck, User, X } from 'lucide-react'
+import { Bell, Briefcase, Globe, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, User, X } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../context/AuthContext'
 import { useI18n } from '../../i18n'
@@ -11,6 +11,7 @@ import LanguageSwitch from '../ui/LanguageSwitch'
 import { buttonClasses } from '../ui/Button'
 import { useFocusTrap } from '../ui/useFocusTrap'
 import Popover from '../ui/Popover'
+import SiteSearch from '../search/SiteSearch'
 import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
 import { isStaff } from '../../lib/roles'
@@ -190,12 +191,40 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
   )
 }
 
+/** Screen 1.3 (website): the search panel comes out of this button, centred under the header over a dimmed page. */
+function SearchButton() {
+  const { t } = useI18n()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLButtonElement>(null)
+  const close = useCallback(() => setOpen(false), [])
+  return (
+    <>
+      <button
+        ref={ref}
+        type="button"
+        aria-label={t('search.open')}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className="w-10 h-10 rounded-full flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <Search size={18} aria-hidden />
+      </button>
+      <Popover open={open} onClose={close} triggerRef={ref} placement="center" scrim width={780} maxHeight={600} label={t('search.label')} className="!overflow-hidden flex flex-col">
+        <SiteSearch variant="panel" onNavigate={close} />
+      </Popover>
+    </>
+  )
+}
+
 function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolean; onClose: () => void; links: NavItem[]; canStaff: boolean; onLogout: () => void }) {
   const { t } = useI18n()
   const { isAuthenticated } = useAuth()
   const settings = useShellSettings()
   const ref = useRef<HTMLDivElement>(null)
+  const [searching, setSearching] = useState(false)
   useFocusTrap(ref, open, onClose)
+  useEffect(() => { if (!open) setSearching(false) }, [open])
   if (!open) return null
   const row = 'flex items-center min-h-[48px] px-1 text-d-h5 font-heading text-text border-b border-border'
   return (
@@ -208,7 +237,10 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
             <X size={22} aria-hidden />
           </button>
         </div>
-        <nav aria-label={t('nav.main')} className="flex-1 overflow-y-auto px-5 py-2">
+        <div className="px-5 pt-3 pb-1 shrink-0">
+          <SiteSearch variant="drawer" onNavigate={onClose} onQueryChange={setSearching} />
+        </div>
+        <nav aria-label={t('nav.main')} className={clsx('flex-1 overflow-y-auto px-5 py-2', searching && 'hidden')}>
           {links.map((l) => (
             <NavLink key={l.to} to={l.to} end={l.end} onClick={onClose} className={({ isActive }) => clsx(row, isActive && 'text-primary')}>
               {t(l.key)}
@@ -287,6 +319,7 @@ export default function Navbar() {
           </nav>
 
           <div className="hidden lg:flex items-center gap-3 shrink-0">
+            <SearchButton />
             {isAuthenticated ? (
               <>
                 <BellButton count={unread} />

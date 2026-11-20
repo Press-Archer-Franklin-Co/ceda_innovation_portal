@@ -167,6 +167,34 @@ const tn: Record<StringKey, string> = {
   'qs2.title': 'Re ka go fitlhelela jang?', // TODO tn-review
   'qs2.edit': 'Fetola', // TODO tn-review
   'qs2.general': 'Kakanyo ya kakaretso', // TODO tn-review
+  'postd.back': 'Dikgang le bulletin', // TODO tn-review
+  'postd.notFound': 'Ga re a bona kgang e', // TODO tn-review
+  'postd.notFoundBody': 'Gongwe e tlositswe kgotsa kgolagano ya yone e fetogile. Bona dikgang tsa bosheng.', // TODO tn-review
+  'postd.loadError': 'Ga re a kgona go tsenya kgang e', // TODO tn-review
+  'postd.watch': 'Lebelela bidio', // TODO tn-review
+  'postd.related': 'Tse di amanang', // TODO tn-review
+  // Site search (1.3)
+  'search.open': 'Batla mo websaeteng', // TODO tn-review
+  'search.label': 'Batla dikgwetlho, dikgang le thuso', // TODO tn-review
+  'search.placeholder': 'Batla dikgwetlho, dikgang, thuso', // TODO tn-review
+  'search.esc': 'Esc',
+  'search.group.challenges': 'Dikgwetlho', // TODO tn-review
+  'search.group.stories': 'Dikgang tsa katlego le dikakanyo', // TODO tn-review
+  'search.group.posts': 'Dikgang', // TODO tn-review
+  'search.group.help': 'Thuso', // TODO tn-review
+  'search.story': 'Kgang ya katlego', // TODO tn-review
+  'search.faq': 'Setlhogo sa thuso', // TODO tn-review
+  'search.guide': 'Kaedi', // TODO tn-review
+  'search.hint': 'Kwala ditlhaka di le 2 bonnye.', // TODO tn-review
+  'search.keys': '↑ ↓ go tsamaya · Enter go bula', // TODO tn-review
+  'search.count': 'Dipoelo di le {n} tsa “{q}”', // TODO tn-review
+  'search.countOne': 'Poelo e le 1 ya “{q}”', // TODO tn-review
+  'search.none': 'Ga go a bonwa sepe sa “{q}”', // TODO tn-review
+  'search.noneBody': 'Leka lefoko le le khutshwane kgotsa le sele, kgotsa o re botse mo Thusong.', // TODO tn-review
+  'search.askHelp': 'Ya kwa Thusong', // TODO tn-review
+  'search.error': 'Patlo ga e dire jaanong.', // TODO tn-review
+  'search.loading': 'Re a batla', // TODO tn-review
+  'search.opensNew': '(e bula mo tsebeng e ntšha)', // TODO tn-review
   'qs2.name': 'Leina ka botlalo', // TODO tn-review
   'qs2.district': 'Kgaolo', // TODO tn-review
   'qs2.districtPlaceholder': 'Tlhopha kgaolo ya gago', // TODO tn-review

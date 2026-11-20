@@ -20,7 +20,8 @@ import type {
 // GET /api/content/public/home/; a section with nothing to show renders nothing.
 
 // The article page (/news/:id) loads by id from the content API.
-export const postPath = (p: Pick<PostCard, 'id'>) => `/news/${p.id}`
+/** A post's own page (PostDetail). The public API looks posts up by slug; the id is only a fallback. */
+export const postPath = (p: Pick<PostCard, 'id'> & { slug?: string }) => `/news/${encodeURIComponent(p.slug || p.id)}`
 export const postTypeTone: Record<PostType, TagTone> = {
   news: 'neutral', event: 'orange', opportunity: 'green', result: 'amber', notice: 'neutral', newsletter: 'blue',
 }

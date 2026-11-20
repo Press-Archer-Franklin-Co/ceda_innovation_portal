@@ -28,7 +28,7 @@ const TermsOfAgreement = lazy(() => import('./pages/TermsOfAgreement'))
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const TermsOfUse = lazy(() => import('./pages/TermsOfUse'))
 const News = lazy(() => import('./pages/News'))
-const ArticleDetail = lazy(() => import('./pages/ArticleDetail'))
+const PostDetail = lazy(() => import('./pages/PostDetail'))
 const HackathonDetail = lazy(() => import('./pages/HackathonDetail'))
 const SubmissionDetail = lazy(() => import('./pages/SubmissionDetail'))
 const DocumentPage = lazy(() => import('./pages/DocumentPage'))
@@ -114,7 +114,7 @@ function AppRoutes() {
         <Route path="/unsubscribe/:token" element={<SubscriptionLink action="unsubscribe" />} />
         {/* TODO(U2): own Stories page; until then the news feed. */}
         <Route path="/stories"     element={<News />} />
-        <Route path="/news/:id"    element={<ArticleDetail />} />
+        <Route path="/news/:slug"  element={<PostDetail />} />
         <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
         <Route path="/sign-in"     element={<PublicOnlyRoute><CodeSignIn /></PublicOnlyRoute>} />
