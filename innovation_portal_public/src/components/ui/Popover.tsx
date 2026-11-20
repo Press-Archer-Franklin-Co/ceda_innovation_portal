@@ -7,6 +7,8 @@ import { anchorStyle } from './anchor'
 // Figma Foundations › Popover / Notifications. Grows out of its trigger with the small genie and goes back
 // into it. Esc and a click outside close it; focus moves in once open and back to the trigger on close.
 // inline: render in place (inside a Modal) instead of in a portal.
+// placement "center": centred under the site header instead of next to the trigger (1.3 search), still pouring
+// out of the trigger. scrim: dims the page behind it.
 
 export interface PopoverProps {
   open: boolean
@@ -18,14 +20,26 @@ export interface PopoverProps {
   inline?: boolean
   label?: string
   role?: 'dialog' | 'menu' | 'listbox'
+  placement?: 'anchor' | 'center'
+  scrim?: boolean
   className?: string
   children: ReactNode
 }
 
-export default function Popover({ open, onClose, triggerRef, align = 'start', width = 320, maxHeight = 420, inline = false, label, role = 'dialog', className, children }: PopoverProps) {
+export default function Popover({ open, onClose, triggerRef, align = 'start', width = 320, maxHeight = 420, inline = false, label, role = 'dialog', placement = 'anchor', scrim = false, className, children }: PopoverProps) {
   const [settled, setSettled] = useState(false)
   const onOpened = useCallback(() => setSettled(true), [])
   const { mounted, panelRef } = useGenie(open, triggerRef, { small: true, onOpened })
+  // The scrim fades in with the genie (one frame after mounting) and out as it closes.
+  const [dim, setDim] = useState(false)
+  useEffect(() => {
+    if (!open) {
+      setDim(false)
+      return
+    }
+    const id = requestAnimationFrame(() => setDim(true))
+    return () => cancelAnimationFrame(id)
+  }, [open])
 
   useEffect(() => {
     if (!open) {
@@ -65,7 +79,7 @@ export default function Popover({ open, onClose, triggerRef, align = 'start', wi
       role={role}
       aria-label={label}
       tabIndex={-1}
-      style={inline ? { width, maxHeight } : anchorStyle(triggerRef.current, { align, width, maxHeight })}
+      style={inline ? { width, maxHeight } : placement === 'center' ? centredStyle(triggerRef.current, width, maxHeight) : anchorStyle(triggerRef.current, { align, width, maxHeight })}
       className={clsx(
         'z-[55] bg-surface border border-border rounded-card shadow-pop overflow-y-auto focus:outline-none',
         inline ? 'absolute mt-1.5 right-0' : 'fixed',
@@ -75,5 +89,26 @@ export default function Popover({ open, onClose, triggerRef, align = 'start', wi
       {children}
     </div>
   )
-  return inline ? panel : createPortal(panel, document.body)
+  if (inline) return panel
+  return createPortal(
+    <>
+      {scrim && (
+        <div
+          aria-hidden
+          className={clsx('fixed inset-0 z-[54] bg-scrim/45 transition-opacity duration-300 motion-reduce:duration-150', dim ? 'opacity-100' : 'opacity-0')}
+        />
+      )}
+      {panel}
+    </>,
+    document.body,
+  )
+}
+
+/** Centred under the header the trigger sits in, 16px inside the window at phone widths. Pixels, no transform, so the genie measures it exactly. */
+function centredStyle(trigger: HTMLElement | null, width: number, maxHeight: number) {
+  const vw = window.innerWidth
+  const w = Math.min(width, vw - 32)
+  const header = trigger?.closest('header')?.getBoundingClientRect().bottom ?? 80
+  const top = header + 11
+  return { left: Math.round((vw - w) / 2), top, width: w, maxHeight: Math.min(maxHeight, window.innerHeight - top - 16) }
 }
