@@ -19,6 +19,7 @@ const SignUp = lazy(() => import('./pages/SignUp'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
+const SubscriptionLink = lazy(() => import('./pages/SubscriptionLink'))
 const MfaChallenge = lazy(() => import('./pages/MfaChallenge'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
@@ -106,6 +107,8 @@ function AppRoutes() {
         <Route path="/innovate"    element={<Innovate />} />
         <Route path="/skills"      element={<Skills />} />
         <Route path="/news"        element={<News />} />
+        <Route path="/subscribe/confirm/:token" element={<SubscriptionLink action="confirm" />} />
+        <Route path="/unsubscribe/:token" element={<SubscriptionLink action="unsubscribe" />} />
         {/* TODO(U2): own Stories page; until then the news feed. */}
         <Route path="/stories"     element={<News />} />
         <Route path="/news/:id"    element={<ArticleDetail />} />

@@ -116,7 +116,8 @@ export default function Home() {
       <VideoStoryDialog post={video} onClose={() => openStory(null)} onOpenPost={openStory} />
       {!isDesktop && (
         <Modal open={Boolean(step)} onClose={() => setStep(null)} closeOnBackdrop={false} bodyClassName="!p-0" size="md">
-          {step2 && <div className="[&>form]:shadow-none [&>form]:rounded-none">{step2}</div>}
+          {/* pr-10 on the heading row keeps "Step 2 of 2" clear of the sheet's close button. */}
+          {step2 && <div className="[&>form]:shadow-none [&>form]:rounded-none [&>form>div:first-child]:pr-10">{step2}</div>}
         </Modal>
       )}
     </div>
