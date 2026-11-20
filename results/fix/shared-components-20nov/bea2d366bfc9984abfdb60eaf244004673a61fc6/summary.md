@@ -1,9 +1,9 @@
 ## CI results for `fix/shared-components-20nov` @ `bea2d36`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44727205317
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44734565346
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 15s, job steps 3m 30s
+Timing (api job): Run tests 4m 01s, job steps 4m 30s
 
 | Check | Result | Details |
 | --- | --- | --- |
