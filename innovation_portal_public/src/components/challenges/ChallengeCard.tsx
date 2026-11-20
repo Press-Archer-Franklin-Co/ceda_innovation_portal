@@ -24,7 +24,8 @@ export function DaysLeft({ days, className }: { days: number; className?: string
   )
 }
 
-export default function ChallengeCard({ challenge, className }: { challenge: Challenge; className?: string }) {
+/** showWindow: the entry-window bar (1.7): how much of the window has passed, red under 3 days left. */
+export default function ChallengeCard({ challenge, className, showWindow = false }: { challenge: Challenge; className?: string; showWindow?: boolean }) {
   const { t, lang } = useI18n()
   const href = challengePath(challenge)
   const upcoming = challenge.status === 'upcoming'
@@ -71,11 +72,25 @@ export default function ChallengeCard({ challenge, className }: { challenge: Cha
                     : ''}
             </span>
             {challenge.status === 'open' && challenge.closes_at && <DaysLeft days={challenge.days_left} />}
+            {upcoming && <Badge status="upcoming" />}
+            {closed && challenge.has_results && <Tag tone="neutral">{t('ch.resultsOut')}</Tag>}
           </div>
+          {showWindow && challenge.status === 'open' && challenge.window_progress !== null && (
+            <div
+              role="progressbar"
+              aria-label={t('ch.window')}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(challenge.window_progress * 100)}
+              className="h-1.5 w-full rounded-full bg-surface2 overflow-hidden"
+            >
+              <div className={clsx('h-full rounded-full', challenge.days_left < 3 ? 'bg-primary' : 'bg-amber')} style={{ width: `${Math.round(challenge.window_progress * 100)}%` }} />
+            </div>
+          )}
         </div>
         {/* Visual only: the card's link handles the click; this keeps Figma's button look. */}
         <span aria-hidden className={buttonClasses({ variant: upcoming || closed ? 'secondary' : 'primary', size: 'sm', block: true, className: 'mt-1 pointer-events-none' })}>
-          {upcoming ? t('ch.notify') : closed ? t('ch.seeResults') : t('ch.enter')}
+          {upcoming ? t('ch.notify') : closed ? (challenge.has_results ? t('ch.seeResults') : t('ch.seeChallenge')) : t('ch.enter')}
         </span>
       </div>
     </article>

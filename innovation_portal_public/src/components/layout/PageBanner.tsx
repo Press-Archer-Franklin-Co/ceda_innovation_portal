@@ -4,7 +4,7 @@ import watermarkUrl from '../../assets/brand/ceda-watermark.png'
 // Figma 1.6 › Page banner (13:487), 1.7 › Page banner (13:1027). Chocolate band with a yellow overline,
 // white title, a sentence and an optional slot (search box, counts). The CEDA mark watermark sits on the right.
 
-export default function PageBanner({ id, overline, title, subtitle, children }: { id: string; overline: string; title: string; subtitle?: string; children?: ReactNode }) {
+export default function PageBanner({ id, overline, title, subtitle, children }: { id: string; overline: string; title: ReactNode; subtitle?: string; children?: ReactNode }) {
   return (
     <section aria-labelledby={id} className="relative overflow-hidden bg-banner text-on-banner">
       <img src={watermarkUrl} alt="" aria-hidden className="pointer-events-none select-none absolute right-[-120px] top-[-10px] w-[620px] max-w-none hidden md:block" />

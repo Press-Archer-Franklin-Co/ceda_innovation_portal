@@ -28,7 +28,7 @@ export interface SectorRef {
   name: string
 }
 
-/** Challenge card shape shared by the home page and (with B5) the public challenge list. */
+/** Challenge card shape shared by the home page and the public challenge list (B5). */
 export interface ChallengeCard {
   id: string
   slug: string
@@ -41,6 +41,36 @@ export interface ChallengeCard {
   closes_at: string | null
   days_left: number
   window_progress: number | null
+  /** B5 list and detail only. */
+  sector?: SectorRef | null
+  cover_url?: string | null
+  has_results?: boolean
+  results_url?: string | null
+}
+
+export type ChallengeStatus = 'open' | 'upcoming' | 'closed'
+
+export interface ChallengeList {
+  counts: Record<ChallengeStatus | 'all', number>
+  results: ChallengeCard[]
+}
+
+/** GET /api/programs/public/{slug}/ (1.8). Never judges or scores. */
+export interface ChallengeDetail extends ChallengeCard {
+  description: string
+  problem_statement: string
+  who_can_enter: string
+  where: string
+  what_we_look_for: string[]
+  support_package: { title: string; amount_label: string; description: string }[]
+  judging_criteria: { name: string; description: string; weight: number }[]
+  key_dates: { title: string; starts_at: string | null; ends_at: string | null }[]
+  faqs: { question: string; answer: string }[]
+  partners: { name: string; tier: string; url: string; logo_url: string | null }[]
+  started_count: number
+  estimated_minutes: number | null
+  form_id: string | null
+  availability: Record<string, unknown>
 }
 
 export type PostType = 'news' | 'event' | 'opportunity' | 'result' | 'notice' | 'newsletter'
@@ -160,6 +190,15 @@ export const publicContent = {
   async newsletters(): Promise<PostCard[]> {
     const { data } = await api.get('/content/public/newsletters/')
     return unwrap<PostCard[]>(data) ?? []
+  },
+  async challenges(params: { status?: ChallengeStatus | ''; sector?: string; sort?: 'closing_soon' | 'newest' | '' } = {}): Promise<ChallengeList> {
+    const clean = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== undefined))
+    const { data } = await api.get('/programs/public/challenges/', { params: clean })
+    return unwrap<ChallengeList>(data)
+  },
+  async challenge(slug: string): Promise<ChallengeDetail> {
+    const { data } = await api.get(`/programs/public/${encodeURIComponent(slug)}/`)
+    return unwrap<ChallengeDetail>(data)
   },
   async partners(placement = 'home'): Promise<PartnerCard[]> {
     const { data } = await api.get('/content/public/partners/', { params: { placement } })

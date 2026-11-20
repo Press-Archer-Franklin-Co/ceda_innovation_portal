@@ -10,7 +10,8 @@ import { useI18n } from '../../i18n'
 import { useAsync } from '../../lib/useAsync'
 import { referenceService } from '../../services/reference.service'
 import { intakeService, resumeStorage } from '../../services/intake.service'
-import type { ChallengeCard } from '../../services/publicContent.service'
+import { publicContent, ChallengeCard } from '../../services/publicContent.service'
+import { useSearchParams } from 'react-router-dom'
 
 // Figma 1.1 › Hero › Quick start card (10:280), step 1 of 2. Typing a title (with a sector chosen) creates a
 // saved guest draft, debounced 800 ms; later changes save to the same draft. The resume token stays in
@@ -36,7 +37,16 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
   const sectors = useAsync(() => referenceService.sectors(lang), [lang])
   const [title, setTitle] = useState('')
   const [sectorId, setSectorId] = useState<string | null>(null)
-  const [programId, setProgramId] = useState<string>('')
+  // 1.8 "Enter this challenge" lands here with ?challenge=<id>: preselect it.
+  const [params] = useSearchParams()
+  const wanted = params.get('challenge') ?? ''
+  const [programId, setProgramId] = useState<string>(wanted)
+  const needList = Boolean(wanted) && !challenges.some((c) => c.id === wanted)
+  const openList = useAsync(() => (needList ? publicContent.challenges({ status: 'open' }).then((r) => r.results) : Promise.resolve([] as ChallengeCard[])), [needList, lang])
+  const allChallenges = useMemo(() => {
+    const extra = (openList.data ?? []).filter((c) => !challenges.some((h) => h.id === c.id))
+    return [...challenges, ...extra]
+  }, [challenges, openList.data])
   const [draft, setDraft] = useState<{ draftId: string; token: string } | null>(() => resumeStorage.get())
   const [save, setSave] = useState<SaveState>('idle')
   const [errors, setErrors] = useState<{ title?: string; sector?: string }>({})
@@ -106,7 +116,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
       return
     }
     if (!draft || save === 'saving') return
-    const program = challenges.find((c) => c.id === programId)
+    const program = allChallenges.find((c) => c.id === programId)
     onContinue({
       draftId: draft.draftId,
       token: draft.token,
@@ -119,7 +129,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
   }
 
   const ready = Boolean(draft) && save === 'saved'
-  const options = [{ value: '', label: t('qs.general') }, ...challenges.filter((c) => c.status === 'open').map((c) => ({ value: c.id, label: c.title }))]
+  const options = [{ value: '', label: t('qs.general') }, ...allChallenges.filter((c) => c.status === 'open').map((c) => ({ value: c.id, label: c.title }))]
 
   return (
     <form

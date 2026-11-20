@@ -1,286 +1,150 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Calendar, Inbox, Trophy } from 'lucide-react'
-import { programsService } from '../services/programs.service'
-import { contentService } from '../services/content.service'
-import { useAuth } from '../context/AuthContext'
-import type { Program } from '../types/api'
-import { parseApiError } from '../utils/apiError'
-import Badge from '../components/ui/Badge'
-import StandardHero from '../components/ui/StandardHero'
-import FilterPills from '../components/ui/FilterPills'
-import SearchInput from '../components/ui/SearchInput'
-import EmptyState from '../components/ui/EmptyState'
-import { SkeletonGrid } from '../components/ui/SkeletonCard'
+import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { SlidersHorizontal } from 'lucide-react'
 import clsx from 'clsx'
-import { EMPTY_CELL } from '../lib/format'
+import Button from '../components/ui/Button'
+import Modal from '../components/ui/Modal'
+import Select, { SelectControl } from '../components/ui/Select'
+import Skeleton from '../components/ui/Skeleton'
+import EmptyState, { ErrorState } from '../components/ui/EmptyState'
+import PageBanner from '../components/layout/PageBanner'
+import SectionHead from '../components/home/SectionHead'
+import ChallengeCard, { GeneralIdeaCard } from '../components/challenges/ChallengeCard'
+import { useI18n } from '../i18n'
+import { useAsync } from '../lib/useAsync'
+import { referenceService } from '../services/reference.service'
+import { publicContent, ChallengeStatus } from '../services/publicContent.service'
 
+// Screen 1.7 Challenges (Figma 13:973 website, 13:1285 phone). GET /api/programs/public/challenges/ (B5).
+// Open calls first, sorted by closing date; a bar shows how much of the entry window has passed (red under
+// 3 days). Closed calls keep their results public. The general-idea card is always there. Filters live in the
+// URL; on phone they open in a sheet.
 
-type DisplayStatus = 'open' | 'upcoming' | 'closed'
+type Sort = 'closing_soon' | 'newest'
 
-function programTypeCode(p: Program): string {
-  return typeof p.program_type === 'object' && p.program_type !== null
-    ? (p.program_type as { code?: string })?.code ?? ''
-    : String(p.program_type)
+function Count({ n, label }: { n: number; label: string }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="font-heading font-extrabold text-[32px] leading-none text-amber">{n}</span>
+      <span className="text-d-label-s">{label}</span>
+    </span>
+  )
 }
-
-const isChallenge = (p: Program) => programTypeCode(p) === 'innovation_challenge'
-
-function programDisplayStatus(p: Program): DisplayStatus {
-  if (isChallenge(p) && p.status === 'published') {
-    const now = Date.now()
-    if (p.opening_date && now < new Date(p.opening_date).getTime()) return 'upcoming'
-    if (p.closing_date && now > new Date(p.closing_date).getTime()) return 'closed'
-  }
-  return toDisplayStatus(p.status)
-}
-
-function toDisplayStatus(status: string): DisplayStatus {
-  if (status === 'published') return 'open'
-  if (status === 'draft')     return 'upcoming'
-  if (status === 'closed' || status === 'archived') return 'closed'
-  return 'upcoming'
-}
-
-const gradients: Record<string, string> = {
-  challenge:  'from-emerald-950 to-emerald-700',
-  hackathon:  'from-violet-950 to-violet-700',
-  innovation: 'from-green-950 to-green-700',
-  research:   'from-blue-950 to-blue-700',
-  default:    'from-slate-900 to-slate-600',
-}
-
-function gradientFor(type: string): string {
-  const t = type?.toLowerCase() ?? ''
-  if (t.includes('hackathon'))  return gradients.hackathon
-  if (t.includes('innovation')) return gradients.innovation
-  if (t.includes('research'))   return gradients.research
-  if (t.includes('challenge'))  return gradients.challenge
-  return gradients.default
-}
-
-function formatDate(iso: string): string {
-  try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) }
-  catch { return iso }
-}
-
-
-const statusFilters: { value: 'all' | DisplayStatus; label: string }[] = [
-  { value: 'all',      label: 'All' },
-  { value: 'open',     label: 'Open' },
-  { value: 'upcoming', label: 'Upcoming' },
-  { value: 'closed',   label: 'Closed' },
-]
-
 
 export default function Challenges() {
-  const { isAuthenticated } = useAuth()
-  const [programs,  setPrograms]  = useState<Program[]>([])
-  const [bannerMap, setBannerMap] = useState<Record<string, string>>({})
-  const [loading,   setLoading]   = useState(true)
-  const [apiError,  setApiError]  = useState('')
-  const [search,    setSearch]    = useState('')
-  const [status,    setStatus]    = useState<'all' | DisplayStatus>('all')
+  const { t, lang } = useI18n()
+  const [params, setParams] = useSearchParams()
+  const status = (params.get('status') as ChallengeStatus | null) ?? ''
+  const sector = params.get('sector') ?? ''
+  const sort = (params.get('sort') as Sort | null) ?? 'closing_soon'
+  const [sheet, setSheet] = useState(false)
 
-  const load = () => {
-    setLoading(true)
-    setApiError('')
-    Promise.all([
-      programsService.getPublic(),
-      contentService.getHackathons(),
-    ])
-      .then(([data, hackathonContent]) => {
-        const hackathons = data
-          .filter(p => ['hackathon', 'innovation_challenge'].includes(programTypeCode(p)))
-          .sort((a, b) => new Date(b.opening_date).getTime() - new Date(a.opening_date).getTime())
-        setPrograms(hackathons)
-        setBannerMap(
-          hackathonContent.reduce<Record<string, string>>((acc, item) => {
-            if (item.program && item.banner_image_url) acc[item.program] = item.banner_image_url
-            return acc
-          }, {})
-        )
-      })
-      .catch(err => setApiError(parseApiError(err)))
-      .finally(() => setLoading(false))
-  }
+  const set = (patch: Record<string, string>) =>
+    setParams((p) => {
+      const next = new URLSearchParams(p)
+      Object.entries(patch).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)))
+      return next
+    }, { replace: true })
 
-  useEffect(() => { load() }, [])
+  // One call for counts and the current list; closed calls come from the same list when no status is chosen.
+  const list = useAsync(() => publicContent.challenges({ sector, sort }), [sector, sort, lang])
+  const sectors = useAsync(() => referenceService.sectors(lang), [lang])
 
-  const filtered = programs.filter(p => {
-    const q  = search.toLowerCase()
-    const ds = programDisplayStatus(p)
-    return (
-      (!q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)) &&
-      (status === 'all' || ds === status)
-    )
-  })
+  const all = list.data?.results ?? []
+  const counts = list.data?.counts ?? { open: 0, upcoming: 0, closed: 0, all: 0 }
+  const current = status ? all.filter((c) => c.status === status) : all.filter((c) => c.status !== 'closed')
+  const closed = status ? [] : all.filter((c) => c.status === 'closed')
+  const closedWithResults = all.filter((c) => c.status === 'closed' && c.has_results).length
+
+  const sectorOptions = [{ value: '', label: t('chl.allSectors') }, ...(sectors.data ?? []).map((s) => ({ value: s.slug, label: s.name }))]
+  const sortOptions = [{ value: 'closing_soon', label: t('chl.sortClosing') }, { value: 'newest', label: t('chl.sortNewest') }]
+
+  const title = t('chl.title')
+  const hl = t('chl.highlight')
+  const at = title.lastIndexOf(hl)
 
   return (
-    <div className="bg-white">
+    <>
+      <PageBanner
+          id="challenges-page-title"
+          overline={t('chl.over')}
+          title={at > 0 ? <>{title.slice(0, at)}<span className="text-amber">{title.slice(at)}</span></> : title}
+          subtitle={t('chl.sub')}
+        >
+          {list.data && (
+            <p className="flex flex-wrap gap-x-7 gap-y-3">
+              <Count n={counts.open} label={t('chl.openNow')} />
+              <Count n={counts.upcoming} label={t('chl.upcoming')} />
+              <Count n={closedWithResults} label={t('chl.closedResults')} />
+            </p>
+          )}
+        </PageBanner>
 
-      <StandardHero
-        eyebrow="Open Programs"
-        title="Innovation Challenges"
-        subtitle="Enter a challenge, build a solution, win prizes, and make a real impact across Botswana."
-        image={{ src: '/pages/challenges.png', alt: '' }}
-      />
-
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-        <div className="flex flex-col sm:flex-row gap-3 mb-8">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search challenges…"
-            className="flex-1"
-          />
-          <FilterPills
-            options={statusFilters}
-            value={status}
-            onChange={setStatus}
-          />
-        </div>
-
-        {apiError && (
-          <EmptyState
-            title="Failed to load challenges"
-            body={apiError}
-            action={{ label: 'Retry', onClick: load }}
-          />
-        )}
-
-        {loading && <SkeletonGrid />}
-
-        {!loading && !apiError && filtered.length === 0 && (
-          <EmptyState
-            icon={Inbox}
-            title={programs.length === 0 ? 'No challenges available yet.' : 'No challenges match your filters.'}
-            action={
-              programs.length > 0
-                ? { label: 'Clear filters', onClick: () => { setSearch(''); setStatus('all') } }
-                : undefined
-            }
-          />
-        )}
-
-        {!loading && !apiError && filtered.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map(p => {
-              const ds = programDisplayStatus(p)
-              const bannerUrl = bannerMap[p.id]
-              const typeCode = programTypeCode(p)
-              const challenge = isChallenge(p)
-              const canEnter = !challenge || (p.entry?.can_enter ?? true)
+      <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10 lg:py-[72px]">
+        <div className="flex flex-wrap items-center gap-3 mb-7">
+          <div role="group" aria-label={t('chl.statusFilter')} className="flex gap-2 overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {(['open', 'upcoming', 'closed'] as ChallengeStatus[]).map((s) => {
+              const on = status === s
               return (
-                <div
-                  key={p.id}
-                  className="rounded-2xl border border-gray-100 shadow-[0_2px_12px_rgba(0,0,0,0.06)] overflow-hidden hover:shadow-[0_6px_24px_rgba(0,0,0,0.10)] hover:-translate-y-0.5 transition-all duration-300 flex flex-col"
+                <button
+                  key={s}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => set({ status: on ? '' : s })}
+                  className={clsx(
+                    'shrink-0 min-h-[32px] px-3 rounded-full text-d-label-s border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    on ? 'bg-primary border-primary text-on-primary' : 'bg-surface border-border text-text hover:border-muted/60',
+                  )}
                 >
-                  <Link
-                    to={`/hackathons/${p.id}`}
-                    className={`h-36 bg-gradient-to-br ${gradientFor(typeCode)} flex items-center justify-center relative`}
-                  >
-                    <Badge status={ds} className="absolute top-3 left-3 z-10" />
-                    {challenge && (
-                      <span className="absolute top-3 right-3 z-10 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/90 text-[#A01E0A]">
-                        {p.audience === 'internal' ? 'CEDA Staff Challenge' : 'Innovation Challenge'}
-                      </span>
-                    )}
-                    {bannerUrl ? (
-                      <>
-                        <img src={bannerUrl} alt={p.title} className={`absolute inset-0 h-full w-full object-cover ${ds === 'closed' ? 'opacity-60 grayscale-[30%]' : ''}`} />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
-                      </>
-                    ) : (
-                      <span className="text-white/[0.08] text-[72px] font-black tracking-tighter select-none leading-none">
-                        {p.title.slice(0, 2).toUpperCase()}
-                      </span>
-                    )}
-                    {ds === 'closed' && (
-                      <Trophy size={28} className="text-amber-400/60 relative z-10" />
-                    )}
-                  </Link>
-
-                  <div className="p-5 bg-white flex flex-col flex-1">
-                    <Link
-                      to={`/hackathons/${p.id}`}
-                      className="font-bold text-gray-900 text-[13.5px] leading-snug mb-1.5 hover:text-[#A01E0A] transition-colors"
-                    >
-                      {p.title}
-                    </Link>
-                    <p className="text-[12px] text-gray-400 line-clamp-2 leading-relaxed flex-1">{p.description}</p>
-
-                    <div className="flex items-center justify-between mt-4 pt-3.5 border-t border-gray-100">
-                      <p className="flex items-center gap-1 text-xs text-gray-400">
-                        <Calendar size={11} />
-                        {ds === 'upcoming' && challenge && p.opening_date
-                          ? `Opens ${formatDate(p.opening_date)}`
-                          : p.closing_date ? `Closes ${formatDate(p.closing_date)}` : EMPTY_CELL}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/hackathons/${p.id}`}
-                          className="flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-[#A01E0A] transition-colors"
-                        >
-                          Details
-                        </Link>
-                        {ds === 'closed' ? (
-                          <Link
-                            to={`/hackathons/${p.id}`}
-                            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 transition-colors"
-                          >
-                            <Trophy size={11} />
-                            See Results
-                          </Link>
-                        ) : !canEnter || (challenge && ds !== 'open') ? (
-                          <Link
-                            to={`/hackathons/${p.id}`}
-                            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                          >
-                            View
-                            <ArrowRight size={11} />
-                          </Link>
-                        ) : (
-                          <Link
-                            to={ds === 'open'
-                              ? (isAuthenticated ? `/innovate?program=${p.id}` : '/login')
-                              : '/login'}
-                            className={clsx(
-                              'flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors bg-[#A01E0A] text-white hover:bg-[#7E1708]',
-                            )}
-                          >
-                            {ds === 'open' ? (challenge ? 'Enter' : 'Apply') : 'Notify Me'}
-                            <ArrowRight size={11} />
-                          </Link>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  {t(`chl.filter.${s}`)} ({counts[s]})
+                </button>
               )
             })}
           </div>
-        )}
-      </section>
-
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div
-          className="relative rounded-3xl px-10 py-8 text-center overflow-hidden"
-          style={{ background: 'linear-gradient(125deg, #2E1E18 0%, #5A3C32 55%, #6B4A3E 100%)' }}
-        >
-          <div
-            className="absolute inset-0 opacity-[0.45] pointer-events-none"
-            style={{ backgroundImage: 'radial-gradient(circle, rgba(148,163,184,0.9) 1px, transparent 1px)', backgroundSize: '26px 26px' }}
-          />
-          <div className="relative z-10">
-            <h3 className="font-bold text-white text-xl mb-2">Have a challenge idea?</h3>
-            <p className="text-white/70 text-sm mb-6">Suggest a new challenge that addresses a real need in Botswana.</p>
-            <Link to="/suggestions" className="btn-white inline-flex">
-              Submit a Suggestion <ArrowRight size={14} />
-            </Link>
+          <div className="hidden md:flex items-center gap-3 ml-auto">
+            <SelectControl aria-label={t('chl.sector')} className="w-[220px]" options={sectorOptions} value={sector} onChange={(v) => set({ sector: v })} />
+            <SelectControl aria-label={t('chl.sort')} className="w-[220px]" options={sortOptions} value={sort} onChange={(v) => set({ sort: v === 'closing_soon' ? '' : v })} />
           </div>
+          <Button variant="secondary" size="sm" className="md:hidden ml-auto" icon={<SlidersHorizontal size={16} aria-hidden />} onClick={() => setSheet(true)}>
+            {t('chl.filters')}
+          </Button>
         </div>
-      </section>
-    </div>
+
+        {list.loading ? (
+          <div aria-hidden className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[300px] rounded-card" />)}
+          </div>
+        ) : list.error && !list.data ? (
+          <ErrorState title={t('chl.loadError')} body={t('home.loadErrorBody')} onRetry={list.reload} retrying={list.fetching} />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" aria-busy={list.fetching || undefined}>
+            {current.length === 0 && status === 'closed' ? (
+              <EmptyState title={t('chl.empty')} body={t('chl.emptyBody')} className="sm:col-span-2 lg:col-span-3" />
+            ) : (
+              current.map((c) => <ChallengeCard key={c.id} challenge={c} showWindow />)
+            )}
+            {status !== 'closed' && <GeneralIdeaCard />}
+          </div>
+        )}
+      </div>
+
+      {closed.length > 0 && (
+        <section aria-labelledby="closed-title" className="bg-surface2">
+          <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-12 lg:py-[72px]">
+            <SectionHead id="closed-title" overline={t('chl.closedOver')} title={t('chl.closedTitle')} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {closed.map((c) => <ChallengeCard key={c.id} challenge={c} />)}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <Modal open={sheet} onClose={() => setSheet(false)} title={t('chl.filters')} footer={<Button block onClick={() => setSheet(false)}>{t('chl.apply')}</Button>}>
+        <div className="flex flex-col gap-4">
+          <Select label={t('chl.sector')} options={sectorOptions} value={sector} onChange={(v) => set({ sector: v })} />
+          <Select label={t('chl.sort')} options={sortOptions} value={sort} onChange={(v) => set({ sort: v === 'closing_soon' ? '' : v })} />
+        </div>
+      </Modal>
+    </>
   )
 }

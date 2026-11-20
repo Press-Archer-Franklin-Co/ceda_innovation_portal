@@ -244,6 +244,75 @@ const tn: Record<StringKey, string> = {
   'news.unread': 'Ga e ise e bulwe', // TODO tn-review
   'news.results': 'Dipoelo di le {n}', // TODO tn-review
 
+  'ch.resultsOut': 'Dipoelo di tswile', // TODO tn-review
+  'ch.window': 'Nako ya go tsenela e e dirisitsweng', // TODO tn-review
+  'ch.seeChallenge': 'Bona kgwetlho', // TODO tn-review
+  'chl.over': 'Dikgwetlho', // TODO tn-review
+  'chl.title': 'Rarabolola bothata jwa nnete. Bona thuso ya nnete.', // TODO tn-review
+  'chl.highlight': 'thuso ya nnete.', // TODO tn-review
+  'chl.sub': 'CEDA le balekane ba tlhagisa dikgwetlho tse di nang le malatsi a bofelo, dikabelo le kaelo. Tlhopha e e go tshwanelang, kgotsa o romele kakanyo ya kakaretso nako nngwe le nngwe.', // TODO tn-review
+  'chl.openNow': 'di bulegile', // TODO tn-review
+  'chl.upcoming': 'di a tla', // TODO tn-review
+  'chl.closedResults': 'di tswetswe di na le dipoelo', // TODO tn-review
+  'chl.filter.open': 'Di bulegile', // TODO tn-review
+  'chl.filter.upcoming': 'Di a tla', // TODO tn-review
+  'chl.filter.closed': 'Di tswetswe', // TODO tn-review
+  'chl.allSectors': 'Mafapha otlhe', // TODO tn-review
+  'chl.sector': 'Lephata', // TODO tn-review
+  'chl.sort': 'Rulaganya', // TODO tn-review
+  'chl.sortClosing': 'Tse di tswalwang pele', // TODO tn-review
+  'chl.sortNewest': 'Tse dintšhwa', // TODO tn-review
+  'chl.filters': 'Ditlhopho', // TODO tn-review
+  'chl.apply': 'Bontsha dikgwetlho', // TODO tn-review
+  'chl.closedOver': 'Dikgwetlho tse di tswetsweng', // TODO tn-review
+  'chl.closedTitle': 'Dipoelo di phasaladitswe', // TODO tn-review
+  'chl.empty': 'Ga go na dikgwetlho fa jaanong', // TODO tn-review
+  'chl.emptyBody': 'Dikgwetlho tse dintšhwa di tlhagisiwa mo botong ya dikitsiso. O ka romela kakanyo ya kakaretso nako nngwe le nngwe.', // TODO tn-review
+  'chl.loadError': 'Ga re a kgona go bula dikgwetlho', // TODO tn-review
+  'chl.statusFilter': 'Maemo a kgwetlho', // TODO tn-review
+
+  'chd.breadcrumb': 'Tsela', // TODO tn-review
+  'chd.support': 'Thuso', // TODO tn-review
+  'chd.closes': 'E tswalwa', // TODO tn-review
+  'chd.opens': 'E bulwa', // TODO tn-review
+  'chd.closedOn': 'E tswetswe', // TODO tn-review
+  'chd.who': 'Ba ba ka tsenelang', // TODO tn-review
+  'chd.where': 'Kae', // TODO tn-review
+  'chd.sections': 'Mo tsebeng e', // TODO tn-review
+  'chd.tab.overview': 'Kakaretso', // TODO tn-review
+  'chd.tab.who': 'Ba ba ka tsenelang', // TODO tn-review
+  'chd.tab.support': 'Thuso', // TODO tn-review
+  'chd.tab.judge': 'Ka moo re atlholang', // TODO tn-review
+  'chd.tab.dates': 'Malatsi', // TODO tn-review
+  'chd.tab.faqs': 'Dipotso', // TODO tn-review
+  'chd.lookingFor': 'Se re se batlang', // TODO tn-review
+  'chd.whoTitle': 'Ba ba ka tsenelang', // TODO tn-review
+  'chd.supportTitle': 'Thuso e e neelwang', // TODO tn-review
+  'chd.judgeTitle': 'Ka moo re atlholang ka teng', // TODO tn-review
+  'chd.judgeNote': 'Kakanyo nngwe le nngwe e tshwaiwa ka tsone, ka bokete jo.', // TODO tn-review
+  'chd.datesTitle': 'Malatsi', // TODO tn-review
+  'chd.faqTitle': 'Dipotso tse batho ba di botsang', // TODO tn-review
+  'chd.closeIn': 'Go tsenela go tswalwa mo', // TODO tn-review
+  'chd.openIn': 'Go tsenela go bulwa mo', // TODO tn-review
+  'chd.days': 'malatsi', // TODO tn-review
+  'chd.hours': 'diura', // TODO tn-review
+  'chd.mins': 'metsotso', // TODO tn-review
+  'chd.closesAt': 'E tswalwa {when}', // TODO tn-review
+  'chd.opensAt': 'E bulwa {when}', // TODO tn-review
+  'chd.closedAt': 'Go tsenela go tswetswe ka {when}', // TODO tn-review
+  'chd.enter': 'Tsenela kgwetlho e', // TODO tn-review
+  'chd.minutes': 'Ka metsotso e ka nna {n}. Kakanyetso ya gago e bolokwa fa o ntse o tsweletse.', // TODO tn-review
+  'chd.questions': 'Dipotso? WhatsApp {number}', // TODO tn-review
+  'chd.started': 'Batho ba le {n} ba simolotse go tsenela', // TODO tn-review
+  'chd.startedOne': 'Motho a le 1 o simolotse go tsenela', // TODO tn-review
+  'chd.partners': 'Ka tirisanommogo le', // TODO tn-review
+  'chd.notFound': 'Ga re a bona kgwetlho e', // TODO tn-review
+  'chd.notFoundBody': 'Gongwe e fetotswe leina kgotsa e tlositswe. Bona dikgwetlho tse di bulegileng jaanong.', // TODO tn-review
+  'chd.allChallenges': 'Bona dikgwetlho tsotlhe', // TODO tn-review
+  'chd.loadError': 'Ga re a kgona go bula kgwetlho e', // TODO tn-review
+  'chd.notYet': 'Dintlha tsa karolo e di mo tseleng.', // TODO tn-review
+  'chd.weight': '{n}% ya maduo', // TODO tn-review
+
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',
   'pager.next': 'Pele',

@@ -5,6 +5,7 @@ import Layout        from './components/layout/Layout'
 import PrivateRoute  from './components/ui/PrivateRoute'
 const Home = lazy(() => import('./pages/Home'))
 const IdeaSent = lazy(() => import('./pages/IdeaSent'))
+const ChallengeDetail = lazy(() => import('./pages/ChallengeDetail'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
@@ -96,6 +97,7 @@ function AppRoutes() {
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
         <Route path="/challenges"  element={<Challenges />} />
+        <Route path="/challenges/:slug" element={<ChallengeDetail />} />
         <Route path="/suggestions" element={<Suggestions />} />
         <Route path="/innovate"    element={<Innovate />} />
         <Route path="/skills"      element={<Skills />} />
