@@ -113,6 +113,25 @@ export default function Styleguide() {
         />
         <p className="text-d-cap text-muted">Setswana keys missing: {missing.length === 0 ? 'none' : missing.join(', ')}</p>
 
+        <Section figma="PageHeader" title="Many actions wrap on a phone (R-24)">
+          <div id="sg-pageheader-many" className="rounded-card border border-border p-4">
+            <PageHeader
+              title="Idea form"
+              subtitle="Six actions, like the form builder."
+              actions={
+                <>
+                  <span className="text-d-cap text-muted">Saved</span>
+                  <Button variant="ghost" size="sm">Undo</Button>
+                  <Button variant="ghost" size="sm">Redo</Button>
+                  <LanguageSwitch />
+                  <Button variant="secondary" size="sm">Preview</Button>
+                  <Button size="sm">Publish</Button>
+                </>
+              }
+            />
+          </div>
+        </Section>
+
         <Section figma="Shell" title="Sidebar (as an administrator) and top bar">
           <div className="relative h-[720px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)' }}>
             <LayoutContext.Provider value={{ sidebarOpen: true, mobileSidebarOpen: false, setSidebarOpen: () => {}, setMobileSidebarOpen: () => {} }}>
