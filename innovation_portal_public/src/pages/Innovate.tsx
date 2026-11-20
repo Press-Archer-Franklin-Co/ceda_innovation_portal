@@ -11,7 +11,8 @@ import { documentsService } from '../services/documents.service'
 import DocumentLink from '../components/documents/DocumentLink'
 import { profileService } from '../services/profile.service'
 import { parseApiError } from '../utils/apiError'
-import type { Program, SubmissionFormDefinition, SubmissionFormField } from '../types/api'
+import type { Program, Submission, SubmissionFormDefinition, SubmissionFormField } from '../types/api'
+import type { SubmitResult } from '../types/innovator'
 import type { SubmissionDetail, SubmissionFileDocument } from '../services/submissions.service'
 import VerificationRequired from '../components/ui/VerificationRequired'
 import Countdown, { useNow } from '../components/challenges/Countdown'
@@ -841,6 +842,8 @@ function SubmissionForm() {
     setDraftLoading(true)
     submissionsService.getDraft(resumeDraftId)
       .then((draft) => {
+        // A draft that was already sent (Forward after sending, or an old link) must not open as a form again.
+        if (draft.status === 'submitted') { navigate('/my-ideas', { replace: true }); return }
         setDraftId(draft.id)
         setProgramId(draft.program)
         setTitle(draft.title !== 'Untitled idea' ? draft.title : '')
@@ -864,7 +867,7 @@ function SubmissionForm() {
           .catch(() => {})
       })
       .finally(() => setDraftLoading(false))
-  }, [resumeDraftId])
+  }, [resumeDraftId, navigate])
 
   useEffect(() => {
     if (!programId || selectedProgram?.id === programId || loadingPrograms) return
@@ -1146,7 +1149,13 @@ function SubmissionForm() {
       for (const [key, fieldFiles] of Object.entries(files))
         for (const file of fieldFiles)
           await documentsService.uploadDraftDocument(id, key, file)
-      const final = await submissionsService.submitDraft(id, { consent: true })
+      const final = await submissionsService.submitDraft(id, { consent: true }) as Submission & Partial<SubmitResult>
+      if (final.reference && final.submission_id) {
+        // Same confirmation as the idea form (1.5). It replaces this page in the history, so Back cannot
+        // reopen the form and send the idea twice. The local draft is forgotten when this page unmounts.
+        navigate('/idea-sent', { replace: true, state: { result: final } })
+        return
+      }
       setRefNumber((final as { reference_number?: string }).reference_number ?? '')
       setDraftId(null)
       setSubmitted(true)

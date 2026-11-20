@@ -266,7 +266,7 @@ const tn: Record<StringKey, string> = {
   'sent.trackTitle': 'E latele ka tsela e o e ratang', // TODO tn-review
   'sent.trackBody': 'Akhaonto ya gago, dikitsiso tsa WhatsApp, kgotsa leletsa {ussd} o bo o tsenya nomore ya gago ya tshupetso.', // TODO tn-review
   'sent.trackBodyNoUssd': 'Akhaonto ya gago kgotsa dikitsiso tsa WhatsApp, ka nomore ya gago ya tshupetso.', // TODO tn-review
-  'sent.trackCta': 'Bula letlapa la me', // TODO tn-review
+  'sent.trackCta': 'Latela kakanyo e', // TODO tn-review
   'sent.signInCta': 'Tsena go latela', // TODO tn-review
   'sent.moreTitle': 'O na le kakanyo e nngwe?', // TODO tn-review
   'sent.moreBody': 'Tlhola dikgwetlho tse di bulegileng. Dingwe di tla le dithuso tsa madi le kaelo.', // TODO tn-review
