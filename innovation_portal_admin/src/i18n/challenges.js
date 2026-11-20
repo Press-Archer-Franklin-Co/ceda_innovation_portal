@@ -4,6 +4,9 @@
 // screens lane and must be checked by a Setswana speaker at CEDA.
 
 export const challengesEn = {
+  'wf.advanceAuto': 'Move on by itself when enough reviewers are done',
+  'wf.advanceAutoOn': 'On: the idea moves to the next step as soon as enough reviewers finish.',
+  'wf.advanceAutoOff': 'Off: an officer moves the idea on once enough reviewers finish.',
   // 3.6 Challenge builder
   'cb.crumbNew': 'Challenges / New challenge',
   'cb.crumbEdit': 'Challenges / {name}',
@@ -158,6 +161,9 @@ export const challengesEn = {
 }
 
 export const challengesTn = {
+  'wf.advanceAuto': 'Fetogela kwa pele ka bosi fa basekaseki ba ba lekaneng ba fetsa',
+  'wf.advanceAutoOn': 'Go tshubilwe: kakanyo e ya kgatong e e latelang fa fela basekaseki ba ba lekaneng ba fetsa.',
+  'wf.advanceAutoOff': 'Go timilwe: motlhankedi o tsamaisa kakanyo fa basekaseki ba ba lekaneng ba fetsa.',
   'cb.crumbNew': 'Dikgwetlho / Kgwetlho e ntšhwa',
   'cb.crumbEdit': 'Dikgwetlho / {name}',
   'cb.titleNew': 'Kgwetlho e ntšhwa',

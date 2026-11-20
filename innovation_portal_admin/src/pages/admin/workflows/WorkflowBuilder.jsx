@@ -39,6 +39,8 @@ import {
   useStageConfig,
 } from '../../../lib/queries/evaluations'
 import { useConfirm } from '../../../components/ui/confirm'
+import { Toggle } from '../../../components/ui/Choice'
+import { useT } from '../../../i18n/context'
 
 const ROLE_OPTIONS = ['', 'innovator', 'innovation_officer', 'innovation_manager', 'judge', 'specialist', 'mentor', 'administrator']
 const EXECUTION_OPTIONS = ['sequential', 'parallel_all', 'parallel_any', 'parallel_minimum']
@@ -95,6 +97,7 @@ function buildStepPayload(draft) {
     due_in_hours: draft.due_in_hours === '' ? null : Number(draft.due_in_hours),
     execution_mode: draft.execution_mode,
     minimum_completions_required: Number(draft.minimum_completions_required || 1),
+    advance_automatically: !!draft.advance_automatically,
     requires_assignment: draft.requires_assignment,
     assignment_role: draft.requires_assignment ? draft.assignment_role || null : null,
     minimum_assignments: draft.requires_assignment ? Number(draft.minimum_assignments || 1) : 0,
@@ -116,6 +119,8 @@ function stepToDraft(step) {
     due_in_hours: step.due_in_hours ?? '',
     execution_mode: step.execution_mode ?? 'sequential',
     minimum_completions_required: step.minimum_completions_required ?? 1,
+    // R-30: off means an officer moves the idea on once enough reviewers are done; new steps start off.
+    advance_automatically: !!step.advance_automatically,
     requires_assignment: !!step.requires_assignment,
     assignment_role: step.assignment_role ?? '',
     minimum_assignments: step.minimum_assignments ?? 1,
@@ -371,6 +376,7 @@ function CriteriaLinkField({ value, detail, onChange, disabled }) {
 }
 
 function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelete, onDirtyChange }) {
+  const t = useT()
   const { data: stageConfig } = useStageConfig(step?.id)
   const [draft, setDraft] = useState(() => stepToDraft(step ?? {}))
   const [stageDraft, setStageDraft] = useState(() => stageConfigToDraft(null))
@@ -549,6 +555,13 @@ function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelet
               />
             </div>
           </div>
+
+          <Toggle
+            label={t('wf.advanceAuto')}
+            description={draft.advance_automatically ? t('wf.advanceAutoOn') : t('wf.advanceAutoOff')}
+            checked={!!draft.advance_automatically}
+            onChange={(on) => setDraft((prev) => ({ ...prev, advance_automatically: on }))}
+          />
 
           <div>
             <label className="label">Allowed Outcomes</label>
