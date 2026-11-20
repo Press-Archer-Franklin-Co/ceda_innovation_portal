@@ -151,7 +151,19 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "apps.audit.refusals.RefusalRecordingMiddleware",
 ]
+
+# S1: refusals are logged to "security.authorization" (ceda-security section 5).
+# A logger without a handler drops everything, so it gets its own console handler.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {
+        "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
 
 ROOT_URLCONF = "config.urls"
 WSGI_APPLICATION = "config.wsgi.application"
@@ -347,6 +359,10 @@ def _env_list(key: str) -> list:
 
 CORS_ALLOWED_ORIGINS = _env_list(_prefixed_name("CORS_ALLOWED_ORIGINS"))
 CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
+# Both frontends send X-CEDA-Client (S1); a cross-origin set-up must allow it in the preflight.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = (*default_headers, "x-ceda-client")
 CSRF_TRUSTED_ORIGINS = _env_list(_prefixed_name("CSRF_TRUSTED_ORIGINS"))
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

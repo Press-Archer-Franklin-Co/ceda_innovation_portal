@@ -7,12 +7,27 @@ from apps.core.models import TimeStampedModel, UUIDModel
 
 
 class Role(UUIDModel, TimeStampedModel):
-    code = models.CharField(max_length=50, choices=RoleType.choices, unique=True)
+    """A role people can hold. Built-in roles (RoleType) are system roles; administrators can add more (S2)."""
+
+    code = models.CharField(max_length=50, unique=True, help_text="Built-in codes come from RoleType; custom roles get their own.")
     name = models.CharField(max_length=100)
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"name": "...", "description": "..."}}')
     description = models.TextField(blank=True)
+    is_system = models.BooleanField(default=False, help_text="Built-in role: cannot be renamed in code, retired or deleted.")
+    is_active = models.BooleanField(default=True, help_text="Retired roles keep their holders but give no capabilities.")
 
     def __str__(self) -> str:
         return self.name
+
+
+class RoleCapability(UUIDModel, TimeStampedModel):
+    """S2: one ticked box in the Roles & permissions matrix."""
+
+    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name="capabilities")
+    capability = models.CharField(max_length=60)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["role", "capability"], name="uq_role_capability")]
 
 
 class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):

@@ -3,7 +3,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from apps.audit.models import AuditLog
 from apps.audit.serializers import AuditLogSerializer
-from apps.core.permissions import IsOfficerAdminOrManagementReadOnly
+from apps.core.permissions import HasCapability
 
 
 class AuditPagination(PageNumberPagination):
@@ -26,7 +26,7 @@ class AuditPagination(PageNumberPagination):
 
 class AuditLogListView(generics.ListAPIView):
     serializer_class   = AuditLogSerializer
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
     search_fields      = ["action_type", "target_model", "actor__first_name", "actor__last_name", "actor__email"]
@@ -56,7 +56,7 @@ class AuditLogListView(generics.ListAPIView):
 
 class SubmissionAuditLogListView(generics.ListAPIView):
     serializer_class   = AuditLogSerializer
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
 
     def get_queryset(self):
@@ -67,7 +67,7 @@ class SubmissionAuditLogListView(generics.ListAPIView):
 
 class AssignmentAuditLogListView(generics.ListAPIView):
     serializer_class   = AuditLogSerializer
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
 
     def get_queryset(self):
@@ -78,7 +78,7 @@ class AssignmentAuditLogListView(generics.ListAPIView):
 
 class EvaluationAuditLogListView(generics.ListAPIView):
     serializer_class   = AuditLogSerializer
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
 
     def get_queryset(self):
@@ -92,7 +92,7 @@ class EvaluationAuditLogListView(generics.ListAPIView):
 
 class WorkflowAuditLogListView(generics.ListAPIView):
     serializer_class   = AuditLogSerializer
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
 
     def get_queryset(self):
@@ -103,7 +103,7 @@ class WorkflowAuditLogListView(generics.ListAPIView):
 
 class NotificationAuditLogListView(generics.ListAPIView):
     serializer_class   = AuditLogSerializer
-    permission_classes = [IsOfficerAdminOrManagementReadOnly]
+    permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
 
     def get_queryset(self):

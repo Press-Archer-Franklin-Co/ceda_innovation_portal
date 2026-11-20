@@ -5,23 +5,21 @@ import Button from '../../ui/Button'
 import { SelectControl } from '../../ui/Select'
 import { useI18n, useT } from '../../../i18n/context'
 import { cn } from '../../../lib/cn'
-import { useAuth } from '../../../lib/auth/AuthContext'
-import { useAdminRoles } from '../../../lib/queries/adminRoles'
+import { useQuery } from '@tanstack/react-query'
+import { forms } from '../../../lib/api/formBuilder'
 import { pickText } from '../../../lib/admin/roles'
 
 const REVIEWER_ROLES = ['innovation_officer', 'innovation_manager', 'staff_member']
 
 /**
  * Roles that can be asked to review: the built-in reviewer roles, plus custom roles such as
- * "Setswana reviewer" (S2). Only administrators may read the role list today, so others see the
- * built-in ones. TODO(S1): ask can('settings.manage'); TODO(R-32): a list form editors can read.
+ * "Setswana reviewer" (S2), from GET /api/forms/review-roles/ (R-32). If that fails, the built-in ones.
  */
 function useReviewerRoles(t, lang) {
-  const { user } = useAuth()
-  const roles = useAdminRoles({ enabled: !!user?.is_admin })
+  const roles = useQuery({ queryKey: ['forms', 'review-roles'], queryFn: () => forms.reviewRoles(), staleTime: 5 * 60 * 1000, retry: false })
   return useMemo(() => {
     const builtIn = REVIEWER_ROLES.map((r) => ({ value: r, label: t(`tr.role.${r}`) }))
-    const custom = (roles.data ?? []).filter((r) => r.is_active && !r.is_system).map((r) => ({ value: r.code, label: pickText(r.name, lang) }))
+    const custom = (Array.isArray(roles.data) ? roles.data : []).filter((r) => !r.is_system).map((r) => ({ value: r.code, label: pickText(r.name, lang) }))
     return [...builtIn, ...custom]
   }, [roles.data, t, lang])
 }

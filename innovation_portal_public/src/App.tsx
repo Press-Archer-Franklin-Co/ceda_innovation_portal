@@ -19,6 +19,7 @@ const SignUp = lazy(() => import('./pages/SignUp'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
+const SubscriptionLink = lazy(() => import('./pages/SubscriptionLink'))
 const MfaChallenge = lazy(() => import('./pages/MfaChallenge'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
@@ -40,6 +41,7 @@ const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
 const IdeaForm = lazy(() => import('./pages/innovator/IdeaForm'))
 const Notifications = lazy(() => import('./pages/innovator/Notifications'))
 const PreviewForm = lazy(() => import('./pages/innovator/PreviewForm'))
+const PreviewHome = lazy(() => import('./pages/PreviewHome'))
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
@@ -92,6 +94,8 @@ function AppRoutes() {
 
       {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
       <Route path="/preview/form" element={<PreviewForm />} />
+      {/* Staff home page editor preview (U6, 3.8), same idea. */}
+      <Route path="/preview/home" element={<PreviewHome />} />
 
       <Route element={<Layout />}>
         <Route path="/"            element={<HomeOrDashboard />} />
@@ -106,6 +110,8 @@ function AppRoutes() {
         <Route path="/innovate"    element={<Innovate />} />
         <Route path="/skills"      element={<Skills />} />
         <Route path="/news"        element={<News />} />
+        <Route path="/subscribe/confirm/:token" element={<SubscriptionLink action="confirm" />} />
+        <Route path="/unsubscribe/:token" element={<SubscriptionLink action="unsubscribe" />} />
         {/* TODO(U2): own Stories page; until then the news feed. */}
         <Route path="/stories"     element={<News />} />
         <Route path="/news/:id"    element={<ArticleDetail />} />

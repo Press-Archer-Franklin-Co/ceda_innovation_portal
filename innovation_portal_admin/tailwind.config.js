@@ -74,6 +74,11 @@ export default {
         ...optionDTheme.fontSize,
         "2xs": ["10px", { lineHeight: "14px" }],
       },
+      // Older names used as text: ceda-green is the orange accent, so as text it uses accent-ink (see tailwind.tokens.js).
+      textColor: {
+        ...optionDTheme.textColor,
+        ceda: { green: v("accent-ink"), "gold-light": v("accent-ink") },
+      },
       borderRadius: optionDTheme.borderRadius,
       boxShadow: {
         ...optionDTheme.boxShadow,

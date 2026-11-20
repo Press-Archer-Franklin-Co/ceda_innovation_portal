@@ -174,6 +174,7 @@ class AuthUserProfileSerializer(serializers.ModelSerializer):
 
 class AuthenticatedUserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    capabilities = serializers.SerializerMethodField(help_text="What this person may do (S1). Ask for these, not for roles.")
     profile = serializers.SerializerMethodField()
     is_admin = serializers.SerializerMethodField()
     mfa_enabled = serializers.SerializerMethodField()
@@ -183,6 +184,7 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             "id",
+            "capabilities",
             "email",
             "first_name",
             "last_name",
@@ -198,6 +200,11 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
             "roles",
             "profile",
         )
+
+    def get_capabilities(self, obj) -> list[str]:
+        from apps.core.capabilities import capabilities_for
+
+        return capabilities_for(obj)
 
     def get_roles(self, obj):
         return list(obj.roles.filter(user_roles__is_active=True).values_list("code", flat=True))
@@ -358,11 +365,9 @@ class MFADisableConfirmSerializer(serializers.Serializer):
 
 
 class UserRoleUpdateSerializer(serializers.Serializer):
-    roles = serializers.ListField(
-        child=serializers.ChoiceField(choices=tuple(RoleService.CANONICAL_ROLE_CODES)),
-        allow_empty=False,
-    )
-    role = serializers.ChoiceField(choices=tuple(RoleService.CANONICAL_ROLE_CODES), required=False)
+    # Built-in roles an admin may give, plus any active custom role (S2). The service checks the codes.
+    roles = serializers.ListField(child=serializers.CharField(max_length=50), allow_empty=False)
+    role = serializers.CharField(max_length=50, required=False)
 
 
 class SetPasswordSerializer(serializers.Serializer):

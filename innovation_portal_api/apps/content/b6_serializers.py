@@ -51,6 +51,7 @@ class PostSerializer(serializers.ModelSerializer):
     is_new = serializers.BooleanField(read_only=True)
     is_pinned = serializers.BooleanField(read_only=True)
     approval = serializers.SerializerMethodField()
+    pending_change = serializers.SerializerMethodField(help_text="A change to this live post that is waiting for approval: {approval_id, changes, requested_by, requested_at}, or null.")
     tags = serializers.ListField(child=serializers.CharField(max_length=60), required=False)
 
     class Meta:
@@ -77,6 +78,7 @@ class PostSerializer(serializers.ModelSerializer):
             "event_starts_at",
             "event_place",
             "newsletter_issue",
+            "send_to_subscribers",
             "publish_at",
             "unpublish_at",
             "published_at",
@@ -85,6 +87,7 @@ class PostSerializer(serializers.ModelSerializer):
             "is_new",
             "is_pinned",
             "approval",
+            "pending_change",
             "created_at",
             "updated_at",
         )
@@ -96,6 +99,21 @@ class PostSerializer(serializers.ModelSerializer):
 
     def get_shows_on(self, obj) -> list[str]:
         return PostService.shows_on(obj)
+
+    def get_pending_change(self, obj) -> dict | None:
+        from apps.content.services import ApprovalService
+
+        if not obj.pk:
+            return None
+        approval = ApprovalService.open_for(obj).filter(payload__kind="edit").first()
+        if approval is None:
+            return None
+        return {
+            "approval_id": str(approval.id),
+            "changes": (approval.payload or {}).get("changes") or {},
+            "requested_by": (approval.requested_by.full_name or approval.requested_by.email) if approval.requested_by else None,
+            "requested_at": approval.created_at.isoformat(),
+        }
 
     def get_approval(self, obj) -> dict | None:
         from apps.content.services import ApprovalService

@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.views import APIView
 
 from apps.audit.services import AuditService
@@ -17,8 +17,7 @@ from apps.content.sections import describe_types
 from apps.content.services import ApprovalService, PageService, PartnerService, PostService, clear_home_cache, text_in
 from apps.core.api import api_success
 from apps.core.i18n import normalize_language
-from apps.core.constants import RoleType
-from apps.core.permissions import HasRolePermission, IPRateThrottle, IsOfficerOrAdmin
+from apps.core.permissions import HasAnyCapability, HasCapability, IPRateThrottle
 
 STAFF_TAGS = ["Website content"]
 PUBLIC_TAGS = ["Website content (public)"]
@@ -31,12 +30,6 @@ def _lang(request) -> str:
     return "en" if lang == "all" else lang
 
 
-class IsContentStaffOrApprover(HasRolePermission):
-    """Officers and admins edit content; managers also see and decide approvals."""
-
-    allowed_roles = {RoleType.INNOVATION_OFFICER, RoleType.INNOVATION_MANAGER, RoleType.ADMINISTRATOR}
-
-
 class PublicContentThrottle(IPRateThrottle):
     scope = "content_public"
 
@@ -45,7 +38,7 @@ class PublicContentThrottle(IPRateThrottle):
 
 
 class SectionTypeListView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="List home page section types and their settings", responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -53,7 +46,7 @@ class SectionTypeListView(APIView):
 
 
 class HomeDraftView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="Get the home page draft", responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -73,7 +66,7 @@ class HomeDraftView(APIView):
 
 
 class HomePreviewView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(tags=STAFF_TAGS, summary="Preview the home page draft", description="Same shape as the public home page.", parameters=[LANG_PARAM], responses=OpenApiTypes.OBJECT)
     def get(self, request):
@@ -83,7 +76,7 @@ class HomePreviewView(APIView):
 
 
 class HomeSubmitView(APIView):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
 
     @extend_schema(
         tags=STAFF_TAGS,
@@ -118,8 +111,22 @@ class PublicHomeView(APIView):
 # --- Approvals --------------------------------------------------------------------------------
 
 
+class CanSeeApprovals(BasePermission):
+    """S2: editors, approvers, and anyone who may approve a step of the website approval flow (custom roles too)."""
+
+    def has_permission(self, request, view):
+        from apps.core.capabilities import user_has
+
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user_has(user, "content.edit") or user_has(user, "content.approve"):
+            return True
+        return ApprovalService.is_any_approver(user)
+
+
 class ApprovalListView(APIView):
-    permission_classes = [IsContentStaffOrApprover]
+    permission_classes = [CanSeeApprovals]
 
     @extend_schema(
         tags=STAFF_TAGS,
@@ -134,23 +141,32 @@ class ApprovalListView(APIView):
             queryset = queryset.filter(status=status_value)
         items = []
         for approval in queryset[:200]:
-            item = ApprovalService.payload(approval)
-            item["can_decide"] = ApprovalService.can_decide(request.user, approval)
+            # can_approve: this person may approve a waiting step for its language (S2); can_decide kept for old screens.
+            item = ApprovalService.payload(approval, user=request.user)
+            item["can_decide"] = item["can_send_back"] or item["can_approve"]
             items.append(item)
         return api_success(data=items)
 
 
 class ApprovalDecisionView(APIView):
-    permission_classes = [IsContentStaffOrApprover]
+    # Who may approve depends on the flow's steps (a capability or a role per step), so the service decides.
+    permission_classes = [CanSeeApprovals]
     approve = True
 
-    @extend_schema(tags=STAFF_TAGS, summary="Approve or reject a request", description="Only innovation managers and administrators decide. Rejecting needs a comment.", request=DecisionSerializer, responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        tags=STAFF_TAGS,
+        summary="Approve or send back a request",
+        description="Approve counts for every waiting step this person may approve; the change goes live when all its steps are done. "
+        "Send back needs a comment and works from any step.",
+        request=DecisionSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
     def post(self, request, approval_id):
         serializer = DecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         approval = get_object_or_404(ApprovalRequest, id=approval_id)
         approval = ApprovalService.decide(approval, actor=request.user, approve=self.approve, comment=serializer.validated_data.get("comment", ""))
-        return api_success(data=ApprovalService.payload(approval), message="Approved." if self.approve else "Sent back.")
+        return api_success(data=ApprovalService.payload(approval, user=request.user), message="Approved." if self.approve else "Sent back.")
 
 
 class ApprovalRejectView(ApprovalDecisionView):
@@ -164,7 +180,7 @@ class ApprovalRejectView(ApprovalDecisionView):
 class PostViewSet(viewsets.ModelViewSet):
     """Staff posts editor. The older /api/content/news/ endpoints keep working on the same rows."""
 
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = PostSerializer
     queryset = ContentItem.objects.select_related("cover", "author")
 
@@ -187,6 +203,7 @@ class PostViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         found = dict(ContentItem.objects.values_list("status").annotate(total=Count("id")).values_list("status", "total"))
         counts = {
+            **PostService.monthly_view_counts(),
             "live": found.get("published", 0),
             "scheduled": found.get("scheduled", 0),
             "waiting_approval": found.get("pending_approval", 0),
@@ -211,8 +228,15 @@ class PostViewSet(viewsets.ModelViewSet):
     @extend_schema(summary="Change a post")
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop("partial", False)
-        serializer = self.get_serializer(self.get_object(), data=request.data, partial=partial)
+        post = self.get_object()
+        serializer = self.get_serializer(post, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
+        if post.status == "published":
+            # R-29 c (Nshathisi): a change to a live post goes through approval; the live post stays until then.
+            approval = PostService.propose_edit(post, dict(request.data), actor=request.user, summary=f"Change to: {post.title}")
+            AuditService.log_action(actor=request.user, action_type="post_change_proposed", target=post, metadata={"approval_id": str(approval.id)})
+            data = self.get_serializer(ContentItem.objects.get(pk=post.pk)).data
+            return api_success(data=data, message="Your change is waiting for approval. The live post has not changed.", status_code=status.HTTP_202_ACCEPTED)
         post = serializer.save()
         if post.status == "published":
             clear_home_cache()
@@ -364,7 +388,7 @@ class PublicNewslettersView(APIView):
 
 @extend_schema(tags=STAFF_TAGS)
 class PartnerViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsOfficerOrAdmin]
+    permission_classes = [HasCapability.of("content.edit")]
     serializer_class = PartnerSerializer
     queryset = Partner.objects.select_related("logo").prefetch_related("programs")
 

@@ -1,7 +1,7 @@
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 
@@ -409,7 +409,7 @@ class SpecialistInvitationTokenView(generics.RetrieveAPIView):
     """GET /api/specialist-invite/{token}/  — public, no auth required.
     Returns enough context for the landing page.
     """
-    permission_classes = []
+    permission_classes = [AllowAny]  # public on purpose: the unguessable token is the key
     authentication_classes = []
     throttle_classes = [IPRateThrottle]
 
