@@ -1,7 +1,7 @@
 {
   "branch": "feat/s2-admin-screens",
   "sha": "de7fed1c60d8e9188723f2f0fe29734a0c26e6d2",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44732225219",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44734594722",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -15,8 +15,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 237,
-      "job_seconds_to_here": 256
+      "pytest_seconds": 205,
+      "job_seconds_to_here": 222
     },
     "admin": {
       "install": "success",

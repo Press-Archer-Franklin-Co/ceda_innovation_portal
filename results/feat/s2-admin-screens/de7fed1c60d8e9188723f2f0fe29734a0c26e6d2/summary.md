@@ -1,9 +1,9 @@
 ## CI results for `feat/s2-admin-screens` @ `de7fed1`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44732225219
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44734594722
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 57s, job steps 4m 16s
+Timing (api job): Run tests 3m 25s, job steps 3m 42s
 
 | Check | Result | Details |
 | --- | --- | --- |
