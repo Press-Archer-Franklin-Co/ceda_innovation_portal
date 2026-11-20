@@ -6,7 +6,7 @@
  * - B2 (on main since 4facb3b): quick start, drafts, steps,
  *   /api/me/*, similar ideas, timeline.
  * - B4 (on main): the published form.
- * - B3 is not built yet. Its types follow the prompt and are marked TODO(B3).
+ * - B3 (on main): messages, open questions, notification categories.
  * - Fields the screens need but no prompt plans are optional and marked
  *   TODO(R-<n>) with the request number in ~/ceda-coord/requests.md.
  */
@@ -159,7 +159,7 @@ export interface StageDot {
   status: StageStatus
 }
 
-/** TODO(R-5): the officer's open question; B3 fills it. */
+/** The officer's open question (R-5 c). */
 export interface OpenQuestion {
   officer_first_name: string
   excerpt: string
@@ -176,8 +176,8 @@ export interface IdeaItem {
   sector: SectorRef | null
   program: { id: string; title: string; is_general_intake: boolean }
   stage: string
-  /** TODO(R-16): the raw status, with B3. */
-  status?: string
+  /** The raw status ("draft" for drafts), R-16. */
+  status: string
   percent_complete: number
   last_change: string | null
   needs_action_reason: string
@@ -188,11 +188,10 @@ export interface IdeaItem {
   decided_at: string | null
   /** True for finished ideas with feedback. */
   has_feedback: boolean
-  /** TODO(R-5 c): comes with B3. */
-  open_question?: OpenQuestion | null
-  /** TODO(R-5 d): only on summary.active_idea; not on main yet. */
+  open_question: OpenQuestion | null
+  /** Only on summary.active_idea (R-5 d). */
   unread_messages?: number
-  /** TODO(R-5 d): only on summary.active_idea; not on main yet. */
+  /** Only on summary.active_idea (R-5 d). */
   unread_updates?: number
 }
 
@@ -210,8 +209,7 @@ export type NextAction =
       title: string
       detail: string
       reply_by: string | null
-      /** TODO(R-5 c): comes with B3. */
-      open_question?: OpenQuestion
+      open_question: OpenQuestion | null
     }
   | {
       type: 'finish_draft'
@@ -229,11 +227,11 @@ export interface MySummary {
   unread_notifications: number
 }
 
+/** What a notification or update is about: {type, id, slug}, null where not set. */
 export interface UpdateLink {
   type: 'idea' | 'challenge' | 'post' | string
-  id: string
-  slug?: string
-  url?: string
+  id: string | null
+  slug?: string | null
 }
 
 export type UpdateItem =
@@ -246,7 +244,6 @@ export type UpdateItem =
       at: string
       /** Picks the icon (R-5 f). */
       notification_type: string
-      /** TODO(R-8): null for notifications until B3. */
       link: UpdateLink | null
     }
   | {
@@ -354,21 +351,37 @@ export interface TrackedIdea {
   timeline: Timeline
 }
 
-// ── 2.4 Messages (B3, not built) ───────────────────────────────────────────
+// ── 2.4 Messages (B3, apps/communications/messaging.py) ───────────────────
 
-/** TODO(B3): shape from the B3 prompt; confirm against the backend schema. */
+export interface MessageAttachment {
+  id: string
+  kind: 'image' | 'video' | 'document' | 'audio'
+  url: string
+  mime_type: string
+  duration_seconds: number | null
+  original_filename: string
+}
+
 export interface IdeaMessage {
   id: string
   author_role: 'applicant' | 'officer' | 'system'
+  /** label: "Kago T., Innovation officer"; the system's is "CEDA Innovation". */
+  author: { name: string; role: string; label: string }
   body: string
-  attachments: MediaAsset[]
+  attachments: MessageAttachment[]
   reply_by: string | null
+  is_question: boolean
+  answered_at: string | null
+  /** Read by the person viewing. */
+  read: boolean
   created_at: string
-  read_at?: string | null
-  /** TODO(R-7): "Kago T." or "CEDA Innovation". */
-  author_name?: string
-  /** TODO(R-7): "Innovation officer". */
-  author_title?: string
+}
+
+/** GET /api/me/ideas/{id}/messages/ */
+export interface MessageThreadPayload {
+  idea_id: string
+  open_question: IdeaMessage | null
+  results: IdeaMessage[]
 }
 
 export interface NewMessage {
@@ -377,12 +390,19 @@ export interface NewMessage {
   attachments?: string[]
 }
 
-/** TODO(B3): latest message per idea, for the 2.2 side panel. */
+/** One idea in GET /api/me/messages/recent/ (the 2.2 side panel). */
 export interface RecentThread {
   idea_id: string
-  idea_title: string
-  last_message: IdeaMessage
+  reference: string
+  title: string
   unread: number
+  has_open_question: boolean
+  latest: IdeaMessage
+}
+
+export interface RecentMessages {
+  total_unread: number
+  results: RecentThread[]
 }
 
 // ── Media (main, B1) ───────────────────────────────────────────────────────
@@ -415,12 +435,10 @@ export interface NotificationItem {
   body: string
   is_read: boolean
   created_at: string
-  /** TODO(R-8) */
-  category?: NotificationCategory
-  /** TODO(R-8) */
-  link?: UpdateLink | null
-  /** TODO(R-8): for the "Reply by 25 Nov" tag. */
-  due_at?: string | null
+  category: NotificationCategory
+  link: UpdateLink | null
+  /** Questions with a reply-by date, for the "Reply by 25 Nov" tag. */
+  due_at: string | null
 }
 
 export type NotificationChannel = 'web' | 'whatsapp' | 'sms' | 'email'

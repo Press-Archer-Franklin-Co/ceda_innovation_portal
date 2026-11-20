@@ -7,13 +7,13 @@ import { useToast } from '../ui/Toast'
 import { useI18n } from '../../i18n'
 import { ideaMessagesService } from '../../services/ideaMessages.service'
 import { mediaService } from '../../services/media.service'
-import type { IdeaMessage, MediaAsset } from '../../types/innovator'
+import type { IdeaMessage, MediaAsset, MessageAttachment } from '../../types/innovator'
 import { formatDateTime, formatShortDate } from './format'
 
 /**
- * 2.4 messages with the officer (B3). While B3 is not on main the thread
- * endpoint does not exist; the section then says so plainly instead of
- * showing an empty conversation.
+ * 2.4 messages with the officer (B3). If the thread cannot be loaded (for
+ * example the messages switch is off), the section says so plainly instead
+ * of showing an empty conversation.
  */
 export default function MessageThread({ ideaId }: { ideaId: string }) {
   const { t, lang } = useI18n()
@@ -22,8 +22,8 @@ export default function MessageThread({ ideaId }: { ideaId: string }) {
 
   const load = useCallback(async () => {
     try {
-      const list = await ideaMessagesService.list(ideaId)
-      setMessages(list)
+      const thread = await ideaMessagesService.thread(ideaId)
+      setMessages(thread.results)
       setState('ready')
       ideaMessagesService.markRead(ideaId).catch(() => undefined)
     } catch {
@@ -50,19 +50,18 @@ export default function MessageThread({ ideaId }: { ideaId: string }) {
                 const mine = message.author_role === 'applicant'
                 const author = mine
                   ? t('track.you')
-                  : message.author_name || (message.author_role === 'system' ? t('track.system') : t('track.officer'))
-                const title = mine ? '' : message.author_title
+                  : message.author.label || message.author.name || (message.author_role === 'system' ? t('track.system') : t('track.officer'))
                 return (
                   <li key={message.id} className={clsx('flex gap-3', mine && 'flex-row-reverse')}>
-                    <Avatar name={author} size="sm" decorative />
+                    <Avatar name={mine ? t('track.you') : message.author.name || author} size="sm" decorative />
                     <div
                       className={clsx(
                         'max-w-[560px] rounded-card px-4 py-3',
-                        mine ? 'bg-surface2' : message.reply_by ? 'border-2 border-accent bg-surface' : 'border border-border bg-surface',
+                        mine ? 'bg-surface2' : message.is_question && !message.answered_at ? 'border-2 border-accent bg-surface' : 'border border-border bg-surface',
                       )}
                     >
                       <p className="text-d-cap text-muted">
-                        {[author, title].filter(Boolean).join(', ')} · {formatDateTime(message.created_at, lang)}
+                        {author} · {formatDateTime(message.created_at, lang)}
                       </p>
                       <p className="mt-1.5 whitespace-pre-line break-words text-d-body-s text-text">{message.body}</p>
                       {message.attachments.length > 0 && <Attachments items={message.attachments} />}
@@ -85,7 +84,7 @@ export default function MessageThread({ ideaId }: { ideaId: string }) {
   )
 }
 
-function Attachments({ items }: { items: MediaAsset[] }) {
+function Attachments({ items }: { items: MessageAttachment[] }) {
   const { t } = useI18n()
   return (
     <ul className="mt-3 flex flex-wrap gap-2">
@@ -109,7 +108,7 @@ function Attachments({ items }: { items: MediaAsset[] }) {
   )
 }
 
-/** Formats in the order we prefer; the API accepts mp4/m4a and ogg today, and webm with R-7. */
+/** Formats in the order we prefer; the API accepts all four (webm since B3). */
 const RECORD_TYPES: Array<{ mime: string; ext: string }> = [
   { mime: 'audio/mp4', ext: 'm4a' },
   { mime: 'audio/ogg;codecs=opus', ext: 'ogg' },
