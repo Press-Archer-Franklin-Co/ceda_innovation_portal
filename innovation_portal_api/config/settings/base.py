@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     "apps.reference",
     "apps.media_library",
     "apps.platform_config",
+    "apps.assistant",
 ]
 
 MIDDLEWARE = [
@@ -162,6 +163,8 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "loggers": {
         "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # C3: AI helper outcomes (no key, no text sent), so admins can see why it hid itself.
+        "apps.assistant": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -252,6 +255,8 @@ REST_FRAMEWORK = {
         "subscribe": "10/hour",
         "subscription_link": "60/hour",
         "challenges_public": "120/minute",
+        "assistant": "20/minute",
+        "assistant_guest": "10/minute",
     },
 }
 
@@ -267,6 +272,14 @@ ANALYTICS_DECISION_TARGET_DAYS = int(os.getenv("INNOVATION_PORTAL_ANALYTICS_DECI
 # Form builder (B4): dotted path to a class with translate(texts, source=, target=) for
 # Setswana suggestions. Empty means suggestions are off (the endpoint answers 501).
 FORM_TRANSLATION_PROVIDER = os.getenv("INNOVATION_PORTAL_FORM_TRANSLATION_PROVIDER", "")
+
+# AI helper (C3): US dollars per million tokens, used to work out the cost of each call and
+# the monthly limit. Cache writes (5 minute) cost 1.25 times input. Update when prices change.
+ASSISTANT_MODEL_PRICES = {
+    "claude-opus-5-5": {"input": 4.00, "output": 20.00, "cache_write": 5.00, "cache_read": 0.20},
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_write": 2.50, "cache_read": 0.10},
+    "claude-haiku-5-5": {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01},
+}
 
 from datetime import timedelta
 

@@ -18,6 +18,9 @@ const FRONTENDS = ['innovation_portal_admin/src', 'innovation_portal_public/src'
 const NOT_IN_UI = {
   'dashboard.view': 'the dashboard opens for every staff member; the API uses it for the overview numbers',
   'reports.export': 'no export button yet (B7)',
+  // C3: the screens come on feat/c3-assistant-screens, which removes these two lines.
+  'assistant.hints': 'AI helper card on submission detail comes with the C3 screens branch',
+  'assistant.manage': 'Admin > AI helper page comes with the C3 screens branch',
 }
 
 // Role-name tests that are allowed: auth internals and display-only role pickers.

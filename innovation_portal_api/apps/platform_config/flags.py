@@ -53,6 +53,14 @@ FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     FlagDefinition("sms_messages", "SMS messages", "Send SMS, including sign-in codes. Needs an active SMS connection.", "messaging", False),
     FlagDefinition("whatsapp_messages", "WhatsApp messages", "Send WhatsApp messages.", "messaging", False, coming_soon=True),
     FlagDefinition("ussd", "USSD", "Let people use the portal from a USSD menu.", "messaging", False, coming_soon=True),
+    FlagDefinition(
+        "ai_helper",
+        "AI helper",
+        "Claude guides innovators, gives officers hints and answers questions about the portal. Needs an active, tested Claude connection.",
+        "integrations",
+        False,
+        is_public=True,
+    ),
     FlagDefinition("translation_suggestions", "Translation suggestions", "Suggest Setswana text for staff to review.", "integrations", False),
 )
 FLAG_DEFAULTS = {definition.key: definition.default for definition in FLAG_DEFINITIONS}

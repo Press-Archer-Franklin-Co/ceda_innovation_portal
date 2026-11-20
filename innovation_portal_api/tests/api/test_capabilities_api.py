@@ -127,7 +127,7 @@ class CapabilityEndpointTests(TestCase):
         self.client.force_authenticate(self.manager)
         data = self.client.get("/api/auth/me/").json()["data"]
         self.assertIn("roles", data)
-        self.assertEqual(data["capabilities"], ["content.approve", "content.edit", "entries.review", "entries.search"])
+        self.assertEqual(data["capabilities"], ["assistant.hints", "content.approve", "content.edit", "entries.review", "entries.search"])
         self.client.force_authenticate(self.officer)
         self.assertIn("content.edit", self.client.get("/api/auth/me/").json()["data"]["capabilities"])
 

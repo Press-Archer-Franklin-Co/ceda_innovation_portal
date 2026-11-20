@@ -50,6 +50,9 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     # Administration (was IsAdministrator).
     "users.manage": (R.ADMINISTRATOR,),
     "settings.manage": (R.ADMINISTRATOR,),
+    # C3 AI helper: officer hints and related ideas on submissions they can open; tune the helper.
+    "assistant.hints": (R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
+    "assistant.manage": (R.ADMINISTRATOR,),
 }
 
 
@@ -70,6 +73,18 @@ CATALOGUE: dict[str, dict] = {
     "content.approve": {"group": "website", "label": "Approve website content", "label_tn": "Dumelela diteng tsa webosaete"},
     "users.manage": {"group": "administration", "label": "Manage people and roles", "label_tn": "Laola batho le maemo", "locked_to": (R.ADMINISTRATOR,)},
     "settings.manage": {"group": "administration", "label": "Change platform settings", "label_tn": "Fetola ditlhophiso", "locked_to": (R.ADMINISTRATOR,)},
+    "assistant.hints": {
+        "group": "ideas",
+        "label": "See AI helper hints and related ideas",
+        "label_tn": "Bona dikakantsho tsa mothusi wa AI le dikakanyo tse di amanang",
+        "description": "Summary, points to check and similar or complementary ideas on submissions the person can already open.",
+    },
+    "assistant.manage": {
+        "group": "administration",
+        "label": "Tune the AI helper",
+        "label_tn": "Baakanya mothusi wa AI",
+        "description": "Write guidance, upload the user manual, switch helper features on or off and see what it costs.",
+    },
 }
 GROUPS = ("overview", "ideas", "challenges", "website", "administration")
 # Roles that never get staff capabilities, whatever is ticked.
