@@ -13,14 +13,14 @@ import { useAnalyticsExport } from './useExport'
 /** Download menu (CSV or PDF) for one report. Shown only to people with reports.export. */
 export function ExportMenu({ report, filters, label, text, compact = false }) {
   const t = useT()
-  const start = useAnalyticsExport()
+  const [start, busy] = useAnalyticsExport()
   return (
     <DropdownMenu
       label={label}
       width={200}
       trigger={(props) => (
-        <Button {...props} variant={compact ? 'ghost' : 'secondary'} size="sm" icon={<Download size={14} aria-hidden />} aria-label={compact ? label : undefined}>
-          {compact ? null : (text ?? t('exp.download'))}
+        <Button {...props} variant={compact ? 'ghost' : 'secondary'} size="sm" loading={busy} icon={<Download size={14} aria-hidden />} aria-label={compact ? (busy ? t('exp.busy') : label) : undefined}>
+          {compact ? null : (busy ? t('exp.busy') : (text ?? t('exp.download')))}
         </Button>
       )}
       items={[

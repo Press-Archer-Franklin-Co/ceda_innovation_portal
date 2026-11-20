@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useToast } from '../ui/toast'
 import { useT } from '../../i18n/context'
 import { analytics } from '../../lib/api/endpoints'
@@ -23,17 +23,20 @@ function saveBlob(blob, name) {
 
 /**
  * 3.2 exports (R-35): POST /analytics/exports/, poll until ready, then a toast with a Download button.
- * Returns start(report, format, filters). Needs reports.export; callers hide the menu otherwise.
+ * Returns [start(report, format, filters), busy]. busy is true while this caller has an export running.
+ * Needs reports.export; callers hide the menu otherwise.
  */
 export function useAnalyticsExport() {
   const t = useT()
   const toast = useToast()
   const running = useRef(new Set())
+  const [busy, setBusy] = useState(false)
 
-  return useCallback(async (report, format, filters) => {
+  const start = useCallback(async (report, format, filters) => {
     const key = `${report}:${format}:${JSON.stringify(filters)}`
     if (running.current.has(key)) return
     running.current.add(key)
+    setBusy(true)
     const fail = (message) => toast.show({ tone: 'error', title: t('exp.failed'), body: message ? t('exp.failedBody', { message }) : undefined })
     try {
       toast.show({ tone: 'info', title: t('exp.making'), body: t('exp.makingBody') })
@@ -61,6 +64,8 @@ export function useAnalyticsExport() {
       fail(err?.message)
     } finally {
       running.current.delete(key)
+      setBusy(running.current.size > 0)
     }
   }, [t, toast])
+  return [start, busy]
 }

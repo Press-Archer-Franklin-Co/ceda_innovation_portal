@@ -68,17 +68,17 @@ export function channelConfig(rows, { t, onPick }) {
   }
 }
 
-/** Ideas that reached each step, as a share of those sent in. */
+/** Ideas that reached each step, as a share of those sent in. A step that is not tracked has no bar and says so. */
 export function funnelConfig(rows, { t }) {
   return {
     type: 'bar',
     data: {
-      labels: rows.map((r) => t(`rep.step.${r.step}`)),
+      labels: rows.map((r) => (r.count === null ? `${t(`rep.step.${r.step}`)}: ${t('rep.notTracked')}` : t(`rep.step.${r.step}`))),
       datasets: [{ data: rows.map((r) => r.count), backgroundColor: rows.map((_, i) => tokenColor('primary', Math.max(0.3, 0.95 - i * 0.13))), borderRadius: 4, maxBarThickness: 22 }],
     },
     options: baseOptions({
       horizontal: true,
-      tooltip: { callbacks: { label: (item) => `${t('dash.series.tip', { count: item.raw })} (${rows[item.dataIndex].pct}%)` } },
+      tooltip: { callbacks: { label: (item) => (rows[item.dataIndex].count === null ? t('rep.notTracked') : `${t('dash.series.tip', { count: item.raw })} (${rows[item.dataIndex].pct}%)`) } },
     }),
   }
 }

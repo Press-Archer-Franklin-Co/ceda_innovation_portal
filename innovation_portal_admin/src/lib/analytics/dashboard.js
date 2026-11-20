@@ -10,7 +10,7 @@ export const CHANNEL_TOKEN = { web: 'primary', office: 'amber', whatsapp: 'succe
 /** Pipeline stage codes from /pipeline/, in order. Labels come from the strings files, not the API. */
 export const STAGES = ['received', 'screening', 'review', 'judging', 'shortlisted', 'finalist', 'action_needed']
 
-/** Funnel steps from /funnel/, in order. "funded" is shown only when funded_tracked is true. */
+/** Funnel steps from /funnel/, in order. "funded" says "Not tracked yet" while funded_tracked is false. */
 export const FUNNEL_STEPS = ['submitted', 'passed_check', 'reviewed', 'panel', 'supported', 'funded']
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/
@@ -91,11 +91,15 @@ export function pipelineRows(pipeline) {
   })
 }
 
-/** Funnel steps with the share of "submitted" that reached each one. Funded is left out until it is tracked. */
+/**
+ * Funnel steps with the share of "submitted" that reached each one. Until funding is tracked, the funded row
+ * has count and pct null, so screens say "Not tracked yet" instead of showing 0.
+ */
 export function funnelRows(funnel) {
   if (!funnel) return []
   const top = funnel.submitted ?? 0
-  return FUNNEL_STEPS.filter((step) => step !== 'funded' || funnel.funded_tracked).map((step) => {
+  return FUNNEL_STEPS.map((step) => {
+    if (step === 'funded' && !funnel.funded_tracked) return { step, count: null, pct: null }
     const count = funnel[step] ?? 0
     return { step, count, pct: top ? Math.round((count * 1000) / top) / 10 : 0 }
   })

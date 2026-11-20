@@ -53,10 +53,11 @@ describe('shaping API answers', () => {
     expect(rows[1]).toEqual({ code: 'review', count: 5, waiting: 3, bottleneck: true })
   })
 
-  it('leaves "funded" out of the funnel until it is tracked', () => {
+  it('marks "funded" as not tracked instead of showing 0', () => {
     const funnel = { submitted: 40, passed_check: 30, reviewed: 20, panel: 8, supported: 3, funded: null, funded_tracked: false }
     const rows = funnelRows(funnel)
-    expect(rows.map((r) => r.step)).toEqual(['submitted', 'passed_check', 'reviewed', 'panel', 'supported'])
+    expect(rows.map((r) => r.step)).toEqual(['submitted', 'passed_check', 'reviewed', 'panel', 'supported', 'funded'])
+    expect(rows.at(-1)).toEqual({ step: 'funded', count: null, pct: null })
     expect(rows[1].pct).toBe(75)
     expect(funnelRows({ ...funnel, funded: 1, funded_tracked: true }).at(-1)).toEqual({ step: 'funded', count: 1, pct: 2.5 })
     expect(funnelRows({ submitted: 0, passed_check: 0 })[1].pct).toBe(0)

@@ -48,7 +48,9 @@ function FunnelCard({ filters, canExport }) {
       chart={{ config, label: t('rep.funnel.label', { count: sent }) }}
       table={{
         columns: [{ key: 'step', label: t('dash.col.step') }, { key: 'count', label: t('dash.col.ideas'), align: 'right' }, { key: 'pct', label: t('dash.col.reached'), align: 'right' }],
-        rows: rows.map((r) => ({ id: r.step, step: t(`rep.step.${r.step}`), count: r.count, pct: `${r.pct}%` })),
+        rows: rows.map((r) => (r.count === null
+          ? { id: r.step, step: t(`rep.step.${r.step}`), count: t('rep.notTracked'), pct: t('rep.notTracked') }
+          : { id: r.step, step: t(`rep.step.${r.step}`), count: r.count, pct: `${r.pct}%` })),
       }}
       note={query.data && !query.data.funded_tracked ? <p className="text-[12px] text-muted">{t('rep.funnel.notTracked')}</p> : null} />
   )
@@ -142,7 +144,7 @@ export default function Reports() {
         title={t('rep.title')}
         subtitle={t('rep.subtitle')}
         back={can('dashboard.view') ? <Link to={{ pathname: '/dashboard', search: new URLSearchParams(filters).toString() }} className={buttonClasses({ variant: 'ghost', size: 'sm' })}><ArrowLeft size={14} aria-hidden /> {t('dash.title')}</Link> : null}
-        actions={tab === 'numbers' && can('reports.export') ? <ExportMenu report="all" filters={filters} label={t('exp.all')} text={t('exp.all')} /> : null}
+        actions={tab === 'numbers' && can('reports.export') ? <ExportMenu report="all" filters={filters} label={t('exp.menu', { chart: t('exp.report.all') })} text={t('exp.button')} /> : null}
       />
       {tabs.length > 1 && <Tabs tabs={tabs} active={tab} onChange={setTab} label={t('rep.title')} className="mb-3.5" />}
       {tab === 'numbers' && <Numbers />}
