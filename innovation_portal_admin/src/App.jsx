@@ -36,6 +36,7 @@ const Users = lazy(() => import('./pages/users/Users'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
 const ContentList = lazy(() => import('./pages/content/ContentList'))
 const ContentEditor = lazy(() => import('./pages/content/ContentEditor'))
+const HomePageEditor = lazy(() => import('./pages/content/HomePageEditor'))
 const HackathonContentEditor = lazy(() => import('./pages/content/HackathonContentEditor'))
 const WinnersManager = lazy(() => import('./pages/content/WinnersManager'))
 const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
@@ -119,6 +120,7 @@ export default function App() {
                   <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
                   <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
                   <Route path="/content"                        element={<ErrorBoundary><ContentList /></ErrorBoundary>} />
+                  <Route path="/content/home"                   element={<ErrorBoundary><HomePageEditor /></ErrorBoundary>} />
                   <Route path="/content/news/new"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
                   <Route path="/content/news/:id"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
                   <Route path="/content/hackathons/new"         element={<ErrorBoundary><HackathonContentEditor /></ErrorBoundary>} />
