@@ -67,6 +67,7 @@ export default function Styleguide() {
   const [judge, setJudge] = useState(null)
   const [yes, setYes] = useState('yes')
   const [toggle, setToggle] = useState(true)
+  const [stage, setStage] = useState('tested')
   const [page, setPage] = useState(3)
   const [step, setStep] = useState(1)
   const [modal, setModal] = useState('none')
@@ -245,6 +246,10 @@ export default function Styleguide() {
           <div className="mt-4 grid sm:grid-cols-2 gap-4">
             <label className="block"><span className="label">.input (older pages)</span><input className="input" placeholder="Placeholder" /></label>
           </div>
+        </Section>
+
+        <Section figma="2.3 Submit an idea · How far along are you? (R-17)" title="RadioGroup variant=&quot;cards&quot;">
+          <RadioGroup name="sg-stage" legend="How far along are you?" variant="cards" options={[{ value: 'idea', label: 'Just an idea', description: 'Not tried yet' }, { value: 'tested', label: 'Tested', description: 'Made a few, got feedback' }, { value: 'selling', label: 'Already selling', description: 'Some customers pay' }]} value={stage} onChange={setStage} />
         </Section>
 
         <Section figma="Components › Tabs" title="Tabs">

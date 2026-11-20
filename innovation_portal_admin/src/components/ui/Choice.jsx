@@ -85,14 +85,71 @@ export const Radio = forwardRef(function Radio({ label, description, invalid, cl
   )
 })
 
-/** A handful of fixed options that are the information itself (Yes / No). options: [{ value, label, description?, disabled? }] */
-export function RadioGroup({ name, legend, options, value, onChange, error, hint, inline, className }) {
+/** One option as a bordered card (Figma 2.3 "How far along are you?"). Used by RadioGroup variant="cards". */
+function RadioCard({ id, name, value, label, description, checked, disabled, invalid, onChange }) {
+  return (
+    <label
+      htmlFor={id}
+      className={cn(
+        'relative flex items-center gap-2.5 min-h-[44px] px-3.5 py-3 rounded-[10px] border bg-surface cursor-pointer transition-colors',
+        invalid ? 'border-danger' : 'border-border hover:border-muted/60',
+        'has-[:checked]:bg-primary-soft has-[:checked]:border-primary has-[:checked]:ring-1 has-[:checked]:ring-primary',
+        'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-bg',
+        'has-[:disabled]:opacity-60 has-[:disabled]:cursor-not-allowed',
+      )}
+    >
+      <input
+        id={id}
+        type="radio"
+        name={name}
+        value={value}
+        checked={checked}
+        disabled={disabled}
+        aria-invalid={invalid || undefined}
+        aria-describedby={description ? `${id}-desc` : undefined}
+        onChange={onChange}
+        className="peer sr-only"
+      />
+      <span aria-hidden className="w-[18px] h-[18px] rounded-full border-2 border-border bg-surface flex items-center justify-center shrink-0 peer-checked:border-primary peer-checked:[&>span]:scale-100">
+        <span className="w-2 h-2 rounded-full bg-primary scale-0 transition-transform" />
+      </span>
+      <span className="flex flex-col min-w-0">
+        <span className="text-d-label text-text">{label}</span>
+        {description && <span id={`${id}-desc`} className="text-d-cap text-muted">{description}</span>}
+      </span>
+    </label>
+  )
+}
+
+/**
+ * A handful of fixed options that are the information itself (Yes / No). options: [{ value, label, description?, disabled? }]
+ * variant "cards": bordered cards with label and description in equal columns (Figma 2.3), chosen card outlined in red.
+ */
+export function RadioGroup({ name, legend, options, value, onChange, error, hint, inline, variant = 'list', className }) {
   const auto = useId().replace(/:/g, '')
   const errId = error ? `rg${auto}-err` : undefined
   const hintId = hint ? `rg${auto}-hint` : undefined
   return (
     <fieldset className={cn('min-w-0', className)} aria-describedby={[errId, hintId].filter(Boolean).join(' ') || undefined}>
       <legend className="text-[13px] leading-5 font-bold text-text mb-0.5">{legend}</legend>
+      {variant === 'cards' ? (
+        <div className={cn('grid grid-cols-1 gap-2.5', options.length >= 3 ? 'sm:grid-cols-3' : options.length === 2 ? 'sm:grid-cols-2' : '')}>
+          {options.map((o) => (
+            <RadioCard
+              key={o.value}
+              id={`rg${auto}-${o.value}`}
+              name={name}
+              value={o.value}
+              label={o.label}
+              description={o.description}
+              disabled={o.disabled}
+              checked={value === o.value}
+              invalid={Boolean(error)}
+              onChange={() => onChange(o.value)}
+            />
+          ))}
+        </div>
+      ) : (
       <div className={cn(inline ? 'flex flex-wrap gap-x-5' : 'flex flex-col')}>
         {options.map((o) => (
           <Radio
@@ -108,6 +165,7 @@ export function RadioGroup({ name, legend, options, value, onChange, error, hint
           />
         ))}
       </div>
+      )}
       {error && <p id={errId} role="alert" className="text-d-cap text-danger mt-1">{error}</p>}
       {hint && <p id={hintId} className="text-d-cap text-muted mt-1">{hint}</p>}
     </fieldset>
