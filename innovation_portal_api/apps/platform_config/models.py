@@ -41,7 +41,9 @@ class IntegrationConnection(UUIDModel, TimeStampedModel):
     """Saved settings for one external provider (an SSO directory, an SMS gateway, ...).
 
     Non-secret settings live in ``config``; secrets are encrypted into ``secrets_encrypted``
-    and never leave the server. At most one connection per kind is active.
+    and never leave the server. At most one connection per kind is active, except for
+    the kinds in ``MULTI_ACTIVE_KINDS`` (C2: one USSD connection per operator or short code,
+    and more than one WhatsApp number).
     """
 
     class Kind(models.TextChoices):
@@ -49,6 +51,7 @@ class IntegrationConnection(UUIDModel, TimeStampedModel):
         SMS = "sms", "SMS"
         EMAIL = "email", "Email"
         WHATSAPP = "whatsapp", "WhatsApp"
+        USSD = "ussd", "USSD"
         TRANSLATION = "translation", "Translation"
         STORAGE = "storage", "Storage"
 
@@ -84,10 +87,14 @@ class IntegrationConnection(UUIDModel, TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["kind"],
-                condition=models.Q(is_active=True),
+                condition=models.Q(is_active=True) & ~models.Q(kind__in=["ussd", "whatsapp"]),
                 name="uq_one_active_integration_per_kind",
             )
         ]
+
+    # Kinds that may have several active connections at once. Keep in step with the
+    # constraint above.
+    MULTI_ACTIVE_KINDS = ("ussd", "whatsapp")
 
     def __str__(self) -> str:
         return f"{self.kind}:{self.provider}:{self.name}"

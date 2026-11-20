@@ -50,6 +50,8 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     # Administration (was IsAdministrator).
     "users.manage": (R.ADMINISTRATOR,),
     "settings.manage": (R.ADMINISTRATOR,),
+    # C2: WhatsApp and USSD journeys, channel connections and their activity.
+    "channels.manage": OFFICER_ADMIN,
 }
 
 
@@ -70,6 +72,12 @@ CATALOGUE: dict[str, dict] = {
     "content.approve": {"group": "website", "label": "Approve website content", "label_tn": "Dumelela diteng tsa webosaete"},
     "users.manage": {"group": "administration", "label": "Manage people and roles", "label_tn": "Laola batho le maemo", "locked_to": (R.ADMINISTRATOR,)},
     "settings.manage": {"group": "administration", "label": "Change platform settings", "label_tn": "Fetola ditlhophiso", "locked_to": (R.ADMINISTRATOR,)},
+    "channels.manage": {
+        "group": "administration",
+        "label": "Run WhatsApp and USSD journeys",
+        "label_tn": "Tsamaisa maeto a WhatsApp le USSD",  # TODO tn-review
+        "description": "Design journeys, test them on the phone simulator, connect providers and see activity.",
+    },
 }
 GROUPS = ("overview", "ideas", "challenges", "website", "administration")
 # Roles that never get staff capabilities, whatever is ticked.

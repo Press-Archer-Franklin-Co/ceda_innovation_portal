@@ -313,9 +313,11 @@ class IntegrationService:
         blocker = IntegrationService.activation_blocker(connection)
         if blocker:
             raise ValidationError({"code": "activation_blocked", "detail": blocker})
-        previous = list(
-            IntegrationConnection.objects.select_for_update().filter(kind=connection.kind, is_active=True).exclude(pk=connection.pk)
-        )
+        previous = []
+        if connection.kind not in IntegrationConnection.MULTI_ACTIVE_KINDS:
+            previous = list(
+                IntegrationConnection.objects.select_for_update().filter(kind=connection.kind, is_active=True).exclude(pk=connection.pk)
+            )
         for item in previous:
             item.is_active = False
             item.status = IntegrationConnection.Status.DISABLED

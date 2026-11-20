@@ -51,8 +51,9 @@ FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     FlagDefinition("public_search", "Website search", "Search box on the public website.", "website", True, is_public=True),
     FlagDefinition("subscriptions", "Email subscriptions", "Visitors can subscribe to news and new challenges.", "website", True, is_public=True),
     FlagDefinition("sms_messages", "SMS messages", "Send SMS, including sign-in codes. Needs an active SMS connection.", "messaging", False),
-    FlagDefinition("whatsapp_messages", "WhatsApp messages", "Send WhatsApp messages.", "messaging", False, coming_soon=True),
-    FlagDefinition("ussd", "USSD", "Let people use the portal from a USSD menu.", "messaging", False, coming_soon=True),
+    # C2: on only when the switch is on and at least one connection is active (apps.channels).
+    FlagDefinition("whatsapp_messages", "WhatsApp messages", "WhatsApp journeys and messages. Needs at least one active WhatsApp connection.", "messaging", False),
+    FlagDefinition("ussd", "USSD", "Let people use the portal from a USSD menu. Needs at least one active USSD connection.", "messaging", False),
     FlagDefinition("translation_suggestions", "Translation suggestions", "Suggest Setswana text for staff to review.", "integrations", False),
 )
 FLAG_DEFAULTS = {definition.key: definition.default for definition in FLAG_DEFINITIONS}
