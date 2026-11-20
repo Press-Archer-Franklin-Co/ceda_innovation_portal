@@ -196,7 +196,6 @@ const en = {
   'search.opensNew': '(opens in a new tab)',
   'qs2.name': 'Full name',
   'qs2.district': 'District',
-  'qs2.districtPlaceholder': 'Choose your district',
   'qs2.districtLoading': 'Loading districts',
   'qs2.districtError': 'Choose a district from the list.',
   'qs2.email': 'Email',
