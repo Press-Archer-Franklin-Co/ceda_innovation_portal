@@ -3,6 +3,9 @@ import { getLang } from '../../i18n/context'
 export const TOKEN_KEY   = 'ceda_access'
 export const REFRESH_KEY = 'ceda_refresh'
 
+/** Sent on every API call so a refusal in the API log names the build (S1). */
+export const CEDA_CLIENT = import.meta.env.VITE_CEDA_CLIENT ?? 'admin@unknown'
+
 function getToken()   { return localStorage.getItem(TOKEN_KEY) }
 function getRefresh() { return localStorage.getItem(REFRESH_KEY) }
 
@@ -55,7 +58,7 @@ async function attemptRefresh() {
     try {
       const res = await fetch(buildUrl('/api/auth/refresh/'), {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CEDA-Client': CEDA_CLIENT },
         body:    JSON.stringify({ refresh }),
       })
 
@@ -120,6 +123,7 @@ async function request(path, {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         // The API returns content text in this language (en or tn).
         'Accept-Language': getLang(),
+        'X-CEDA-Client': CEDA_CLIENT,
         ...headers,
       },
       ...(body   !== undefined ? { body: isFormData ? body : JSON.stringify(body) } : {}),

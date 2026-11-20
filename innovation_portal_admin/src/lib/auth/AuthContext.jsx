@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { auth as authApi } from '../api/endpoints'
 import { TOKEN_KEY, REFRESH_KEY } from '../api/client'
 
@@ -86,6 +87,7 @@ function loadActiveRole() {
 }
 
 export function AuthProvider({ children }) {
+  const queryClient = useQueryClient()
   const [user, setUser]       = useState(() => loadCachedUser())
   const [activeRole, setActiveRole] = useState(() => loadActiveRole())
   const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY))
@@ -170,7 +172,9 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(ROLE_KEY)
     setUser(null)
     setActiveRole(null)
-  }, [])
+    // Nothing the last person could see stays in memory for the next one (S1). Capabilities come from user.
+    queryClient.clear()
+  }, [queryClient])
 
   const refreshUser = useCallback(async () => {
     try {

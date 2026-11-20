@@ -10,6 +10,7 @@ import { useT } from '../i18n/context'
 import Avatar from '../components/ui/Avatar'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
 import { buttonClasses } from '../components/ui/buttonClasses'
+import { pollEvery } from '../lib/api/refusals'
 
 // Staff top bar: menu toggle, search, "View public site", bell with the real unread count, the user.
 // Compact: 52px tall (64px from 2xl).
@@ -119,7 +120,7 @@ function BellButton() {
   const { data } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: () => notifications.unreadCount(),
-    refetchInterval: 60_000,
+    refetchInterval: pollEvery(60_000),
     staleTime: 30_000,
   })
   const count = typeof data?.unread_count === 'number' ? data.unread_count : undefined
@@ -140,7 +141,7 @@ export default function Topbar() {
   const t = useT()
   const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen } = useLayout()
   const { can } = useAuth()
-  const canSearch = can('entries.search') // GET /api/staff-search/. TODO(R-25)
+  const canSearch = can('entries.search') // GET /api/staff-search/
 
   const toggleSidebar = () => {
     if (window.innerWidth < 1024) setMobileSidebarOpen((o) => !o)

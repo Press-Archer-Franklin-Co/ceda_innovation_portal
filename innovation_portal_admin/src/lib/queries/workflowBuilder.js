@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { pollEvery } from '../api/refusals'
 import {
   workflows as wfApi,
   workflowSteps,
@@ -293,7 +294,7 @@ export function useWorkflowInstances(params) {
     queryFn:  () => wiApi.list(params),
     enabled:  true,
     staleTime: 0,
-    refetchInterval: 15_000,
+    refetchInterval: pollEvery(15_000),
   })
 }
 
@@ -303,7 +304,7 @@ export function useWorkflowInstance(id) {
     queryFn:  () => wiApi.get(id),
     enabled:  !!id,
     staleTime: 0,
-    refetchInterval: 10_000,
+    refetchInterval: pollEvery(10_000),
   })
 }
 

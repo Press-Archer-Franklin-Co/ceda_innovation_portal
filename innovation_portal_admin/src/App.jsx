@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
 import { ProtectedRoute, CapabilityRoute }  from './lib/auth/ProtectedRoute'
 import AppLayout           from './layout/AppLayout'
@@ -53,7 +54,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime:           30_000,
-      retry:               1,
+      retry:               retryUnlessRefused,
       refetchOnWindowFocus: true,
       refetchOnReconnect:   true,
     },
