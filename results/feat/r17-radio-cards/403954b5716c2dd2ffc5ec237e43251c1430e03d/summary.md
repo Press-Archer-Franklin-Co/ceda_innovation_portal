@@ -1,14 +1,14 @@
 ## CI results for `feat/r17-radio-cards` @ `403954b`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44627287417
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44670554476
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 21s, job steps 3m 42s
+Timing (api job): Run tests 3m 25s, job steps 3m 42s
 
 | Check | Result | Details |
 | --- | --- | --- |
 | Migrations up to date | pass | 11 known on main, 0 new |
-| API tests | pass | 492 passed, 24 failed (24 known on main, 0 new) |
+| API tests | pass | 513 passed, 24 failed (24 known on main, 0 new) |
 | Admin lint | pass | 1 errors, 8 warnings (0 new vs baseline) |
 | Admin tests | pass |  |
 | Admin build | pass |  |

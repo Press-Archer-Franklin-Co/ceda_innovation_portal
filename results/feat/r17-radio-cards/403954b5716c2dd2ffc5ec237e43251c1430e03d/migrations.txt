@@ -65,6 +65,10 @@ Google OAuth disabled: missing GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_RE
 GitHub OAuth disabled: missing GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET, GITHUB_REDIRECT_URI
 Microsoft OAuth disabled: missing MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET, MICROSOFT_REDIRECT_URI
 CEDA staff sign-in OAuth disabled: missing CEDA_SSO_CLIENT_ID, CEDA_SSO_CLIENT_SECRET, CEDA_SSO_REDIRECT_URI, CEDA_SSO_DISCOVERY_URL
+/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/rest_framework/fields.py:992: UserWarning: min_value should be a Decimal instance.
+  warnings.warn("min_value should be a Decimal instance.")
+/opt/hostedtoolcache/Python/3.12.16/x64/lib/python3.12/site-packages/rest_framework/fields.py:990: UserWarning: max_value should be a Decimal instance.
+  warnings.warn("max_value should be a Decimal instance.")
 Migrations for 'accounts':
   apps/accounts/migrations/0010_remove_user_user_sort_idx_and_more.py
     - Remove index user_sort_idx from user
@@ -72,7 +76,7 @@ Migrations for 'accounts':
     ~ Rename index accounts_us_user_id_2bca33_idx on usermfaprofile to accounts_us_user_id_0a6639_idx
     ~ Alter field code on role
 Migrations for 'assignments':
-  apps/assignments/migrations/0007_alter_assignment_role_type_and_more.py
+  apps/assignments/migrations/0008_alter_assignment_role_type_and_more.py
     ~ Alter field role_type on assignment
     ~ Alter field created_at on specialistinvitation
 Migrations for 'submissions':
