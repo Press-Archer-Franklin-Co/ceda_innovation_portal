@@ -1,0 +1,29 @@
+
+> ceda-innovation-admin@1.0.0 test
+> vitest run && node scripts/check-capabilities.mjs
+
+
+[1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90m/home/runner/work/ceda_innovation_portal/ceda_innovation_portal/innovation_portal_admin[39m
+
+ [32m✓[39m src/lib/forms/document.test.js [2m([22m[2m15 tests[22m[2m)[22m[90m 43[2mms[22m[39m
+ [32m✓[39m src/lib/content/home.test.js [2m([22m[2m9 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/content/posts.test.js [2m([22m[2m9 tests[22m[2m)[22m[90m 12[2mms[22m[39m
+ [32m✓[39m src/lib/motion/genie.test.js [2m([22m[2m9 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m src/lib/admin/admin.test.js [2m([22m[2m7 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+ [32m✓[39m src/components/channels/journeyModel.test.js [2m([22m[2m6 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/content/quotes.test.js [2m([22m[2m5 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/content/faqs.test.js [2m([22m[2m5 tests[22m[2m)[22m[90m 13[2mms[22m[39m
+ [32m✓[39m src/lib/status.test.js [2m([22m[2m42 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/judging.test.js [2m([22m[2m4 tests[22m[2m)[22m[90m 7[2mms[22m[39m
+ [32m✓[39m src/lib/content/partners.test.js [2m([22m[2m5 tests[22m[2m)[22m[90m 6[2mms[22m[39m
+ [32m✓[39m src/lib/content/stories.test.js [2m([22m[2m4 tests[22m[2m)[22m[90m 5[2mms[22m[39m
+ [32m✓[39m src/lib/api/refusals.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+ [32m✓[39m src/lib/challenges/cover.test.js [2m([22m[2m3 tests[22m[2m)[22m[90m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m14 passed[39m[22m[90m (14)[39m
+[2m      Tests [22m [1m[32m126 passed[39m[22m[90m (126)[39m
+[2m   Start at [22m 16:49:34
+[2m   Duration [22m 5.43s[2m (transform 348ms, setup 0ms, collect 793ms, tests 156ms, environment 3ms, prepare 1.56s)[22m
+
+check-capabilities: 1 problem(s)
+  - Frontend asks for "channels.manage", which the API does not define (innovation_portal_admin/src/App.jsx:125, innovation_portal_admin/src/layout/Sidebar.jsx:58, innovation_portal_admin/src/layout/Sidebar.jsx:59, innovation_portal_admin/src/layout/Sidebar.jsx:60, innovation_portal_admin/src/lib/queries/channels.js:22)
