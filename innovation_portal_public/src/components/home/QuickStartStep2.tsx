@@ -17,6 +17,9 @@ import type { QuickStartDraft } from './QuickStartCard'
 // Signed-in people skip the phone: the draft is claimed and sent from their account.
 // TODO(R-22): District and Email are in the design but nothing stores them yet, so they are not asked for.
 
+const needsMoreAnswers = (err: unknown): boolean =>
+  axios.isAxiosError(err) && err.response?.status === 400 && !!(err.response.data as { errors?: { draft_data?: unknown } } | undefined)?.errors?.draft_data
+
 const apiCode = (err: unknown): string | undefined => {
   if (!axios.isAxiosError(err)) return undefined
   const body = err.response?.data as { errors?: Record<string, unknown> } | undefined
@@ -99,17 +102,30 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
     setBusy('submit')
     try {
       if (isAuthenticated) await intakeService.claim(draft.draftId, draft.token).catch(() => undefined)
+      const token = isAuthenticated ? undefined : draft.token
+      const [first_name, ...rest] = name.trim().split(/\s+/)
+      const last_name = rest.join(' ')
+      // The general form has an "about-you" step with the same names; fill it so the form check passes.
+      // Challenge forms may not have that step, so a refusal here is fine. TODO(R-23)
+      await intakeService.saveStep(draft.draftId, 'about-you', { first_name, last_name }, token).catch(() => undefined)
       const result = await intakeService.submit(
         draft.draftId,
-        { consent: true, create_account: isAuthenticated ? undefined : isChallenge || createAccount, name: name.trim() },
-        isAuthenticated ? undefined : draft.token,
+        { consent: true, create_account: isAuthenticated ? undefined : isChallenge || createAccount, first_name, last_name },
+        token,
       )
       resumeStorage.clear()
       onSent(result)
     } catch (err) {
       const c = apiCode(err)
       setErrors({
-        form: c === 'phone_verification_required' ? t('qs2.phoneFirst') : c === 'consent_required' ? t('qs2.consentError') : c === 'name_required' ? t('qs2.nameError') : t('qs2.sendFail'),
+        form:
+          c === 'phone_verification_required' ? t('qs2.phoneFirst')
+          : c === 'consent_required' ? t('qs2.consentError')
+          : c === 'name_required' ? t('qs2.nameError')
+          // The form still wants answers quick start does not ask for (problem, solution). TODO(R-23): goes away
+          // once the API takes a quick-start idea with just the basics.
+          : needsMoreAnswers(err) ? t('qs2.needMore')
+          : t('qs2.sendFail'),
       })
     } finally {
       setBusy(null)

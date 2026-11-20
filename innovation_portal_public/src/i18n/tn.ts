@@ -178,6 +178,7 @@ const tn: Record<StringKey, string> = {
   'qs2.send': 'Romela kakanyo ya me', // TODO tn-review
   'qs2.sendFail': 'Ga re a kgona go romela kakanyo ya gago. Kakanyetso ya gago e babalesegile. Leka gape morago ga nakwana.', // TODO tn-review
   'qs2.phoneFirst': 'Netefatsa nomore ya gago ka khoutu pele.', // TODO tn-review
+  'qs2.needMore': 'Kakanyo ya gago e tlhoka dikarabo di le mmalwa pele re e romela. Thalo ya gago e bolokilwe.', // TODO tn-review
 
   'video.showTranscript': 'Bontsha mafoko', // TODO tn-review
   'video.hideTranscript': 'Fitlha mafoko', // TODO tn-review

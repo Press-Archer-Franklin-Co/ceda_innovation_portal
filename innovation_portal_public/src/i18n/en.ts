@@ -177,6 +177,7 @@ const en = {
   'qs2.send': 'Send my idea',
   'qs2.sendFail': 'We could not send your idea. Your draft is safe. Try again in a moment.',
   'qs2.phoneFirst': 'Confirm your phone number with the code first.',
+  'qs2.needMore': 'Your idea needs a few more answers before we can send it. Your draft is saved.',
 
   'video.showTranscript': 'Show transcript',
   'video.hideTranscript': 'Hide transcript',
