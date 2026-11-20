@@ -164,7 +164,6 @@ function LatestIdeaCard({ item }: { item: IdeaItem }) {
         <Link to={`${ideaLink(item)}#messages`} className="flex items-center gap-2 rounded-control p-2 text-d-label-s hover:bg-surface2">
           <MessageCircle size={16} aria-hidden className="text-muted" />
           {t('home.messages')}
-          {/* TODO(R-5 d): unread count once the API sends it. */}
           {item.unread_messages ? <Tag tone="red">{item.unread_messages}</Tag> : null}
         </Link>
         <Link to="/notifications" className="flex items-center gap-2 rounded-control p-2 text-d-label-s hover:bg-surface2">
@@ -290,7 +289,7 @@ function UpdatesList({ state, onRetry }: { state: Async<{ results: UpdateItem[] 
       {items.map((item) => {
         const Icon = UPDATE_ICON[item.notification_type] ?? Bell
         const unread = item.type === 'notification' && !item.is_read
-        const href = item.link?.type === 'idea' ? `/my-ideas/${item.link.id}` : null
+        const href = item.link?.type === 'idea' && item.link.id ? `/my-ideas/${item.link.id}` : null
         const content = (
           <>
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface2 text-muted">

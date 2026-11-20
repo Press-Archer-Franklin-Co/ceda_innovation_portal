@@ -12,7 +12,7 @@ import IdeaCard from '../../components/innovator/IdeaCard'
 import { useI18n, type StringKey } from '../../i18n'
 import { ideaMessagesService } from '../../services/ideaMessages.service'
 import { innovatorService } from '../../services/innovator.service'
-import type { IdeasFilter, IdeasList, RecentThread } from '../../types/innovator'
+import type { IdeasFilter, IdeasList, RecentMessages } from '../../types/innovator'
 
 const TABS: Array<{ key: IdeasFilter; label: StringKey }> = [
   { key: 'all', label: 'ideas.tabAll' },
@@ -110,7 +110,7 @@ export default function MyIdeas() {
         </section>
 
         <aside className="flex flex-col gap-4">
-          <RecentMessages />
+          <RecentMessagesCard />
           <Card tone="soft" padding="md">
             <h2 className="font-heading text-d-h5 text-text">{t('ideas.helpTitle')}</h2>
             <p className="mt-2 text-d-body-s text-muted">{t('ideas.helpBody')}</p>
@@ -125,48 +125,52 @@ export default function MyIdeas() {
 }
 
 /**
- * Latest message per idea (B3). Until B3 is on main the endpoint does not
- * exist, so the card is not shown at all rather than claiming "no messages".
+ * Latest message per idea (B3). If the list cannot be loaded the card is not
+ * shown, rather than claiming "no messages".
  */
-function RecentMessages() {
+function RecentMessagesCard() {
   const { t } = useI18n()
-  const [threads, setThreads] = useState<RecentThread[] | null>(null)
+  const [data, setData] = useState<RecentMessages | null>(null)
 
   useEffect(() => {
     let alive = true
     ideaMessagesService
       .recent()
-      .then((list) => alive && setThreads(list))
-      .catch(() => alive && setThreads(null))
+      .then((result) => alive && setData(result))
+      .catch(() => alive && setData(null))
     return () => {
       alive = false
     }
   }, [])
 
-  if (!threads) return null
-  const unread = threads.reduce((sum, thread) => sum + (thread.unread || 0), 0)
+  if (!data) return null
   return (
     <Card padding="md">
       <div className="flex items-center justify-between gap-2">
         <h2 className="font-heading text-d-h5 text-text">{t('ideas.messages')}</h2>
-        {unread > 0 && <Tag tone="red">{t('ideas.messagesNew', { count: unread })}</Tag>}
+        {data.total_unread > 0 && <Tag tone="red">{t('ideas.messagesNew', { count: data.total_unread })}</Tag>}
       </div>
-      {threads.length === 0 ? (
+      {data.results.length === 0 ? (
         <p className="mt-3 text-d-body-s text-muted">{t('ideas.messagesEmpty')}</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-3">
-          {threads.map((thread) => {
-            const author = thread.last_message.author_name || (thread.last_message.author_role === 'system' ? t('track.system') : t('track.officer'))
+          {data.results.map((thread) => {
+            const latest = thread.latest
+            const mine = latest.author_role === 'applicant'
+            const author = mine ? t('track.you') : latest.author.label || latest.author.name || t('track.officer')
             return (
               <li key={thread.idea_id}>
                 <Link to={`/my-ideas/${thread.idea_id}#messages`} className="flex gap-3 rounded-control p-1 hover:bg-surface2">
-                  <Avatar name={author} size="sm" decorative />
+                  <Avatar name={mine ? t('track.you') : latest.author.name || author} size="sm" decorative />
                   <span className="min-w-0">
-                    <span className="block truncate text-d-label-s text-text">
-                      {[author, thread.last_message.author_title].filter(Boolean).join(' · ')}
-                    </span>
-                    <span className="block truncate text-d-cap text-muted">{thread.last_message.body}</span>
+                    <span className="block truncate text-d-label-s text-text">{author}</span>
+                    <span className="block truncate text-d-cap text-muted">{latest.body || thread.title}</span>
                   </span>
+                  {thread.unread > 0 && (
+                    <span className="ml-auto mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary">
+                      <span className="sr-only">{t('notif.unread')}</span>
+                    </span>
+                  )}
                 </Link>
               </li>
             )
