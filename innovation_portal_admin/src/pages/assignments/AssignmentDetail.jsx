@@ -170,7 +170,6 @@ export default function AssignmentDetail() {
   })
 
   const history = Array.isArray(historyData) ? historyData : historyData?.results ?? []
-  const groupedDocuments = documentsData?.grouped_by_field ?? {}
   const evaluationList = evaluations?.items ?? []
   const suggestionItems = suggestionsData?.suggestions ?? []
   const responses = normalizeResponses(submission?.responses ?? [], submission?.title)
@@ -212,13 +211,13 @@ export default function AssignmentDetail() {
 
   const documents = useMemo(() => {
     const rows = []
-    for (const [fieldKey, items] of Object.entries(groupedDocuments)) {
+    for (const [fieldKey, items] of Object.entries(documentsData?.grouped_by_field ?? {})) {
       for (const item of items) {
         rows.push({ fieldKey, ...item })
       }
     }
     return rows
-  }, [groupedDocuments])
+  }, [documentsData])
 
   if (isLoading) {
     return <div className="h-32 rounded-xl bg-ceda-border/30 animate-pulse" />
