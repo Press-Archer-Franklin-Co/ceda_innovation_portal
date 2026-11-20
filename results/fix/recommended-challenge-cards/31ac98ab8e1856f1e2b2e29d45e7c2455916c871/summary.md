@@ -1,9 +1,9 @@
 ## CI results for `fix/recommended-challenge-cards` @ `31ac98a`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44668801169
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44670559337
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 58s, job steps 4m 21s
+Timing (api job): Run tests 3m 29s, job steps 3m 49s
 
 | Check | Result | Details |
 | --- | --- | --- |
