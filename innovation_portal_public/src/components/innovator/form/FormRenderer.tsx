@@ -156,7 +156,6 @@ function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlo
               { value: 'no', label: t('form.no') },
             ]
           : options
-      // TODO(R-17): cards variant when ui-system adds it.
       return wrap(
         <RadioGroup
           name={field.key}
@@ -165,6 +164,7 @@ function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlo
           value={typeof value === 'string' ? value : value === true ? 'yes' : value === false ? 'no' : null}
           onChange={set}
           inline={field.type === 'yes_no'}
+          variant={field.type === 'radio' && options.some((o) => o.description) ? 'cards' : 'list'}
           error={errorText}
           hint={hint}
         />,
