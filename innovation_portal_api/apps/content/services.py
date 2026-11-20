@@ -66,13 +66,115 @@ def text_in(obj, attr, lang) -> str:
 
 
 class ApprovalService:
+    """S2: website changes go through the content approval flow (Website approvals settings).
+
+    Each step names who may approve it (a capability or a role), how many approvals it needs and
+    which language it covers. A change waits only for the steps whose language it touches, in any
+    order, and goes live when every one of them has enough approvals. People who can approve a
+    step may approve their own change when the flow allows it. Send back works from any step.
+    """
+
+    FLOW_KEY = "content"
+
+    # Flow and steps ----------------------------------------------------------------------
+
+    @classmethod
+    def flow(cls):
+        from apps.content.models import ApprovalFlow, ApprovalStep
+
+        flow, created = ApprovalFlow.objects.get_or_create(key=cls.FLOW_KEY, defaults={"approvers_can_approve_own_work": True})
+        if created or not flow.steps.exists():
+            ApprovalStep.objects.get_or_create(flow=flow, order=1, defaults={"name": "Approval", "capability": "content.approve", "approvals_needed": 1, "language": "all"})
+        return flow
+
     @staticmethod
-    def can_decide(user, approval: ApprovalRequest) -> bool:
+    def qualifies(user, step) -> bool:
         if not user or not user.is_authenticated:
             return False
         if user.is_superuser:
             return True
-        return user.roles.filter(code__in=approval.approver_roles or APPROVER_ROLES, user_roles__is_active=True).exists()
+        if step.role_id:
+            return user.roles.filter(id=step.role_id, is_active=True, user_roles__is_active=True).exists()
+        if step.capability:
+            from apps.core.capabilities import user_has
+
+            return user_has(user, step.capability)
+        return False
+
+    @staticmethod
+    def approvers(step):
+        from apps.accounts.models import User
+        from apps.core.capabilities import roles_for
+
+        users = User.objects.filter(is_active=True)
+        if step.role_id:
+            return users.filter(user_roles__role_id=step.role_id, user_roles__is_active=True).distinct()
+        if step.capability:
+            return users.filter(user_roles__role__code__in=roles_for(step.capability), user_roles__is_active=True, user_roles__role__is_active=True).distinct()
+        return users.none()
+
+    @staticmethod
+    def languages_touched(target, payload: dict | None = None) -> list[str]:
+        """English always; Setswana when the change has any Setswana text."""
+
+        def has_tn(value) -> bool:
+            if isinstance(value, dict):
+                if isinstance(value.get("tn"), str) and value["tn"].strip() and set(value) <= {"en", "tn"}:
+                    return True
+                return any(has_tn(item) for item in value.values())
+            if isinstance(value, list):
+                return any(has_tn(item) for item in value)
+            return False
+
+        tn = False
+        if payload:
+            tn = has_tn(payload)
+        translations = getattr(target, "translations", None)
+        if isinstance(translations, dict):
+            tn = tn or any(isinstance(text, str) and text.strip() for text in (translations.get("tn") or {}).values())
+        return ["en", "tn"] if tn else ["en"]
+
+    @classmethod
+    def needed_steps(cls, approval):
+        from apps.content.models import ApprovalStep
+
+        steps = {str(step.id): step for step in ApprovalStep.objects.filter(id__in=approval.step_ids or []).select_related("role")}
+        return [steps[step_id] for step_id in approval.step_ids or [] if step_id in steps]
+
+    @staticmethod
+    def approvals_for(approval, step) -> int:
+        return approval.decisions.filter(step=step).count()
+
+    @classmethod
+    def waiting_steps(cls, approval):
+        return [step for step in cls.needed_steps(approval) if cls.approvals_for(approval, step) < step.approvals_needed]
+
+    @classmethod
+    def steps_user_can_approve(cls, user, approval):
+        if approval.status != ApprovalRequest.Status.PENDING or not user or not user.is_authenticated:
+            return []
+        flow = cls.flow()
+        if approval.requested_by_id == user.id and not flow.approvers_can_approve_own_work:
+            return []
+        decided = set(approval.decisions.filter(decided_by=user).values_list("step_id", flat=True))
+        return [step for step in cls.waiting_steps(approval) if step.id not in decided and cls.qualifies(user, step)]
+
+    @classmethod
+    def can_approve(cls, user, approval) -> bool:
+        return bool(cls.steps_user_can_approve(user, approval))
+
+    @classmethod
+    def can_decide(cls, user, approval) -> bool:
+        """May approve a waiting step, or send the change back from one."""
+        if cls.can_approve(user, approval):
+            return True
+        if approval.status != ApprovalRequest.Status.PENDING:
+            return False
+        return any(cls.qualifies(user, step) for step in cls.waiting_steps(approval)) and approval.requested_by_id != getattr(user, "id", None)
+
+    @classmethod
+    def is_any_approver(cls, user) -> bool:
+        return any(cls.qualifies(user, step) for step in cls.flow().steps.all())
 
     @staticmethod
     def open_for(target):
@@ -80,21 +182,51 @@ class ApprovalService:
             content_type=ContentType.objects.get_for_model(target), object_id=str(target.pk), status=ApprovalRequest.Status.PENDING
         )
 
+    # Requests ----------------------------------------------------------------------------
+
     @classmethod
     def create(cls, target, *, actor, summary: str, payload: dict | None = None, publish_at=None) -> ApprovalRequest:
         # A new request replaces an older open one for the same thing.
         cls.open_for(target).update(status=ApprovalRequest.Status.WITHDRAWN, decided_at=timezone.now())
+        flow = cls.flow()
+        languages = cls.languages_touched(target, payload)
+        steps = [step for step in flow.steps.select_related("role").order_by("order") if step.language == "all" or step.language in languages]
+        roles = set()
+        from apps.core.capabilities import roles_for
+
+        for step in steps:
+            roles |= {step.role.code} if step.role_id else set(roles_for(step.capability) if step.capability else ())
         approval = ApprovalRequest.objects.create(
             content_type=ContentType.objects.get_for_model(target),
             object_id=str(target.pk),
             summary=summary[:255],
             payload=payload or {},
             requested_by=actor,
-            approver_roles=list(APPROVER_ROLES),
+            approver_roles=sorted(roles),
             publish_at=publish_at,
+            languages=languages,
+            step_ids=[str(step.id) for step in steps],
         )
-        AuditService.log_action(actor=actor, action_type="content_approval_requested", target=approval, metadata={"summary": approval.summary})
+        AuditService.log_action(actor=actor, action_type="content_approval_requested", target=approval, metadata={"summary": approval.summary, "languages": languages})
+        cls._notify(approval, steps, exclude=actor)
         return approval
+
+    @classmethod
+    def _notify(cls, approval, steps, *, exclude=None):
+        from apps.notifications.services import NotificationService
+
+        notified = set()
+        for step in steps:
+            for person in cls.approvers(step):
+                if person.pk in notified or (exclude is not None and person.pk == exclude.pk):
+                    continue
+                notified.add(person.pk)
+                NotificationService.notify(
+                    user=person,
+                    notification_type="content_approval",
+                    title="Website change waiting for you",
+                    message=f"{approval.summary}. Please approve it or send it back.",
+                )
 
     @classmethod
     @transaction.atomic
@@ -102,10 +234,33 @@ class ApprovalService:
         approval = ApprovalRequest.objects.select_for_update().get(pk=approval.pk)
         if approval.status != ApprovalRequest.Status.PENDING:
             raise ValidationError({"detail": f"This request is already {approval.status}."})
-        if not cls.can_decide(actor, approval):
-            raise PermissionDenied("You cannot approve website content.")
-        if not approve and not comment.strip():
-            raise ValidationError({"comment": "Say why, so the author can fix it."})
+        if not approve:
+            if not cls.can_decide(actor, approval):
+                raise PermissionDenied("You cannot send this change back.")
+            if not comment.strip():
+                raise ValidationError({"comment": "Say why, so the author can fix it."})
+            return cls._finish(approval, actor=actor, approve=False, comment=comment)
+        steps = cls.steps_user_can_approve(actor, approval)
+        if not steps:
+            raise PermissionDenied("You cannot approve this change.")
+        from apps.content.models import ApprovalDecision
+
+        for step in steps:
+            ApprovalDecision.objects.create(request=approval, step=step, step_order=step.order, decided_by=actor, own_work=approval.requested_by_id == actor.id)
+            AuditService.log_action(
+                actor=actor,
+                action_type="content_step_approved",
+                target=approval,
+                metadata={"step": step.name or str(step.order), "language": step.language, "own_work": approval.requested_by_id == actor.id},
+            )
+        if cls.waiting_steps(approval):
+            approval.comment = comment or approval.comment
+            approval.save(update_fields=["comment", "updated_at"])
+            return approval
+        return cls._finish(approval, actor=actor, approve=True, comment=comment)
+
+    @classmethod
+    def _finish(cls, approval, *, actor, approve: bool, comment: str):
         approval.status = ApprovalRequest.Status.APPROVED if approve else ApprovalRequest.Status.REJECTED
         approval.comment = comment
         approval.decided_by = actor
@@ -129,10 +284,24 @@ class ApprovalService:
         )
         return approval
 
-    @staticmethod
-    def payload(approval: ApprovalRequest) -> dict:
+    @classmethod
+    def payload(cls, approval: ApprovalRequest, user=None) -> dict:
         target_type = approval.content_type.model
-        return {
+        steps = []
+        for step in cls.needed_steps(approval):
+            count = cls.approvals_for(approval, step)
+            steps.append(
+                {
+                    "id": str(step.id),
+                    "name": step.name,
+                    "language": step.language,
+                    "approver": {"role": step.role.code, "role_name": step.role.name} if step.role_id else {"capability": step.capability},
+                    "approvals_needed": step.approvals_needed,
+                    "approvals": count,
+                    "done": count >= step.approvals_needed,
+                }
+            )
+        data = {
             "id": str(approval.id),
             "target_type": {"contentitem": "post", "page": "page", "leadershipcard": "quote"}.get(target_type, target_type),
             "target_id": approval.object_id,
@@ -142,10 +311,16 @@ class ApprovalService:
             "requested_by": (approval.requested_by.full_name or approval.requested_by.email) if approval.requested_by else None,
             "requested_at": _iso(approval.created_at),
             "approver_roles": approval.approver_roles,
+            "languages": approval.languages or ["en"],
+            "steps": steps,
             "comment": approval.comment,
             "decided_by": (approval.decided_by.full_name or approval.decided_by.email) if approval.decided_by else None,
             "decided_at": _iso(approval.decided_at),
         }
+        if user is not None:
+            data["can_approve"] = cls.can_approve(user, approval)
+            data["can_send_back"] = cls.can_decide(user, approval)
+        return data
 
 
 # --- Home page -------------------------------------------------------------------------------

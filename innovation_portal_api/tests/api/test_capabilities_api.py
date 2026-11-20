@@ -112,7 +112,8 @@ class CapabilityEndpointTests(TestCase):
             ("forms.manage", "get", "/api/forms/", self.officer, self.manager),
             ("content.edit", "post", "/api/content/news/", self.manager, self.viewer),
             ("content.edit", "get", "/api/content/pages/home/draft/", self.manager, self.viewer),
-            ("content.approve", "post", "/api/content/approvals/00000000-0000-0000-0000-000000000000/approve/", self.manager, self.officer),
+            # S2: the approval flow decides per step; at the door, people with no website capability are refused.
+            ("content.approve", "post", "/api/content/approvals/00000000-0000-0000-0000-000000000000/approve/", self.manager, self.viewer),
             ("entries.search", "get", "/api/staff-search/?q=solar", self.manager, self.viewer),
             ("audit.view", "get", "/api/audit/logs/", self.viewer, self.manager),
             ("settings.manage", "get", "/api/platform/features/", self.admin, self.officer),

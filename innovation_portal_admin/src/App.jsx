@@ -35,8 +35,15 @@ const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 const Users = lazy(() => import('./pages/users/Users'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
-const ContentList = lazy(() => import('./pages/content/ContentList'))
-const ContentEditor = lazy(() => import('./pages/content/ContentEditor'))
+const ContentIndex = lazy(() => import('./pages/content/ContentIndex'))
+const HomePageEditor = lazy(() => import('./pages/content/HomePageEditor'))
+const NewsList = lazy(() => import('./pages/content/NewsList'))
+const PostEditor = lazy(() => import('./pages/content/PostEditor'))
+const LeadershipQuotes = lazy(() => import('./pages/content/LeadershipQuotes'))
+const Partners = lazy(() => import('./pages/content/Partners'))
+const Faqs = lazy(() => import('./pages/content/Faqs'))
+const Stories = lazy(() => import('./pages/content/Stories'))
+const Approvals = lazy(() => import('./pages/content/Approvals'))
 const HackathonContentEditor = lazy(() => import('./pages/content/HackathonContentEditor'))
 const WinnersManager = lazy(() => import('./pages/content/WinnersManager'))
 const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
@@ -129,23 +136,31 @@ export default function App() {
                   <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
                   <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
                 </Route>
-                {/* Approving is its own capability (content.approve), even though managers now hold both. An approvals screen (U6, GET /api/content/approvals/)
-                    goes in its own group with need={['content.edit', 'content.approve']}, never in this one, and its
-                    Approve / Send back buttons check can('content.approve'). */}
+                {/* Website content editors (U6) need content.edit. Approving is its own capability (content.approve);
+                    the approvals list below opens for either, and its buttons follow can_approve / can_send_back. */}
                 <Route element={<CapabilityRoute need="content.edit" />}>
-                  <Route path="/content"                        element={<ErrorBoundary><ContentList /></ErrorBoundary>} />
-                  <Route path="/content/leadership"             element={<Navigate to="/content?tab=leadership" replace />} />
-                  <Route path="/content/faqs"                   element={<Navigate to="/content?tab=faqs" replace />} />
-                  <Route path="/content/news/new"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
-                  <Route path="/content/news/:id"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
+                  <Route path="/content"                        element={<ErrorBoundary><ContentIndex /></ErrorBoundary>} />
+                  <Route path="/content/home"                   element={<ErrorBoundary><HomePageEditor /></ErrorBoundary>} />
+                  <Route path="/content/news"                   element={<ErrorBoundary><NewsList /></ErrorBoundary>} />
+                  <Route path="/content/news/new"               element={<ErrorBoundary><PostEditor /></ErrorBoundary>} />
+                  <Route path="/content/news/:id"               element={<ErrorBoundary><PostEditor /></ErrorBoundary>} />
                   <Route path="/content/hackathons/new"         element={<ErrorBoundary><HackathonContentEditor /></ErrorBoundary>} />
                   <Route path="/content/hackathons/:id"         element={<ErrorBoundary><HackathonContentEditor /></ErrorBoundary>} />
                   <Route path="/content/winners/new"            element={<ErrorBoundary><WinnersManager /></ErrorBoundary>} />
                   <Route path="/content/winners/:id"            element={<ErrorBoundary><WinnersManager /></ErrorBoundary>} />
+                  <Route path="/content/leadership"             element={<Navigate to="/content/quotes" replace />} />
+                  <Route path="/content/quotes"                 element={<ErrorBoundary><LeadershipQuotes /></ErrorBoundary>} />
+                  <Route path="/content/partners"               element={<ErrorBoundary><Partners /></ErrorBoundary>} />
                   <Route path="/content/leadership/new"         element={<ErrorBoundary><LeadershipCardEditor /></ErrorBoundary>} />
                   <Route path="/content/leadership/:id"         element={<ErrorBoundary><LeadershipCardEditor /></ErrorBoundary>} />
+                  <Route path="/content/faqs"                   element={<ErrorBoundary><Faqs /></ErrorBoundary>} />
+                  <Route path="/content/stories"                element={<ErrorBoundary><Stories /></ErrorBoundary>} />
                   <Route path="/content/faqs/new"               element={<ErrorBoundary><FaqEditor /></ErrorBoundary>} />
                   <Route path="/content/faqs/:id"               element={<ErrorBoundary><FaqEditor /></ErrorBoundary>} />
+                </Route>
+                {/* Approvers who do not edit (content.approve only) still reach the list; its buttons follow the API. */}
+                <Route element={<CapabilityRoute need={['content.edit', 'content.approve']} />}>
+                  <Route path="/content/approvals"              element={<ErrorBoundary><Approvals /></ErrorBoundary>} />
                 </Route>
 
                 <Route path="/settings" element={<Settings />} />

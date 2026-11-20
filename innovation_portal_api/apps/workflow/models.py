@@ -81,7 +81,7 @@ class WorkflowStep(UUIDModel, TimeStampedModel):
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=80)
     order = models.PositiveIntegerField()
-    role_required = models.CharField(max_length=50, choices=RoleType.choices, blank=True, default="")
+    role_required = models.CharField(max_length=50, blank=True, default="", help_text="A role code, built-in or custom (S2).")
     actions_allowed = models.JSONField(default=list, blank=True)
     submission_status = models.CharField(max_length=40, choices=SubmissionStatus.choices, blank=True, default="")
     execution_mode = models.CharField(max_length=30, choices=EXECUTION_MODE_CHOICES, default=EXECUTION_SEQUENTIAL)

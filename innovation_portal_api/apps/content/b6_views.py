@@ -7,7 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.views import APIView
 
 from apps.audit.services import AuditService
@@ -111,8 +111,22 @@ class PublicHomeView(APIView):
 # --- Approvals --------------------------------------------------------------------------------
 
 
+class CanSeeApprovals(BasePermission):
+    """S2: editors, approvers, and anyone who may approve a step of the website approval flow (custom roles too)."""
+
+    def has_permission(self, request, view):
+        from apps.core.capabilities import user_has
+
+        user = request.user
+        if not user or not user.is_authenticated:
+            return False
+        if user_has(user, "content.edit") or user_has(user, "content.approve"):
+            return True
+        return ApprovalService.is_any_approver(user)
+
+
 class ApprovalListView(APIView):
-    permission_classes = [HasAnyCapability.of("content.edit", "content.approve")]
+    permission_classes = [CanSeeApprovals]
 
     @extend_schema(
         tags=STAFF_TAGS,
@@ -127,23 +141,32 @@ class ApprovalListView(APIView):
             queryset = queryset.filter(status=status_value)
         items = []
         for approval in queryset[:200]:
-            item = ApprovalService.payload(approval)
-            item["can_decide"] = ApprovalService.can_decide(request.user, approval)
+            # can_approve: this person may approve a waiting step for its language (S2); can_decide kept for old screens.
+            item = ApprovalService.payload(approval, user=request.user)
+            item["can_decide"] = item["can_send_back"] or item["can_approve"]
             items.append(item)
         return api_success(data=items)
 
 
 class ApprovalDecisionView(APIView):
-    permission_classes = [HasCapability.of("content.approve")]
+    # Who may approve depends on the flow's steps (a capability or a role per step), so the service decides.
+    permission_classes = [CanSeeApprovals]
     approve = True
 
-    @extend_schema(tags=STAFF_TAGS, summary="Approve or reject a request", description="Only innovation managers and administrators decide. Rejecting needs a comment.", request=DecisionSerializer, responses=OpenApiTypes.OBJECT)
+    @extend_schema(
+        tags=STAFF_TAGS,
+        summary="Approve or send back a request",
+        description="Approve counts for every waiting step this person may approve; the change goes live when all its steps are done. "
+        "Send back needs a comment and works from any step.",
+        request=DecisionSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
     def post(self, request, approval_id):
         serializer = DecisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         approval = get_object_or_404(ApprovalRequest, id=approval_id)
         approval = ApprovalService.decide(approval, actor=request.user, approve=self.approve, comment=serializer.validated_data.get("comment", ""))
-        return api_success(data=ApprovalService.payload(approval), message="Approved." if self.approve else "Sent back.")
+        return api_success(data=ApprovalService.payload(approval, user=request.user), message="Approved." if self.approve else "Sent back.")
 
 
 class ApprovalRejectView(ApprovalDecisionView):

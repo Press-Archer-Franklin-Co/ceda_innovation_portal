@@ -365,11 +365,9 @@ class MFADisableConfirmSerializer(serializers.Serializer):
 
 
 class UserRoleUpdateSerializer(serializers.Serializer):
-    roles = serializers.ListField(
-        child=serializers.ChoiceField(choices=tuple(RoleService.CANONICAL_ROLE_CODES)),
-        allow_empty=False,
-    )
-    role = serializers.ChoiceField(choices=tuple(RoleService.CANONICAL_ROLE_CODES), required=False)
+    # Built-in roles an admin may give, plus any active custom role (S2). The service checks the codes.
+    roles = serializers.ListField(child=serializers.CharField(max_length=50), allow_empty=False)
+    role = serializers.CharField(max_length=50, required=False)
 
 
 class SetPasswordSerializer(serializers.Serializer):

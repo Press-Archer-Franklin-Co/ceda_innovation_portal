@@ -135,11 +135,11 @@ class HasCapability(BasePermission):
 
     @classmethod
     def of(cls, capability: str, *, write: str = ""):
-        from apps.core.capabilities import roles_for
+        from apps.core.capabilities import exists
 
-        roles_for(capability)
-        if write:
-            roles_for(write)
+        for name in (capability, write):
+            if name and not exists(name):
+                raise KeyError(f"Unknown capability `{name}`. Add it to apps/core/capabilities.py first.")
         name = f"HasCapability_{capability}{'__' + write if write else ''}".replace(".", "_")
         return type(name, (cls,), {"capability": capability, "write_capability": write})
 
@@ -161,10 +161,11 @@ class HasAnyCapability(BasePermission):
 
     @classmethod
     def of(cls, *capabilities: str):
-        from apps.core.capabilities import roles_for
+        from apps.core.capabilities import exists
 
         for capability in capabilities:
-            roles_for(capability)
+            if not exists(capability):
+                raise KeyError(f"Unknown capability `{capability}`. Add it to apps/core/capabilities.py first.")
         name = "HasAnyCapability_" + "__".join(capabilities).replace(".", "_")
         return type(name, (cls,), {"capabilities": tuple(capabilities)})
 

@@ -1,5 +1,6 @@
 // Setswana strings for staff console chrome. First draft: needs review by a Setswana speaker at CEDA.
 import { challengesTn } from './challenges'
+import { contentTn } from './content'
 import { formsTn } from './forms'
 
 const tn = {
@@ -137,6 +138,7 @@ const tn = {
   'crop.taintedError': 'Setshwantsho se ga se kgone go segelwa fano. Tsenya faele ya ntlha gape mme o e sege pele o boloka.', // TODO tn-review
   ...formsTn,
   ...challengesTn,
+  ...contentTn,
 }
 
 export default tn
