@@ -53,7 +53,7 @@ from apps.accounts.services import UserSecurityTokenService
 from apps.audit.services import AuditService
 from apps.communications.email_notifications import EmailNotificationService
 from apps.core.api import api_success
-from apps.core.permissions import IsOfficerAdminOrManagementReadOnly, IsAdministrator, AuthRateThrottle
+from apps.core.permissions import HasCapability, IsOfficerAdminOrManagementReadOnly, IsAdministrator, AuthRateThrottle
 from apps.platform_config.flags import require_feature
 
 
@@ -381,7 +381,7 @@ class UserListView(generics.ListAPIView):
 
 
 class UserRoleUpdateView(generics.GenericAPIView):
-    permission_classes = [IsAdministrator]
+    permission_classes = [HasCapability.of("users.manage")]
     serializer_class = UserRoleUpdateSerializer
 
     def patch(self, request, user_id, *args, **kwargs):
@@ -395,7 +395,12 @@ class UserRoleUpdateView(generics.GenericAPIView):
         if not roles:
             role = serializer.validated_data.get("role")
             roles = [role] if role else []
-        RoleService.set_roles(user=user, role_codes=roles, actor=request.user, reason="admin_role_update")
+        try:
+            RoleService.set_roles(user=user, role_codes=roles, actor=request.user, reason="admin_role_update")
+        except ValueError as exc:
+            from rest_framework.exceptions import ValidationError
+
+            raise ValidationError({"roles": str(exc)})
         return api_success(data=UserSummarySerializer(user).data, status_code=status.HTTP_200_OK)
 
 

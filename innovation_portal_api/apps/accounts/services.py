@@ -6,7 +6,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.exceptions import PermissionDenied
 
-from apps.accounts.models import Role, User, UserRole, UserSecurityToken
+from apps.accounts.models import RoleCapability, Role, User, UserRole, UserSecurityToken
 from apps.audit.services import AuditService
 from apps.communications.models import NotificationPreference
 from apps.communications.email_notifications import EmailNotificationService
@@ -37,7 +37,26 @@ class RoleService:
     @staticmethod
     def ensure_default_roles() -> None:
         for code, label in RoleType.choices:
-            Role.objects.get_or_create(code=code, defaults={"name": label})
+            Role.objects.get_or_create(code=code, defaults={"name": label, "is_system": True})
+
+    @staticmethod
+    def _check_admin_locks(*, user, next_codes: set, actor=None) -> None:
+        """S2 locks: keep at least one active administrator; nobody removes their own administrator role."""
+        from rest_framework.exceptions import ValidationError
+
+        if RoleType.ADMINISTRATOR in next_codes:
+            return
+        if not user.roles.filter(code=RoleType.ADMINISTRATOR, user_roles__is_active=True).exists():
+            return
+        if actor is not None and actor.pk == user.pk:
+            raise ValidationError({"roles": "You cannot remove your own administrator role. Ask another administrator."})
+        others = (
+            UserRole.objects.filter(role__code=RoleType.ADMINISTRATOR, is_active=True, user__is_active=True)
+            .exclude(user=user)
+            .exists()
+        )
+        if not others:
+            raise ValidationError({"roles": "This is the last active administrator. Give someone else the administrator role first."})
 
     @staticmethod
     @transaction.atomic
@@ -86,10 +105,12 @@ class RoleService:
         if not role_codes:
             raise ValueError("At least one role is required.")
         role_codes = list(dict.fromkeys(role_codes))
-        invalid = [code for code in role_codes if code not in RoleService.CANONICAL_ROLE_CODES]
+        custom = set(Role.objects.filter(code__in=role_codes, is_system=False, is_active=True).values_list("code", flat=True))
+        invalid = [code for code in role_codes if code not in RoleService.CANONICAL_ROLE_CODES and code not in custom]
         if invalid:
             raise ValueError("Invalid role code.")
         RoleService.ensure_default_roles()
+        RoleService._check_admin_locks(user=user, next_codes=set(role_codes), actor=actor)
         roles = list(Role.objects.filter(code__in=role_codes))
         if len(roles) != len(set(role_codes)):
             raise ValueError("Role does not exist.")
@@ -104,7 +125,7 @@ class RoleService:
             RoleType.JUDGE,
             RoleType.SPECIALIST,
             RoleType.MENTOR,
-        } for code in role_codes)
+        } for code in role_codes) or bool(custom and RoleCapability.objects.filter(role__code__in=custom).exists())
         if user.is_staff != is_staff_role:
             user.is_staff = is_staff_role
             user.save(update_fields=["is_staff", "updated_at"])
