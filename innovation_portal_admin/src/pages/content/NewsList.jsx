@@ -69,7 +69,8 @@ function ForYourApproval({ approvals, posts }) {
   const toast = useToast()
   const navigate = useNavigate()
   const decide = useDecideApproval()
-  const mine = approvals.filter((a) => a.target_type === 'post' && a.can_decide)
+  // S2 (R-31) adds can_approve; until then can_decide says the same.
+  const mine = approvals.filter((a) => a.target_type === 'post' && (a.can_approve ?? a.can_decide))
   if (!mine.length) return null
   return (
     <div className="mb-4 flex flex-col gap-2">

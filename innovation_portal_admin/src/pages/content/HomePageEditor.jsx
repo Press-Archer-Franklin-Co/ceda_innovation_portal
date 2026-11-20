@@ -121,6 +121,9 @@ function Waiting({ approval }) {
   const [reasonError, setReasonError] = useState('')
   const trigger = useRef(null)
   if (!approval) return null
+  // S2 (R-31) splits the decision into can_approve and can_send_back; until then can_decide covers both.
+  const canApprove = approval.can_approve ?? approval.can_decide
+  const canSendBack = approval.can_send_back ?? approval.can_decide
   const when = approval.publish_at ? t('home.sendWhen', { date: formatDate(approval.publish_at, lang, true) }) : ''
   const run = async (approve) => {
     if (!approve && !reason.trim()) {
@@ -143,10 +146,10 @@ function Waiting({ approval }) {
         <p className="font-bold">{t('home.waiting')}</p>
         <p className="text-muted">{t('home.waitingBy', { name: approval.requested_by ?? '', date: formatDate(approval.requested_at, lang, true), when })} {t('home.waitingNote')}</p>
       </div>
-      {approval.can_decide && (
+      {(canApprove || canSendBack) && (
         <div className="flex shrink-0 gap-2">
-          <Button ref={trigger} variant="secondary" size="sm" onClick={() => setSendingBack(true)}>{t('home.sendBack')}</Button>
-          <Button size="sm" icon={<Check size={14} aria-hidden />} loading={decide.isPending && !sendingBack} onClick={() => run(true)}>{t('home.approve')}</Button>
+          {canSendBack && <Button ref={trigger} variant="secondary" size="sm" onClick={() => setSendingBack(true)}>{t('home.sendBack')}</Button>}
+          {canApprove && <Button size="sm" icon={<Check size={14} aria-hidden />} loading={decide.isPending && !sendingBack} onClick={() => run(true)}>{t('home.approve')}</Button>}
         </div>
       )}
       <Modal open={sendingBack} onClose={() => setSendingBack(false)} triggerRef={trigger} title={t('home.sendBackTitle')} size="sm"
