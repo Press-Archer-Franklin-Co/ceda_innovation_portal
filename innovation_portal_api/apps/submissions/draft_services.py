@@ -126,6 +126,34 @@ class ApplicationDraftService:
                     errors.append(error)
         return errors
 
+    @staticmethod
+    def allows_basics_only(draft: ApplicationDraft) -> bool:
+        """R-23: a quick-start idea for General ideas may be sent before the full form is answered."""
+        return bool((draft.metadata or {}).get("quick_start")) and bool(getattr(draft.program, "is_general_intake", False))
+
+    @classmethod
+    def _check_before_submit(cls, draft: ApplicationDraft) -> list[str]:
+        """Validate the answers. Returns the required answers still missing when that is allowed (R-23)."""
+        if not cls.allows_basics_only(draft):
+            cls.validate_draft_data(draft, draft.draft_data)
+            return []
+        form = getattr(draft.program, "submission_form", None)
+        if not form:
+            return []
+        values = cls._effective_values(draft, draft.draft_data)
+        errors, missing = {}, []
+        for field in form.fields.filter(is_active=True).prefetch_related("field_rules"):
+            problems = cls.field_errors(field, values)
+            if not problems:
+                continue
+            if values.get(field.key) in (None, "", []):
+                missing.append(field.key)  # not answered yet: fine for now
+            else:
+                errors[field.key] = problems  # answered but wrong: still refused
+        if errors:
+            raise ValidationError({"draft_data": errors})
+        return missing
+
     @classmethod
     def validate_draft_data(cls, draft: ApplicationDraft, draft_data: dict) -> None:
         form = getattr(draft.program, "submission_form", None)
@@ -341,7 +369,11 @@ class ApplicationDraftService:
         if require_consent and consent is not True:
             raise ValidationError({"consent": {"code": "consent_required", "detail": "Please agree to the terms before sending your idea."}})
         is_guest = draft.innovator_id is None
-        cls.validate_draft_data(draft, draft.draft_data)
+        missing = cls._check_before_submit(draft)
+        metadata = dict(draft.metadata or {})
+        if missing:
+            # R-23: a quick-start idea is sent with the basics; these answers come later.
+            metadata["details_pending"] = missing
         submission = Submission.objects.create(
             reference_number="",
             program=draft.program,
@@ -349,7 +381,7 @@ class ApplicationDraftService:
             innovator=draft.innovator,
             team=draft.team,
             title=draft.title,
-            metadata=draft.metadata,
+            metadata=metadata,
             form_version_number=getattr(getattr(draft.program, "submission_form", None), "version", 1),
             channel=draft.channel,
             sector=draft.sector,

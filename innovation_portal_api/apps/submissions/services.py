@@ -69,6 +69,8 @@ class SubmissionService:
         form = getattr(submission.program, "submission_form", None)
         if not form:
             return
+        if (submission.metadata or {}).get("details_pending") is not None and submission.program.is_general_intake:
+            return  # R-23: answers were checked at submit; the missing ones come later
         fields = form.fields.filter(is_active=True).prefetch_related("field_rules")
         response_map = {response.form_field_id: response.value for response in submission.responses.all()}
         values = {

@@ -407,3 +407,37 @@ class IdeaIntakeApiTests(TestCase):
         submission.refresh_from_db()
         self.assertEqual((submission.form_version_id, submission.form_version_number), (first.id, 1))
         self.assertNotEqual(first.schema["steps"][0]["title"]["en"], "Tell us your idea")
+
+    # R-23 ------------------------------------------------------------------------------
+
+    def test_quick_start_idea_is_sent_with_the_basics_and_details_come_later(self):
+        draft_id, token = self.quick_start()
+        self.verify_phone_on_draft(draft_id, token)
+        response = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "create_account": False, "first_name": "Neo", "last_name": "K"})
+        self.assertEqual(response.status_code, 200, response.content)
+        submission = Submission.objects.get(reference_number=response.json()["data"]["reference"])
+        self.assertIn("problem", submission.metadata["details_pending"])
+        self.assertIn("solution", submission.metadata["details_pending"])
+        self.assertRegex(submission.reference_number, REFERENCE_PATTERN)
+
+    def test_quick_start_with_everything_answered_has_nothing_pending(self):
+        draft_id, token = self.quick_start()
+        self.fill_all_steps(draft_id, token)
+        self.verify_phone_on_draft(draft_id, token)
+        response = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "create_account": False, "name": "Neo K"})
+        submission = Submission.objects.get(reference_number=response.json()["data"]["reference"])
+        self.assertNotIn("details_pending", submission.metadata)
+
+    def test_ideas_not_from_quick_start_still_need_the_full_form(self):
+        from apps.submissions.draft_services import ApplicationDraftService
+        from apps.programs.general_intake import GeneralIntakeService
+
+        draft = ApplicationDraft.objects.create(
+            reference_number="DRAFT-NOT-QUICK", program=GeneralIntakeService.program(), innovator=None, submission_type="idea", title="Full form", metadata={}
+        )
+        self.assertFalse(ApplicationDraftService.allows_basics_only(draft))
+        from rest_framework.exceptions import ValidationError
+
+        with self.assertRaises(ValidationError):
+            ApplicationDraftService._check_before_submit(draft)
+
