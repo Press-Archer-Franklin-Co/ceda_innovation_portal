@@ -1,9 +1,9 @@
 ## CI results for `feat/u2-public-site` @ `cbe0f9c`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44676567117
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44678220927
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 52s, job steps 4m 15s
+Timing (api job): Run tests 2m 59s, job steps 3m 13s
 
 | Check | Result | Details |
 | --- | --- | --- |
