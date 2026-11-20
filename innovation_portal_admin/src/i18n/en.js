@@ -124,6 +124,15 @@ const en = {
   'staff.collapse': 'Hide menu',
   'staff.expand': 'Show menu',
   'staff.console': 'Staff console',
+  // Crop dialog (components/ui/ImageCropModal)
+  'crop.title': 'Position and crop the picture',
+  'crop.help': 'Drag the picture to place it and use the slider to zoom. The box shows exactly what people will see.',
+  'crop.drag': 'Drag to place it',
+  'crop.zoom': 'Zoom',
+  'crop.apply': 'Apply crop',
+  'crop.loadError': 'This picture could not be opened for cropping.',
+  'crop.createError': 'We could not make the cropped picture. Please try again.',
+  'crop.taintedError': 'This picture cannot be cropped here. Upload the original file again and crop it before saving.',
   ...formsEn,
   ...challengesEn,
 }
