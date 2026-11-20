@@ -104,6 +104,7 @@ class ContentItem(UUIDModel, TimeStampedModel):
     event_place = models.CharField(max_length=255, blank=True, default="")
     newsletter_issue = models.PositiveIntegerField(null=True, blank=True)
     view_count = models.PositiveIntegerField(default=0)
+    send_to_subscribers = models.BooleanField(default=False, help_text="Email the post to subscribers when it goes live (R-29 b).")
     publish_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Publish automatically at this time (after approval).")
     unpublish_at = models.DateTimeField(null=True, blank=True, db_index=True, help_text="Take down automatically at this time.")
 
@@ -635,3 +636,16 @@ class ApprovalDecision(UUIDModel, TimeStampedModel):
     class Meta:
         ordering = ["created_at"]
         constraints = [models.UniqueConstraint(fields=["request", "step", "decided_by"], name="uq_approval_decision_person_step")]
+
+
+class PostMonthlyViews(UUIDModel, TimeStampedModel):
+    """Views per post per calendar month (R-29 a). view_count on the post stays the all-time total."""
+
+    post = models.ForeignKey(ContentItem, on_delete=models.CASCADE, related_name="monthly_views")
+    month = models.DateField(help_text="First day of the month.")
+    count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["post", "month"], name="uq_post_month_views")]
+        indexes = [models.Index(fields=["month"])]
+

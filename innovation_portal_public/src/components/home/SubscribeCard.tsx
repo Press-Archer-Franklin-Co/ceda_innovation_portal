@@ -5,12 +5,12 @@ import Button from '../ui/Button'
 import Input from '../ui/Input'
 import { Toggle } from '../ui/Choice'
 import { useI18n } from '../../i18n'
-import { subscriptionsService, SubscriptionsNotAvailable } from '../../services/subscriptions.service'
+import axios from 'axios'
+import { subscriptionsService } from '../../services/subscriptions.service'
 
-// Figma 1.1 › Bulletin board › Subscribe card (10:634). Double opt-in by email (B6 part D).
-// TODO(B6 part 2): until the subscriptions endpoint is on main, sending says sign-ups open soon.
+// Figma 1.1 › Bulletin board › Subscribe card (10:634). Double opt-in by email: POST /api/content/public/subscriptions/.
 
-type State = 'idle' | 'sending' | 'done' | 'not-yet' | 'error'
+type State = 'idle' | 'sending' | 'done' | 'busy' | 'error'
 
 /** headingLevel: 3 inside a home section (h2 above it), 2 in a page rail next to other h2 cards. */
 export default function SubscribeCard({ className, headingLevel = 3 }: { className?: string; headingLevel?: 2 | 3 }) {
@@ -21,6 +21,7 @@ export default function SubscribeCard({ className, headingLevel = 3 }: { classNa
   const [phone, setPhone] = useState('')
   const [state, setState] = useState<State>('idle')
   const [emailError, setEmailError] = useState<string | undefined>()
+  const [phoneError, setPhoneError] = useState<string | undefined>()
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -29,12 +30,22 @@ export default function SubscribeCard({ className, headingLevel = 3 }: { classNa
       return
     }
     setEmailError(undefined)
+    setPhoneError(undefined)
     setState('sending')
     try {
       await subscriptionsService.subscribe({ email: email.trim(), language: lang, ...(whatsapp && phone.trim() ? { phone: phone.trim() } : {}) })
       setState('done')
     } catch (err) {
-      setState(err instanceof SubscriptionsNotAvailable ? 'not-yet' : 'error')
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined
+      const fields = axios.isAxiosError(err) ? ((err.response?.data as { errors?: Record<string, unknown> } | undefined)?.errors ?? {}) : {}
+      if (status === 400 && ('email' in fields || 'phone' in fields)) {
+        if ('email' in fields) setEmailError(t('sub.emailError'))
+        if ('phone' in fields) setPhoneError(t('sub.phoneError'))
+        setState('idle')
+        return
+      }
+      // 429: too many sign-ups from this address for now.
+      setState(status === 429 ? 'busy' : 'error')
     }
   }
 
@@ -57,9 +68,9 @@ export default function SubscribeCard({ className, headingLevel = 3 }: { classNa
           <p className="text-d-body-s text-muted">{t('sub.body')}</p>
           <Input label={t('sub.email')} type="email" autoComplete="email" placeholder="you@example.co.bw" value={email} onChange={(e) => setEmail(e.target.value)} error={emailError} />
           <Toggle label={t('sub.whatsapp')} checked={whatsapp} onChange={setWhatsapp} />
-          {whatsapp && <Input label={t('sub.phone')} type="tel" autoComplete="tel" placeholder="7x xxx xxx" value={phone} onChange={(e) => setPhone(e.target.value)} />}
+          {whatsapp && <Input label={t('sub.phone')} type="tel" autoComplete="tel" placeholder="7x xxx xxx" value={phone} onChange={(e) => setPhone(e.target.value)} error={phoneError} />}
           <Button type="submit" block loading={state === 'sending'}>{t('sub.button')}</Button>
-          {state === 'not-yet' && <p role="status" className="text-d-cap text-info">{t('sub.notYet')}</p>}
+          {state === 'busy' && <p role="alert" className="text-d-cap text-danger">{t('sub.busy')}</p>}
           {state === 'error' && <p role="alert" className="text-d-cap text-danger">{t('sub.error')}</p>}
           <p className="text-d-cap text-muted">{t('sub.unsub')}</p>
         </form>

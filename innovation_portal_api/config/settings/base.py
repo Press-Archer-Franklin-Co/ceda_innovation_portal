@@ -359,6 +359,10 @@ def _env_list(key: str) -> list:
 
 CORS_ALLOWED_ORIGINS = _env_list(_prefixed_name("CORS_ALLOWED_ORIGINS"))
 CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS", default=True)
+# Both frontends send X-CEDA-Client (S1); a cross-origin set-up must allow it in the preflight.
+from corsheaders.defaults import default_headers  # noqa: E402
+
+CORS_ALLOW_HEADERS = (*default_headers, "x-ceda-client")
 CSRF_TRUSTED_ORIGINS = _env_list(_prefixed_name("CSRF_TRUSTED_ORIGINS"))
 
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024

@@ -1,7 +1,7 @@
 {
   "totals": {
     "errors": 1,
-    "warnings": 9
+    "warnings": 7
   },
   "problems": [
     {
@@ -23,20 +23,6 @@
       "rule": "react-refresh/only-export-components",
       "severity": "warning",
       "message": "Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.",
-      "count": 1
-    },
-    {
-      "file": "src/pages/analytics/Analytics.jsx",
-      "rule": "react-hooks/exhaustive-deps",
-      "severity": "warning",
-      "message": "The 'programs' conditional could make the dependencies of useEffect Hook (at line 459) change on every render. To fix this, wrap the initialization of 'programs' in its own useMemo() Hook.",
-      "count": 1
-    },
-    {
-      "file": "src/pages/assignments/AssignmentDetail.jsx",
-      "rule": "react-hooks/exhaustive-deps",
-      "severity": "warning",
-      "message": "The 'groupedDocuments' logical expression could make the dependencies of useMemo Hook (at line 222) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'groupedDocuments' in its own useMemo() Hook.",
       "count": 1
     },
     {

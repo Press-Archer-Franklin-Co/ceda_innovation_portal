@@ -139,7 +139,21 @@ const tn: Record<StringKey, string> = {
   'sub.unsub': 'O ka ikgogela morago nako nngwe le nngwe.', // TODO tn-review
   'sub.done': 'Tlhola imeile ya gago', // TODO tn-review
   'sub.doneBody': 'Re go romeletse kgolagano ya go netefatsa. Ga go sepe se se romelwang go fitlha o e tobetsa.', // TODO tn-review
-  'sub.notYet': 'Go ikwadisa go tla bulwa ka bonako. Go fitlha foo, tlhola boto ya dikitsiso fa.', // TODO tn-review
+  'sub.phoneError': 'Tsenya nomore ya WhatsApp jaaka 71 234 567.', // TODO tn-review
+  'sub.busy': 'Go ikwadisitse batho ba bantsi go tswa fano jaanong. Tsweetswee leka gape morago ga metsotso e mmalwa.', // TODO tn-review
+  'subLink.confirmTitle': 'Netefatsa go ikwadisa ga gago', // TODO tn-review
+  'subLink.unsubTitle': 'Emisa dikitsiso', // TODO tn-review
+  'subLink.working': 'Re tlhola kgolagano ya gago', // TODO tn-review
+  'subLink.confirmedTitle': 'O ikwadisitse', // TODO tn-review
+  'subLink.confirmedBody': 'O tla amogela dikitsiso tse dintsha, dikgwetlho le kakaretso ya kgwedi. Imeile nngwe le nngwe e na le kgolagano ya go di emisa.', // TODO tn-review
+  'subLink.unsubscribedTitle': 'Ga o kitla o amogela dikitsiso gape', // TODO tn-review
+  'subLink.unsubscribedBody': 'Re emisitse go go romelela dikitsiso tsa CEDA Innovation. O ka ikwadisa gape mo tsebeng ya dikgang.', // TODO tn-review
+  'subLink.invalidTitle': 'Kgolagano e ga e dire', // TODO tn-review
+  'subLink.invalidBody': 'Gongwe e setse e dirisitswe kgotsa e kopilwe karolo fela. Bula imeile ya bofelo go tswa go rona, kgotsa o ikwadise gape mo tsebeng ya dikgang.', // TODO tn-review
+  'subLink.errorTitle': 'Ga re a kgona go tlhola kgolagano ya gago', // TODO tn-review
+  'subLink.errorBody': 'Go na le se se sa tsamaeng sentle ka fa go rona. Tsweetswee leka gape.', // TODO tn-review
+  'subLink.busyBody': 'Go nnile le maiteko a mantsi go tswa fano jaanong. Ema metsotso e mmalwa, o bo o leka gape.', // TODO tn-review
+  'subLink.toNews': 'Ya kwa Dikgang le bulletin', // TODO tn-review
   'sub.emailError': 'Tsenya aterese ya imeile jaaka leina@example.co.bw.', // TODO tn-review
   'sub.error': 'Ga re a kgona go go kwadisa. Leka gape morago ga nakwana.', // TODO tn-review
   'home.sectorsOver': 'Boitshimololedi mo mafapheng otlhe', // TODO tn-review
@@ -182,6 +196,13 @@ const tn: Record<StringKey, string> = {
   'search.loading': 'Re a batla', // TODO tn-review
   'search.opensNew': '(e bula mo tsebeng e ntšha)', // TODO tn-review
   'qs2.name': 'Leina ka botlalo', // TODO tn-review
+  'qs2.district': 'Kgaolo', // TODO tn-review
+  'qs2.districtPlaceholder': 'Tlhopha kgaolo ya gago', // TODO tn-review
+  'qs2.districtLoading': 'Re tsenya dikgaolo', // TODO tn-review
+  'qs2.districtError': 'Tlhopha kgaolo mo lenaneng.', // TODO tn-review
+  'qs2.email': 'Imeile', // TODO tn-review
+  'qs2.emailHint': 'Re romela khopi ya kakanyo ya gago fano.', // TODO tn-review
+  'qs2.emailError': 'Tsenya aterese ya imeile jaaka name@example.co.bw.', // TODO tn-review
   'qs2.nameError': 'Re bolelele leina la gago.', // TODO tn-review
   'qs2.phone': 'Nomore ya selefouno (WhatsApp fa o na le yone)', // TODO tn-review
   'qs2.phoneHint': 'Re romela khoutu ya dinomore di le 6 go netefatsa. Dikitsiso di tla fa gape.', // TODO tn-review

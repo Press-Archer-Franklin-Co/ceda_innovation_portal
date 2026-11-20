@@ -9,6 +9,7 @@ from apps.programs.form_views import (
     FormPublishCheckView,
     FormPublishView,
     FormResponsesExportView,
+    FormReviewRolesView,
     FormTemplateListView,
     FormTranslationReviewView,
     FormTranslationsView,
@@ -20,6 +21,7 @@ from apps.programs.form_views import (
 urlpatterns = [
     path("", FormListCreateView.as_view(), name="form-list"),
     path("templates/", FormTemplateListView.as_view(), name="form-templates"),
+    path("review-roles/", FormReviewRolesView.as_view(), name="form-review-roles"),
     path("<uuid:form_id>/", FormDetailView.as_view(), name="form-detail"),
     path("<uuid:form_id>/draft/", FormDraftView.as_view(), name="form-draft"),
     path("<uuid:form_id>/publish/", FormPublishView.as_view(), name="form-publish"),

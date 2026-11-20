@@ -403,3 +403,28 @@ class FormResponsesExportView(APIView):
         response["Content-Disposition"] = f'attachment; filename="{filename}-responses.csv"'
         AuditService.log_action(actor=request.user, action_type="form_responses_exported", target=form)
         return response
+
+
+class FormReviewRolesView(APIView):
+    """R-32: roles a form editor can ask for a translation review, custom roles included."""
+
+    permission_classes = [HasCapability.of("forms.manage")]
+
+    @extend_schema(
+        tags=TAGS,
+        summary="Roles you can ask to review translations",
+        description="Active staff roles (built-in and custom), without Innovator: [{code, name: {en, tn}, is_system}].",
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        from apps.accounts.models import Role
+        from apps.core.constants import RoleType
+
+        roles = Role.objects.filter(is_active=True).exclude(code=RoleType.INNOVATOR).order_by("-is_system", "name")
+        return api_success(
+            data=[
+                {"code": role.code, "name": {"en": role.name, "tn": ((role.translations or {}).get("tn") or {}).get("name", "")}, "is_system": role.is_system}
+                for role in roles
+            ]
+        )
+

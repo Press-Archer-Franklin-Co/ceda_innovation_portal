@@ -271,7 +271,12 @@ class ApprovalService:
             if approve:
                 PageService.publish(target, approval.payload.get("sections") or [], actor=actor, go_live_at=approval.publish_at, approval=approval)
         elif isinstance(target, ContentItem):
-            PostService.apply_decision(target, approve=approve, publish_at=approval.publish_at)
+            if (approval.payload or {}).get("kind") == "edit":
+                # A change to a live post: apply it when approved; sending it back leaves the live post alone.
+                if approve:
+                    PostService.apply_edit(target, approval.payload.get("changes") or {})
+            else:
+                PostService.apply_decision(target, approve=approve, publish_at=approval.publish_at)
         elif isinstance(target, LeadershipCard) and approve:
             LeadershipCard.objects.filter(pk=target.pk).update(approved_at=timezone.now())
             clear_home_cache()
@@ -311,6 +316,7 @@ class ApprovalService:
             "requested_by": (approval.requested_by.full_name or approval.requested_by.email) if approval.requested_by else None,
             "requested_at": _iso(approval.created_at),
             "approver_roles": approval.approver_roles,
+            "kind": (approval.payload or {}).get("kind") or "publish",
             "languages": approval.languages or ["en"],
             "steps": steps,
             "comment": approval.comment,
@@ -329,10 +335,20 @@ class ApprovalService:
 class PageService:
     @staticmethod
     def home() -> Page:
-        page, created = Page.objects.get_or_create(slug=HOME, defaults={"title": "Home"})
-        if created or not page.sections.exists():
-            for order, section_type in enumerate(DEFAULT_ORDER):
-                PageSection.objects.create(page=page, type=section_type, order=order, enabled=True, settings=default_settings(section_type))
+        """The home page, with its default sections made exactly once (R-28).
+
+        Two first requests at the same time used to both make the defaults (two banners).
+        The page row is locked and the check repeated after the lock, so only one request
+        makes them; Page.slug is unique, so only one page exists.
+        """
+        page, _ = Page.objects.get_or_create(slug=HOME, defaults={"title": "Home"})
+        if page.sections.exists():
+            return page
+        with transaction.atomic():
+            page = Page.objects.select_for_update().get(pk=page.pk)
+            if not page.sections.exists():
+                for order, section_type in enumerate(DEFAULT_ORDER):
+                    PageSection.objects.create(page=page, type=section_type, order=order, enabled=True, settings=default_settings(section_type))
         return page
 
     @staticmethod
@@ -682,7 +698,55 @@ class PostService:
 
     @staticmethod
     def count_view(post):
+        from apps.content.models import PostMonthlyViews
+
         ContentItem.objects.filter(pk=post.pk).update(view_count=F("view_count") + 1)
+        month = timezone.localdate().replace(day=1)
+        updated = PostMonthlyViews.objects.filter(post=post, month=month).update(count=F("count") + 1)
+        if not updated:
+            from django.db import IntegrityError
+
+            try:
+                with transaction.atomic():
+                    PostMonthlyViews.objects.create(post=post, month=month, count=1)
+            except IntegrityError:  # another view made the row first
+                PostMonthlyViews.objects.filter(post=post, month=month).update(count=F("count") + 1)
+
+    @staticmethod
+    def monthly_view_counts() -> dict:
+        """views_this_month and views_last_month over all posts (R-29 a)."""
+        from django.db.models import Sum
+
+        from apps.content.models import PostMonthlyViews
+
+        this_month = timezone.localdate().replace(day=1)
+        last_month = (this_month - timezone.timedelta(days=1)).replace(day=1)
+        totals = dict(PostMonthlyViews.objects.filter(month__in=[this_month, last_month]).values_list("month").annotate(total=Sum("count")).values_list("month", "total"))
+        return {"views_this_month": totals.get(this_month, 0), "views_last_month": totals.get(last_month, 0)}
+
+    @staticmethod
+    def went_live(post, *, actor=None):
+        """Called whenever a post goes live: sends it to subscribers once if asked (R-29 b)."""
+        if not post.send_to_subscribers or post.blasts.exists():
+            return None
+        from apps.content.part2_services import SubscriptionService
+
+        return SubscriptionService.blast(post, actor=actor)
+
+    @staticmethod
+    def propose_edit(post, changes: dict, *, actor, summary: str) -> "ApprovalRequest":
+        """R-29 c: a change to a live post waits for approval; the live post stays as it is."""
+        return ApprovalService.create(post, actor=actor, summary=summary, payload={"kind": "edit", "changes": changes})
+
+    @staticmethod
+    def apply_edit(post, changes: dict):
+        from apps.content.b6_serializers import PostSerializer
+
+        serializer = PostSerializer(post, data=changes, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        clear_home_cache()
+        return post
 
     @staticmethod
     def submit(post, *, actor, publish_at=None) -> ApprovalRequest:
@@ -705,6 +769,8 @@ class PostService:
             post.published_at = post.published_at or timezone.now()
         post.save()
         clear_home_cache()
+        if post.status == "published":
+            PostService.went_live(post)
 
     @staticmethod
     def unpublish(post, *, actor):
@@ -784,6 +850,7 @@ def publish_due_content(now=None) -> dict:
         post.status = "published"
         post.published_at = post.publish_at or now
         post.save()
+        PostService.went_live(post)
         published += 1
     retired = 0
     for post in ContentItem.objects.filter(status="published", unpublish_at__lte=now):
