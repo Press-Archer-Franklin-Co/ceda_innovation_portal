@@ -250,6 +250,7 @@ REST_FRAMEWORK = {
         "form_published": "60/minute",
         "content_public": "120/minute",
         "subscribe": "10/hour",
+        "subscription_link": "60/hour",
         "challenges_public": "120/minute",
     },
 }

@@ -24,6 +24,12 @@ class SubscribeThrottle(IPRateThrottle):
     scope = "subscribe"
 
 
+class SubscriptionLinkThrottle(IPRateThrottle):
+    """Confirm and stop links: looser than sign-up, since the token guards them and many people can share one address."""
+
+    scope = "subscription_link"
+
+
 class StorySerializer(serializers.ModelSerializer):
     quote = BilingualAttrField("quote", max_length=200, required=False)
     business = BilingualAttrField("business", max_length=255, required=False)
@@ -192,7 +198,7 @@ class PublicSubscribeView(APIView):
 class PublicConfirmSubscriptionView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [SubscribeThrottle]
+    throttle_classes = [SubscriptionLinkThrottle]
 
     @extend_schema(tags=PUBLIC_TAGS, summary="Confirm an email sign-up", responses=OpenApiTypes.OBJECT)
     def get(self, request, token):
@@ -205,7 +211,7 @@ class PublicConfirmSubscriptionView(APIView):
 class PublicUnsubscribeView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = []
-    throttle_classes = [SubscribeThrottle]
+    throttle_classes = [SubscriptionLinkThrottle]
 
     @extend_schema(tags=PUBLIC_TAGS, summary="Stop updates", responses=OpenApiTypes.OBJECT)
     def get(self, request, token):
