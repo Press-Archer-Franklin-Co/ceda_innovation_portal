@@ -28,3 +28,7 @@ COPY deploy/edge/public.conf /etc/nginx/conf.d/public.conf
 COPY deploy/edge/staff.conf /etc/nginx/conf.d/staff.conf
 COPY --from=public-builder /build/public/dist/ /usr/share/nginx/html/public/
 COPY --from=staff-builder /build/staff/dist/ /usr/share/nginx/html/staff/
+# The console is also served at /staff/ by the public server (public.conf), so the
+# public site and the console share one origin when the stack is used without the host
+# nginx in front (demo, port forwarding). Sign-in tokens live in localStorage, per origin.
+COPY --from=staff-builder /build/staff/dist/ /usr/share/nginx/html/public/staff/
