@@ -317,6 +317,11 @@ class ApplicationDraftService:
         AuditService.log_action(actor=innovator, action_type="draft_saved", target=program, metadata={"draft_id": str(draft.id), "reference_number": draft.reference_number})
         return draft
 
+    @staticmethod
+    def _profile_district(user):
+        profile = getattr(user, "innovator_profile", None) if user else None
+        return getattr(profile, "district", None)
+
     @classmethod
     @transaction.atomic
     def submit_draft(
@@ -328,6 +333,8 @@ class ApplicationDraftService:
         consent: bool = False,
         ip_address: str | None = None,
         guest_name: str = "",
+        district=None,
+        guest_email: str = "",
     ):
         """Turn a draft into a submission.
 
@@ -356,6 +363,8 @@ class ApplicationDraftService:
             is_guest=is_guest,
             guest_name=guest_name if is_guest else "",
             guest_phone=draft.guest_phone if is_guest else "",
+            guest_email=guest_email if is_guest else "",
+            district=district or cls._profile_district(draft.innovator),
         )
         if consent is True:
             from apps.submissions.models import ConsentRecord

@@ -174,7 +174,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         draft, token = QuickStartService.start(
             title=serializer.validated_data["title"],
-            sector=serializer.validated_data["sector"],
+            sector=serializer.validated_data.get("sector"),
             program_id=serializer.validated_data.get("program_id"),
             ip_address=client_ip(request),
         )
@@ -246,6 +246,8 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
             name=serializer.validated_data.get("name", ""),
             first_name=serializer.validated_data.get("first_name", ""),
             last_name=serializer.validated_data.get("last_name", ""),
+            district=serializer.validated_data.get("district"),
+            email=serializer.validated_data.get("email", ""),
             ip_address=client_ip(request),
         )
         payload = IdeaSubmitService.response_payload(outcome, lang=resolve_request_language(request))

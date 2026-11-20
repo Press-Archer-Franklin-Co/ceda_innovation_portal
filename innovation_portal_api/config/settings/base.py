@@ -237,6 +237,7 @@ REST_FRAMEWORK = {
         "similar_ideas": "30/minute",
         "form_published": "60/minute",
         "content_public": "120/minute",
+        "subscribe": "10/hour",
         "challenges_public": "120/minute",
     },
 }

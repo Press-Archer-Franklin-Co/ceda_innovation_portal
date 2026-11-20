@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
@@ -263,6 +265,7 @@ class SiteSettings(models.Model):
     )
     quote_rotation_seconds = models.PositiveSmallIntegerField(default=8, help_text="Seconds each leadership quote shows on the home page.")
     # Contact and footer details for the public shell (R-13). All optional.
+    social_links = models.JSONField(default=list, blank=True, help_text='[{"network": "facebook", "url": "..."}]')
     whatsapp_number = models.CharField(max_length=32, blank=True, default="")
     ussd_code = models.CharField(max_length=32, blank=True, default="")
     call_centre_number = models.CharField(max_length=32, blank=True, default="")
@@ -330,6 +333,11 @@ class LeadershipCard(UUIDModel, TimeStampedModel):
         null=True, blank=True,
         related_name="leadership_cards",
     )
+    # B6 part 2 (F): quotes are at most 180 characters, in English and Setswana; quotes
+    # from officials go through approval before they show.
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"quote": "..."}}')
+    is_official = models.BooleanField(default=False, help_text="A government or CEDA official: the quote needs approval.")
+    approved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["sort_order", "created_at"]
@@ -348,6 +356,9 @@ class LeadershipCard(UUIDModel, TimeStampedModel):
             raise ValidationError({"job_title": "Job title is required."})
         if not self.quote.strip():
             raise ValidationError({"quote": "Quote / message is required."})
+        tn_quote = ((self.translations or {}).get("tn") or {}).get("quote", "")
+        if len(self.quote) > 180 or len(tn_quote or "") > 180:
+            raise ValidationError({"quote": "Keep the quote to 180 characters or fewer."})
 
     def save(self, *args, **kwargs):
         self.full_clean()
@@ -503,3 +514,80 @@ class Partner(UUIDModel, TimeStampedModel):
     def __str__(self):
         return self.name
 
+
+class Story(UUIDModel, TimeStampedModel):
+    """B6 part 2: a success story (1.6, 3.11). Stories about a real innovator need their consent first."""
+
+    class Status(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        PUBLISHED = "published", "Published"
+        ARCHIVED = "archived", "Archived"
+
+    class Consent(models.TextChoices):
+        NOT_NEEDED = "not_needed", "Not needed"
+        NOT_ASKED = "not_asked", "Not asked yet"
+        REQUESTED = "requested", "Asked, waiting"
+        GIVEN = "given", "Given"
+        DECLINED = "declined", "Declined"
+
+    MAX_FEATURED = 3
+    PLACES = ("home", "challenge", "stories")
+    TRANSLATABLE = ("quote", "business", "place")
+
+    person_name = models.CharField(max_length=255)
+    business = models.CharField(max_length=255, blank=True)
+    place = models.CharField(max_length=255, blank=True)
+    sector = models.ForeignKey("reference.Sector", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    quote = models.CharField(max_length=200, blank=True)
+    stats = models.JSONField(default=list, blank=True, help_text='[{"value": "40", "label": {"en": "jobs", "tn": "..."}}]')
+    translations = models.JSONField(default=dict, blank=True)
+    cover = models.ForeignKey("media_assets.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    shows_on = models.JSONField(default=list, blank=True, help_text='Where it shows: "home", "challenge", "stories".')
+    program = models.ForeignKey("programs.Program", on_delete=models.SET_NULL, null=True, blank=True, related_name="stories")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="stories_about_me", help_text="The innovator the story is about.")
+    submission = models.ForeignKey("submissions.Submission", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    is_featured = models.BooleanField(default=False, db_index=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFT, db_index=True)
+    consent_status = models.CharField(max_length=20, choices=Consent.choices, default=Consent.NOT_NEEDED)
+    consent_requested_at = models.DateTimeField(null=True, blank=True)
+    consent_decided_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["-is_featured", "-published_at", "-created_at"]
+
+    def __str__(self):
+        return f"{self.person_name}: {self.business}"
+
+
+class Subscriber(UUIDModel, TimeStampedModel):
+    """B6 part 2: people who asked for news by email (double opt-in) or WhatsApp."""
+
+    TOPICS = ("challenges", "news", "events", "results")
+
+    email = models.EmailField(blank=True, db_index=True)
+    phone = models.CharField(max_length=32, blank=True, help_text="For WhatsApp, once a provider exists.")
+    topics = models.JSONField(default=list, blank=True)
+    language = models.CharField(max_length=5, default="en")
+    confirm_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    unsubscribe_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+    unsubscribed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    @property
+    def is_active(self) -> bool:
+        return self.unsubscribed_at is None and (self.confirmed_at is not None or (not self.email and bool(self.phone)))
+
+
+class PostBlast(UUIDModel, TimeStampedModel):
+    """A post sent to subscribers. WhatsApp stays pending until a provider exists."""
+
+    post = models.ForeignKey(ContentItem, on_delete=models.CASCADE, related_name="blasts")
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    email_count = models.PositiveIntegerField(default=0)
+    whatsapp_pending = models.PositiveIntegerField(default=0)
+    sent_at = models.DateTimeField(null=True, blank=True)
