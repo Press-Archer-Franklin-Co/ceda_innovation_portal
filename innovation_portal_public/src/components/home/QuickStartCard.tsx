@@ -8,6 +8,7 @@ import { SelectControl } from '../ui/Select'
 import Skeleton from '../ui/Skeleton'
 import { useI18n } from '../../i18n'
 import { useAsync } from '../../lib/useAsync'
+import { useBasicsOnly } from '../../lib/usePublicConfig'
 import { referenceService } from '../../services/reference.service'
 import { intakeService, resumeStorage } from '../../services/intake.service'
 import { publicContent, ChallengeCard } from '../../services/publicContent.service'
@@ -34,6 +35,7 @@ const NOT_SURE_SLUGS = ['not-sure', 'not_sure', 'other']
 
 export default function QuickStartCard({ challenges, onContinue }: { challenges: ChallengeCard[]; onContinue: (draft: QuickStartDraft) => void }) {
   const { t, lang } = useI18n()
+  const basicsOnly = useBasicsOnly()
   const sectors = useAsync(() => referenceService.sectors(lang), [lang])
   const [title, setTitle] = useState('')
   const [sectorId, setSectorId] = useState<string | null>(null)
@@ -145,7 +147,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
       <div aria-hidden className="h-1 rounded-full bg-surface2">
         <div className="h-1 w-1/2 rounded-full bg-primary" />
       </div>
-      <p className="text-d-body-s text-muted">{t('qs.intro')}</p>
+      <p className="text-d-body-s text-muted">{basicsOnly ? t('qs.intro') : t('qs.introFull')}</p>
 
       <Field label={t('qs.ideaLabel')} hint={t('qs.ideaHint')} error={errors.title} required>
         <InputControl value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('qs.ideaPlaceholder')} maxLength={255} autoComplete="off" />

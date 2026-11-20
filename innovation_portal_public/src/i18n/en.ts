@@ -178,6 +178,12 @@ const en = {
   'qs2.sendFail': 'We could not send your idea. Your draft is safe. Try again in a moment.',
   'qs2.phoneFirst': 'Confirm your phone number with the code first.',
   'qs2.needMore': 'Your idea needs a few more answers before we can send it. Your draft is saved.',
+  'qs.introFull': 'Two short steps. Before you send, we ask what problem your idea solves and how.',
+  'qs2.problem': 'What problem does your idea solve?',
+  'qs2.solution': 'How does your idea solve it?',
+  'qs2.problemError': 'Tell us the problem in a sentence or two.',
+  'qs2.solutionError': 'Tell us how your idea solves it.',
+  'qs2.answerBelow': 'Answer the two questions about your idea, then send it. Your draft is saved.',
 
   'video.showTranscript': 'Show transcript',
   'video.hideTranscript': 'Hide transcript',
