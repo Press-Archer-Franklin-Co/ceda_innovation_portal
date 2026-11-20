@@ -3,11 +3,13 @@ import axios from 'axios'
 import { CheckCircle2, Lightbulb } from 'lucide-react'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
+import Textarea from '../ui/Textarea'
 import { Checkbox, Toggle } from '../ui/Choice'
 import { useI18n } from '../../i18n'
 import { useAuth } from '../../context/AuthContext'
 import { codeSignInService } from '../../services/codeSignIn.service'
 import { intakeService, resumeStorage } from '../../services/intake.service'
+import { useBasicsOnly } from '../../lib/usePublicConfig'
 import type { SubmitResult } from '../../types/innovator'
 import type { QuickStartDraft } from './QuickStartCard'
 
@@ -52,6 +54,13 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
   const [busy, setBusy] = useState<'send' | 'verify' | 'submit' | null>(null)
   const [errors, setErrors] = useState<Record<string, string | undefined>>({})
   const isChallenge = Boolean(draft.programId)
+  // "Send ideas with just the basics" off: General ideas answer the problem and the solution here, before
+  // Send. Also shown when the API asks for them anyway (switch changed, or the config did not load).
+  const basicsOnly = useBasicsOnly()
+  const [serverAsked, setServerAsked] = useState(false)
+  const askDetails = !isChallenge && (!basicsOnly || serverAsked)
+  const [problem, setProblem] = useState('')
+  const [solution, setSolution] = useState('')
 
   useEffect(() => {
     if (resendIn <= 0) return
@@ -94,6 +103,8 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     const next: Record<string, string | undefined> = {}
+    if (askDetails && !problem.trim()) next.problem = t('qs2.problemError')
+    if (askDetails && !solution.trim()) next.solution = t('qs2.solutionError')
     if (!name.trim()) next.name = t('qs2.nameError')
     if (!isAuthenticated && !verified) next.code = t('qs2.phoneFirst')
     if (!consent) next.consent = t('qs2.consentError')
@@ -106,8 +117,9 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
       const [first_name, ...rest] = name.trim().split(/\s+/)
       const last_name = rest.join(' ')
       // The general form has an "about-you" step with the same names; fill it so the form check passes.
-      // Challenge forms may not have that step, so a refusal here is fine. TODO(R-23)
+      // Challenge forms may not have that step, so a refusal here is fine.
       await intakeService.saveStep(draft.draftId, 'about-you', { first_name, last_name }, token).catch(() => undefined)
+      if (askDetails) await intakeService.saveStep(draft.draftId, 'your-idea', { problem: problem.trim(), solution: solution.trim() }, token)
       const result = await intakeService.submit(
         draft.draftId,
         { consent: true, create_account: isAuthenticated ? undefined : isChallenge || createAccount, first_name, last_name },
@@ -117,14 +129,14 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
       onSent(result)
     } catch (err) {
       const c = apiCode(err)
+      if (needsMoreAnswers(err) && !isChallenge) setServerAsked(true)
       setErrors({
         form:
           c === 'phone_verification_required' ? t('qs2.phoneFirst')
           : c === 'consent_required' ? t('qs2.consentError')
           : c === 'name_required' ? t('qs2.nameError')
-          // The form still wants answers quick start does not ask for (problem, solution). TODO(R-23): goes away
-          // once the API takes a quick-start idea with just the basics.
-          : needsMoreAnswers(err) ? t('qs2.needMore')
+          // The form still wants answers: show the questions (General ideas) or say what is missing.
+          : needsMoreAnswers(err) ? (isChallenge ? t('qs2.needMore') : t('qs2.answerBelow'))
           : t('qs2.sendFail'),
       })
     } finally {
@@ -155,6 +167,13 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
           {t('qs2.edit')}
         </button>
       </div>
+
+      {askDetails && (
+        <>
+          <Textarea label={t('qs2.problem')} rows={3} maxChars={1000} value={problem} onChange={(e) => { setProblem(e.target.value); setErrors((x) => ({ ...x, problem: undefined })) }} error={errors.problem} required />
+          <Textarea label={t('qs2.solution')} rows={3} maxChars={1000} value={solution} onChange={(e) => { setSolution(e.target.value); setErrors((x) => ({ ...x, solution: undefined })) }} error={errors.solution} required />
+        </>
+      )}
 
       <Input label={t('qs2.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" required />
 
