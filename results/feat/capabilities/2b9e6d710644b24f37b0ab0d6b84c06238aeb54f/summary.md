@@ -1,9 +1,9 @@
 ## CI results for `feat/capabilities` @ `2b9e6d7`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44723517687
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44734579121
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 29s, job steps 3m 48s
+Timing (api job): Run tests 4m 02s, job steps 4m 23s
 
 | Check | Result | Details |
 | --- | --- | --- |
