@@ -120,6 +120,7 @@ class StepCompletionEvaluator:
         return {
             "execution_mode": step.execution_mode if step else "",
             "minimum_completions_required": step.minimum_completions_required if step else 0,
+            "advance_automatically": bool(step.advance_automatically) if step else False,
             "total_tasks": total_tasks,
             "completed_tasks": completed_tasks,
             "approved_tasks": approved_tasks,
@@ -383,6 +384,7 @@ class WorkflowDefinitionService:
                 submission_status=step.submission_status,
                 execution_mode=step.execution_mode,
                 minimum_completions_required=step.minimum_completions_required,
+                advance_automatically=step.advance_automatically,
                 requires_assignment=step.requires_assignment,
                 assignment_role=step.assignment_role,
                 minimum_assignments=step.minimum_assignments,
@@ -2783,7 +2785,9 @@ class TaskExecutionService:
         no_criteria = step.requires_evaluation and not WorkflowRuntimeService._step_has_criteria(step)
         if step.code == "challenge_judging":
             return task
-        if step.requires_assignment and (not step.requires_evaluation or no_criteria):
+        # The step moves on by itself only when it is set to (advance_automatically);
+        # otherwise an officer moves it on once execution_mode allows it.
+        if step.advance_automatically and step.requires_assignment and (not step.requires_evaluation or no_criteria):
             completion = StepCompletionEvaluator.evaluate(instance=instance, step=step)
             if completion["may_advance"]:
                 done_tasks = instance.tasks.filter(

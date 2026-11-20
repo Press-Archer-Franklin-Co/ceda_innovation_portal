@@ -50,7 +50,7 @@ class AuthProfileApiTests(APITestCase):
         self.assertIn("profile", response.data["user"])
         self.assertIsNotNone(response.data["user"]["profile"])
 
-    def test_password_login_establishes_session_for_follow_up_requests(self):
+    def test_password_login_returns_tokens_for_follow_up_requests(self):
         User.objects.create_user(
             email="sessionuser@example.com",
             password="StrongPass123!",
@@ -64,8 +64,12 @@ class AuthProfileApiTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["user"]["email"], "sessionuser@example.com")
-        self.assertIn("sessionid", self.client.cookies)
+        self.assertIn("access", response.data)
+        self.assertIn("refresh", response.data)
 
+        # JWT only (Nshathisi, 20 Nov): without the token the API does not know the person.
+        self.assertIn(self.client.get("/api/auth/account-security/").status_code, {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
         follow_up = self.client.get("/api/auth/account-security/")
         self.assertEqual(follow_up.status_code, status.HTTP_200_OK)
 
@@ -118,21 +122,25 @@ class AuthProfileApiTests(APITestCase):
         self.assertTrue(response.data["user"]["is_superuser"])
         self.assertTrue(response.data["user"]["is_admin"])
 
-    def test_logout_clears_authenticated_session_without_refresh(self):
+    def test_logout_blacklists_the_refresh_token(self):
         User.objects.create_user(
             email="logoutsession@example.com",
             password="StrongPass123!",
             first_name="Logout",
             last_name="Session",
         )
-        self.client.post(
+        login = self.client.post(
             "/api/auth/login/",
             {"email": "logoutsession@example.com", "password": "StrongPass123!"},
             format="json",
         )
+        refresh = login.data["refresh"]
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {login.data['access']}")
 
-        response = self.client.post("/api/auth/logout/", {}, format="json")
+        response = self.client.post("/api/auth/logout/", {"refresh": refresh}, format="json")
         self.assertEqual(response.status_code, status.HTTP_205_RESET_CONTENT)
 
-        follow_up = self.client.get("/api/auth/account-security/")
-        self.assertIn(follow_up.status_code, {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN})
+        # The blacklisted refresh token cannot get a new access token.
+        self.client.credentials()
+        again = self.client.post("/api/auth/refresh/", {"refresh": refresh}, format="json")
+        self.assertEqual(again.status_code, status.HTTP_401_UNAUTHORIZED)

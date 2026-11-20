@@ -194,8 +194,14 @@ class RefreshView(generics.GenericAPIView):
     serializer_class = TokenRefreshSerializer
 
     def post(self, request, *args, **kwargs):
+        from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
+
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as exc:
+            # A blacklisted or expired refresh token is a 401, not a server error.
+            raise InvalidToken(exc.args[0]) from exc
 
         refresh_token = RefreshToken(serializer.validated_data["refresh"])
         user = User.objects.filter(id=refresh_token.get("user_id")).first()
