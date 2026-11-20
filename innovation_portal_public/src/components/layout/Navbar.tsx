@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { Bell, Briefcase, Globe, LayoutDashboard, LogOut, Menu, Search, ShieldCheck, User, X } from 'lucide-react'
+import { ArrowRight, Bell, Briefcase, ChevronRight, FileText, FolderOpen, Globe, Heart, Home, LayoutDashboard, Lightbulb, LogOut, Megaphone, Menu, MessageCircle, Search, ShieldCheck, Trophy, User, X } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../context/AuthContext'
 import { useI18n } from '../../i18n'
@@ -40,6 +41,12 @@ const mainLinks: NavItem[] = [
 ]
 
 const myIdeas: NavItem = { to: '/my-ideas', key: 'nav.myIdeas' }
+
+/** Phone menu icons (Figma 11:694), by path. */
+const MENU_ICONS: Record<string, LucideIcon> = {
+  '/': Home, '/dashboard': Home, [SUBMIT_PATH]: Lightbulb, '/challenges': Trophy, '/news': Megaphone,
+  '/stories': Heart, '/faq': MessageCircle, '/my-ideas': FolderOpen,
+}
 
 export function UtilityBar() {
   const { t } = useI18n()
@@ -206,7 +213,7 @@ function SearchButton() {
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="w-10 h-10 rounded-full flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        className="w-10 h-10 rounded-full border border-border flex items-center justify-center text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
         <Search size={18} aria-hidden />
       </button>
@@ -241,11 +248,16 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
           <SiteSearch variant="drawer" onNavigate={onClose} onQueryChange={setSearching} />
         </div>
         <nav aria-label={t('nav.main')} className={clsx('flex-1 overflow-y-auto px-5 py-2', searching && 'hidden')}>
-          {links.map((l) => (
-            <NavLink key={l.to} to={l.to} end={l.end} onClick={onClose} className={({ isActive }) => clsx(row, isActive && 'text-primary')}>
-              {t(l.key)}
-            </NavLink>
-          ))}
+          {links.map((l) => {
+            const Icon = MENU_ICONS[l.to] ?? FileText
+            return (
+              <NavLink key={l.to} to={l.to} end={l.end} onClick={onClose} className={({ isActive }) => clsx(row, 'gap-3.5', isActive && 'text-primary')}>
+                <Icon size={22} aria-hidden className="shrink-0" />
+                <span className="flex-1">{t(l.key)}</span>
+                <ChevronRight size={18} aria-hidden className="text-muted shrink-0" />
+              </NavLink>
+            )
+          })}
           {isAuthenticated && (
             <>
               <Link to={WEBSITE_HOME_PATH} onClick={onClose} className={row}>{t('nav.websiteHome')}</Link>
@@ -255,7 +267,10 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
             </>
           )}
           <div className="py-5 space-y-3 text-d-body-s text-muted">
-            <LanguageSwitch />
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-d-label text-text">{t('lang.label')}</span>
+              <LanguageSwitch variant="pill" />
+            </div>
             {(settings.whatsapp_number || settings.ussd_code || settings.call_centre_number) && (
               <div className="space-y-1.5">
                 <p className="text-d-label text-text">{t('footer.otherWays')}</p>
@@ -267,14 +282,14 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
           </div>
         </nav>
         <div className="p-5 border-t border-border shrink-0 space-y-3">
+          <Link to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
+            {t('nav.submit')} <ArrowRight size={18} aria-hidden />
+          </Link>
           {!isAuthenticated && (
             <Link to={SIGN_IN_PATH} onClick={onClose} className={buttonClasses({ variant: 'secondary', block: true })}>
               {t('common.signIn')}
             </Link>
           )}
-          <Link to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
-            {t('nav.submit')}
-          </Link>
         </div>
       </div>
     </div>

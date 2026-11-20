@@ -197,7 +197,6 @@ const tn: Record<StringKey, string> = {
   'search.opensNew': '(e bula mo tsebeng e ntšha)', // TODO tn-review
   'qs2.name': 'Leina ka botlalo', // TODO tn-review
   'qs2.district': 'Kgaolo', // TODO tn-review
-  'qs2.districtPlaceholder': 'Tlhopha kgaolo ya gago', // TODO tn-review
   'qs2.districtLoading': 'Re tsenya dikgaolo', // TODO tn-review
   'qs2.districtError': 'Tlhopha kgaolo mo lenaneng.', // TODO tn-review
   'qs2.email': 'Imeile', // TODO tn-review
