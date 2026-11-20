@@ -41,7 +41,7 @@ const GROUPS = [
     items: [
       // TODO(S1): capability 'content.edit' once S1 is on main.
       { label: 'staff.nav.homePage', href: '/content/home', icon: LayoutTemplate, officerOrAbove: true },
-      { label: 'staff.nav.news', href: '/content?tab=news', icon: Newspaper, officerOrAbove: true, tab: 'news', defaultTab: true },
+      { label: 'staff.nav.news', href: '/content/news', icon: Newspaper, officerOrAbove: true },
       { label: 'staff.nav.stories', href: '/content?tab=winners', icon: Trophy, officerOrAbove: true, tab: 'winners' },
       { label: 'staff.nav.quotes', href: '/content?tab=leadership', icon: Quote, officerOrAbove: true, tab: 'leadership' },
       { label: 'staff.nav.faqs', href: '/content?tab=faqs', icon: HelpCircle, officerOrAbove: true, tab: 'faqs' },

@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { approvals, homePage } from '../api/websiteContent'
+import { approvals, homePage, posts, subscribers } from '../api/websiteContent'
 
 export const contentKeys = {
   sectionTypes: ()      => ['content', 'section-types'],
   homeDraft:    ()      => ['content', 'home', 'draft'],
   homePreview:  (lang)  => ['content', 'home', 'preview', lang],
   approvals:    (status) => ['content', 'approvals', status ?? 'all'],
+  posts:        (params) => ['content', 'posts', params ?? {}],
+  post:         (id)     => ['content', 'post', id],
+  subscribers:  ()       => ['content', 'subscribers'],
 }
 
 const list = (data) => (Array.isArray(data) ? data : data?.results ?? [])
@@ -49,5 +52,48 @@ export function useDecideApproval() {
   return useMutation({
     mutationFn: ({ id, approve, comment }) => (approve ? approvals.approve(id, comment) : approvals.reject(id, comment)),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['content'] }),
+  })
+}
+
+// ── 3.9 and 3.10 posts ──────────────────────────────────────────────────────
+
+export function usePosts(params) {
+  return useQuery({
+    queryKey: contentKeys.posts(params),
+    queryFn: async () => {
+      const data = await posts.list(params)
+      return { results: data?.results ?? (Array.isArray(data) ? data : []), counts: data?.counts ?? null }
+    },
+  })
+}
+
+export function usePost(id) {
+  return useQuery({ queryKey: contentKeys.post(id), queryFn: () => posts.get(id), enabled: !!id, refetchOnWindowFocus: false })
+}
+
+export function useSubscriberCounts() {
+  return useQuery({ queryKey: contentKeys.subscribers(), queryFn: () => subscribers.counts(), staleTime: 5 * 60 * 1000 })
+}
+
+/** One hook for the row and editor actions; each refreshes the lists afterwards. */
+export function usePostAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ action, id, value }) => {
+      if (action === 'create') return posts.create(value)
+      if (action === 'update') return posts.update(id, value)
+      if (action === 'remove') return posts.remove(id)
+      if (action === 'submit') return posts.submit(id, value)
+      if (action === 'pin') return posts.pin(id, value)
+      if (action === 'duplicate') return posts.duplicate(id)
+      if (action === 'unpublish') return posts.unpublish(id)
+      if (action === 'blast') return posts.blast(id)
+      throw new Error(`Unknown action ${action}`)
+    },
+    onSuccess: (data, { action, id }) => {
+      qc.invalidateQueries({ queryKey: ['content', 'posts'] })
+      qc.invalidateQueries({ queryKey: ['content', 'approvals'] })
+      if (id && action !== 'remove' && data?.id === id) qc.setQueryData(contentKeys.post(id), data)
+    },
   })
 }
