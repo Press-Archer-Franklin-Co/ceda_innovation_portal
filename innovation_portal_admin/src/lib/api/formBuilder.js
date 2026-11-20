@@ -119,6 +119,8 @@ export const forms = {
   /** 501 when no translation provider is set up. Suggestions are never saved by the API. */
   suggest:          (id, keys) => client.post(`/api/forms/${id}/translations/suggest/`, keys ? { keys } : {}),
   requestReview:    (id, body) => client.post(`/api/forms/${id}/translations/request-review/`, body ?? {}),
+  /** Active staff roles, custom ones included (R-32). Needs forms.manage. */
+  reviewRoles:      ()         => client.get('/api/forms/review-roles/'),
 }
 
 export const programSetup = {

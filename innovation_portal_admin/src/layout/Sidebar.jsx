@@ -54,6 +54,7 @@ const GROUPS = [
     label: 'staff.group.admin',
     items: [
       { label: 'staff.nav.users', href: '/users', icon: Users, capability: 'users.manage' },
+      { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
       { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
       { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, capability: 'challenges.manage' },

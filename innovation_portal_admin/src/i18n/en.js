@@ -1,5 +1,6 @@
 // English strings for staff console chrome. Every key must also exist in tn.js (checked in the styleguide).
 import { challengesEn } from './challenges'
+import { rolesEn } from './roles'
 import { contentEn } from './content'
 import { formsEn } from './forms'
 
@@ -138,6 +139,7 @@ const en = {
   'crop.taintedError': 'This picture cannot be cropped here. Upload the original file again and crop it before saving.',
   ...formsEn,
   ...challengesEn,
+  ...rolesEn,
   ...contentEn,
 }
 
