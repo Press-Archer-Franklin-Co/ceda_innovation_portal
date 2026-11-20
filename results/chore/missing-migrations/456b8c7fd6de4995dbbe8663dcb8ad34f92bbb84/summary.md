@@ -1,9 +1,9 @@
 ## CI results for `chore/missing-migrations` @ `456b8c7`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44674574703
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44678237262
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 56s, job steps 4m 19s
+Timing (api job): Run tests 3m 28s, job steps 3m 47s
 
 | Check | Result | Details |
 | --- | --- | --- |
