@@ -59,6 +59,20 @@ class OTPLoginApiTests(TestCase):
         self.assertEqual(LocMemMessageSender.outbox[0].to, "+26771234567")
         self.assertIn(CODE, LocMemMessageSender.outbox[0].body)
 
+    def test_email_codes_work_with_sms_switched_off(self):
+        # Demo set-up: code sign-in on, SMS off until SMS details are entered in Platform settings.
+        set_features(self, code_sign_in=True, sms_messages=False)
+        response = self._request(email="demo.person@example.com")
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["data"]["channel"], "email")
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(CODE, mail.outbox[0].body)
+        verified = self._verify(email="demo.person@example.com")
+        self.assertEqual(verified.status_code, 200, verified.content)
+        self.assertIn("access", verified.json())
+        # Phone codes are refused while SMS is off.
+        self.assertNotEqual(self._request(phone="71234567").status_code, 200)
+
     def test_request_by_email_sends_email(self):
         response = self._request(email="New.Person@Example.com")
         self.assertEqual(response.status_code, 200)

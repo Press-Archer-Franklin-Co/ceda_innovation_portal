@@ -357,7 +357,7 @@ class WorkflowManagementAndVisibilityApiTests(TestCase):
         )
         self.assertEqual(section_response.status_code, 201)
         field_response = self.client.post(
-            f"/api/form-sections/{section_response.data['id']}/fields/",
+            f"/api/programs/form-sections/{section_response.data['id']}/fields/",
             {"key": "decision_note", "label": "Decision Note", "field_type": "textarea", "required": True, "ordering": 1},
             format="json",
         )
@@ -412,7 +412,7 @@ class WorkflowManagementAndVisibilityApiTests(TestCase):
             format="json",
         )
         self.client.post(
-            f"/api/form-sections/{section_response.data['id']}/fields/",
+            f"/api/programs/form-sections/{section_response.data['id']}/fields/",
             {"key": "review_note", "label": "Review Note", "field_type": "textarea", "required": True, "ordering": 1},
             format="json",
         )
@@ -994,7 +994,10 @@ class WorkflowManagementAndVisibilityApiTests(TestCase):
         self.assertNotIn("Subject: New assignment", output)
 
     def test_schema_uses_correct_request_serializers_for_nodes_and_transitions(self):
-        self.client.force_authenticate(self.officer)
+        # The schema is for administrators only (config/urls.py).
+        admin = User.objects.create_user(email="schema-admin@example.com", password="StrongPass123")
+        RoleService.assign_roles(admin, [RoleType.ADMINISTRATOR])
+        self.client.force_authenticate(admin)
         response = self.client.get(reverse("schema"))
         self.assertEqual(response.status_code, 200)
         schema = yaml.safe_load(response.content.decode("utf-8"))

@@ -112,7 +112,7 @@ class OperationsWorkflowSafetyApiTests(TestCase):
 
     def test_notification_retry_and_operations_dashboard(self):
         self.client.force_authenticate(self.officer)
-        with patch("apps.communications.services.send_mail", side_effect=RuntimeError("smtp failed")):
+        with patch("apps.communications.services.EmailNotificationService.send_generic_notification_email", side_effect=RuntimeError("smtp failed")):
             notification = NotificationService.notify(
                 user=self.innovator,
                 notification_type="assignment_created",
