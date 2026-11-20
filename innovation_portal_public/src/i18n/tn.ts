@@ -71,6 +71,123 @@ const tn: Record<StringKey, string> = {
   'error.newVersionBody': 'Simolola sesha go bona kgatiso ya bosheng. Se o se bolokileng se a bolokwa.', // TODO tn-review
   'error.reload': 'Simolola sesha', // TODO tn-review
 
+  'home.loadError': 'Ga re a kgona go bula tsebe ya ntlha', // TODO tn-review
+  'home.loadErrorBody': 'Tlhola kgolagano ya gago o bo o leke gape.', // TODO tn-review
+  'home.pill': 'Dikakanyo di amogelwa ngwaga otlhe', // TODO tn-review
+  'home.check1': 'Ga go duelelwe', // TODO tn-review
+  'home.check2': 'Latela mo webosaeteng, WhatsApp kgotsa USSD', // TODO tn-review
+  'home.check3': 'Motlhankedi wa CEDA o a araba', // TODO tn-review
+  'qs.title': 'Simolola kakanyo ya gago ka metsotso e le 2', // TODO tn-review
+  'qs.step': 'Kgato {n} go 2', // TODO tn-review
+  'qs.intro': 'Ditlhaloso tsa motheo fela jaanong. O ka oketsa dintlha, ditshwantsho le dikwalo morago.', // TODO tn-review
+  'qs.ideaLabel': 'Kakanyo ya gago e bidiwa eng?', // TODO tn-review
+  'qs.ideaPlaceholder': 'sk. Dinamune tsa phane tse di omisitsweng ka letsatsi', // TODO tn-review
+  'qs.ideaHint': 'Le le khutshwane le le motlhofo le botoka', // TODO tn-review
+  'qs.sector': 'Ke lephata lefe le le tshwanelang?', // TODO tn-review
+  'qs.notSure': 'Ga ke itse', // TODO tn-review
+  'qs.challenge': 'A e le ya kgwetlho?', // TODO tn-review
+  'qs.general': 'Nnyaa, ke kakanyo ya kakaretso', // TODO tn-review
+  'qs.continue': 'Tswelela', // TODO tn-review
+  'qs.privacy': 'Kakanyetso ya gago e bolokwa ka bo yone. E sireleditswe ke Molao wa Tshireletso ya Tshedimosetso.', // TODO tn-review
+  'qs.saving': 'E a boloka…', // TODO tn-review
+  'qs.saved': 'E bolokilwe', // TODO tn-review
+  'qs.needSector': 'Tlhopha lephata mme re tla boloka kakanyetso ya gago.', // TODO tn-review
+  'qs.titleError': 'Naya kakanyo ya gago leina le lekhutshwane.', // TODO tn-review
+  'qs.sectorError': 'Tlhopha lephata le le tshwanelang botoka.', // TODO tn-review
+  'qs.saveError': 'Ga re a kgona go boloka kakanyetso ya gago. Tlhola kgolagano o bo o leke gape.', // TODO tn-review
+  'qs.sectorsError': 'Ga re a kgona go bula mafapha. Leka gape morago ga nakwana.', // TODO tn-review
+  'home.challengesOver': 'Dikgwetlho tse di nang le malatsi a bofelo', // TODO tn-review
+  'home.challengesSub': 'Ka dinako tse dingwe CEDA e kopa dikakanyo ka bothata bongwe. Kgwetlho nngwe le nngwe e na le letsatsi la bofelo le thuso ya yone.', // TODO tn-review
+  'ch.daysLeft': 'Go setse malatsi a le {n}', // TODO tn-review
+  'ch.lastDay': 'Letsatsi la bofelo', // TODO tn-review
+  'ch.closes': 'E tswalwa {date}', // TODO tn-review
+  'ch.opens': 'E bulwa {date}', // TODO tn-review
+  'ch.closed': 'E tswetswe {date}', // TODO tn-review
+  'ch.enter': 'Tsenela kgwetlho e', // TODO tn-review
+  'ch.notify': 'Nkitsise fa e bulwa', // TODO tn-review
+  'ch.seeResults': 'Bona dipoelo', // TODO tn-review
+  'ch.generalTitle': 'Ga go na kgwetlho e e tshwanelang kakanyo ya gago?', // TODO tn-review
+  'ch.generalBody': 'Go siame. Dikakanyo tsa kakaretso di amogelwa ngwaga otlhe. E romele mme motlhankedi o tla go kaela.', // TODO tn-review
+  'ch.generalCta': 'Romela kakanyo ya kakaretso', // TODO tn-review
+  'home.quotePrev': 'Mafoko a pele', // TODO tn-review
+  'home.quoteNext': 'Mafoko a a latelang', // TODO tn-review
+  'home.quoteOf': 'Mafoko {n} go {total}', // TODO tn-review
+  'home.newsOver': 'Dikgang tsa ga jaana', // TODO tn-review
+  'home.allNews': 'Dikgang tsotlhe', // TODO tn-review
+  'home.play': 'Tshameka bidio: {title}', // TODO tn-review
+  'post.news': 'Dikgang', // TODO tn-review
+  'post.event': 'Tiragalo', // TODO tn-review
+  'post.opportunity': 'Tshono', // TODO tn-review
+  'post.result': 'Dipoelo', // TODO tn-review
+  'post.notice': 'Kitsiso', // TODO tn-review
+  'post.newsletter': 'Lekwalodikgang', // TODO tn-review
+  'post.video': 'Bidio', // TODO tn-review
+  'home.bulletinOver': 'Boto ya dikitsiso', // TODO tn-review
+  'filter.all': 'Tsotlhe', // TODO tn-review
+  'filter.notice': 'Dikitsiso', // TODO tn-review
+  'filter.event': 'Ditiragalo', // TODO tn-review
+  'filter.opportunity': 'Ditshono', // TODO tn-review
+  'filter.result': 'Dipoelo', // TODO tn-review
+  'filter.newsletter': 'Makwalodikgang', // TODO tn-review
+  'home.noBulletin': 'Ga go na sepe mo botong mo setlhopheng se jaanong.', // TODO tn-review
+  'sub.title': 'O se tlhole o tlhaelwa ke letsatsi la bofelo', // TODO tn-review
+  'sub.body': 'Amogela dikitsiso, dikgwetlho le makwalodikgang a kgwedi ka tsela e o e ratang.', // TODO tn-review
+  'sub.email': 'Imeile', // TODO tn-review
+  'sub.whatsapp': 'Romela le mo WhatsApp', // TODO tn-review
+  'sub.phone': 'Nomore ya WhatsApp', // TODO tn-review
+  'sub.button': 'Ikwadise', // TODO tn-review
+  'sub.unsub': 'O ka ikgogela morago nako nngwe le nngwe.', // TODO tn-review
+  'sub.done': 'Tlhola imeile ya gago', // TODO tn-review
+  'sub.doneBody': 'Re go romeletse kgolagano ya go netefatsa. Ga go sepe se se romelwang go fitlha o e tobetsa.', // TODO tn-review
+  'sub.notYet': 'Go ikwadisa go tla bulwa ka bonako. Go fitlha foo, tlhola boto ya dikitsiso fa.', // TODO tn-review
+  'sub.emailError': 'Tsenya aterese ya imeile jaaka leina@example.co.bw.', // TODO tn-review
+  'sub.error': 'Ga re a kgona go go kwadisa. Leka gape morago ga nakwana.', // TODO tn-review
+  'home.sectorsOver': 'Boitshimololedi mo mafapheng otlhe', // TODO tn-review
+  'home.sectorsSub': 'Tsela e e botoka, sedirwa se sesha kgotsa tirelo e e botlhale, tsotlhe di a bala. Fa ke ka moo boitshimololedi bo ka lebegang ka teng mo Botswana.', // TODO tn-review
+  'home.howOver': 'Ka moo go dirang ka teng', // TODO tn-review
+  'home.fullGuide': 'Kaelo e e feletseng', // TODO tn-review
+  'home.storiesOver': 'Dikgang tsa katlego', // TODO tn-review
+  'home.allStories': 'Dikgang tsotlhe', // TODO tn-review
+  'home.partnersEmpty': 'Molekane', // TODO tn-review
+
+  'qs2.title': 'Re ka go fitlhelela jang?', // TODO tn-review
+  'qs2.edit': 'Fetola', // TODO tn-review
+  'qs2.general': 'Kakanyo ya kakaretso', // TODO tn-review
+  'qs2.name': 'Leina ka botlalo', // TODO tn-review
+  'qs2.nameError': 'Re bolelele leina la gago.', // TODO tn-review
+  'qs2.phone': 'Nomore ya selefouno (WhatsApp fa o na le yone)', // TODO tn-review
+  'qs2.phoneHint': 'Re romela khoutu ya dinomore di le 6 go netefatsa. Dikitsiso di tla fa gape.', // TODO tn-review
+  'qs2.phoneError': 'Tsenya nomore ya selefouno jaaka 71 234 567.', // TODO tn-review
+  'qs2.sendCode': 'Romela khoutu', // TODO tn-review
+  'qs2.code': 'Khoutu ya dinomore di le 6', // TODO tn-review
+  'qs2.codeHint': 'E rometswe go {to}.', // TODO tn-review
+  'qs2.confirm': 'Netefatsa', // TODO tn-review
+  'qs2.resendIn': 'Romela gape mo {time}', // TODO tn-review
+  'qs2.resend': 'Romela khoutu e ntšhwa', // TODO tn-review
+  'qs2.codeError': 'Khoutu eo ga e a dira. E tlhole kgotsa o kope e ntšhwa.', // TODO tn-review
+  'qs2.sendError': 'Ga re a kgona go romela khoutu. Tlhola nomore o bo o leke gape.', // TODO tn-review
+  'qs2.confirmed': 'Nomore e netefaditswe', // TODO tn-review
+  'qs2.change': 'Fetola nomore', // TODO tn-review
+  'qs2.account': 'Ntirela akhaonto gore ke kgone go latela le go fetola', // TODO tn-review
+  'qs2.accountHint': 'Ga go tlhokege lefoko la sephiri. Tsena ka khoutu.', // TODO tn-review
+  'qs2.accountRequired': 'Ditsenelo tsa dikgwetlho di tlhoka akhaonto, ka jalo re go direla yone.', // TODO tn-review
+  'qs2.signedIn': 'O tsene jaaka {name}. Kakanyo ya gago e ya mo akhaontong ya gago.', // TODO tn-review
+  'qs2.consent': 'Ke dumela gore CEDA e ka ikgolaganya le nna ka kakanyo e mme e boloke dintlha tsa me jaaka kitsiso ya sephiri e tlhalosa.', // TODO tn-review
+  'qs2.consentError': 'Tshwaya lebokoso go dumela pele o romela.', // TODO tn-review
+  'qs2.back': 'Boela morago', // TODO tn-review
+  'qs2.send': 'Romela kakanyo ya me', // TODO tn-review
+  'qs2.sendFail': 'Ga re a kgona go romela kakanyo ya gago. Kakanyetso ya gago e babalesegile. Leka gape morago ga nakwana.', // TODO tn-review
+  'qs2.phoneFirst': 'Netefatsa nomore ya gago ka khoutu pele.', // TODO tn-review
+
+  'video.showTranscript': 'Bontsha mafoko', // TODO tn-review
+  'video.hideTranscript': 'Fitlha mafoko', // TODO tn-review
+  'video.noCaptions': 'Bidio e ga e ise e nne le mafoko a a kwadilweng.', // TODO tn-review
+  'video.related': 'Tse di amanang', // TODO tn-review
+  'video.loadError': 'Ga re a kgona go bula kgang e', // TODO tn-review
+  'video.readMore': 'Bala kgang yotlhe', // TODO tn-review
+  'video.noVideo': 'Kgang e ga e na bidio.', // TODO tn-review
+  'video.transcript': 'Mafoko a bidio', // TODO tn-review
+
   'pager.label': 'Ditsebe',
   'pager.previous': 'Morago',
   'pager.next': 'Pele',
