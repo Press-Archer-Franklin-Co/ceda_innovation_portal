@@ -7,6 +7,8 @@ const en = {
   'lang.tn': 'Setswana',
   'lang.label': 'Language',
   'common.close': 'Close',
+  'access.noPageTitle': 'This page is not part of your work',
+  'access.noPageBody': 'Ask an administrator if you need it.',
   'common.confirm': 'Confirm',
   'common.cancel': 'Cancel',
   'common.save': 'Save',

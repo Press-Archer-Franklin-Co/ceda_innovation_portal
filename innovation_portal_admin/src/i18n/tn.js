@@ -7,6 +7,8 @@ const tn = {
   'lang.tn': 'Setswana',
   'lang.label': 'Puo',
   'common.close': 'Tswala',
+  'access.noPageTitle': 'Tsebe e ga se karolo ya tiro ya gago', // TODO tn-review
+  'access.noPageBody': 'Kopa motsamaisi fa o e tlhoka.', // TODO tn-review
   'common.confirm': 'Netefatsa',
   'common.cancel': 'Khansela',
   'common.save': 'Boloka',

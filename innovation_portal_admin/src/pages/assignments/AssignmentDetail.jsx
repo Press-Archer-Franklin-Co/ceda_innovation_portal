@@ -11,7 +11,6 @@ import DocumentLink from '../../components/documents/DocumentLink'
 import { useSubmission, useSubmissionEvaluations, useSubmissionWorkflow, useWorkflowAction } from '../../lib/queries/submissions'
 import { useAssignmentInstance, useAcceptAssignment, useCompleteAssignment, useDeclineAssignment } from '../../lib/queries/assignmentInstances'
 import { useAuth } from '../../lib/auth/AuthContext'
-import { isAdminOrManager } from '../../lib/auth/permissions'
 import {
   formatDisplayLabel,
   formatResponseValue,
@@ -118,8 +117,8 @@ export default function AssignmentDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { user } = useAuth()
-  const adminMode = isAdminOrManager(user)
+  const { user, can } = useAuth()
+  const adminMode = can('entries.assign') // assigns reviewers (IsOfficerOrAdmin)
   const [note, setNote] = useState('')
   const [reviewComment, setReviewComment] = useState('')
   const [reassignUser, setReassignUser] = useState('')

@@ -5,7 +5,6 @@ import { Menu, Search, Bell, ChevronDown, LogOut, User, BriefcaseBusiness, Exter
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
 import { useAuth } from '../lib/auth/AuthContext'
-import { isInnovationOfficer } from '../lib/auth/permissions'
 import { notifications } from '../lib/api/endpoints'
 import { useT } from '../i18n/context'
 import Avatar from '../components/ui/Avatar'
@@ -140,8 +139,8 @@ function BellButton() {
 export default function Topbar() {
   const t = useT()
   const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen } = useLayout()
-  const { user } = useAuth()
-  const canSearch = isInnovationOfficer(user)
+  const { can } = useAuth()
+  const canSearch = can('entries.search') // GET /api/staff-search/. TODO(R-25)
 
   const toggleSidebar = () => {
     if (window.innerWidth < 1024) setMobileSidebarOpen((o) => !o)

@@ -14,7 +14,7 @@ import DataTable    from '../../components/ui/DataTable'
 import ErrorState   from '../../components/ui/ErrorState'
 import { SkeletonStatCards, SkeletonTable } from '../../components/ui/LoadingSkeleton'
 import { useAuth }  from '../../lib/auth/AuthContext'
-import { isAdminOrManager, isInnovationOfficer, isPureJudge, isJudge } from '../../lib/auth/permissions'
+import { useJudgeOnly } from '../../lib/auth/useJudgeOnly'
 import {
   useOperationsDashboard,
   useReportsDashboard,
@@ -312,8 +312,9 @@ function JudgeDashboard({ user }) {
 function OfficerDashboard({ user }) {
   const navigate    = useNavigate()
   const firstName   = user?.first_name ?? user?.username ?? 'Staff'
-  const adminMode   = isAdminOrManager(user)
-  const canEvaluate = isJudge(user)
+  const { can }     = useAuth()
+  const adminMode   = can('entries.search') // sees every programme. TODO(R-25)
+  const canEvaluate = can('entries.score')  // TODO(R-25)
 
   const {
     data: opsData,
@@ -556,7 +557,7 @@ function OfficerDashboard({ user }) {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const judgeOnly = isPureJudge(user)
+  const judgeOnly = useJudgeOnly()
 
   if (judgeOnly) return <JudgeDashboard user={user} />
   return <OfficerDashboard user={user} />
