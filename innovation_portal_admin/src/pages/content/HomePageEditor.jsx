@@ -133,7 +133,7 @@ function Waiting({ approval }) {
       setSendingBack(false)
       setReason('')
     } catch (err) {
-      toast.show({ tone: 'danger', title: err?.message ?? '' })
+      toast.show({ tone: 'error', title: err?.message ?? '' })
     }
   }
   return (
@@ -283,11 +283,11 @@ export default function HomePageEditor() {
 
   async function onSend() {
     if (Object.keys(errors).length) {
-      toast.show({ tone: 'danger', title: t('home.fixFirst') })
+      toast.show({ tone: 'error', title: t('home.fixFirst') })
       return
     }
     if (dirty && !(await runSave(sections))) {
-      toast.show({ tone: 'danger', title: t('home.fixFirst') })
+      toast.show({ tone: 'error', title: t('home.fixFirst') })
       return
     }
     const when = goLive.at ? t('home.sendWhen', { date: formatDate(goLive.at, uiLang, true) }) : ''
@@ -300,7 +300,7 @@ export default function HomePageEditor() {
     } catch (err) {
       const found = apiErrors(err)
       if (found.length) setErrors(Object.fromEntries(Object.entries(errorsBySection(found)).map(([k, v]) => [k === 'page' ? 'page' : sections[Number(k)]?._key ?? 'page', v])))
-      toast.show({ tone: 'danger', title: t('home.sendFailed', { message: found[0]?.message ?? err?.message ?? '' }) })
+      toast.show({ tone: 'error', title: t('home.sendFailed', { message: found[0]?.message ?? err?.message ?? '' }) })
     }
   }
 
