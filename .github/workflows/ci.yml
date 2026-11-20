@@ -1,6 +1,8 @@
 name: CI
 
-# Every push to a branch other than main, and every pull request to main.
+# Every push (main included), and pull requests to main that come from a fork.
+# A pull request from a branch in this repository is not run again: the push run for the
+# same commit already covers it (lanes test by pushing before a PR exists, see verify-work).
 # Tests that already fail on main are listed in
 # innovation_portal_api/tests/known_failures.txt and do not fail the run;
 # any other failure does. Admin lint is compared with
@@ -8,7 +10,6 @@ name: CI
 on:
   push:
     branches-ignore:
-      - main
       - ci-results
   pull_request:
     branches:
@@ -17,16 +18,17 @@ on:
 permissions:
   contents: read
 
-# One run per branch: a push to a branch with an open PR triggers both `push`
-# and `pull_request`, and a new push makes the previous run pointless.
+# One run per branch and event: a new push makes the previous run pointless. The event is part
+# of the group so the (skipped) pull_request run of a same-repo PR never cancels its push run.
 concurrency:
-  group: ci-${{ github.head_ref || github.ref_name }}
+  group: ci-${{ github.event_name }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
 
   em-dash:
     name: em-dash
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -40,6 +42,7 @@ jobs:
 
   api:
     name: api
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     services:
@@ -165,6 +168,7 @@ jobs:
 
   admin:
     name: admin
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -225,6 +229,7 @@ jobs:
 
   public:
     name: public
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -286,7 +291,7 @@ jobs:
   report:
     name: report
     needs: [api, admin, public, em-dash]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
