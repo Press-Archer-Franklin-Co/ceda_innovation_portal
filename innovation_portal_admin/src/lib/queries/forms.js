@@ -150,7 +150,7 @@ export function useAttachProgramForm(programId) {
   })
 }
 
-// ── 3.6 judging step and 3.7 marking criteria (TODO(R-10)) ─────────────────
+// ── 3.6 judging step and 3.7 marking criteria (B5) ─────────────────────────
 
 export function useProgramJudging(programId) {
   return useQuery({
@@ -177,5 +177,13 @@ export function useCriteriaLibrary(params) {
     queryKey: formKeys.library(params),
     queryFn:  () => programJudging.library(params),
     retry:    false,
+  })
+}
+
+export function useAddLibraryCriterion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body) => programJudging.addToLibrary(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['criteria-library'] }),
   })
 }

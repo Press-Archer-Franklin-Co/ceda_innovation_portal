@@ -31,7 +31,7 @@ const GROUPS = [
     label: 'staff.group.challenges',
     items: [
       { label: 'staff.nav.challenges', href: '/programs', icon: Layers, officerOrAbove: true },
-      { label: 'staff.nav.criteria', href: '/marking-criteria', icon: BookOpen, adminOnly: true },
+      { label: 'staff.nav.criteria', href: '/marking-criteria', icon: BookOpen, officerOrAbove: true },
       { label: 'staff.nav.forms', href: '/forms', icon: FileText, officerOrAbove: true },
     ],
   },

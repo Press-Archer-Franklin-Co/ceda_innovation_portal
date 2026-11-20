@@ -26,7 +26,8 @@ const DocumentPage = lazy(() => import('./pages/documents/DocumentPage'))
 const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows'))
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
 const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
-const MarkingCriteriaLibrary = lazy(() => import('./pages/admin/MarkingCriteriaLibrary'))
+const MarkingCriteria = lazy(() => import('./pages/challenges/MarkingCriteria'))
+const ChallengeBuilder = lazy(() => import('./pages/challenges/ChallengeBuilder'))
 const Forms = lazy(() => import('./pages/forms/Forms'))
 const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
 const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
@@ -76,9 +77,10 @@ export default function App() {
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
 
                 <Route path="/programs"     element={<ErrorBoundary><Programs /></ErrorBoundary>} />
-                <Route path="/programs/new" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/new" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
                 <Route path="/programs/:id" element={<ErrorBoundary><ProgramDetail /></ErrorBoundary>} />
-                <Route path="/programs/:id/edit" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/:id/edit" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
+                <Route path="/programs/:id/settings" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
 
                 <Route path="/submissions"     element={<ErrorBoundary><Submissions /></ErrorBoundary>} />
                 <Route path="/submissions/:id" element={<ErrorBoundary><SubmissionDetail /></ErrorBoundary>} />
@@ -101,7 +103,6 @@ export default function App() {
                   <Route path="/admin/workflows"               element={<ErrorBoundary><AdminWorkflows /></ErrorBoundary>} />
                   <Route path="/admin/workflows/:id/builder"   element={<ErrorBoundary><WorkflowBuilder /></ErrorBoundary>} />
                   <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
-                  <Route path="/marking-criteria"              element={<ErrorBoundary><MarkingCriteriaLibrary /></ErrorBoundary>} />
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
                 </Route>
@@ -114,6 +115,7 @@ export default function App() {
 
 
                 <Route element={<OfficerRoute />}>
+                  <Route path="/marking-criteria"               element={<ErrorBoundary><MarkingCriteria /></ErrorBoundary>} />
                   <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
                   <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
                   <Route path="/content"                        element={<ErrorBoundary><ContentList /></ErrorBoundary>} />

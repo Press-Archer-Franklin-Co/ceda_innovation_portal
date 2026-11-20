@@ -1,4 +1,5 @@
 // Setswana strings for staff console chrome. First draft: needs review by a Setswana speaker at CEDA.
+import { challengesTn } from './challenges'
 import { formsTn } from './forms'
 
 const tn = {
@@ -124,6 +125,7 @@ const tn = {
   'staff.expand': 'Bontsha lenaane',
   'staff.console': 'Kgolo ya badiri',
   ...formsTn,
+  ...challengesTn,
 }
 
 export default tn
