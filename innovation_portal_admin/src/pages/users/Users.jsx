@@ -35,7 +35,7 @@ const ROLE_OPTIONS = [
 ]
 
 function roleLabel(value, options = ROLE_OPTIONS) {
-  return options.find(r => r.value === value)?.label ?? (value ? value.replace(/_/g, ' ') : '—')
+  return options.find(r => r.value === value)?.label ?? (value ? value.replace(/_/g, ' ') : '–')
 }
 
 /** Built-in roles plus the active custom roles an administrator made (S2, GET /api/admin/roles/). */
