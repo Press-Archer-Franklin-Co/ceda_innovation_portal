@@ -1,9 +1,9 @@
 ## CI results for `feat/u6-pages` @ `aff1378`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44731447812
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44734570466
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 41s, job steps 3m 58s
+Timing (api job): Run tests 3m 30s, job steps 3m 50s
 
 | Check | Result | Details |
 | --- | --- | --- |
