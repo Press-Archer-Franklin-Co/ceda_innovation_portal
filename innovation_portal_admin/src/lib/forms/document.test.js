@@ -127,3 +127,26 @@ describe('undo and redo', () => {
     expect(h.past).toHaveLength(HISTORY_LIMIT)
   })
 })
+
+describe('texts', () => {
+  it('lists texts with their API keys and sets one language', async () => {
+    const { textRows, setText } = await import('./document')
+    const doc = base()
+    const rows = textRows(doc)
+    expect(rows.map((r) => r.key)).toEqual(['step.about_you.title', 'field.first_name.label', 'field.sector.label'])
+    const next = setText(doc, rows[1], 'tn', 'Leina la ntlha')
+    expect(next.steps[0].rows[0].fields[0].label).toEqual({ en: 'First name', tn: 'Leina la ntlha' })
+    expect(doc.steps[0].rows[0].fields[0].label.tn).toBe('Leina')
+  })
+})
+
+describe('renaming a key', () => {
+  it('updates conditions that point at it and refuses a key in use', async () => {
+    const { renameKey } = await import('./document')
+    const doc = updateField(base(), 'sector', { visible_if: { all: [{ field: 'first_name', op: 'is_not_empty' }] } })
+    const next = renameKey(doc, 'first_name', 'given_name')
+    expect(next.steps[0].rows[0].fields[0].key).toBe('given_name')
+    expect(next.steps[0].rows[1].fields[0].visible_if.all[0].field).toBe('given_name')
+    expect(renameKey(doc, 'first_name', 'sector')).toBe(doc)
+  })
+})

@@ -320,3 +320,66 @@ export function redo(h) {
   if (h.future.length === 0) return h
   return { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: h.future[0], future: h.future.slice(1) }
 }
+
+// ── Texts (for the Setswana switch and the translations panel) ─────────────
+
+/** Every translatable text in the form, in canvas order, keyed like the API's translation rows. */
+export function textRows(doc) {
+  const rows = []
+  doc.steps.forEach((step, s) => {
+    rows.push({ key: `step.${step.code}.title`, kind: 'step', stepIndex: s, attr: 'title', value: step.title })
+    if ((step.description?.en ?? '').trim()) rows.push({ key: `step.${step.code}.description`, kind: 'step', stepIndex: s, attr: 'description', value: step.description })
+    ;(step.tips ?? []).forEach((tip, i) => rows.push({ key: `step.${step.code}.tips.${i + 1}`, kind: 'tip', stepIndex: s, index: i, value: tip }))
+    step.rows.forEach((row) =>
+      row.fields.forEach((field) => {
+        rows.push({ key: `field.${field.key}.label`, kind: 'field', fieldKey: field.key, attr: 'label', value: field.label })
+        for (const attr of ['help_text', 'placeholder']) {
+          if ((field[attr]?.en ?? '').trim()) rows.push({ key: `field.${field.key}.${attr}`, kind: 'field', fieldKey: field.key, attr, value: field[attr] })
+        }
+        field.options.forEach((option, i) => {
+          rows.push({ key: `option.${field.key}.${option.value}.label`, kind: 'option', fieldKey: field.key, index: i, attr: 'label', value: option.label })
+          if ((option.description?.en ?? '').trim()) rows.push({ key: `option.${field.key}.${option.value}.description`, kind: 'option', fieldKey: field.key, index: i, attr: 'description', value: option.description })
+        })
+      }),
+    )
+  })
+  return rows.filter((row) => (row.value?.en ?? '').trim())
+}
+
+/** Sets one language of one text row (from textRows) and returns the new document. */
+export function setText(doc, row, lang, text) {
+  const merge = (value) => ({ ...(value ?? { en: '', tn: '' }), [lang]: text })
+  if (row.kind === 'step') return updateStep(doc, row.stepIndex, { [row.attr]: merge(doc.steps[row.stepIndex][row.attr]) })
+  if (row.kind === 'tip') {
+    const tips = [...(doc.steps[row.stepIndex].tips ?? [])]
+    tips[row.index] = merge(tips[row.index])
+    return updateStep(doc, row.stepIndex, { tips })
+  }
+  const field = findField(doc, row.fieldKey)
+  if (!field) return doc
+  if (row.kind === 'field') return updateField(doc, row.fieldKey, { [row.attr]: merge(field[row.attr]) })
+  const options = field.options.map((o, i) => (i === row.index ? { ...o, [row.attr]: merge(o[row.attr]) } : o))
+  return updateField(doc, row.fieldKey, { options })
+}
+
+/** Changes a field's key and every condition that points at it. */
+export function renameKey(doc, from, to) {
+  if (!to || from === to || allFields(doc).some((f) => f.key === to)) return doc
+  const fix = (cond) => (cond?.all ? { all: cond.all.map((c) => (c.field === from ? { ...c, field: to } : c)) } : cond)
+  return {
+    ...doc,
+    steps: doc.steps.map((step) => ({
+      ...step,
+      rows: step.rows.map((row) => ({
+        ...row,
+        fields: row.fields.map((f) => ({
+          ...f,
+          key: f.key === from ? to : f.key,
+          visible_if: fix(f.visible_if),
+          required_if: fix(f.required_if),
+          enabled_if: fix(f.enabled_if),
+        })),
+      })),
+    })),
+  }
+}

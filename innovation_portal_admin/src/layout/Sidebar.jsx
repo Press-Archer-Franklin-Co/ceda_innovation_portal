@@ -13,7 +13,7 @@ import Logo from '../components/ui/Logo'
 // Staff sidebar: chocolate banner, grouped as Overview, Challenges, Website content, Admin.
 // Compact by default (216px wide, 32px rows, 13px text), roomier from 2xl (248px, 38px, 14px).
 // An item is hidden when the person's role cannot use it, and a group with nothing left is hidden.
-// Items whose screens do not exist yet (Form builder 3.5, Home page 3.8, Partners 3.12) are added with U5/U6.
+// Items whose screens do not exist yet (Home page 3.8, Partners 3.12) are added with U6.
 
 const GROUPS = [
   {
@@ -32,6 +32,7 @@ const GROUPS = [
     items: [
       { label: 'staff.nav.challenges', href: '/programs', icon: Layers, officerOrAbove: true },
       { label: 'staff.nav.criteria', href: '/marking-criteria', icon: BookOpen, adminOnly: true },
+      { label: 'staff.nav.forms', href: '/forms', icon: FileText, officerOrAbove: true },
     ],
   },
   {

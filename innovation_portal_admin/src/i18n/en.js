@@ -1,4 +1,6 @@
 // English strings for staff console chrome. Every key must also exist in tn.js (checked in the styleguide).
+import { formsEn } from './forms'
+
 const en = {
   'lang.en': 'English',
   'lang.tn': 'Setswana',
@@ -121,6 +123,7 @@ const en = {
   'staff.collapse': 'Hide menu',
   'staff.expand': 'Show menu',
   'staff.console': 'Staff console',
+  ...formsEn,
 }
 
 export default en

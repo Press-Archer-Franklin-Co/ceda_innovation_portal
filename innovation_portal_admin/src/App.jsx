@@ -27,6 +27,8 @@ const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
 const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
 const MarkingCriteriaLibrary = lazy(() => import('./pages/admin/MarkingCriteriaLibrary'))
+const Forms = lazy(() => import('./pages/forms/Forms'))
+const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
 const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 const Users = lazy(() => import('./pages/users/Users'))
@@ -112,6 +114,8 @@ export default function App() {
 
 
                 <Route element={<OfficerRoute />}>
+                  <Route path="/forms"                          element={<ErrorBoundary><Forms /></ErrorBoundary>} />
+                  <Route path="/forms/:id"                      element={<ErrorBoundary><FormBuilder /></ErrorBoundary>} />
                   <Route path="/content"                        element={<ErrorBoundary><ContentList /></ErrorBoundary>} />
                   <Route path="/content/news/new"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
                   <Route path="/content/news/:id"               element={<ErrorBoundary><ContentEditor /></ErrorBoundary>} />
