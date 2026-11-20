@@ -22,7 +22,8 @@ export interface QuickStartDraft {
   draftId: string
   token: string
   title: string
-  sectorId: string
+  /** null when the person chose "Not sure". */
+  sectorId: string | null
   sectorName: string
   programId: string | null
   programTitle: string | null
@@ -30,8 +31,9 @@ export interface QuickStartDraft {
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 
-// TODO(R-21): the API needs a real sector; "Not sure" shows only when the list has such an entry.
-const NOT_SURE_SLUGS = ['not-sure', 'not_sure', 'other']
+// "Not sure" is always the last chip. It is saved as no sector; officers set it later (R-21).
+const NOT_SURE = 'not-sure'
+const sectorForApi = (id: string) => (id === NOT_SURE ? null : id)
 
 export default function QuickStartCard({ challenges, onContinue }: { challenges: ChallengeCard[]; onContinue: (draft: QuickStartDraft) => void }) {
   const { t, lang } = useI18n()
@@ -55,11 +57,10 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
   const lastSaved = useRef<string>('')
   const [retry, setRetry] = useState(0)
 
-  const sectorList = useMemo(() => {
-    const all = sectors.data ?? []
-    const notSure = all.filter((s) => NOT_SURE_SLUGS.includes(s.slug))
-    return [...all.filter((s) => !NOT_SURE_SLUGS.includes(s.slug)), ...notSure]
-  }, [sectors.data])
+  const sectorList = useMemo(
+    () => [...(sectors.data ?? []).map((s) => ({ id: s.id, name: s.name })), { id: NOT_SURE, name: t('qs.notSure') }],
+    [sectors.data, t],
+  )
 
   // Restore a draft kept from an earlier visit.
   useEffect(() => {
@@ -69,9 +70,11 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
       .getDraft(kept.draftId, kept.token)
       .then((d) => {
         setTitle((v) => v || d.title || '')
-        setSectorId((v) => v ?? d.sector)
+        // A kept draft was saved with a choice, so no sector means "Not sure".
+        const kept = d.sector ?? NOT_SURE
+        setSectorId((v) => v ?? kept)
         if (d.program_detail && !d.program_detail.is_general_intake) setProgramId(d.program)
-        lastSaved.current = JSON.stringify([d.title, d.sector, d.program_detail?.is_general_intake ? '' : d.program])
+        lastSaved.current = JSON.stringify([d.title, kept, d.program_detail?.is_general_intake ? '' : d.program])
         setSave('saved')
       })
       .catch(() => {
@@ -90,11 +93,11 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
       setSave('saving')
       try {
         if (!draft) {
-          const res = await intakeService.quickStart({ title: clean, sector: sectorId, ...(programId ? { program_id: programId } : {}) })
+          const res = await intakeService.quickStart({ title: clean, sector: sectorForApi(sectorId), ...(programId ? { program_id: programId } : {}) })
           resumeStorage.set(res.draft_id, res.resume_token)
           setDraft({ draftId: res.draft_id, token: res.resume_token })
         } else {
-          await intakeService.updateDraft(draft.draftId, { title: clean, sector: sectorId, ...(programId ? { program: programId } : {}) }, draft.token)
+          await intakeService.updateDraft(draft.draftId, { title: clean, sector: sectorForApi(sectorId), ...(programId ? { program: programId } : {}) }, draft.token)
         }
         lastSaved.current = key
         setSave('saved')
@@ -123,7 +126,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
       draftId: draft.draftId,
       token: draft.token,
       title: title.trim(),
-      sectorId: sectorId as string,
+      sectorId: sectorForApi(sectorId as string),
       sectorName: sectorList.find((s) => s.id === sectorId)?.name ?? '',
       programId: programId || null,
       programTitle: program?.title ?? null,
@@ -175,7 +178,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
                   )}
                 >
                   <input type="radio" name="qs-sector" value={s.id} checked={on} onChange={() => setSectorId(s.id)} className="sr-only" />
-                  {NOT_SURE_SLUGS.includes(s.slug) ? t('qs.notSure') : s.name}
+                  {s.name}
                 </label>
               )
             })}

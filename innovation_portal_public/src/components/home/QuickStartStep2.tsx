@@ -4,12 +4,15 @@ import { CheckCircle2, Lightbulb } from 'lucide-react'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
 import Textarea from '../ui/Textarea'
+import Select from '../ui/Select'
 import { Checkbox, Toggle } from '../ui/Choice'
 import { useI18n } from '../../i18n'
 import { useAuth } from '../../context/AuthContext'
 import { codeSignInService } from '../../services/codeSignIn.service'
 import { intakeService, resumeStorage } from '../../services/intake.service'
 import { useBasicsOnly } from '../../lib/usePublicConfig'
+import { useAsync } from '../../lib/useAsync'
+import { referenceService } from '../../services/reference.service'
 import type { SubmitResult } from '../../types/innovator'
 import type { QuickStartDraft } from './QuickStartCard'
 
@@ -17,7 +20,7 @@ import type { QuickStartDraft } from './QuickStartCard'
 // Edit. Guests confirm their phone with a 6-digit code (POST /api/auth/otp/request/, then
 // /api/drafts/{id}/verify-phone/); "Create my account" is on by default, and off sends the idea as a guest.
 // Signed-in people skip the phone: the draft is claimed and sent from their account.
-// TODO(R-22): District and Email are in the design but nothing stores them yet, so they are not asked for.
+// District (everyone) and Email (guests) are optional and go with the submit; the email gets the confirmation copy (R-22).
 
 const needsMoreAnswers = (err: unknown): boolean =>
   axios.isAxiosError(err) && err.response?.status === 400 && !!(err.response.data as { errors?: { draft_data?: unknown } } | undefined)?.errors?.draft_data
@@ -41,8 +44,11 @@ function normalisePhone(raw: string) {
 }
 
 export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: QuickStartDraft; onEdit: () => void; onSent: (result: SubmitResult) => void }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const { isAuthenticated, user } = useAuth()
+  const districts = useAsync(() => referenceService.districts(lang), [lang])
+  const [district, setDistrict] = useState('')
+  const [email, setEmail] = useState('')
   const [name, setName] = useState(user ? `${user.first_name} ${user.last_name}`.trim() : '')
   const [phone, setPhone] = useState('')
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
@@ -106,6 +112,7 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
     if (askDetails && !problem.trim()) next.problem = t('qs2.problemError')
     if (askDetails && !solution.trim()) next.solution = t('qs2.solutionError')
     if (!name.trim()) next.name = t('qs2.nameError')
+    if (!isAuthenticated && email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) next.email = t('qs2.emailError')
     if (!isAuthenticated && !verified) next.code = t('qs2.phoneFirst')
     if (!consent) next.consent = t('qs2.consentError')
     setErrors(next)
@@ -122,7 +129,14 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
       if (askDetails) await intakeService.saveStep(draft.draftId, 'your-idea', { problem: problem.trim(), solution: solution.trim() }, token)
       const result = await intakeService.submit(
         draft.draftId,
-        { consent: true, create_account: isAuthenticated ? undefined : isChallenge || createAccount, first_name, last_name },
+        {
+          consent: true,
+          create_account: isAuthenticated ? undefined : isChallenge || createAccount,
+          first_name,
+          last_name,
+          ...(district ? { district } : {}),
+          ...(!isAuthenticated && email.trim() ? { email: email.trim() } : {}),
+        },
         token,
       )
       resumeStorage.clear()
@@ -130,6 +144,12 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
     } catch (err) {
       const c = apiCode(err)
       if (needsMoreAnswers(err) && !isChallenge) setServerAsked(true)
+      // A district or email the API does not accept shows on that field.
+      const fields = axios.isAxiosError(err) && err.response?.status === 400 ? ((err.response.data as { errors?: Record<string, unknown> } | undefined)?.errors ?? {}) : {}
+      if ('district' in fields || 'email' in fields) {
+        setErrors({ district: 'district' in fields ? t('qs2.districtError') : undefined, email: 'email' in fields ? t('qs2.emailError') : undefined })
+        return
+      }
       setErrors({
         form:
           c === 'phone_verification_required' ? t('qs2.phoneFirst')
@@ -175,7 +195,23 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
         </>
       )}
 
+      {/* Figma 11:279: name and district side by side. District is hidden when the list cannot load; it is
+          optional, so it never blocks sending. */}
+      <div className="grid gap-4 sm:grid-cols-2">
       <Input label={t('qs2.name')} value={name} onChange={(e) => setName(e.target.value)} error={errors.name} autoComplete="name" required />
+      {!districts.error && (
+        <Select
+          label={t('qs2.district')}
+          optional
+          placeholder={districts.loading ? t('qs2.districtLoading') : t('qs2.districtPlaceholder')}
+          disabled={districts.loading}
+          options={(districts.data ?? []).map((d) => ({ value: d.slug, label: d.name }))}
+          value={district || null}
+          onChange={setDistrict}
+          error={errors.district}
+        />
+      )}
+      </div>
 
       {isAuthenticated ? (
         <p className="text-d-body-s text-muted">{t('qs2.signedIn', { name: name || user?.email || '' })}</p>
@@ -239,6 +275,20 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
           )}
           {!codeSentTo && errors.code && <p role="alert" className="text-d-cap text-danger -mt-2">{errors.code}</p>}
         </>
+      )}
+
+      {!isAuthenticated && (
+        <Input
+          label={t('qs2.email')}
+          optional
+          hint={t('qs2.emailHint')}
+          type="email"
+          autoComplete="email"
+          placeholder="you@example.co.bw"
+          value={email}
+          onChange={(e) => { setEmail(e.target.value); setErrors((x) => ({ ...x, email: undefined })) }}
+          error={errors.email}
+        />
       )}
 
       {!isAuthenticated && (
