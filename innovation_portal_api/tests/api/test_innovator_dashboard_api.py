@@ -222,6 +222,19 @@ class ChallengeMatchingApiTests(DashboardFixtureMixin, TestCase):
         ids = {item["id"] for item in response.json()["data"]}
         self.assertEqual(ids, {str(by_profile.id), str(by_idea.id)})
 
+    def test_recommended_challenges_use_the_public_card_and_include_upcoming_calls(self):
+        InnovatorProfile.objects.update_or_create(user=self.user, defaults={"sector": self.sectors[0]})
+        open_call = self.challenge("Open call", [self.sectors[0]])
+        later = self.challenge("Later call", [self.sectors[0]])
+        Program.objects.filter(id=later.id).update(opening_date=timezone.now() + timedelta(days=10), closing_date=timezone.now() + timedelta(days=40))
+        items = {item["id"]: item for item in self.client.get("/api/me/challenges/recommended/").json()["data"]}
+        self.assertEqual(set(items), {str(open_call.id), str(later.id)})
+        self.assertEqual(items[str(open_call.id)]["status"], "open")
+        self.assertEqual(items[str(later.id)]["status"], "upcoming")
+        for key in ("summary", "support_headline", "opens_at", "closes_at", "days_left", "window_progress", "matched_sectors", "program_type"):
+            self.assertIn(key, items[str(open_call.id)])
+        self.assertEqual(items[str(open_call.id)]["matched_sectors"][0]["id"], str(self.sectors[0].id))
+
     def test_link_challenge_copies_matching_answers_and_lists_what_is_left(self):
         idea = self.draft(
             "Cold milk",
