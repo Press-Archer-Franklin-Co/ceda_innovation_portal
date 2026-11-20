@@ -117,6 +117,9 @@ class ApprovalService:
                 PageService.publish(target, approval.payload.get("sections") or [], actor=actor, go_live_at=approval.publish_at, approval=approval)
         elif isinstance(target, ContentItem):
             PostService.apply_decision(target, approve=approve, publish_at=approval.publish_at)
+        elif isinstance(target, LeadershipCard) and approve:
+            LeadershipCard.objects.filter(pk=target.pk).update(approved_at=timezone.now())
+            clear_home_cache()
         AuditService.log_action(
             actor=actor,
             action_type="content_approved" if approve else "content_rejected",
@@ -131,7 +134,7 @@ class ApprovalService:
         target_type = approval.content_type.model
         return {
             "id": str(approval.id),
-            "target_type": {"contentitem": "post", "page": "page"}.get(target_type, target_type),
+            "target_type": {"contentitem": "post", "page": "page", "leadershipcard": "quote"}.get(target_type, target_type),
             "target_id": approval.object_id,
             "summary": approval.summary,
             "status": approval.status,
@@ -347,6 +350,7 @@ def _quotes(settings, lang, request):
         LeadershipCard.objects.filter(is_active=True)
         .filter(Q(start_at__isnull=True) | Q(start_at__lte=now))
         .filter(Q(end_at__isnull=True) | Q(end_at__gt=now))
+        .exclude(is_official=True, approved_at__isnull=True)
         .order_by("sort_order", "created_at")[: settings.get("max_items", 5)]
     )
 
@@ -358,7 +362,7 @@ def _quotes(settings, lang, request):
     return {
         "rotation_seconds": SiteSettings.get().quote_rotation_seconds,
         "items": [
-            {"id": str(card.id), "name": card.full_name, "job_title": card.job_title, "committee_role": card.committee_role, "quote": card.quote, "photo_url": photo(card)}
+            {"id": str(card.id), "name": card.full_name, "job_title": card.job_title, "committee_role": card.committee_role, "quote": text_in(card, "quote", lang), "photo_url": photo(card)}
             for card in cards
         ],
     }
@@ -400,14 +404,20 @@ def _sectors(settings, lang, request):
 
 
 def _stories(settings, lang, request):
-    winners = WinnerSpotlight.objects.filter(is_featured=True).select_related("program").order_by("-year", "position")[: settings.get("max_items", 3)]
+    from apps.content.part2_services import StoryService
+
+    limit = settings.get("max_items", 3)
+    stories = list(StoryService.public_queryset().filter(is_featured=True, shows_on__contains=["home"])[:limit])
+    if stories:
+        return {"items": [dict(StoryService.card(story, lang, request), kind="story") for story in stories]}
+    # No stories yet: featured winners stand in.
+    winners = WinnerSpotlight.objects.filter(is_featured=True).select_related("program").order_by("-year", "position")[:limit]
 
     def photo(item):
         if not item.photo:
             return None
         return request.build_absolute_uri(item.photo.url) if request else item.photo.url
 
-    # TODO(B6 part 2): Story model with consent; winners stand in until then.
     return {
         "items": [
             {"id": str(item.id), "kind": "winner", "name": item.team_name, "business": item.project_name, "quote": item.description[:200], "photo_url": photo(item), "program": item.program.title, "year": item.year}

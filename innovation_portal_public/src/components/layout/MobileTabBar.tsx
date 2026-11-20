@@ -3,7 +3,8 @@ import { Home, LayoutDashboard, Megaphone, Plus, Trophy, User } from 'lucide-rea
 import clsx from 'clsx'
 import { useAuth } from '../../context/AuthContext'
 import { useI18n } from '../../i18n'
-import { SUBMIT_PATH } from './Navbar'
+import { SIGN_IN_PATH, SUBMIT_PATH } from './Navbar'
+import { isStaff } from '../../lib/roles'
 
 // Figma 1 · Public home › Tab bar (sticky) (10:1350). Phone only. The + in the centre always opens Submit an idea.
 
@@ -11,7 +12,9 @@ export const TAB_BAR_SPACE = 'pb-[calc(76px+env(safe-area-inset-bottom))] lg:pb-
 
 export default function MobileTabBar() {
   const { t } = useI18n()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  // Signed-in innovators: Home is their dashboard ("/" redirects there).
+  const homePath = isAuthenticated && !isStaff(user) ? '/dashboard' : '/'
 
   const tab = ({ isActive }: { isActive: boolean }) =>
     clsx(
@@ -25,7 +28,7 @@ export default function MobileTabBar() {
       aria-label={t('tabs.label')}
       className="lg:hidden fixed inset-x-0 bottom-0 z-30 bg-bg border-t border-border px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] flex items-center justify-between"
     >
-      <NavLink to="/" end className={tab}>
+      <NavLink to={homePath} end className={tab}>
         <Home size={22} aria-hidden />
         {t('nav.home')}
       </NavLink>
@@ -50,7 +53,7 @@ export default function MobileTabBar() {
           {t('nav.myIdeas')}
         </NavLink>
       ) : (
-        <NavLink to="/login" className={tab}>
+        <NavLink to={SIGN_IN_PATH} className={tab}>
           <User size={22} aria-hidden />
           {t('common.signIn')}
         </NavLink>

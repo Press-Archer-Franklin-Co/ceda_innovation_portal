@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
 import PrivateRoute  from './components/ui/PrivateRoute'
 const Home = lazy(() => import('./pages/Home'))
+const IdeaSent = lazy(() => import('./pages/IdeaSent'))
+const ChallengeDetail = lazy(() => import('./pages/ChallengeDetail'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
@@ -37,10 +39,13 @@ const MyIdeas = lazy(() => import('./pages/innovator/MyIdeas'))
 const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
 const IdeaForm = lazy(() => import('./pages/innovator/IdeaForm'))
 const Notifications = lazy(() => import('./pages/innovator/Notifications'))
+const PreviewForm = lazy(() => import('./pages/innovator/PreviewForm'))
 import { I18nProvider } from './i18n'
 import { ToastProvider } from './components/ui/Toast'
 import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import PageSkeleton from './components/ui/PageSkeleton'
+import PageErrorBoundary from './components/ui/PageErrorBoundary'
+import { isStaff } from './lib/roles'
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
@@ -55,10 +60,20 @@ function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+/** "/" is the website home for visitors and staff; signed-in innovators go to their dashboard. */
+function HomeOrDashboard() {
+  const { isAuthenticated, isLoading, user } = useAuth()
+  if (isLoading) return <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>
+  if (isAuthenticated && !isStaff(user)) return <Navigate to="/dashboard" replace />
+  return <Home />
+}
+
 function AppRoutes() {
+  const { pathname } = useLocation()
   return (
     // Pages outside the site layout (sign in and the like) load under this boundary;
     // pages inside it load under the one in Layout, so the header and footer stay.
+    <PageErrorBoundary resetKey={pathname}>
     <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 py-10"><PageSkeleton shape="form" /></div>}>
     <Routes>
       <Route path="/login"           element={<PublicOnlyRoute><Login          /></PublicOnlyRoute>} />
@@ -75,12 +90,18 @@ function AppRoutes() {
       <Route path="/judge-invite/:token" element={<JudgeInvite />} />
 
 
+      {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
+      <Route path="/preview/form" element={<PreviewForm />} />
+
       <Route element={<Layout />}>
-        <Route path="/"            element={<Home />} />
+        <Route path="/"            element={<HomeOrDashboard />} />
+        <Route path="/home"        element={<Home />} />
+        <Route path="/idea-sent"   element={<IdeaSent />} />
         <Route path="/about"       element={<About />} />
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
         <Route path="/challenges"  element={<Challenges />} />
+        <Route path="/challenges/:slug" element={<ChallengeDetail />} />
         <Route path="/suggestions" element={<Suggestions />} />
         <Route path="/innovate"    element={<Innovate />} />
         <Route path="/skills"      element={<Skills />} />
@@ -116,6 +137,7 @@ function AppRoutes() {
       </Route>
     </Routes>
     </Suspense>
+    </PageErrorBoundary>
   )
 }
 

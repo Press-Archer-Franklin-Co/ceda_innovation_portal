@@ -5,6 +5,7 @@ import Footer from './Footer'
 import MobileTabBar from './MobileTabBar'
 import { useT } from '../../i18n'
 import PageSkeleton from '../ui/PageSkeleton'
+import PageErrorBoundary from '../ui/PageErrorBoundary'
 
 /** Public shell: utility bar + nav, page, footer; on phone a sticky tab bar. Page background is always bg (white). */
 export default function Layout() {
@@ -25,9 +26,12 @@ export default function Layout() {
       </a>
       <Navbar />
       <main id="main" className="flex-1" tabIndex={-1}>
-        <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>}>
-          <Outlet />
-        </Suspense>
+        {/* A page that fails shows an error with Retry inside the shell; header and footer stay. */}
+        <PageErrorBoundary resetKey={pathname}>
+          <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>}>
+            <Outlet />
+          </Suspense>
+        </PageErrorBoundary>
       </main>
       <Footer />
       <MobileTabBar />

@@ -8,7 +8,8 @@ export default function PrivateRoute() {
   if (isLoading) return null
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    // The code sign-in is the main way in (2.0); it returns the person to state.from.
+    return <Navigate to="/sign-in" state={{ from: location }} replace />
   }
 
   return <Outlet />

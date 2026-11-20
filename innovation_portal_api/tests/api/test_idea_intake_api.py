@@ -92,10 +92,12 @@ class IdeaIntakeApiTests(TestCase):
         self.assertEqual(Program.objects.filter(is_general_intake=True).count(), 1)
         self.assertEqual(ApplicationDraft.objects.get(id=second_id).program, draft.program)
 
-    def test_quick_start_needs_title_and_sector(self):
+    def test_quick_start_needs_a_title(self):
+        # R-21: the sector is optional ("not sure"); only the title is required.
         response = self.client.post(QUICK_START_URL, {"title": ""}, format="json")
         self.assertEqual(response.status_code, 400)
-        self.assertIn("sector", response.json()["errors"])
+        self.assertIn("title", response.json()["errors"])
+        self.assertNotIn("sector", response.json()["errors"])
 
     def test_quick_start_is_off_when_the_feature_is_off(self):
         set_features(self, guest_quick_start=False)
@@ -407,6 +409,52 @@ class IdeaIntakeApiTests(TestCase):
         submission.refresh_from_db()
         self.assertEqual((submission.form_version_id, submission.form_version_number), (first.id, 1))
         self.assertNotEqual(first.schema["steps"][0]["title"]["en"], "Tell us your idea")
+
+    # R-21, R-22 ------------------------------------------------------------------
+
+    def test_quick_start_without_a_sector_means_not_sure(self):
+        sectors_before = Sector.objects.count()
+        for payload in ({"title": "No sector yet"}, {"title": "Null sector", "sector": None}):
+            response = self.client.post(QUICK_START_URL, payload, format="json")
+            self.assertEqual(response.status_code, 201, response.content)
+            self.assertIsNone(ApplicationDraft.objects.get(id=response.json()["data"]["draft_id"]).sector)
+        self.assertEqual(Sector.objects.count(), sectors_before)  # no "Not sure" sector is made
+
+    def test_guest_submit_keeps_district_and_email_and_sends_a_copy(self):
+        from django.core import mail
+
+        from apps.reference.models import District
+
+        district = District.objects.filter(active=True).first()
+        draft_id, token = self.quick_start()
+        self.fill_all_steps(draft_id, token)
+        self.verify_phone_on_draft(draft_id, token)
+        bad = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "create_account": False, "name": "Neo K", "district": "atlantis"})
+        self.assertEqual(bad.status_code, 400)
+        mail.outbox = []
+        response = self.as_guest(
+            "post", f"/api/drafts/{draft_id}/submit/", token,
+            {"consent": True, "create_account": False, "name": "Neo K", "district": district.slug, "email": "Neo@Example.com"},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        submission = Submission.objects.get(reference_number=response.json()["data"]["reference"])
+        self.assertEqual((submission.district_id, submission.guest_email), (district.id, "neo@example.com"))
+        self.assertTrue(any(message.to == ["neo@example.com"] and submission.reference_number in message.body for message in mail.outbox))
+
+    def test_new_account_gets_the_district_and_email(self):
+        from apps.reference.models import District
+
+        district = District.objects.filter(active=True).first()
+        draft_id, token = self.quick_start()
+        self.fill_all_steps(draft_id, token)
+        self.verify_phone_on_draft(draft_id, token)
+        response = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "district": str(district.id), "email": "neo.k@example.com"})
+        self.assertEqual(response.status_code, 200, response.content)
+        user = User.objects.get(phone_number=PHONE)
+        self.assertEqual(user.email, "neo.k@example.com")
+        self.assertEqual(user.innovator_profile.district_id, district.id)
+        submission = Submission.objects.get(reference_number=response.json()["data"]["reference"])
+        self.assertEqual((submission.district_id, submission.guest_email), (district.id, ""))
 
     # R-23 ------------------------------------------------------------------------------
 

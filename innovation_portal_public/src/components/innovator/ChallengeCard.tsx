@@ -14,8 +14,7 @@ const STATUS: Record<string, { key: StringKey; tone: 'green' | 'blue' | 'neutral
 }
 
 /**
- * A challenge on the signed-in home (2.1). Shows only what the API sends:
- * summary, support line, status and the entry-window bar arrive with B5 (R-5 e).
+ * A challenge on the signed-in home (2.1), from the B5 public card fields.
  */
 export default function ChallengeCard({ challenge }: { challenge: RecommendedChallenge }) {
   const { t, lang } = useI18n()

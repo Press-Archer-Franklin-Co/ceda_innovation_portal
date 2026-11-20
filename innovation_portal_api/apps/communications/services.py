@@ -88,12 +88,42 @@ class CommunicationService:
         return log
 
     @staticmethod
+    def send_guest_email(submission, *, subject: str, body: str):
+        """Email a guest (no account) at the address they gave, logged against the submission."""
+        from django.core.mail import send_mail
+
+        log = CommunicationLog.objects.create(
+            recipient=None,
+            channel=CommunicationChannel.EMAIL,
+            subject=subject,
+            rendered_body=body,
+            to_address=submission.guest_email,
+            related_submission=submission,
+            related_program=submission.program,
+        )
+        try:
+            send_mail(subject, body, getattr(settings, "DEFAULT_FROM_EMAIL", None), [submission.guest_email], fail_silently=False)
+            log.status = CommunicationStatus.SENT
+            log.sent_at = timezone.now()
+            log.failure_reason = ""
+        except Exception as exc:  # the SMS still went; record the failure
+            log.status = CommunicationStatus.FAILED
+            log.failure_reason = str(exc)[:500]
+        log.save(update_fields=["status", "sent_at", "failure_reason", "updated_at"])
+        return log
+
+    @staticmethod
     def queue_submission_acknowledgement(submission):
         if not submission.innovator_id or not submission.innovator.email:
             # No email address (guest or phone-only account): send the reference by SMS.
             track_url = f"{getattr(settings, 'PUBLIC_BASE_URL', '').rstrip('/')}/track/{submission.reference_number}"
             body = f"CEDA: we received your idea \"{submission.title}\". Your reference is {submission.reference_number}. Track it at {track_url}"
-            return CommunicationService.send_submission_text(submission, body=body, subject="Submission received")
+            log = CommunicationService.send_submission_text(submission, body=body, subject="Submission received")
+            if not submission.innovator_id and submission.guest_email:
+                # R-22: a guest who gave an email also gets the confirmation there.
+                email_log = CommunicationService.send_guest_email(submission, subject="We received your idea", body=body)
+                log = log or email_log
+            return log
         template = MessageTemplate.objects.filter(code=TemplateCode.ACKNOWLEDGEMENT, active=True).first()
         if template:
             subject, body = CommunicationService.render_template(template, CommunicationService._context_for_submission(submission))

@@ -1,5 +1,6 @@
 from django.urls import path
 
+from apps.content.part2_views import MyConsentAnswerView, MyConsentListView
 from apps.communications.message_views import MyIdeaMessagesReadView, MyIdeaMessagesView, MyRecentMessagesView
 
 from apps.submissions.innovator_views import (
@@ -13,6 +14,8 @@ from apps.submissions.innovator_views import (
 
 urlpatterns = [
     path("summary/", MySummaryView.as_view(), name="me-summary"),
+    path("consents/", MyConsentListView.as_view(), name="me-consents"),
+    path("consents/<uuid:story_id>/", MyConsentAnswerView.as_view(), name="me-consent-answer"),
     path("ideas/<uuid:idea_id>/messages/", MyIdeaMessagesView.as_view(), name="me-idea-messages"),
     path("ideas/<uuid:idea_id>/messages/read/", MyIdeaMessagesReadView.as_view(), name="me-idea-messages-read"),
     path("messages/recent/", MyRecentMessagesView.as_view(), name="me-messages-recent"),

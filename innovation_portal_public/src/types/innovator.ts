@@ -263,7 +263,8 @@ export interface UpdatesFeed {
   results: UpdateItem[]
 }
 
-export interface RecommendedChallenge {
+/** Fields every challenge list item has (challenge matches send only these). */
+export interface ChallengeBase {
   id: string
   title: string
   slug: string
@@ -272,16 +273,19 @@ export interface RecommendedChallenge {
   sectors: SectorRef[]
   matched_sectors: SectorRef[]
   can_enter: boolean
-  /** TODO(R-5 e): the B5 public list item fields; comes with B5. */
-  summary?: string
-  support_headline?: string
-  status?: 'open' | 'upcoming' | 'closed'
-  opens_at?: string | null
-  days_left?: number | null
-  window_progress?: number | null
 }
 
-export interface ChallengeMatch extends RecommendedChallenge {
+/** /api/me/challenges/recommended/: the base fields plus the B5 public card (R-5 e). */
+export interface RecommendedChallenge extends ChallengeBase {
+  summary: string
+  support_headline: string
+  status: 'open' | 'upcoming' | 'closed'
+  opens_at: string | null
+  days_left: number | null
+  window_progress: number | null
+}
+
+export interface ChallengeMatch extends ChallengeBase {
   answers_reused: number
   questions_left: number
 }
