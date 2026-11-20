@@ -1,7 +1,7 @@
 {
   "branch": "feature/b6-part2",
   "sha": "b0514417211b3a473b981088fb89896142d203e1",
-  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44673844340",
+  "run_url": "https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44678231368",
   "jobs": {
     "api": "success",
     "admin": "success",
@@ -15,8 +15,8 @@
       "migrations": "success",
       "pytest": "success",
       "results": "success",
-      "pytest_seconds": 211,
-      "job_seconds_to_here": 232
+      "pytest_seconds": 207,
+      "job_seconds_to_here": 224
     },
     "admin": {
       "install": "success",

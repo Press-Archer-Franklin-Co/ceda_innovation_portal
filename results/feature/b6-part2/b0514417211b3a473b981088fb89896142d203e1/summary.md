@@ -1,9 +1,9 @@
 ## CI results for `feature/b6-part2` @ `b051441`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44673844340
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44678231368
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 31s, job steps 3m 52s
+Timing (api job): Run tests 3m 27s, job steps 3m 44s
 
 | Check | Result | Details |
 | --- | --- | --- |
