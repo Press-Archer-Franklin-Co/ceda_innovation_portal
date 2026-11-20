@@ -1,9 +1,9 @@
 ## CI results for `fix/known-failures` @ `c448c4e`
 
-Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44716221653
+Run: https://github.com/Press-Archer-Franklin-Co/ceda_innovation_portal/actions/runs/44717169233
 Jobs: admin success, api success, em-dash success, public success
 Overall: **green**
-Timing (api job): Run tests 3m 27s, job steps 3m 48s
+Timing (api job): Run tests 3m 15s, job steps 3m 32s
 
 | Check | Result | Details |
 | --- | --- | --- |
