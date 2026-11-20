@@ -395,6 +395,7 @@ class WhatsAppWebhookTests(ChannelsTestCase):
         self.assertTrue(any(item["from"] == "person" and item["text"] == "4" for item in kwargs["transcript"]))
         session = JourneySession.objects.get(channel="whatsapp")
         self.assertEqual((session.status, session.conversation_id), ("handed_over", "conv-9"))
+        self.assertNotIn("Tell us in a few words", json.dumps(session.state["transcript"][-1]))
 
     def test_without_c1_the_handoff_is_kept_as_a_support_request(self):
         from apps.channels import handoff as handoff_module

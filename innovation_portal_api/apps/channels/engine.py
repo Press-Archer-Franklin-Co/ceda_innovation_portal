@@ -439,8 +439,7 @@ class JourneyRunner:
         except Exception:  # hand-over never breaks the screen
             logger.exception("open_handoff failed for %s", self.channel)
         done = self.t(settings.get("done_text")) or self.default("handoff_done_ussd" if self.channel == "ussd" else "handoff_done_whatsapp")
-        if self.channel == "whatsapp" and node.get("text"):
-            prefix = prefix + [self.t(node.get("text"))]
+        # On WhatsApp the chat goes straight to staff, so the note prompt (USSD only) is not shown.
         return self._finish(prefix + [done], outcome="handed_over", node_key=node["key"], node_type="handoff")
 
 
