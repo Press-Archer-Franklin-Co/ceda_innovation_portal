@@ -93,8 +93,10 @@ class SocialAuthApiTests(TestCase):
         self.assertIsNotNone(response.data["user"]["profile"])
         self.assertTrue(AuditLog.objects.filter(actor=user, action_type="social_signup_success").exists())
         self.assertTrue(AuditLog.objects.filter(actor=user, action_type="social_login_success").exists())
-        self.assertIn("sessionid", self.client.cookies)
-
+        # The API signs people in with JWT only (Nshathisi, 20 Nov): the access token opens later requests.
+        self.client.credentials()
+        self.assertIn(self.client.get("/api/auth/social/linked-accounts/").status_code, {401, 403})
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {response.data['access']}")
         follow_up = self.client.get("/api/auth/social/linked-accounts/")
         self.assertEqual(follow_up.status_code, 200)
 
