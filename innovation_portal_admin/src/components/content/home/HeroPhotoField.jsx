@@ -9,8 +9,10 @@ import { client } from '../../../lib/api/client'
 
 const SIZES = ['small', 'medium', 'large']
 
-function megabytes(bytes) {
-  return `${(Math.max(bytes || 0, 0) / (1024 * 1024)).toFixed(1)} MB`
+function fileSize(bytes) {
+  const size = Math.max(bytes || 0, 0)
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`
 }
 
 /**
@@ -86,7 +88,7 @@ export default function HeroPhotoField({ label, value, lang, onChange, errors = 
             ) : (
               <>
                 <p className="truncate text-[13px] text-text">
-                  {photo.data ? `${photo.data.filename} · ${megabytes(photo.data.size_bytes)}` : ' '}
+                  {photo.data ? `${photo.data.filename} · ${fileSize(photo.data.size_bytes)}` : ' '}
                 </p>
                 <p className="mt-0.5 flex items-center gap-1.5 text-[12px] text-muted">
                   <span aria-hidden className="h-2 w-2 rounded-full bg-success" />
