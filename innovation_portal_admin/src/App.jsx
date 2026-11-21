@@ -3,7 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
-import { ProtectedRoute, CapabilityRoute, OLD_SIGN_IN_PATHS, ToSignIn }  from './lib/auth/ProtectedRoute'
+import { ProtectedRoute, CapabilityRoute, ToSignIn }  from './lib/auth/ProtectedRoute'
+import { OLD_SIGN_IN_PATHS } from './lib/auth/signInPaths'
 import AppLayout           from './layout/AppLayout'
 import PageErrorBoundary   from './components/ui/PageErrorBoundary'
 

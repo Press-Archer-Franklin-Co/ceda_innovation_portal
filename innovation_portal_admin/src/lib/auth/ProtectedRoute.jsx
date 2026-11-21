@@ -58,9 +58,7 @@ export function CapabilityRoute({ need, children }) {
   return children ?? <Outlet />
 }
 
-/** U7: old console sign-in paths (/staff/login and the like) go to the one sign-in page. */
-export const OLD_SIGN_IN_PATHS = ['/login', '/signin', '/sign-in', '/forgot-password', '/reset-password', '/mfa']
-
+/** U7: old console sign-in paths (OLD_SIGN_IN_PATHS) go to the one sign-in page. */
 export function ToSignIn() {
   useEffect(() => {
     window.location.replace(`${PUBLIC_PORTAL}sign-in?next=${encodeURIComponent('/staff/')}`)
