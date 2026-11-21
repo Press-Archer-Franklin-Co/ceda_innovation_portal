@@ -127,9 +127,6 @@ function AppRoutes() {
 
       <Route path="/auth/callback"   element={<AuthCallback />} />
 
-      <Route path="/specialist-invite/:token" element={<SpecialistInvite />} />
-      <Route path="/judge-invite/:token" element={<JudgeInvite />} />
-
 
       {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
       <Route path="/preview/form" element={<PreviewForm />} />
@@ -144,6 +141,9 @@ function AppRoutes() {
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
         <Route path="/accessibility" element={<Accessibility />} />
+        {/* 1.15: invitations sit in the normal header and footer. */}
+        <Route path="/specialist-invite/:token" element={<SpecialistInvite />} />
+        <Route path="/judge-invite/:token" element={<JudgeInvite />} />
         <Route path="/challenges"  element={<Challenges />} />
         <Route path="/challenges/:slug" element={<ChallengeDetail />} />
         <Route path="/submit"      element={<Submit />} />

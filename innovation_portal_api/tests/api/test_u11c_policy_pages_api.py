@@ -202,3 +202,22 @@ class ApprovalTests(PolicyTestCase):
         response = self.approve(approval["id"], user=self.officer)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(PolicyPage.objects.get(key="privacy").sections, POLICY_SEED["privacy"]["sections"])
+
+
+class ClientErrorTests(PolicyTestCase):
+    def test_a_broken_page_is_logged_with_its_reference_and_staff_can_find_it(self):
+        from apps.audit.models import AuditLog
+
+        self.client.force_authenticate(None)
+        response = self.client.post("/api/audit/client-errors/", {"reference": "ERR-7F3A2C", "path": "/challenges/x", "message": "boom"}, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        log = AuditLog.objects.get(action_type="client_error")
+        self.assertEqual((log.target_id, log.metadata["path"]), ("ERR-7F3A2C", "/challenges/x"))
+        bad = self.client.post("/api/audit/client-errors/", {"reference": "<script>", "path": "/"}, format="json")
+        self.assertEqual(bad.status_code, 400)
+        admin = User.objects.create_user(email="policy-admin@example.com", password="StrongPass123")
+        RoleService.assign_roles(admin, [RoleType.ADMINISTRATOR])
+        self.client.force_authenticate(admin)
+        found = self.client.get("/api/audit/logs/", {"search": "ERR-7F3A2C"})
+        self.assertEqual(found.status_code, 200, found.content)
+        self.assertIn("ERR-7F3A2C", found.content.decode())
