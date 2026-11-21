@@ -294,6 +294,7 @@ class DemoLoginTests(TestCase):
         self.assertEqual(accounts[1]["role"], RoleType.INNOVATION_OFFICER)
         for account in accounts:
             self.assertEqual(set(account), {"id", "name", "initials", "role", "role_label"})
+        self.assertEqual(accounts[0]["initials"], "NM")
         body = str(accounts)
         self.assertNotIn("@example.com", body)
         self.assertNotIn(str(self.real.id), body)

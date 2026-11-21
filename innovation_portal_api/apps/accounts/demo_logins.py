@@ -64,6 +64,16 @@ def assert_roles_allowed(user, role_codes) -> None:
         raise ValidationError({"code": "demo_account_admin_refused", "detail": "Test accounts cannot be administrators on this server."})
 
 
+TITLES = {"dr", "dr.", "mr", "mr.", "mrs", "mrs.", "ms", "ms.", "prof", "prof."}
+
+
+def _initials(first_name: str, last_name: str) -> str:
+    """"Dr Kefilwe" "M." -> "KM": titles are skipped."""
+    words = [w for w in (first_name or "").split() if w.lower() not in TITLES]
+    first = words[0][:1] if words else ""
+    return f"{first}{(last_name or '').strip()[:1]}".upper()
+
+
 def _primary_role(user, codes: list[str]) -> str:
     for code in ROLE_ORDER:
         if code in codes:
@@ -85,7 +95,7 @@ def accounts() -> list[dict]:
             {
                 "id": str(user.id),
                 "name": user.full_name or user.display_contact,
-                "initials": "".join(part[:1] for part in (user.first_name, user.last_name) if part).upper()[:2],
+                "initials": _initials(user.first_name, user.last_name),
                 "role": role,
                 "role_label": role_names.get(role, role.replace("_", " ").title()),
             }

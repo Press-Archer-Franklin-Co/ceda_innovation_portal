@@ -70,8 +70,8 @@ function HeroPhotoBlock({ photo }: { photo: HeroPhoto }) {
       className="relative mx-auto h-[300px] w-full max-w-[340px] overflow-hidden lg:mx-0 lg:h-auto lg:min-w-[160px] lg:max-w-none lg:flex-[0_1_var(--hero-photo-w)] lg:self-end lg:overflow-visible lg:-mb-[88px]"
       style={{ ['--hero-photo-w' as string]: `${width}px` }}
     >
-      <span aria-hidden className="absolute bottom-[-12%] left-1/2 aspect-square w-[92%] -translate-x-1/2 rounded-full bg-accent" />
-      <span aria-hidden className="absolute bottom-[-6%] left-1/2 aspect-square w-[112%] -translate-x-1/2 rounded-full border-2 border-dashed border-amber" />
+      <span aria-hidden className="absolute bottom-[14%] left-1/2 aspect-square w-full -translate-x-1/2 rounded-full bg-accent" />
+      <span aria-hidden className="absolute bottom-[10%] left-1/2 aspect-square w-[118%] -translate-x-1/2 rounded-full border-2 border-dashed border-amber" />
       <span aria-hidden className="absolute right-[6%] top-[22%] h-3 w-3 rounded-full bg-amber" />
       <img
         src={photo.src}
@@ -130,7 +130,7 @@ export default function HeroBanner({ settings, card, photo = null }: { settings:
           </ul>
         </div>
         {photo && <HeroPhotoBlock photo={photo} />}
-        {settings.show_quick_start && (photo ? <div className="w-full lg:w-[410px] lg:shrink-0 lg:[&>*]:!w-full">{card}</div> : card)}
+        {settings.show_quick_start && (photo ? <div className="w-full lg:w-[410px] lg:shrink-0 lg:[&>*]:!w-full lg:[&_form]:!w-full">{card}</div> : card)}
       </div>
     </section>
   )
