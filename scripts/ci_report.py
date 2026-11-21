@@ -107,6 +107,8 @@ def main() -> int:
     rows.append(("Public type check", word(steps["public"].get("typecheck")), ""))
     rows.append(("Public tests", word(steps["public"].get("test")), ""))
     rows.append(("Public build", word(steps["public"].get("build")), ""))
+    if "old-ui" in jobs:
+        rows.append(("Old-UI guard", word(jobs["old-ui"]), "scripts/check_old_ui.mjs"))
 
     all_green = all(result == "success" for result in jobs.values()) and bool(jobs)
     lines = [

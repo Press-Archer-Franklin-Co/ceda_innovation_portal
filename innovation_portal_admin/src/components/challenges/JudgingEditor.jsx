@@ -11,6 +11,7 @@ import { useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
 import { useAddLibraryCriterion, useCriteriaLibrary } from '../../lib/queries/forms'
 import {
+import DataTable from '../ui/DataTable'
   SCORES, isTicked, move, normaliseMeanings, nudge, setCommentRule, setWeight, splitEvenly, toggleLibrary, total,
 } from '../../lib/challenges/judging'
 
@@ -58,45 +59,36 @@ export default function JudgingEditor({ value, onChange, variant = 'full' }) {
   if (variant === 'compact') {
     return (
       <div className="flex flex-col gap-3">
-        <div className="overflow-x-auto rounded-card border border-border bg-surface">
-          <table className="w-full text-left text-[13px]">
-            <thead className="bg-surface2 text-[11px] uppercase tracking-wide text-muted">
-              <tr>
-                <th className="w-8 px-3 py-2" />
-                <th className="px-3 py-2">{t('mc.criterion')}</th>
-                <th className="px-3 py-2">{t('mc.lookFor')}</th>
-                <th className="w-[130px] px-3 py-2">{t('mc.weight')}</th>
-                <th className="w-10 px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {criteria.length === 0 && (
-                <tr><td colSpan={5} className="px-3 py-4 text-center text-muted">{t('mc.empty')}</td></tr>
-              )}
-              {criteria.map((c, i) => (
-                <tr key={c.id ?? c.library_id ?? i} className="border-t border-border">
-                  <td className="px-3 py-2"><OrderButtons index={i} count={criteria.length} name={c.name} onMove={(to) => set(move(criteria, i, to))} /></td>
-                  <td className="px-3 py-2 font-bold text-text">{c.name}</td>
-                  <td className="px-3 py-2 text-muted">{c.description}</td>
-                  <td className="px-3 py-2">
-                    <InputControl
-                      aria-label={`${t('mc.weight')}: ${c.name}`}
-                      inputMode="numeric"
-                      value={String(c.weight ?? 0)}
-                      onChange={(e) => set(setWeight(criteria, i, e.target.value.replace(/[^\d.]/g, '')))}
-                      trailing={<span className="pr-2 text-[12px]">%</span>}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <button type="button" onClick={() => set(criteria.filter((_, j) => j !== i))} aria-label={t('mc.remove', { name: c.name })} className="flex h-8 w-8 items-center justify-center rounded-control text-muted hover:text-danger">
-                      <Trash2 size={15} aria-hidden />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          caption={t('mc.criterion')}
+          data={criteria.map((c, i) => ({ ...c, id: c.id ?? c.library_id ?? `row-${i}`, _index: i }))}
+          emptyTitle={t('mc.empty')}
+          columns={[
+            { key: 'order', label: '', width: 32, render: (_, c) => <OrderButtons index={c._index} count={criteria.length} name={c.name} onMove={(to) => set(move(criteria, c._index, to))} /> },
+            { key: 'name', label: t('mc.criterion'), render: (v) => <span className="font-bold text-text">{v}</span> },
+            { key: 'description', label: t('mc.lookFor'), render: (v) => <span className="text-muted">{v}</span> },
+            {
+              key: 'weight', label: t('mc.weight'), width: 130,
+              render: (_, c) => (
+                <InputControl
+                  aria-label={`${t('mc.weight')}: ${c.name}`}
+                  inputMode="numeric"
+                  value={String(c.weight ?? 0)}
+                  onChange={(e) => set(setWeight(criteria, c._index, e.target.value.replace(/[^\d.]/g, '')))}
+                  trailing={<span className="pr-2 text-[12px]">%</span>}
+                />
+              ),
+            },
+            {
+              key: 'remove', label: '', width: 40,
+              render: (_, c) => (
+                <button type="button" onClick={() => set(criteria.filter((_, j) => j !== c._index))} aria-label={t('mc.remove', { name: c.name })} className="flex h-8 w-8 items-center justify-center rounded-control text-muted hover:text-danger">
+                  <Trash2 size={15} aria-hidden />
+                </button>
+              ),
+            },
+          ]}
+        />
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-card border border-border bg-surface px-3 py-2.5">
           <span role="status" className={cn('inline-flex items-center gap-1.5 text-[13px]', ok ? 'text-success' : 'text-text')}>
             {ok && <Check size={16} aria-hidden />}
