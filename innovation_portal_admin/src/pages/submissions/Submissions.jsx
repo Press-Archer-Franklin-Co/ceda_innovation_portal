@@ -1,307 +1,347 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
-import { ClipboardList, FlaskConical, Award, Search, X } from 'lucide-react'
-import { cn } from '../../lib/cn'
-import DataTable   from '../../components/ui/DataTable'
-import StatusPill  from '../../components/ui/StatusPill'
-import ErrorState  from '../../components/ui/ErrorState'
-import { SkeletonTable } from '../../components/ui/LoadingSkeleton'
-import { useSubmissions }          from '../../lib/queries/submissions'
-import { usePrograms }             from '../../lib/queries/programs'
-import { useAuth }                 from '../../lib/auth/AuthContext'
-import { useJudgeOnly } from '../../lib/auth/useJudgeOnly'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowRight, Download, Plus, Search, UserPlus, X } from 'lucide-react'
+import PageHeader from '../../components/ui/PageHeader'
+import Button from '../../components/ui/Button'
+import Tabs from '../../components/ui/Tabs'
+import DataTable from '../../components/ui/DataTable'
+import StatusPill from '../../components/ui/StatusPill'
+import Avatar from '../../components/ui/Avatar'
+import DropdownMenu from '../../components/ui/DropdownMenu'
+import Modal from '../../components/ui/Modal'
+import Input, { InputControl } from '../../components/ui/Input'
+import { SelectControl } from '../../components/ui/Select'
+import { useToast } from '../../components/ui/toast'
+import ChannelLabel from '../../components/ideas/ChannelLabel'
+import { AssignIdeas, MoveIdeas } from '../../components/ideas/IdeaActionDialogs'
+import { useT, useI18n } from '../../i18n/context'
+import { useAuth } from '../../lib/auth/AuthContext'
+import { reference } from '../../lib/api/endpoints'
+import { VIEWS, savedViews, staffList } from '../../lib/api/ideas'
+import { usePrograms } from '../../lib/queries/programs'
+import { relativeTime } from '../../lib/forms/format'
+import { downloadCsv } from '../../lib/csv'
+import { EMPTY_CELL } from '../../lib/format'
+import { statusWord } from '../../lib/status'
 
+// 3.15 Submissions (Figma 102:803 website, 102:1245 phone). Every idea from every challenge and channel.
+// ① Views at the top (built-in and saved); "Save view" keeps the current filters. ② One filter row.
+// ③ The shared data table: sort by heading, tick rows, 20 per page; cards on a phone.
+// ④ Ticked rows show the action bar: assign, move stage, export. Filters and paging live in the URL.
 
-const TYPE_TABS = [
-  { key: 'all',                    label: 'All',       icon: ClipboardList },
-  { key: 'idea',                   label: 'Ideas',      icon: FlaskConical },
-  { key: 'hackathon_application',  label: 'Hackathon',  icon: Award },
-]
+const PAGE_SIZE = 20
+const FILTERS = ['view', 'program', 'stage', 'channel', 'district', 'since', 'search']
+const STAGES = ['submitted', 'in_review', 'needs_input', 'shortlisted', 'approved', 'not_taken']
+const CHANNELS = ['web', 'whatsapp', 'ussd', 'sms']
+const SINCE = { '7': 7, '30': 30, '90': 90 }
 
-const STATUS_OPTIONS = [
-  { value: '',                          label: 'All',             group: null       },
-  { value: 'submitted',                 label: 'Submitted',       group: 'active'   },
-  { value: 'screening',                 label: 'Screening',       group: 'active'   },
-  { value: 'under_review',              label: 'Under Review',    group: 'active'   },
-  { value: 'judging_review',            label: 'Judging Review',  group: 'active'   },
-  { value: 'under_judging',             label: 'Under Judging',   group: 'active'   },
-  { value: 'shortlisted',               label: 'Shortlisted',     group: 'positive' },
-  { value: 'finalist',                  label: 'Finalist',        group: 'positive' },
-  { value: 'approved',                  label: 'Approved',        group: 'positive' },
-  { value: 'winner',                    label: 'Winner',          group: 'positive' },
-  { value: 'rejected',                  label: 'Rejected',        group: 'closed'   },
-  { value: 'returned',                  label: 'Returned',        group: 'closed'   },
-  { value: 'screened_out',              label: 'Screened Out',    group: 'closed'   },
-  { value: 'requires_more_information', label: 'More Info',       group: 'closed'   },
-]
-
-const STATUS_GROUP_COLORS = {
-  active:   'bg-blue-50 text-blue-700 border-blue-200',
-  positive: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  closed:   'bg-red-50 text-red-600 border-red-200',
+function sinceDate(key) {
+  const days = SINCE[key]
+  if (!days) return undefined
+  const d = new Date(Date.now() - days * 864e5)
+  return d.toISOString().slice(0, 10)
 }
-
-const SUBMISSION_COLUMNS = [
-  {
-    key: 'reference_number', label: 'Ref', width: 110, sortable: true,
-    render: (v) => <span className="text-xs font-mono text-ceda-muted">{v ?? '—'}</span>,
-  },
-  {
-    key: 'title', label: 'Title / Applicant', sortable: true,
-    render: (v, row) => {
-      const name = typeof row.innovator === 'object'
-        ? [row.innovator?.first_name, row.innovator?.last_name].filter(Boolean).join(' ')
-        : (row.innovator ?? row.submitted_by_name ?? '—')
-      return (
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-ceda-dark truncate">{v ?? '—'}</p>
-          <p className="text-xs text-ceda-muted truncate">{name}</p>
-        </div>
-      )
-    },
-  },
-  {
-    key: 'program_detail', label: 'Program', width: 180,
-    render: (v) => (
-      <span className="text-xs text-ceda-muted truncate block">
-        {typeof v === 'object' ? (v?.title ?? v?.name ?? '—') : (v ?? '—')}
-      </span>
-    ),
-  },
-  {
-    key: 'current_status', label: 'Status', width: 160,
-    render: (v) => <StatusPill status={v} />,
-  },
-  {
-    key: 'submitted_at', label: 'Submitted', width: 100, sortable: true,
-    render: (v) => v
-      ? new Date(v).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })
-      : '—',
-  },
-]
-
-
-function TypeSegment({ value, onChange, counts }) {
-  return (
-    <div className="flex items-center gap-1 bg-ceda-surface border border-ceda-border rounded-lg p-0.5">
-      {TYPE_TABS.map(t => {
-        const Icon   = t.icon
-        const count  = counts[t.key]
-        const active = value === t.key
-        return (
-          <button
-            key={t.key}
-            onClick={() => onChange(t.key)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-              active ? 'bg-white shadow-sm text-ceda-dark' : 'text-ceda-muted hover:text-ceda-dark'
-            )}
-          >
-            <Icon size={13} className="flex-shrink-0" />
-            <span>{t.label}</span>
-            <span className={cn('text-[10px] font-semibold min-w-[18px] text-center', active ? 'text-ceda-forest' : 'text-ceda-muted')}>
-              {count}
-            </span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-function StatusFilter({ value, onChange, counts }) {
-  const visible = STATUS_OPTIONS.filter(opt => opt.value === '' || (counts[opt.value] ?? 0) > 0)
-
-  return (
-    <div className="px-4 py-3 border-b border-ceda-border bg-white">
-      <div className="flex flex-wrap gap-1.5">
-        {visible.map(opt => {
-          const key    = opt.value || 'all'
-          const count  = opt.value === '' ? Object.values(counts).reduce((a, b) => a + b, 0) : (counts[opt.value] ?? 0)
-          const active = value === opt.value
-          const groupCls = active && opt.group ? STATUS_GROUP_COLORS[opt.group] ?? '' : ''
-          return (
-            <button
-              key={key}
-              onClick={() => onChange(opt.value)}
-              className={cn(
-                'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all',
-                active
-                  ? opt.group
-                    ? groupCls
-                    : 'bg-ceda-forest text-white border-ceda-forest'
-                  : 'bg-white text-ceda-muted border-ceda-border hover:border-ceda-forest/40 hover:text-ceda-dark'
-              )}
-            >
-              {opt.label}
-              <span className={cn(
-                'text-[10px] font-bold tabular-nums',
-                active ? 'opacity-80' : 'text-ceda-muted'
-              )}>
-                {count}
-              </span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-function FilterBar({ search, onSearch, program, onProgram, programs, hasActiveFilters, onClear }) {
-  const searchRef = useRef(null)
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5 border-b border-ceda-border bg-ceda-surface/40">
-      <div className="relative flex-1 max-w-xs">
-        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ceda-muted pointer-events-none" />
-        <input
-          ref={searchRef}
-          type="text"
-          className="input h-8 pl-7 pr-3 text-sm w-full"
-          placeholder="Search title, ref, applicant…"
-          value={search}
-          onChange={e => onSearch(e.target.value)}
-        />
-        {search && (
-          <button onClick={() => { onSearch(''); searchRef.current?.focus() }} className="absolute right-2 top-1/2 -translate-y-1/2 text-ceda-muted hover:text-ceda-dark">
-            <X size={12} />
-          </button>
-        )}
-      </div>
-      <select className="input h-8 py-0 text-sm w-44" value={program} onChange={e => onProgram(e.target.value)}>
-        <option value="">All Programs</option>
-        {programs.map(p => (
-          <option key={p.id} value={p.id}>{p.title ?? p.name}</option>
-        ))}
-      </select>
-      {hasActiveFilters && (
-        <button onClick={onClear} className="flex items-center gap-1 text-xs text-ceda-muted hover:text-ceda-dark transition-colors">
-          <X size={12} /> Clear
-        </button>
-      )}
-    </div>
-  )
-}
-
-
-function SubmissionsTab() {
-  const navigate = useNavigate()
-  const [typeTab,   setTypeTab]   = useState('all')
-  const [statusTab, setStatusTab] = useState('')
-  const [params] = useSearchParams()
-  const [search,    setSearch]    = useState(() => params.get('search') ?? '')
-  const [program,   setProgram]   = useState('')
-
-  // The top bar search sends people here with ?search=.
-  useEffect(() => {
-    const q = params.get('search')
-    if (q !== null) setSearch(q)
-  }, [params])
-
-  const { data, isLoading, error, refetch } = useSubmissions()
-  const { data: programsData } = usePrograms()
-
-  const all      = Array.isArray(data) ? data : (data?.results ?? [])
-  const programs = Array.isArray(programsData) ? programsData : (programsData?.results ?? [])
-  const byType   = typeTab === 'all' ? all : all.filter(s => s.submission_type === typeTab)
-
-  const typeCounts = {
-    all:             all.length,
-    idea_submission: all.filter(s => s.submission_type === 'idea_submission').length,
-    hackathon:       all.filter(s => s.submission_type === 'hackathon').length,
-  }
-
-  const statusCounts = STATUS_OPTIONS.reduce((acc, opt) => {
-    if (opt.value) {
-      acc[opt.value] = byType.filter(s => s.current_status === opt.value).length
-    }
-    return acc
-  }, {})
-
-  const filtered = byType.filter(s => {
-    if (statusTab && s.current_status !== statusTab) return false
-    if (program && String(s.program) !== String(program) && String(s.program_detail?.id) !== String(program)) return false
-    if (search) {
-      const q    = search.toLowerCase()
-      const name = typeof s.innovator === 'object'
-        ? [s.innovator?.first_name, s.innovator?.last_name].filter(Boolean).join(' ')
-        : (s.innovator ?? s.submitted_by_name ?? '')
-      if (!([s.title, s.reference_number, name].some(v => (v ?? '').toLowerCase().includes(q)))) return false
-    }
-    return true
-  })
-
-  const hasActiveFilters = !!search || !!program || !!statusTab
-  const clearFilters     = () => { setSearch(''); setProgram(''); setStatusTab('') }
-
-  return (
-    <>
-      <div className="flex items-start justify-between mb-6">
-        <p className="text-sm text-ceda-muted self-center">
-          {isLoading ? 'Loading…' : `${all.length} total across all programs`}
-        </p>
-        {!isLoading && !error && (
-          <TypeSegment value={typeTab} onChange={(v) => { setTypeTab(v); setStatusTab('') }} counts={typeCounts} />
-        )}
-      </div>
-
-      <div className="card flex flex-col overflow-hidden" style={{ minHeight: 420 }}>
-        {!isLoading && !error && (
-          <StatusFilter value={statusTab} onChange={setStatusTab} counts={statusCounts} />
-        )}
-        {!isLoading && !error && (
-          <FilterBar
-            search={search} onSearch={setSearch}
-            program={program} onProgram={setProgram}
-            programs={programs} hasActiveFilters={hasActiveFilters} onClear={clearFilters}
-          />
-        )}
-        <div className="flex-1 overflow-auto">
-          {isLoading ? (
-            <SkeletonTable rows={8} cols={5} />
-          ) : error ? (
-            <div className="p-6"><ErrorState message={error.message} onRetry={refetch} /></div>
-          ) : (
-            <DataTable
-              columns={SUBMISSION_COLUMNS}
-              data={filtered}
-              onRowClick={row => navigate(`/submissions/${row.id}`)}
-              emptyTitle={hasActiveFilters ? 'No matching submissions' : 'No submissions yet'}
-              emptyMessage={hasActiveFilters ? 'Try adjusting or clearing your filters.' : 'Submissions will appear here once applicants submit to a program.'}
-              emptyIcon={typeTab === 'hackathon' ? Award : typeTab === 'idea_submission' ? FlaskConical : ClipboardList}
-              footer={
-                <div className="flex items-center justify-between w-full">
-                  <span className="text-xs text-ceda-muted">
-                    {filtered.length === all.length ? `${all.length} submissions` : `${filtered.length} of ${all.length} shown`}
-                  </span>
-                  {hasActiveFilters && (
-                    <button onClick={clearFilters} className="text-xs text-ceda-green hover:underline">Clear all filters</button>
-                  )}
-                </div>
-              }
-            />
-          )}
-        </div>
-      </div>
-    </>
-  )
-}
-
 
 export default function Submissions() {
+  const t = useT()
+  const { lang } = useI18n()
+  const navigate = useNavigate()
+  const toast = useToast()
+  const qc = useQueryClient()
   const { user } = useAuth()
-  const judgeOnly = useJudgeOnly()
+  const [params, setParams] = useSearchParams()
+  const [selected, setSelected] = useState([])
+  const [dialog, setDialog] = useState(null)
+  const assignRef = useRef(null)
+  const moveRef = useRef(null)
+  const saveRef = useRef(null)
 
-  if (judgeOnly) return <Navigate to="/assignments" replace />
+  const get = (k) => params.get(k) ?? ''
+  const view = get('view') || 'all'
+  const page = Number(get('page')) || 1
+  const ordering = get('ordering') || '-updated_at'
+  const [searchDraft, setSearchDraft] = useState(get('search'))
+
+  const update = (patch, { keepPage = false } = {}) => {
+    setParams((p) => {
+      const next = new URLSearchParams(p)
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === '' || v == null || (k === 'view' && v === 'all')) next.delete(k)
+        else next.set(k, String(v))
+      }
+      if (!keepPage) next.delete('page')
+      return next
+    }, { replace: true })
+    if (!keepPage) setSelected([])
+  }
+
+  useEffect(() => {
+    document.title = `${t('ideas.list.title')} · CEDA Innovation`
+  }, [t])
+
+  useEffect(() => {
+    if (searchDraft === get('search')) return
+    const id = setTimeout(() => update({ search: searchDraft.trim() }), 300)
+    return () => clearTimeout(id)
+  }) // re-arms on every keystroke
+
+  const request = {
+    view,
+    page,
+    page_size: PAGE_SIZE,
+    ordering,
+    ...(get('program') ? { program: get('program') } : {}),
+    ...(get('stage') ? { stage: get('stage') } : {}),
+    ...(get('channel') ? { channel: get('channel') } : {}),
+    ...(get('district') ? { district: get('district') } : {}),
+    ...(get('since') ? { submitted_from: sinceDate(get('since')) } : {}),
+    ...(get('search') ? { search: get('search') } : {}),
+  }
+  const listQuery = useQuery({
+    queryKey: ['ideas', 'staff-list', request],
+    queryFn: () => staffList(request, user?.id),
+    placeholderData: keepPreviousData,
+  })
+  const programs = usePrograms()
+  const districts = useQuery({ queryKey: ['reference', 'districts', lang], queryFn: () => reference.districts(lang), staleTime: 3600_000 })
+  const saved = useQuery({ queryKey: ['ideas', 'saved-views'], queryFn: savedViews.list })
+
+  const rows = listQuery.data?.results ?? []
+  const counts = listQuery.data?.views ?? {}
+  const total = listQuery.data?.count ?? 0
+
+  const programOptions = useMemo(() => {
+    const items = Array.isArray(programs.data) ? programs.data : programs.data?.results ?? []
+    return [{ value: '', label: t('ideas.filter.allChallenges') }, ...items.map((p) => ({ value: p.id, label: p.title }))]
+  }, [programs.data, t])
+  const districtOptions = useMemo(() => {
+    const items = Array.isArray(districts.data) ? districts.data : districts.data?.results ?? []
+    return [{ value: '', label: t('ideas.filter.anyDistrict') }, ...items.map((d) => ({ value: d.id, label: d.name }))]
+  }, [districts.data, t])
+
+  const savedList = Array.isArray(saved.data) ? saved.data : []
+  const activeSaved = savedList.find((v) => v.id === get('saved'))
+  const tabs = [
+    ...VIEWS.map((key) => ({ key, label: t(`ideas.view.${key}`), count: counts[key] })),
+    ...savedList.map((v) => ({ key: `saved:${v.id}`, label: v.name })),
+  ]
+  const activeTab = activeSaved ? `saved:${activeSaved.id}` : view
+
+  function chooseTab(key) {
+    if (key.startsWith('saved:')) {
+      const v = savedList.find((x) => `saved:${x.id}` === key)
+      const f = v?.filters ?? {}
+      update({ saved: v?.id, view: f.view ?? 'all', program: f.program, stage: f.stage, channel: f.channel, district: f.district, since: f.since, search: f.search })
+      setSearchDraft(f.search ?? '')
+    } else {
+      update({ view: key, saved: '' })
+    }
+  }
+
+  const sort = { key: ordering.replace(/^-/, ''), dir: ordering.startsWith('-') ? 'desc' : 'asc' }
+  const columns = [
+    {
+      key: 'title',
+      label: t('ideas.col.idea'),
+      sortable: true,
+      link: (r) => `/submissions/${r.id}`,
+      render: (_, r) => (
+        <span className="flex min-w-0 flex-col">
+          <span className="truncate font-bold text-text">{r.title}</span>
+          <span className="text-[12px] text-muted">{r.reference}</span>
+        </span>
+      ),
+    },
+    {
+      key: 'innovator',
+      label: t('ideas.col.innovator'),
+      render: (v) => (v?.name ? <span className="flex min-w-0 items-center gap-2"><Avatar name={v.name} size="xs" decorative /><span className="truncate">{v.name}</span></span> : EMPTY_CELL),
+    },
+    { key: 'program', label: t('ideas.col.challenge'), render: (v) => v?.title ?? EMPTY_CELL, hideOnPhone: true },
+    { key: 'channel', label: t('ideas.col.channel'), render: (v) => <ChannelLabel channel={v} />, hideOnPhone: true },
+    { key: 'status', label: t('ideas.col.stage'), render: (v) => <StatusPill status={v} /> },
+    { key: 'score', label: t('ideas.col.score'), sortable: true, width: 80, render: (v) => (v == null ? EMPTY_CELL : <span className="font-bold tabular-nums">{Math.round(v)}</span>) },
+    { key: 'updated_at', label: t('ideas.col.updated'), sortable: true, width: 110, render: (v) => <span className="text-muted">{relativeTime(v, t) || EMPTY_CELL}</span> },
+    {
+      key: 'menu',
+      label: '',
+      width: 48,
+      render: (_, r) => (
+        <DropdownMenu
+          label={t('ideas.rowMenu', { title: r.title })}
+          items={[
+            { key: 'open', label: t('ideas.open'), onSelect: () => navigate(`/submissions/${r.id}`) },
+            { key: 'assign', label: t('ideas.assign'), onSelect: () => { setSelected([r.id]); setDialog('assign') } },
+            { key: 'move', label: t('ideas.moveOne'), onSelect: () => { setSelected([r.id]); setDialog('move') } },
+          ]}
+        />
+      ),
+    },
+  ]
+
+  async function exportRows(onlySelected) {
+    try {
+      let list = onlySelected ? rows.filter((r) => selected.includes(r.id)) : []
+      if (!onlySelected) {
+        const first = await staffList({ ...request, page: 1, page_size: 50 }, user?.id)
+        list = first.results
+        for (let p = 2; p <= Math.ceil((first.count ?? 0) / 50); p += 1) list = list.concat((await staffList({ ...request, page: p, page_size: 50 }, user?.id)).results)
+      }
+      downloadCsv(`submissions-${new Date().toISOString().slice(0, 10)}.csv`, [
+        [t('ideas.col.reference'), t('ideas.col.idea'), t('ideas.col.innovator'), t('ideas.col.challenge'), t('ideas.col.channel'), t('ideas.col.stage'), t('ideas.col.score'), t('ideas.col.updated')],
+        ...list.map((r) => [r.reference, r.title, r.innovator?.name ?? '', r.program?.title ?? '', r.channel ? t(`ideas.channel.${r.channel}`) : '', t(statusWord(r.status).labelKey), r.score ?? '', r.updated_at ?? '']),
+      ])
+    } catch (err) {
+      toast.show({ tone: 'error', title: t('ideas.exportError'), body: err?.message })
+    }
+  }
 
   return (
-    <div className="animate-fade-in flex flex-col">
-      <div className="mb-2">
-        <h1 className="text-2xl font-bold text-ceda-dark">Submissions</h1>
-        <p className="text-sm text-ceda-muted mt-0.5">Review and manage program submissions.</p>
+    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
+      <PageHeader
+        back={<span className="text-[12px] text-muted">{t('ideas.crumb')}</span>}
+        title={t('ideas.list.title')}
+        subtitle={t('ideas.list.subtitle')}
+        actions={<Button variant="secondary" onClick={() => exportRows(false)}><Download size={16} aria-hidden />{t('ideas.export')}</Button>}
+      />
+
+      <div className="flex flex-wrap items-end gap-x-2 gap-y-1 border-b border-border">
+        <Tabs tabs={tabs} active={activeTab} onChange={chooseTab} label={t('ideas.views')} idPrefix="ideas" className="min-w-0 flex-1 border-b-0" />
+        <Button ref={saveRef} variant="link" size="sm" onClick={() => setDialog('save')} className="mb-1.5">
+          <Plus size={15} aria-hidden />{t('ideas.saveView')}
+        </Button>
       </div>
 
-      <SubmissionsTab />
+      <div role="group" aria-label={t('ideas.filters')} className="flex flex-wrap items-center gap-2">
+        <div className="w-full sm:w-[280px]">
+          <InputControl
+            type="search"
+            value={searchDraft}
+            onChange={(e) => setSearchDraft(e.target.value)}
+            placeholder={t('ideas.searchPlaceholder')}
+            aria-label={t('ideas.searchPlaceholder')}
+            leading={<Search size={16} aria-hidden />}
+          />
+        </div>
+        <SelectControl aria-label={t('ideas.col.challenge')} options={programOptions} value={get('program')} onChange={(v) => update({ program: v, saved: '' })} className="w-full sm:w-auto sm:min-w-[170px]" />
+        <SelectControl
+          aria-label={t('ideas.col.stage')}
+          options={[{ value: '', label: t('ideas.filter.anyStage') }, ...STAGES.map((s) => ({ value: s, label: t(`status.${s}`) }))]}
+          value={get('stage')}
+          onChange={(v) => update({ stage: v, saved: '' })}
+          className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[140px]"
+        />
+        <SelectControl
+          aria-label={t('ideas.col.channel')}
+          options={[{ value: '', label: t('ideas.filter.anyChannel') }, ...CHANNELS.map((c) => ({ value: c, label: t(`ideas.channel.${c}`) }))]}
+          value={get('channel')}
+          onChange={(v) => update({ channel: v, saved: '' })}
+          className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[140px]"
+        />
+        <SelectControl aria-label={t('ideas.filter.district')} options={districtOptions} value={get('district')} onChange={(v) => update({ district: v, saved: '' })} className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[140px]" />
+        <SelectControl
+          aria-label={t('ideas.filter.date')}
+          options={[{ value: '', label: t('ideas.filter.anyDate') }, ...Object.keys(SINCE).map((k) => ({ value: k, label: t('ideas.filter.lastDays', { n: k }) }))]}
+          value={get('since')}
+          onChange={(v) => update({ since: v, saved: '' })}
+          className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[130px]"
+        />
+      </div>
+
+      {selected.length > 0 && (
+        <div role="region" aria-label={t('ideas.selectedActions')} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-card bg-banner-deep px-4 py-3 text-on-banner">
+          <p className="mr-auto text-[14px] font-bold" aria-live="polite">{t('ideas.selected', { n: selected.length })}</p>
+          <Button ref={assignRef} variant="onDark" size="sm" onClick={() => setDialog('assign')}><UserPlus size={15} aria-hidden />{t('ideas.assign')}</Button>
+          <Button ref={moveRef} variant="onDark" size="sm" onClick={() => setDialog('move')}><ArrowRight size={15} aria-hidden />{t('ideas.moveStage')}</Button>
+          <Button variant="onDark" size="sm" onClick={() => exportRows(true)}><Download size={15} aria-hidden />{t('ideas.export')}</Button>
+          <button type="button" onClick={() => setSelected([])} aria-label={t('ideas.clearSelection')} className="flex h-8 w-8 items-center justify-center rounded-control hover:bg-on-banner/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner">
+            <X size={16} aria-hidden />
+          </button>
+        </div>
+      )}
+
+      <DataTable
+        caption={t('ideas.list.title')}
+        columns={columns}
+        data={rows}
+        loading={listQuery.isLoading}
+        error={listQuery.isError ? listQuery.error : null}
+        onRetry={() => listQuery.refetch()}
+        retrying={listQuery.isFetching && listQuery.isError}
+        selectable
+        selected={selected}
+        onSelectionChange={setSelected}
+        onRowClick={(r) => navigate(`/submissions/${r.id}`)}
+        sort={sort}
+        onSortChange={(s) => update({ ordering: s.dir === 'desc' ? `-${s.key}` : s.key })}
+        page={page}
+        pageSize={PAGE_SIZE}
+        total={total}
+        onPageChange={(p) => update({ page: p }, { keepPage: true })}
+        emptyTitle={FILTERS.some((k) => get(k) && !(k === 'view' && get(k) === 'all')) ? t('ideas.emptyFiltered') : t('ideas.empty')}
+        emptyMessage={t('ideas.emptyBody')}
+      />
+
+      <AssignIdeas open={dialog === 'assign'} onClose={() => setDialog(null)} triggerRef={assignRef} ids={selected} onDone={() => setSelected([])} />
+      <MoveIdeas open={dialog === 'move'} onClose={() => setDialog(null)} triggerRef={moveRef} ids={selected} onDone={() => setSelected([])} />
+      <SaveView
+        open={dialog === 'save'}
+        onClose={() => setDialog(null)}
+        triggerRef={saveRef}
+        filters={Object.fromEntries(FILTERS.map((k) => [k, get(k)]).filter(([, v]) => v))}
+        onSaved={(v) => {
+          qc.invalidateQueries({ queryKey: ['ideas', 'saved-views'] })
+          update({ saved: v?.id }, { keepPage: true })
+        }}
+      />
     </div>
+  )
+}
+
+/** "Save view": a name for the current filters (R-42 adds the "submissions" scope). */
+function SaveView({ open, onClose, triggerRef, filters, onSaved }) {
+  const t = useT()
+  const toast = useToast()
+  const [name, setName] = useState('')
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => { if (open) { setName(''); setError('') } }, [open])
+
+  async function save() {
+    if (!name.trim()) { setError(t('ideas.viewNameNeeded')); return }
+    setBusy(true)
+    try {
+      const view = await savedViews.create({ name: name.trim(), filters })
+      toast.show({ tone: 'success', title: t('ideas.viewSaved', { name: name.trim() }) })
+      onSaved(view)
+      onClose()
+    } catch (err) {
+      const errs = err?.data?.errors ?? {}
+      // TODO(R-42): the API accepts the "submissions" scope and these filters once R-42 item 2 lands.
+      if (errs.scope || errs.filters) setError(t('ideas.viewsNotYet'))
+      else setError(errs.name?.[0] ?? err?.message ?? t('common.somethingWrong'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      triggerRef={triggerRef}
+      size="sm"
+      title={t('ideas.saveView')}
+      description={t('ideas.saveViewHint')}
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button onClick={save} loading={busy}>{t('common.save')}</Button>
+        </>
+      }
+    >
+      <Input label={t('ideas.viewName')} value={name} onChange={(e) => { setName(e.target.value); setError('') }} error={error || undefined} required maxLength={120} />
+    </Modal>
   )
 }

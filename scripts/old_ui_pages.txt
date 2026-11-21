@@ -1,0 +1,65 @@
+# Pages still in the old look (R0). The old-UI guard (scripts/check_old_ui.mjs) does not check these yet.
+# Each rebuild PR deletes its lines. Adding a line is not allowed: the guard fails if this list grows.
+admin/src/pages/users/Users.jsx
+admin/src/components/assignments/ActionDrawer.jsx
+admin/src/pages/admin/RolesPermissions.jsx
+admin/src/pages/content/Approvals.jsx
+admin/src/pages/admin/platform/PlatformSettings.jsx
+admin/src/pages/audit/AuditLogs.jsx
+admin/src/pages/history/History.jsx
+admin/src/pages/history/HistorySnapshot.jsx
+admin/src/pages/admin/workflows/AdminWorkflows.jsx
+admin/src/pages/admin/workflows/WorkflowBuilder.jsx
+admin/src/pages/admin/workflows/WorkflowInstances.jsx
+admin/src/pages/workflows/Workflows.jsx
+admin/src/pages/programs/Programs.jsx
+admin/src/pages/programs/ProgramDetail.jsx
+admin/src/pages/programs/ProgramEditor.jsx
+admin/src/pages/admin/MarkingCriteriaLibrary.jsx
+admin/src/pages/admin/TermsManager.jsx
+admin/src/pages/content/ContentIndex.jsx
+admin/src/pages/content/ContentList.jsx
+admin/src/pages/content/HackathonContentEditor.jsx
+admin/src/pages/content/WinnersManager.jsx
+admin/src/pages/reports/FormAnswers.jsx
+admin/src/pages/settings/Settings.jsx
+public/src/pages/ChallengeDetail.tsx
+public/src/pages/HackathonDetail.tsx
+public/src/pages/Innovate.tsx
+public/src/pages/About.tsx
+public/src/pages/Guidelines.tsx
+public/src/pages/PrivacyPolicy.tsx
+public/src/pages/TermsOfUse.tsx
+public/src/pages/TermsOfAgreement.tsx
+public/src/pages/FAQ.tsx
+public/src/pages/NotFound.tsx
+public/src/pages/JudgeInvite.tsx
+public/src/pages/SpecialistInvite.tsx
+public/src/pages/Profile.tsx
+public/src/pages/Security.tsx
+public/src/pages/SubmissionDetail.tsx
+public/src/pages/DocumentPage.tsx
+public/src/pages/Suggestions.tsx
+public/src/pages/Skills.tsx
+# Added when the guard was first set up (U8): also still in the old look.
+# Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
+admin/src/pages/auth/Login.jsx
+admin/src/components/brand/CedaInnovationHubLogo.jsx
+public/src/pages/Login.tsx
+public/src/pages/SignUp.tsx
+public/src/pages/ForgotPassword.tsx
+public/src/pages/ResetPassword.tsx
+public/src/pages/VerifyEmail.tsx
+public/src/pages/MfaChallenge.tsx
+public/src/pages/AuthCallback.tsx
+public/src/components/auth/AuthShell.tsx
+public/src/components/auth/StaffSignInButton.tsx
+# Parts of the Security page (listed above).
+public/src/components/security/LinkedProviders.tsx
+public/src/components/security/MfaManagement.tsx
+public/src/components/security/PasswordManagement.tsx
+public/src/components/security/RecommendedActions.tsx
+# Not routed any more; fix/d3-public-figma deletes them.
+public/src/pages/Dashboard.tsx
+public/src/components/challenges/ChallengeSpotlight.tsx
+public/src/components/challenges/Countdown.tsx
