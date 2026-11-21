@@ -40,7 +40,7 @@ export default function Judging() {
   const due = s?.due_at ? new Date(s.due_at) : null
   const daysLeft = due ? Math.max(0, Math.ceil((due.getTime() - Date.now()) / 864e5)) : null
   const programs = useMemo(() => [...new Set(rows.map((r) => r.program?.title).filter(Boolean))], [rows])
-  const open = rows.filter((r) => r.status !== 'done' && r.conflict !== 'declared')
+  const open = rows.filter((r) => r.status !== 'completed' && r.conflict !== 'declared')
 
   const columns = [
     {
@@ -65,7 +65,7 @@ export default function Judging() {
       render: (_, r) =>
         r.conflict === 'declared' ? (
           <span className="text-[12px] text-muted">{t('judging.conflictDeclared')}</span>
-        ) : r.status === 'done' ? (
+        ) : r.status === 'completed' ? (
           <Link to={`/judging/${r.id}`} className="text-[13px] font-bold text-primary hover:underline">{t('judging.view')}</Link>
         ) : (
           <Link to={`/judging/${r.id}`} className={buttonClasses({ size: 'sm' })}>{t('judging.score')}</Link>

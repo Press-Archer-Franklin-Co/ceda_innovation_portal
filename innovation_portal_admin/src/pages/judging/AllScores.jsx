@@ -36,20 +36,24 @@ function DotRow({ c }) {
   const min = max <= 5 ? 1 : 0
   const pos = (v) => `${((v - min) / (max - min)) * 100}%`
   return (
-    <div className="grid grid-cols-[minmax(0,140px)_1fr_48px] items-center gap-3 sm:grid-cols-[minmax(0,180px)_1fr_48px_auto]">
+    <div className="grid grid-cols-[minmax(0,140px)_1fr_48px] items-center gap-3 sm:grid-cols-[minmax(0,180px)_1fr_48px_120px]">
       <span className="truncate text-[14px] text-text">{c.name}</span>
       <div className="relative h-5" aria-hidden>
         <div className="absolute inset-x-0 top-1/2 h-px bg-border" />
         {Array.from({ length: max - min + 1 }).map((_, i) => (
           <span key={i} className="absolute top-1/2 h-2 w-px -translate-y-1/2 bg-border" style={{ left: `${(i / (max - min)) * 100}%` }} />
         ))}
-        {c.scores.map((s) => (
-          <span
-            key={s.judge}
-            className={cn('absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface', dot(s.judge))}
-            style={{ left: pos(s.score) }}
-          />
-        ))}
+        {c.scores.map((s, i) => {
+          // Judges who gave the same score sit side by side, so every dot stays visible.
+          const before = c.scores.slice(0, i).filter((x) => x.score === s.score).length
+          return (
+            <span
+              key={s.judge}
+              className={cn('absolute top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full ring-2 ring-surface', dot(s.judge))}
+              style={{ left: `calc(${pos(s.score)} - 5px + ${before * 9}px)` }}
+            />
+          )
+        })}
       </div>
       <span className="text-right text-[14px] font-bold tabular-nums text-text">{fmt(c.average)}</span>
       <span className="col-span-3 sm:col-span-1">{c.flagged && <Tag tone="amber">{t('scores.talk')}</Tag>}</span>
@@ -97,8 +101,7 @@ function Decision({ id, title }) {
       <div className="flex flex-col gap-4">
         <RadioGroup
           name="decision"
-          legend={t('scores.decision')}
-          variant="cards"
+          legend={t('scores.outcome')}
           value={choice}
           onChange={(v) => { setChoice(v); setErrors((e) => ({ ...e, choice: undefined })) }}
           error={errors.choice}

@@ -190,7 +190,7 @@ export default function Submissions() {
       }
       downloadCsv(`submissions-${new Date().toISOString().slice(0, 10)}.csv`, [
         [t('ideas.col.reference'), t('ideas.col.idea'), t('ideas.col.innovator'), t('ideas.col.challenge'), t('ideas.col.channel'), t('ideas.col.stage'), t('ideas.col.score'), t('ideas.col.updated')],
-        ...list.map((r) => [r.reference, r.title, r.innovator?.name ?? '', r.program?.title ?? '', r.channel ? t(`ideas.channel.${r.channel}`) : '', t(`status.${statusWord(r.status)}`), r.score ?? '', r.updated_at ?? '']),
+        ...list.map((r) => [r.reference, r.title, r.innovator?.name ?? '', r.program?.title ?? '', r.channel ? t(`ideas.channel.${r.channel}`) : '', t(statusWord(r.status).labelKey), r.score ?? '', r.updated_at ?? '']),
       ])
     } catch (err) {
       toast.show({ tone: 'error', title: t('ideas.exportError'), body: err?.message })
@@ -317,7 +317,10 @@ function SaveView({ open, onClose, triggerRef, filters, onSaved }) {
       onSaved(view)
       onClose()
     } catch (err) {
-      setError(err?.data?.errors?.name?.[0] ?? err?.message ?? t('common.somethingWrong'))
+      const errs = err?.data?.errors ?? {}
+      // TODO(R-42): the API accepts the "submissions" scope and these filters once R-42 item 2 lands.
+      if (errs.scope || errs.filters) setError(t('ideas.viewsNotYet'))
+      else setError(errs.name?.[0] ?? err?.message ?? t('common.somethingWrong'))
     } finally {
       setBusy(false)
     }

@@ -21,6 +21,15 @@ import { relativeTime } from '../../lib/forms/format'
 // The tab panels of 3.16 (Figma 103:843): Answers, Documents, Messages, Notes (staff only), History, Related.
 
 const asList = (data) => (Array.isArray(data) ? data : data?.results ?? [])
+/** One answer as text: lists joined, files and links by their name, yes/no in words. Never "[object Object]". */
+function answerText(value, t) {
+  if (value == null || value === '') return null
+  if (typeof value === 'boolean') return value ? t('ideas.yes') : t('ideas.no')
+  if (Array.isArray(value)) return value.map((v) => answerText(v, t)).filter(Boolean).join(', ') || null
+  if (typeof value === 'object') return value.label ?? value.name ?? value.original_filename ?? value.title ?? value.url ?? value.value ?? null
+  return String(value)
+}
+
 const when = (value) => (value ? new Date(value).toLocaleString('en-BW', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '')
 
 function Rows({ n = 3 }) {
@@ -57,12 +66,12 @@ export function AnswersTab({ summary }) {
           </div>
           <dl className="flex flex-col">
             {g.items.map((item) => {
-              const value = showOther && item.value_other_language ? item.value_other_language : item.value
+              const value = answerText(showOther && item.value_other_language ? item.value_other_language : item.value, t)
               return (
                 <div key={item.key} className="border-b border-border py-4">
                   <dt className="text-[12px] font-bold text-muted">{item.label}</dt>
                   <dd className="mt-1 whitespace-pre-line break-words text-[15px] leading-6 text-text">
-                    {value == null || value === '' ? <span className="text-muted">{t('ideas.notAnswered')}</span> : Array.isArray(value) ? value.join(', ') : typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    {value == null ? <span className="text-muted">{t('ideas.notAnswered')}</span> : value}
                   </dd>
                 </div>
               )

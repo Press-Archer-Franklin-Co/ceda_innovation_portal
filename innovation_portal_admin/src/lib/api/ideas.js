@@ -29,8 +29,8 @@ export const VIEWS = ['all', 'mine', 'needs_input', 'shortlisted', 'channels']
 const VIEW_TEST = {
   all: () => true,
   mine: (row) => row._mine,
-  needs_input: (row) => statusWord(row.status) === 'needs_input',
-  shortlisted: (row) => statusWord(row.status) === 'shortlisted',
+  needs_input: (row) => statusWord(row.status).key === 'needs_input',
+  shortlisted: (row) => statusWord(row.status).key === 'shortlisted',
   channels: (row) => row.channel === 'whatsapp' || row.channel === 'ussd',
 }
 
@@ -60,7 +60,7 @@ async function staffListFallback(params, userId) {
   const from = params.submitted_from ? new Date(params.submitted_from) : null
   const to = params.submitted_to ? new Date(`${params.submitted_to}T23:59:59`) : null
   const filtered = all.filter((r) =>
-    (!params.stage || statusWord(r.status) === params.stage) &&
+    (!params.stage || statusWord(r.status).key === params.stage) &&
     (!params.channel || r.channel === params.channel) &&
     (!from || (r.submitted_at && new Date(r.submitted_at) >= from)) &&
     (!to || (r.submitted_at && new Date(r.submitted_at) <= to)),
@@ -181,7 +181,8 @@ export async function judgingList() {
     reference: r.reference_number,
     program: r.program ?? null,
     due_at: r.deadline,
-    status: r.latest_score_status === 'locked' || r.status === 'completed' ? 'done' : r.latest_score_status === 'draft' ? 'in_progress' : 'assigned',
+    // The API's own words, so StatusPill shows Done / In progress / Assigned.
+    status: r.latest_score_status === 'locked' || r.status === 'completed' ? 'completed' : r.latest_score_status === 'draft' ? 'in_progress' : 'assigned',
     conflict: r.conflict ?? 'none',
     my_score: r.my_score ?? null,
   }))
@@ -191,10 +192,10 @@ export function judgingSummary(rows) {
   return preferNew(
     () => client.get('/api/evaluations/my-assigned/summary/'),
     async () => {
-      const open = rows.filter((r) => r.status !== 'done' && r.due_at).map((r) => r.due_at).sort()
+      const open = rows.filter((r) => r.status !== 'completed' && r.due_at).map((r) => r.due_at).sort()
       return {
         assigned: rows.length,
-        scored: rows.filter((r) => r.status === 'done').length,
+        scored: rows.filter((r) => r.status === 'completed').length,
         programs: new Set(rows.map((r) => r.program?.id).filter(Boolean)).size || null,
         due_at: open[0] ?? null,
       }
@@ -213,17 +214,31 @@ export const judgingApi = {
 // ── 3.19 all scores ──────────────────────────────────────────────────────────
 
 async function overviewFallback(subId) {
+  const empty = { average: null, pass_mark: null, judges_scored: 0, judges_assigned: 0, last_scored_at: null, criteria: [], comments: [], disagreement_threshold: 2 }
   const cycles = list(await client.get(`/api/evaluations/${subId}/cycles/`))
-  const cycle = cycles[cycles.length - 1]
-  if (!cycle) return { average: null, pass_mark: null, judges_scored: 0, judges_assigned: 0, last_scored_at: null, criteria: [], comments: [], disagreement_threshold: 2 }
-  const sum = await client.get(`/api/evaluations/${subId}/cycles/${cycle.id}/summary/`)
-  const cards = (sum.peer_scorecards ?? sum.scorecards ?? []).filter((c) => c.submitted_at || c.status === 'submitted' || c.status === 'locked')
+  if (!cycles.length) return empty
+  const summaries = await Promise.all(cycles.map((c) => client.get(`/api/evaluations/${subId}/cycles/${c.id}/summary/`).catch(() => null)))
+  // The latest sent scorecard of each judge across cycles; judges are numbered by when they first sent, never named.
+  const byJudge = new Map()
+  let criteriaSource = []
+  for (const sum of summaries.filter(Boolean)) {
+    if (sum.criteria?.length) criteriaSource = sum.criteria
+    for (const card of sum.scorecards ?? sum.peer_scorecards ?? []) {
+      const sent = card.submitted_at || ['submitted', 'locked'].includes(card.status)
+      if (!sent) continue
+      const key = card.reviewer?.id ?? card.scorecard_id
+      const prev = byJudge.get(key)
+      if (!prev || String(card.submitted_at ?? '') > String(prev.submitted_at ?? '')) byJudge.set(key, card)
+    }
+  }
+  const cards = [...byJudge.values()].sort((x, y) => String(x.submitted_at ?? '').localeCompare(String(y.submitted_at ?? '')))
+  if (!cards.length) return { ...empty, judges_assigned: cycles[cycles.length - 1]?.required_reviews ?? 0 }
   const threshold = 2
-  const criteria = (sum.criteria ?? []).map((c) => {
+  const criteria = criteriaSource.map((c) => {
     const scores = cards
       .map((card, i) => {
-        const hit = (card.scores ?? card.criterion_scores ?? []).find((x) => String(x.criterion_id) === String(c.id))
-        return hit ? { judge: i + 1, score: Number(hit.raw_score ?? hit.score) } : null
+        const hit = (card.scores ?? []).find((x) => String(x.criterion_id) === String(c.id))
+        return hit ? { judge: i + 1, score: Number(hit.raw_score) } : null
       })
       .filter(Boolean)
     const values = scores.map((x) => x.score)
@@ -233,17 +248,21 @@ async function overviewFallback(subId) {
       name: c.name,
       weight: c.weight,
       max: c.max_score ?? 5,
-      average: values.length ? values.reduce((a, b) => a + b, 0) / values.length : null,
+      average: values.length ? values.reduce((x, y) => x + y, 0) / values.length : null,
       scores,
       spread,
-      flagged: spread > threshold,
+      flagged: spread >= threshold,
     }
   })
+  const totalWeight = criteria.reduce((sum, c) => sum + Number(c.weight || 0), 0)
+  const average = totalWeight
+    ? criteria.reduce((sum, c) => (c.average == null ? sum : sum + (c.average / Number(c.max || 5)) * Number(c.weight || 0)), 0) / totalWeight * 100
+    : null
   return {
-    average: sum.aggregate?.percentage ?? sum.aggregate?.average ?? null,
+    average,
     pass_mark: null,
     judges_scored: cards.length,
-    judges_assigned: sum.required_reviews || cards.length,
+    judges_assigned: Math.max(cards.length, ...cycles.map((c) => c.required_reviews ?? 0)),
     last_scored_at: cards.map((c) => c.submitted_at).filter(Boolean).sort().pop() ?? null,
     criteria,
     comments: cards.map((c, i) => ({ judge: i + 1, comment: c.overall_comment })).filter((c) => c.comment),

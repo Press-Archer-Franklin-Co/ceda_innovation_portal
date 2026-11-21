@@ -23,6 +23,7 @@ export const ideasEn = {
   'ideas.saveViewHint': 'Keeps the filters you have chosen, so you can come back to this list in one click.',
   'ideas.viewName': 'Name of the view',
   'ideas.viewNameNeeded': 'Give the view a name.',
+  'ideas.viewsNotYet': 'Saving views is not switched on yet. Your filters still work, and stay in the address bar.',
   'ideas.viewSaved': 'Saved the view "{name}".',
   'ideas.filters': 'Filters',
   'ideas.searchPlaceholder': 'Search title, name or reference',
@@ -119,6 +120,8 @@ export const ideasEn = {
   'ideas.answers': 'Answers',
   'ideas.stepTitle': 'Step {n} · {title}',
   'ideas.answerLanguage': 'Language of the answers',
+  'ideas.yes': 'Yes',
+  'ideas.no': 'No',
   'ideas.notAnswered': 'Not answered',
   'ideas.noAnswers': 'No answers yet',
   'ideas.document': 'Document',
@@ -183,6 +186,7 @@ export const ideasEn = {
   'judging.ideaTabs': 'The idea and its documents',
   'judging.rubric': 'Scores',
   'judging.noConflict': 'I have no conflict of interest with this applicant',
+  'judging.acceptError': 'We could not open scoring. Try again.',
   'judging.declareInstead': 'Declare a conflict instead',
   'judging.weight': '{n}%',
   'judging.notScored': 'Not scored yet',
@@ -198,6 +202,7 @@ export const ideasEn = {
   'judging.saving': 'Saving…',
   'judging.draftSaved': 'Draft saved',
   'judging.saveError': 'Not saved. We will try again.',
+  'judging.saveNeedsComment': 'Not saved: add the comment that score needs.',
   'judging.submit': 'Submit scores',
   'judging.sent': 'Scores sent for "{title}".',
   'judging.sendError': 'We could not send your scores.',
@@ -231,6 +236,7 @@ export const ideasEn = {
   'scores.comments': 'Judges’ comments',
   'scores.noComments': 'No comments yet.',
   'scores.decision': 'Decision',
+  'scores.outcome': 'Outcome',
   'scores.shortlist': 'Shortlist for pitch day',
   'scores.moreInfo': 'Ask for more information',
   'scores.notTaken': 'Not taken forward',
@@ -303,6 +309,7 @@ export const ideasTn = {
   'ideas.saveViewHint': 'E boloka ditlhopho tsa gago, gore o boele mo lenaneong le ka go tobetsa gangwe.', // TODO tn-review
   'ideas.viewName': 'Leina la tebo', // TODO tn-review
   'ideas.viewNameNeeded': 'Naya tebo leina.', // TODO tn-review
+  'ideas.viewsNotYet': 'Go boloka ditebo ga go ise go bulwe. Ditlhopho tsa gago di sa ntse di dira, mme di nna mo aterese.', // TODO tn-review
   'ideas.viewSaved': 'Tebo "{name}" e bolokilwe.', // TODO tn-review
   'ideas.filters': 'Ditlhopho', // TODO tn-review
   'ideas.searchPlaceholder': 'Batla setlhogo, leina kgotsa nomoro', // TODO tn-review
@@ -399,6 +406,8 @@ export const ideasTn = {
   'ideas.answers': 'Dikarabo', // TODO tn-review
   'ideas.stepTitle': 'Kgato {n} · {title}', // TODO tn-review
   'ideas.answerLanguage': 'Puo ya dikarabo', // TODO tn-review
+  'ideas.yes': 'Ee', // TODO tn-review
+  'ideas.no': 'Nnyaa', // TODO tn-review
   'ideas.notAnswered': 'Ga e a arabiwa', // TODO tn-review
   'ideas.noAnswers': 'Ga go ise go nne le dikarabo', // TODO tn-review
   'ideas.document': 'Tokomane', // TODO tn-review
@@ -463,6 +472,7 @@ export const ideasTn = {
   'judging.ideaTabs': 'Kakanyo le dikwalo tsa yone', // TODO tn-review
   'judging.rubric': 'Maduo', // TODO tn-review
   'judging.noConflict': 'Ga ke na kgotlhang ya dikgatlhego le mokopi yo', // TODO tn-review
+  'judging.acceptError': 'Ga re a kgona go bula go tshwaya. Leka gape.', // TODO tn-review
   'judging.declareInstead': 'Bolela kgotlhang go na le moo', // TODO tn-review
   'judging.weight': '{n}%', // TODO tn-review
   'judging.notScored': 'Ga e ise e tshwaiwe', // TODO tn-review
@@ -478,6 +488,7 @@ export const ideasTn = {
   'judging.saving': 'E a boloka…', // TODO tn-review
   'judging.draftSaved': 'Setlhangwa se bolokilwe', // TODO tn-review
   'judging.saveError': 'Ga e a bolokwa. Re tla leka gape.', // TODO tn-review
+  'judging.saveNeedsComment': 'Ga e a bolokwa: tsenya maikutlo a maduo ao a a tlhokang.', // TODO tn-review
   'judging.submit': 'Romela maduo', // TODO tn-review
   'judging.sent': 'Maduo a "{title}" a rometswe.', // TODO tn-review
   'judging.sendError': 'Ga re a kgona go romela maduo a gago.', // TODO tn-review
@@ -511,6 +522,7 @@ export const ideasTn = {
   'scores.comments': 'Maikutlo a baatlhodi', // TODO tn-review
   'scores.noComments': 'Ga go ise go nne le maikutlo.', // TODO tn-review
   'scores.decision': 'Tshwetso', // TODO tn-review
+  'scores.outcome': 'Tshwetso', // TODO tn-review
   'scores.shortlist': 'Tlhopha go ya letsatsing la tlhagiso', // TODO tn-review
   'scores.moreInfo': 'Kopa tshedimosetso e nngwe', // TODO tn-review
   'scores.notTaken': 'Ga e tswelediwe', // TODO tn-review
