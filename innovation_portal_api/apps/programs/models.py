@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from django.conf import settings
 from django.db import models
@@ -113,6 +114,7 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     cover = models.ForeignKey("media_assets.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     pass_mark = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="0 to 100 on the weighted score. Copied to the judging stage.")
     reviewers_per_idea = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Judges who mark each entry. Default: every judge.")
+    disagreement_threshold = models.DecimalField(max_digits=3, decimal_places=1, default=Decimal("2"), help_text="R-42: a criterion is flagged when judges' scores differ by more than this (1 to 5 scale).")
 
     TRANSLATABLE = ("summary", "problem_statement", "support_headline", "who_can_enter", "where")
 

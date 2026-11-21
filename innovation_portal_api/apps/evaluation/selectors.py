@@ -13,7 +13,7 @@ class EvaluationSelector:
             assignee=user,
             role_type=AssignmentRoleType.JUDGE,
             status__in=[AssignmentStatus.ASSIGNED, AssignmentStatus.ACCEPTED, AssignmentStatus.COMPLETED],
-        ).select_related("submission", "workflow_step")
+        ).select_related("submission__program", "workflow_step", "acceptance", "conflict_declaration")
 
     @staticmethod
     def submission_summary(submission):

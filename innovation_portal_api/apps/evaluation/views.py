@@ -709,6 +709,7 @@ class MyCycleView(generics.GenericAPIView):
         )
 
     def get(self, request, submission_id):
+        lang = "tn" if request.query_params.get("lang") == "tn" else "en"
         submission = Submission.objects.get(id=submission_id)
         step = getattr(getattr(submission, "workflow_instance", None), "current_step", None)
         if not step:
@@ -724,6 +725,7 @@ class MyCycleView(generics.GenericAPIView):
                     judge=request.user,
                     review_cycle=source_cycle,
                     reveal_identities=True,
+                    lang=lang,
                 )
                 data["can_score"] = False
                 data["source_review_step"] = source_cycle.workflow_step.code
@@ -748,6 +750,7 @@ class MyCycleView(generics.GenericAPIView):
                         judge=request.user,
                         review_cycle=source_cycle,
                         reveal_identities=True,
+                        lang=lang,
                     )
                     data["can_score"] = False
                     data["source_review_step"] = source_cycle.workflow_step.code
@@ -789,6 +792,7 @@ class MyCycleView(generics.GenericAPIView):
                     judge=request.user,
                     review_cycle=latest_sheet.review_cycle,
                     reveal_identities=reveal,
+                    lang=lang,
                 )
                 data["can_score"] = False
                 return api_success(data=data)
@@ -840,6 +844,7 @@ class MyCycleView(generics.GenericAPIView):
             judge=request.user,
             review_cycle=review_cycle,
             reveal_identities=reveal,
+            lang=lang,
         )
         return api_success(data=data)
 

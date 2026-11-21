@@ -11,6 +11,8 @@ from apps.core.constants import AssignmentRoleType, AssignmentStatus, ProgramSta
 from apps.programs.models import ChallengeJudge, Program
 
 JUDGING_STEP_CODE = "challenge_judging"
+# Kept on the acceptance of assignments made for a challenge judge: the judge has not yet said "no conflict" (R-42).
+AUTO_ACCEPT_NOTE = "Assigned automatically as a challenge judge."
 REMINDER_INTERVAL = timezone.timedelta(hours=24)
 FINAL_REMINDER_WINDOW = timezone.timedelta(hours=3)
 
@@ -165,7 +167,7 @@ class ChallengeJudgingService:
                 deadline=judge.program.marking_closes_at,
                 notify=False,
             )
-            AssignmentService.respond(assignment, user, accept=True, note="Assigned automatically as a challenge judge.")
+            AssignmentService.respond(assignment, user, accept=True, note=AUTO_ACCEPT_NOTE)
             created += 1
         return created
 

@@ -96,6 +96,7 @@ class SavedView(UUIDModel, TimeStampedModel):
 
     class Scope(models.TextChoices):
         REVIEW_QUEUE = "review_queue", "Review queue"
+        SUBMISSIONS = "submissions", "Staff submissions list"
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_views")
     name = models.CharField(max_length=120)
