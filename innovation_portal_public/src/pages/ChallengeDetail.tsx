@@ -15,7 +15,6 @@ import { useAsync } from '../lib/useAsync'
 import { formatDate } from '../lib/dates'
 import watermarkUrl from '../assets/brand/ceda-watermark.png'
 import { publicContent, ChallengeDetail as Detail } from '../services/publicContent.service'
-import { SUBMIT_PATH } from '../lib/paths'
 
 // Screen 1.8 Challenge detail (Figma 14:641 website, 14:962 phone). GET /api/programs/public/{slug}/ (B5).
 // Everything needed to decide on one page: the problem, who can enter, support, how entries are judged (with
@@ -76,6 +75,12 @@ function ApplyCard({ c, enterTo }: { c: Detail; enterTo: string }) {
         <Link to={enterTo} className={buttonClasses({ block: true })}>
           {t('chd.enter')}
           <ArrowRight size={18} aria-hidden />
+        </Link>
+      )}
+      {c.status === 'closed' && c.results_url && (
+        <Link to={c.results_url} className={buttonClasses({ block: true, variant: 'secondary' })}>
+          <Trophy size={18} aria-hidden />
+          {t('ent.seeResults')}
         </Link>
       )}
       <ul className="flex flex-col gap-2 pt-3 border-t border-border text-d-cap text-muted">
@@ -165,7 +170,8 @@ export default function ChallengeDetail() {
     )
   }
 
-  const enterTo = `${SUBMIT_PATH}?challenge=${encodeURIComponent(c.id)}`
+  // U10: Enter goes to this challenge's own flow (1.9 Can you enter?, then its form 2.10), never the general idea form.
+  const enterTo = `/challenges/${c.slug}/enter`
   const sector = c.sector ?? c.sectors[0]
   const facts = [
     c.support_headline && { icon: Trophy, label: t('chd.support'), value: c.support_headline },

@@ -23,9 +23,6 @@ admin/src/pages/content/HackathonContentEditor.jsx
 admin/src/pages/content/WinnersManager.jsx
 admin/src/pages/reports/FormAnswers.jsx
 admin/src/pages/settings/Settings.jsx
-public/src/pages/ChallengeDetail.tsx
-public/src/pages/HackathonDetail.tsx
-public/src/pages/Innovate.tsx
 public/src/pages/About.tsx
 public/src/pages/Guidelines.tsx
 public/src/pages/PrivacyPolicy.tsx

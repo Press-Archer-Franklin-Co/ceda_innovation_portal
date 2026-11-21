@@ -3,6 +3,7 @@
 import { innovatorEn } from './innovator'
 import { signInEn } from './signin'
 import { pagesEn } from './pages'
+import { challengeEntryEn } from './challengeEntry'
 
 const en = {
   'lang.en': 'English',
@@ -427,6 +428,7 @@ const en = {
   ...innovatorEn,
   ...signInEn,
   ...pagesEn,
+  ...challengeEntryEn,
 } as const
 
 export type StringKey = keyof typeof en

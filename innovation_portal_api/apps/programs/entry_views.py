@@ -1,5 +1,7 @@
 """U10 endpoints: can you enter (1.9, 1.9b), the entry's eligibility answers, results (1.10) and my result (2.11)."""
 
+import uuid
+
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
@@ -13,6 +15,15 @@ from apps.programs import challenge_entry as entry
 from apps.programs.challenge_public import public_queryset
 from apps.programs.challenge_views import LANG, PublicChallengeThrottle, _lang
 from apps.programs.models import Program
+
+
+def _challenge(slug: str):
+    """A public challenge by slug, or by id (old links such as /innovate?program=<id> carry the id)."""
+    queryset = public_queryset()
+    try:
+        return get_object_or_404(queryset, id=uuid.UUID(slug))
+    except ValueError:
+        return get_object_or_404(queryset, slug=slug)
 
 
 class EligibilityThrottle(IPRateThrottle):
@@ -51,7 +62,7 @@ class ChallengeEntryStateView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, slug):
-        program = get_object_or_404(public_queryset(), slug=slug)
+        program = _challenge(slug)
         return api_success(data=entry.entry_state(program, request.user, _lang(request)))
 
 
@@ -71,7 +82,7 @@ class ChallengeEligibilityView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def post(self, request, slug):
-        program = get_object_or_404(public_queryset(), slug=slug)
+        program = _challenge(slug)
         serializer = EligibilityAnswersSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return api_success(data=entry.check_eligibility(program, request.user, serializer.validated_data["answers"], _lang(request)))
@@ -91,7 +102,7 @@ class ChallengeResultsView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, slug):
-        program = get_object_or_404(public_queryset(), slug=slug)
+        program = _challenge(slug)
         return api_success(data=entry.public_results(program, _lang(request)))
 
 
@@ -107,7 +118,7 @@ class MyChallengeResultView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, slug):
-        program = get_object_or_404(public_queryset(), slug=slug)
+        program = _challenge(slug)
         return api_success(data=entry.my_result(program, request.user, _lang(request)))
 
 

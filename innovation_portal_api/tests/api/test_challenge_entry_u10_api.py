@@ -85,6 +85,9 @@ class EntryStateTests(EntryTestCase):
         self.assertEqual(state["state"], "audience")
         self.assertIn("CEDA staff", state["message"])
 
+    def test_old_links_by_id_work(self):
+        self.assertEqual(data(self.entry(str(self.program.id)))["challenge"]["slug"], "cold-chain")
+
     def test_hidden_challenge_is_404(self):
         self.challenge("Hidden", public=False)
         self.assertEqual(self.entry("hidden").status_code, 404)

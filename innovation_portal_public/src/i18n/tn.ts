@@ -4,6 +4,7 @@ import type { StringKey } from './en'
 import { innovatorTn } from './innovator'
 import { signInTn } from './signin'
 import { pagesTn } from './pages'
+import { challengeEntryTn } from './challengeEntry'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -428,6 +429,7 @@ const tn: Record<StringKey, string> = {
   ...innovatorTn,
   ...signInTn,
   ...pagesTn,
+  ...challengeEntryTn,
 }
 
 export default tn

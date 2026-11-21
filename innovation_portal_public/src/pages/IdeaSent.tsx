@@ -18,7 +18,10 @@ import type { SubmitResult } from '../types/innovator'
 
 const KEY = 'ceda_idea_sent'
 
-function readStored(): { result: SubmitResult; at: string } | null {
+/** U10: set when the idea was an entry to a challenge (2.10), so the page names the challenge. */
+type SentChallenge = { title: string; slug: string }
+
+function readStored(): { result: SubmitResult; at: string; challenge?: SentChallenge } | null {
   try {
     const raw = sessionStorage.getItem(KEY)
     return raw ? JSON.parse(raw) : null
@@ -32,8 +35,9 @@ export default function IdeaSent() {
   const { isAuthenticated } = useAuth()
   const settings = useShellSettings()
   const location = useLocation()
-  const fromState = (location.state as { result?: SubmitResult } | null)?.result
-  const [data] = useState(() => (fromState ? { result: fromState, at: new Date().toISOString() } : readStored()))
+  const sentState = location.state as { result?: SubmitResult; challenge?: SentChallenge } | null
+  const fromState = sentState?.result
+  const [data] = useState(() => (fromState ? { result: fromState, at: new Date().toISOString(), challenge: sentState?.challenge } : readStored()))
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -87,6 +91,12 @@ export default function IdeaSent() {
               {t('sent.title')}{' '}
               <span className="text-amber">{result.first_name ? t('sent.wellDone', { name: result.first_name }) : t('sent.wellDoneNoName')}</span>
             </h1>
+            {data.challenge && (
+              <p className="text-d-body text-on-banner">
+                {t('ent.sentFor', { challenge: data.challenge.title })}{' · '}
+                <Link to={`/challenges/${data.challenge.slug}`} className="underline">{t('ent.seeChallenge')}</Link>
+              </p>
+            )}
             {result.copy_sent_to && (
               <p className="text-d-body text-banner-muted">
                 {t('sent.copyTo', { to: result.copy_sent_to.to, channel: t(`sent.channel.${channel}` as StringKey) || String(channel) })}
