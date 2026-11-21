@@ -14,6 +14,14 @@ import { GROUP_ORDER, MIN_QUERY, searchSite, toRows, type RowIcon, type SearchRe
 const ICONS: Record<RowIcon, typeof Trophy> = { challenge: Trophy, story: Lightbulb, post: Megaphone, help: FileText }
 const DEBOUNCE_MS = 250
 
+/** The title with each match of the search words in red (Figma 11:497). Plain text pieces, no HTML. */
+function Highlight({ text, term }: { text: string; term: string }) {
+  const words = term.split(/\s+/).filter((w) => w.length >= 2).map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  if (!words.length) return <>{text}</>
+  const parts = text.split(new RegExp(`(${words.join('|')})`, 'gi'))
+  return <>{parts.map((part, i) => (i % 2 === 1 ? <mark key={i} className="bg-transparent text-primary">{part}</mark> : part))}</>
+}
+
 type Status = 'idle' | 'loading' | 'ok' | 'error'
 
 export default function SiteSearch({ variant, onNavigate, onQueryChange }: { variant: 'panel' | 'drawer'; onNavigate: () => void; onQueryChange?: (hasQuery: boolean) => void }) {
@@ -91,8 +99,8 @@ export default function SiteSearch({ variant, onNavigate, onQueryChange }: { var
 
   return (
     <div className="flex flex-col min-h-0">
-      <div className={clsx('flex items-center gap-3 shrink-0', panel ? 'h-[63px] px-[22px] border-b border-border' : 'h-[46px] px-3.5 rounded-control border border-border bg-surface focus-within:border-primary')}>
-        <Search size={panel ? 22 : 18} aria-hidden className="text-muted shrink-0" />
+      <div className={clsx('flex items-center gap-3 shrink-0', panel ? 'h-[63px] px-[22px] border-b border-border' : 'h-[46px] px-3.5 rounded-control border border-transparent bg-surface2 focus-within:border-primary')}>
+        <Search size={panel ? 22 : 18} aria-hidden className={clsx('shrink-0', panel ? 'text-primary' : 'text-muted')} />
         <input
           ref={inputRef}
           data-autofocus
@@ -109,7 +117,7 @@ export default function SiteSearch({ variant, onNavigate, onQueryChange }: { var
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={onKeyDown}
-          className={clsx('flex-1 min-w-0 bg-transparent text-text placeholder:text-muted focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-search-cancel-button]:hidden', panel ? 'text-d-h4 font-body font-normal' : 'text-d-body-s')}
+          className={clsx('flex-1 min-w-0 bg-transparent text-text placeholder:text-muted focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 [&::-webkit-search-cancel-button]:hidden', panel ? 'text-d-h4 font-heading' : 'text-d-body-s')}
         />
         {panel && (
           <>
@@ -164,7 +172,7 @@ export default function SiteSearch({ variant, onNavigate, onQueryChange }: { var
               const labelId = `${baseId}-g-${group}`
               return (
                 <div key={group} role="group" aria-labelledby={labelId}>
-                  <p id={labelId} className="text-d-label-s uppercase tracking-wide text-muted mb-1.5">{t(`search.group.${group}` as never)}</p>
+                  <p id={labelId} className="text-d-label-s font-bold uppercase tracking-[0.08em] text-text mb-1.5">{t(`search.group.${group}` as never)}</p>
                   {items.map(({ row, index }) => {
                     const Icon = ICONS[row.icon]
                     const on = index === active
@@ -179,18 +187,16 @@ export default function SiteSearch({ variant, onNavigate, onQueryChange }: { var
                         onClick={() => open(row)}
                         className={clsx('flex items-center gap-3 min-h-[58px] px-3 rounded-[10px] cursor-pointer', on ? 'bg-surface2' : 'hover:bg-surface2/60')}
                       >
-                        <span aria-hidden className="w-9 h-9 shrink-0 rounded-[10px] bg-primary-soft text-primary flex items-center justify-center">
+                        <span aria-hidden className="w-9 h-9 shrink-0 rounded-[10px] bg-accent-soft text-accent flex items-center justify-center">
                           <Icon size={18} />
                         </span>
                         <span className="flex-1 min-w-0">
-                          <span className="block text-d-body-s font-bold text-text truncate">{row.title}</span>
+                          <span className="block text-[15px] leading-5 text-text truncate"><Highlight text={row.title} term={term} /></span>
                           {row.meta && <span className="block text-d-cap text-muted truncate">{row.meta}</span>}
                         </span>
-                        {row.external ? (
-                          <><ExternalLink size={16} aria-hidden className="text-muted shrink-0" /><span className="sr-only">{t('search.opensNew')}</span></>
-                        ) : (
-                          <ArrowRight size={18} aria-hidden className={clsx('shrink-0', on ? 'text-primary' : 'text-muted')} />
-                        )}
+                        {row.external && <span className="sr-only">{t('search.opensNew')}</span>}
+                        {/* Figma: only the highlighted row shows where Enter goes. */}
+                        {on && (row.external ? <ExternalLink size={16} aria-hidden className="text-primary shrink-0" /> : <ArrowRight size={18} aria-hidden className="text-primary shrink-0" />)}
                       </div>
                     )
                   })}
@@ -202,7 +208,7 @@ export default function SiteSearch({ variant, onNavigate, onQueryChange }: { var
       </div>
 
       {panel && (
-        <div className="flex items-center justify-between gap-4 h-11 px-[22px] border-t border-border shrink-0 text-d-cap text-muted">
+        <div className="flex items-center justify-between gap-4 h-11 px-[22px] border-t border-border bg-surface2 shrink-0 text-d-cap text-muted">
           <span aria-hidden>{t('search.keys')}</span>
           {status === 'ok' && total > 0 && <span className="text-d-label-s text-text">{total === 1 ? t('search.countOne', { q: term }) : t('search.count', { n: total, q: term })}</span>}
         </div>

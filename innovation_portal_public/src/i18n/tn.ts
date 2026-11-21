@@ -197,7 +197,6 @@ const tn: Record<StringKey, string> = {
   'search.opensNew': '(e bula mo tsebeng e ntšha)', // TODO tn-review
   'qs2.name': 'Leina ka botlalo', // TODO tn-review
   'qs2.district': 'Kgaolo', // TODO tn-review
-  'qs2.districtPlaceholder': 'Tlhopha kgaolo ya gago', // TODO tn-review
   'qs2.districtLoading': 'Re tsenya dikgaolo', // TODO tn-review
   'qs2.districtError': 'Tlhopha kgaolo mo lenaneng.', // TODO tn-review
   'qs2.email': 'Imeile', // TODO tn-review
@@ -267,7 +266,7 @@ const tn: Record<StringKey, string> = {
   'sent.trackTitle': 'E latele ka tsela e o e ratang', // TODO tn-review
   'sent.trackBody': 'Akhaonto ya gago, dikitsiso tsa WhatsApp, kgotsa leletsa {ussd} o bo o tsenya nomore ya gago ya tshupetso.', // TODO tn-review
   'sent.trackBodyNoUssd': 'Akhaonto ya gago kgotsa dikitsiso tsa WhatsApp, ka nomore ya gago ya tshupetso.', // TODO tn-review
-  'sent.trackCta': 'Bula letlapa la me', // TODO tn-review
+  'sent.trackCta': 'Latela kakanyo e', // TODO tn-review
   'sent.signInCta': 'Tsena go latela', // TODO tn-review
   'sent.moreTitle': 'O na le kakanyo e nngwe?', // TODO tn-review
   'sent.moreBody': 'Tlhola dikgwetlho tse di bulegileng. Dingwe di tla le dithuso tsa madi le kaelo.', // TODO tn-review
