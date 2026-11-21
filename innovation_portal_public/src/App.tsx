@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
+import { Navigate, Routes, Route, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
 import PrivateRoute  from './components/ui/PrivateRoute'
@@ -11,9 +11,7 @@ const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
 const FAQ = lazy(() => import('./pages/FAQ'))
 const Challenges = lazy(() => import('./pages/Challenges'))
-const Suggestions = lazy(() => import('./pages/Suggestions'))
-const Innovate = lazy(() => import('./pages/Innovate'))
-const Skills = lazy(() => import('./pages/Skills'))
+const Submit = lazy(() => import('./pages/Submit'))
 const Login = lazy(() => import('./pages/Login'))
 const SignUp = lazy(() => import('./pages/SignUp'))
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
@@ -29,8 +27,6 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const TermsOfUse = lazy(() => import('./pages/TermsOfUse'))
 const News = lazy(() => import('./pages/News'))
 const PostDetail = lazy(() => import('./pages/PostDetail'))
-const HackathonDetail = lazy(() => import('./pages/HackathonDetail'))
-const SubmissionDetail = lazy(() => import('./pages/SubmissionDetail'))
 const DocumentPage = lazy(() => import('./pages/DocumentPage'))
 const SpecialistInvite = lazy(() => import('./pages/SpecialistInvite'))
 const JudgeInvite = lazy(() => import('./pages/JudgeInvite'))
@@ -70,6 +66,32 @@ function HomeOrDashboard() {
   return <Home />
 }
 
+/**
+ * The old submission page (/innovate) is gone. Its links still work:
+ * ?draft= opens that draft in the full form, ?program= starts an idea for that challenge,
+ * ?submission= opens the idea's page, and the bare address starts a new idea.
+ */
+function InnovateRedirect() {
+  const [params] = useSearchParams()
+  const draft = params.get('draft')
+  const program = params.get('program')
+  const submission = params.get('submission')
+  const to = draft
+    ? `/my-ideas/draft/${encodeURIComponent(draft)}`
+    : submission
+      ? `/my-ideas/${encodeURIComponent(submission)}`
+      : program
+        ? `/submit?challenge=${encodeURIComponent(program)}`
+        : '/submit'
+  return <Navigate to={to} replace />
+}
+
+/** Old submission detail addresses go to the idea's page (2.2). */
+function SubmissionRedirect() {
+  const { id = '' } = useParams()
+  return <Navigate to={`/my-ideas/${encodeURIComponent(id)}`} replace />
+}
+
 function AppRoutes() {
   const { pathname } = useLocation()
   return (
@@ -106,16 +128,18 @@ function AppRoutes() {
         <Route path="/faq"         element={<FAQ />} />
         <Route path="/challenges"  element={<Challenges />} />
         <Route path="/challenges/:slug" element={<ChallengeDetail />} />
-        <Route path="/suggestions" element={<Suggestions />} />
-        <Route path="/innovate"    element={<Innovate />} />
-        <Route path="/skills"      element={<Skills />} />
+        <Route path="/submit"      element={<Submit />} />
+        <Route path="/innovate"    element={<InnovateRedirect />} />
+        {/* Old pages nothing links to any more (D3): sent somewhere useful instead. */}
+        <Route path="/suggestions" element={<Navigate to="/faq" replace />} />
+        <Route path="/skills"      element={<Navigate to="/" replace />} />
+        <Route path="/hackathons/:id" element={<Navigate to="/challenges" replace />} />
         <Route path="/news"        element={<News />} />
         <Route path="/subscribe/confirm/:token" element={<SubscriptionLink action="confirm" />} />
         <Route path="/unsubscribe/:token" element={<SubscriptionLink action="unsubscribe" />} />
         {/* TODO(U2): own Stories page; until then the news feed. */}
         <Route path="/stories"     element={<News />} />
         <Route path="/news/:slug"  element={<PostDetail />} />
-        <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
         <Route path="/sign-in"     element={<PublicOnlyRoute><CodeSignIn /></PublicOnlyRoute>} />
 
@@ -129,7 +153,7 @@ function AppRoutes() {
           <Route path="/my-ideas/draft/:id" element={<IdeaForm />} />
           <Route path="/my-ideas/:id"       element={<TrackIdea />} />
           <Route path="/notifications"      element={<Notifications />} />
-          <Route path="/submissions/:id"    element={<SubmissionDetail />} />
+          <Route path="/submissions/:id"    element={<SubmissionRedirect />} />
           <Route path="/documents/:id"      element={<DocumentPage />} />
           <Route path="/profile"            element={<Profile />} />
           <Route path="/security"           element={<Security />} />

@@ -35,7 +35,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 const NOT_SURE = 'not-sure'
 const sectorForApi = (id: string) => (id === NOT_SURE ? null : id)
 
-export default function QuickStartCard({ challenges, onContinue }: { challenges: ChallengeCard[]; onContinue: (draft: QuickStartDraft) => void }) {
+export default function QuickStartCard({ challenges, onContinue, busy = false }: { challenges: ChallengeCard[]; onContinue: (draft: QuickStartDraft) => void; busy?: boolean }) {
   const { t, lang } = useI18n()
   const basicsOnly = useBasicsOnly()
   const sectors = useAsync(() => referenceService.sectors(lang), [lang])
@@ -120,7 +120,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
       setRetry((n) => n + 1)
       return
     }
-    if (!draft || save === 'saving') return
+    if (!draft || save === 'saving' || busy) return
     const program = allChallenges.find((c) => c.id === programId)
     onContinue({
       draftId: draft.draftId,
@@ -191,7 +191,7 @@ export default function QuickStartCard({ challenges, onContinue }: { challenges:
         <SelectControl options={options} value={programId} onChange={setProgramId} />
       </Field>
 
-      <Button type="submit" block disabled={!ready && save !== 'error'}>
+      <Button type="submit" block loading={busy} disabled={!ready && save !== 'error'}>
         {t('qs.continue')}
       </Button>
 

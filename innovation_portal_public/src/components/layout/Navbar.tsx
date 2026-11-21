@@ -16,10 +16,11 @@ import SiteSearch from '../search/SiteSearch'
 import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
 import { isStaff } from '../../lib/roles'
+import { SUBMIT_PATH } from '../../lib/paths'
 
 // Figma 1 · Public home › Header (10:190), Mobile header (10:801), Menu drawer (11:695).
 
-export const SUBMIT_PATH = '/innovate'
+export { SUBMIT_PATH }
 /** The code sign-in (2.0). Password sign-in stays at /login and is linked from there. */
 export const SIGN_IN_PATH = '/sign-in'
 /** The public home for everyone. "/" sends signed-in innovators to their dashboard. */

@@ -1,123 +1,155 @@
-import { useState, useEffect } from 'react'
-import { ChevronDown, Search } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ChevronDown, Search, X } from 'lucide-react'
+import PageBanner from '../components/layout/PageBanner'
+import HelpContactCard from '../components/help/HelpContactCard'
+import Skeleton from '../components/ui/Skeleton'
+import EmptyState, { ErrorState } from '../components/ui/EmptyState'
+import { useI18n } from '../i18n'
+import { useAsync } from '../lib/useAsync'
+import { usePageTitle } from '../lib/usePageTitle'
 import { faqsService } from '../services/faqs.service'
 import type { ApiFAQ } from '../types/api'
-import { parseApiError } from '../utils/apiError'
-import clsx from 'clsx'
-import StandardHero from '../components/ui/StandardHero'
 
-function FAQItem({ question, answer }: { question: string; answer: string }) {
-  const [open, setOpen] = useState(false)
+// Help (/faq), in the Option D look of 1.6 and 1.7: the page banner with the CEDA mark watermark and a search
+// box, the questions in their groups (B6 FAQ groups, in the order the admins set), and "Still need help?" at
+// the foot. Shown: questions placed on Help, and older questions with no placement, but never a question that
+// belongs to one challenge's page.
+
+interface Group {
+  id: string
+  name: string
+  items: ApiFAQ[]
+}
+
+const OTHER = 'other'
+
+function forHelp(f: ApiFAQ) {
+  return !f.program && (!f.placements?.length || f.placements.includes('help'))
+}
+
+/** Keeps the API order: groups in the order their first question arrives, ungrouped ones last. */
+function toGroups(list: ApiFAQ[], otherName: string): Group[] {
+  const groups = new Map<string, Group>()
+  for (const f of list) {
+    const id = f.group ?? OTHER
+    if (!groups.has(id)) groups.set(id, { id, name: f.group ? f.group_name || otherName : otherName, items: [] })
+    groups.get(id)!.items.push(f)
+  }
+  const other = groups.get(OTHER)
+  groups.delete(OTHER)
+  return other ? [...groups.values(), other] : [...groups.values()]
+}
+
+function Question({ faq }: { faq: ApiFAQ }) {
   return (
-    <div className={clsx('border rounded-2xl overflow-hidden transition-all', open ? 'border-[#A01E0A]/20 shadow-sm' : 'border-gray-100')}>
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between gap-4 p-5 text-left hover:bg-gray-50 transition-colors"
-      >
-        <span className="font-semibold text-gray-900 text-sm leading-relaxed">{question}</span>
-        <ChevronDown size={17} className={clsx('shrink-0 text-[#A01E0A] transition-transform duration-300', open && 'rotate-180')} />
-      </button>
-      {open && (
-        <div className="px-5 pb-5 pt-3 bg-gray-50/60 border-t border-gray-100">
-          <p className="text-gray-600 text-sm leading-relaxed">{answer}</p>
+    <details className="group border-b border-border last:border-b-0 open:bg-surface2">
+      <summary className="flex items-center justify-between gap-3 px-4 lg:px-5 py-4 cursor-pointer list-none text-d-h5 font-heading text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary [&::-webkit-details-marker]:hidden">
+        {faq.question}
+        <ChevronDown size={18} aria-hidden className="shrink-0 text-primary transition-transform group-open:rotate-180" />
+      </summary>
+      <p className="px-4 lg:px-5 pb-4 -mt-1 text-d-body-s text-muted whitespace-pre-line">{faq.answer}</p>
+    </details>
+  )
+}
+
+function ListSkeleton() {
+  return (
+    <div aria-hidden className="flex flex-col gap-8">
+      {Array.from({ length: 2 }).map((_, g) => (
+        <div key={g} className="flex flex-col gap-3">
+          <Skeleton className="h-6 w-48" />
+          <div className="rounded-card border border-border">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-[58px] px-5 flex items-center border-b border-border last:border-b-0">
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+      ))}
     </div>
   )
 }
 
 export default function FAQ() {
-  const [faqs,           setFaqs]           = useState<ApiFAQ[]>([])
-  const [loading,        setLoading]        = useState(true)
-  const [apiError,       setApiError]       = useState('')
-  const [search,         setSearch]         = useState('')
-  const [activeCategory, setActiveCategory] = useState('All')
+  const { t, lang } = useI18n()
+  usePageTitle(t('nav.help'))
+  const res = useAsync(() => faqsService.getPublic(lang), [lang])
+  const [q, setQ] = useState('')
+  const term = q.trim().toLowerCase()
 
-  useEffect(() => {
-    faqsService.getPublic()
-      .then(data => setFaqs(data.sort((a, b) => (a.ordering ?? 0) - (b.ordering ?? 0))))
-      .catch(err => setApiError(parseApiError(err)))
-      .finally(() => setLoading(false))
-  }, [])
-
-  const faqCategories = ['All']
-
-  const filtered = faqs.filter((f) => {
-    const q = search.toLowerCase()
-    return !q || f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q)
-  })
+  const all = useMemo(() => (res.data ?? []).filter(forHelp), [res.data])
+  const shown = useMemo(
+    () => (term ? all.filter((f) => f.question.toLowerCase().includes(term) || f.answer.toLowerCase().includes(term)) : all),
+    [all, term],
+  )
+  const groups = useMemo(() => toGroups(shown, t('help.other')), [shown, t])
+  const topics = term ? [] : groups
 
   return (
-    <div className="bg-white">
-      <StandardHero
-        eyebrow="Help Center"
-        title="Frequently Asked Questions"
-        subtitle="Find answers to common questions about the CEDA Innovation Portal."
-        image={{ src: '/pages/faq.png' }}
-        actions={
-          <div className="relative max-w-lg">
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search questions..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/10 text-white placeholder-white/40 border border-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 text-sm"
-            />
-          </div>
-        }
-      />
+    <>
+      <PageBanner id="help-title" overline={t('help.over')} title={t('help.title')} subtitle={t('help.sub')}>
+        <form role="search" onSubmit={(e) => e.preventDefault()} className="relative max-w-[560px]">
+          <Search size={18} aria-hidden className="absolute left-4 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder={t('help.search')}
+            aria-label={t('help.search')}
+            className="w-full h-12 pl-11 pr-11 rounded-control bg-surface text-text text-d-body-s placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-yellow [&::-webkit-search-cancel-button]:hidden"
+          />
+          {q && (
+            <button type="button" onClick={() => setQ('')} aria-label={t('help.clear')} className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-control text-muted hover:bg-surface2 flex items-center justify-center">
+              <X size={16} aria-hidden />
+            </button>
+          )}
+        </form>
+      </PageBanner>
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-16">
-        {faqCategories.length > 1 && (
-          <div className="flex flex-wrap gap-2 mb-8">
-            {faqCategories.map((cat) => (
-              <button key={cat} onClick={() => setActiveCategory(cat)}
-                className={clsx('px-4 py-1.5 rounded-full text-sm font-medium transition-colors',
-                  activeCategory === cat ? 'text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                )}
-                style={activeCategory === cat ? { background: '#A01E0A' } : {}}
-              >{cat}</button>
-            ))}
+      <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10 lg:py-[72px] flex flex-col gap-12 lg:gap-16">
+        <p role="status" aria-live="polite" className={term && res.data ? 'text-d-label-s text-muted -mb-6 lg:-mb-10' : 'sr-only'}>
+          {term && res.data ? (shown.length === 1 ? t('help.countOne', { q: q.trim() }) : shown.length ? t('help.count', { n: shown.length, q: q.trim() }) : '') : ''}
+        </p>
+
+        {res.loading ? (
+          <ListSkeleton />
+        ) : res.error && !res.data ? (
+          <ErrorState title={t('help.loadError')} onRetry={res.reload} retrying={res.fetching} />
+        ) : all.length === 0 ? (
+          <EmptyState title={t('help.empty')} body={t('help.emptyBody')} />
+        ) : shown.length === 0 ? (
+          <EmptyState title={t('help.noMatch', { q: q.trim() })} body={t('help.noMatchBody')} />
+        ) : (
+          <div className={topics.length > 1 ? 'grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-10' : ''}>
+            {topics.length > 1 && (
+              <nav aria-label={t('help.topics')} className="hidden lg:block">
+                <div className="sticky top-6 flex flex-col gap-1">
+                  <p className="text-d-over uppercase font-heading text-accent mb-2">{t('help.topics')}</p>
+                  {topics.map((g) => (
+                    <a key={g.id} href={`#faq-group-${g.id}`} className="px-3 py-2 rounded-control text-d-label text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      {g.name}
+                    </a>
+                  ))}
+                </div>
+              </nav>
+            )}
+            <div className="flex flex-col gap-10 min-w-0">
+              {groups.map((g) => (
+                <section key={g.id} id={`faq-group-${g.id}`} aria-labelledby={`faq-group-${g.id}-title`} className="scroll-mt-6 flex flex-col gap-3">
+                  {/* A single group of ungrouped questions needs no heading on screen. */}
+                  <h2 id={`faq-group-${g.id}-title`} className={groups.length > 1 || g.id !== OTHER ? 'text-d-h4 font-heading text-text' : 'sr-only'}>{g.name}</h2>
+                  <div className="rounded-card border border-border overflow-hidden">
+                    {g.items.map((f) => <Question key={f.id} faq={f} />)}
+                  </div>
+                </section>
+              ))}
+            </div>
           </div>
         )}
 
-        {loading && (
-          <div className="space-y-3">
-            {[1,2,3,4,5].map(i => (
-              <div key={i} className="rounded-2xl border border-gray-100 p-5 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-3/4" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {apiError && (
-          <div className="text-center py-16 text-gray-400">{apiError}</div>
-        )}
-
-        {!loading && !apiError && filtered.length === 0 && (
-          <div className="text-center py-16 text-gray-400">
-            {faqs.length === 0 ? 'No FAQs available yet.' : 'No results found — try a different search term.'}
-          </div>
-        )}
-
-        {!loading && !apiError && filtered.length > 0 && (
-          <div className="space-y-3">
-            {filtered.map((faq) => (
-              <FAQItem key={faq.id} question={faq.question} answer={faq.answer} />
-            ))}
-          </div>
-        )}
-
-        <div className="relative mt-12 rounded-3xl px-8 py-8 text-center overflow-hidden" style={{ background: 'linear-gradient(125deg, #2E1E18 0%, #5A3C32 55%, #6B4A3E 100%)' }}>
-          <div className="absolute inset-0 opacity-[0.5]" style={{ backgroundImage: 'radial-gradient(circle, rgba(148,163,184,0.9) 1px, transparent 1px)', backgroundSize: '26px 26px' }} />
-          <div className="relative z-10">
-            <h3 className="font-bold text-white text-xl mb-2">Still have questions?</h3>
-            <p className="text-white/70 text-sm mb-6">Our team is ready to help.</p>
-            <a href="mailto:innovation@ceda.co.bw" className="btn-white inline-flex">Contact Us</a>
-          </div>
-        </div>
-      </section>
-    </div>
+        <HelpContactCard id="help-contact-title" />
+      </div>
+    </>
   )
 }

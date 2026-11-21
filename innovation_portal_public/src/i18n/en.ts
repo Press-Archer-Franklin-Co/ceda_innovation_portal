@@ -1,6 +1,7 @@
 // English strings for UI chrome. Content text arrives translated from the API.
 // Keys are grouped by area. Every key here must also exist in tn.ts.
 import { innovatorEn } from './innovator'
+import { pagesEn } from './pages'
 
 const en = {
   'lang.en': 'English',
@@ -76,6 +77,9 @@ const en = {
   'home.check1': 'Free to submit',
   'home.check2': 'Track on web, WhatsApp or USSD',
   'home.check3': 'A real CEDA officer replies',
+  'submit.headline': 'Share your idea with CEDA',
+  'submit.highlight': 'your idea',
+  'submit.text': 'Tell us about it in two minutes. You do not need an account to start.',
   'qs.title': 'Start your idea in 2 minutes',
   'qs.step': 'Step {n} of 2',
   'qs.intro': 'Just the basics now. You can add details, photos and documents later.',
@@ -420,6 +424,7 @@ const en = {
   'tabs.news': 'News',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorEn,
+  ...pagesEn,
 } as const
 
 export type StringKey = keyof typeof en
