@@ -695,6 +695,7 @@ class PolicyPage(UUIDModel, TimeStampedModel):
     title = models.JSONField(default=dict, blank=True)
     intro = models.JSONField(default=dict, blank=True)
     sections = models.JSONField(default=list, blank=True)
+    version = models.PositiveIntegerField(default=1, help_text="Goes up by one each time an approved change goes live.")
     published_at = models.DateTimeField(null=True, blank=True)
     published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     draft = models.JSONField(null=True, blank=True, help_text="Unpublished edits: {title, intro, sections}. Null when there are none.")

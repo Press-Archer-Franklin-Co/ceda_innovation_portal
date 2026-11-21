@@ -123,6 +123,7 @@ def staff_document(page: PolicyPage, user=None) -> dict:
         "key": page.key,
         "name": page.get_key_display(),
         "live": live_content(page),
+        "version": page.version,
         "published_at": _iso(page.published_at),
         "published_by": _name(page.published_by),
         "draft": page.draft,
@@ -179,7 +180,8 @@ def apply_approved(page: PolicyPage, approval: ApprovalRequest, *, actor) -> Pol
     page.title, page.intro, page.sections = content["title"], content["intro"], content["sections"]
     page.published_at = timezone.now()
     page.published_by = approval.requested_by
-    fields = ["title", "intro", "sections", "published_at", "published_by", "updated_at"]
+    page.version += 1
+    fields = ["title", "intro", "sections", "version", "published_at", "published_by", "updated_at"]
     # The draft is done once what was approved is what is in it; later edits stay as a draft.
     if page.draft is not None and validate(page.draft) == content:
         page.draft, page.draft_updated_at, page.draft_updated_by = None, None, None
@@ -217,6 +219,7 @@ def public_document(page: PolicyPage, lang: str) -> dict:
         "intro": pick(content["intro"]),
         "sections": [{"heading": pick(section.get("heading")), "body": pick(section.get("body"))} for section in content["sections"]],
         "updated_at": _iso(page.published_at),
+        "version": page.version,
     }
     data["lang"] = lang
     data["english_fallback"] = fallback

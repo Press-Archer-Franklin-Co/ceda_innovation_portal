@@ -323,102 +323,72 @@ POLICY_SEED = {
         },
         "sections": [
             {
-                "heading": {
-                    "en": "Clause 1",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I confirm that I am authorized to submit the material for publication on the Portal and that the submission is made in full compliance with all applicable legislation and/or policy.",
+                    "en": "1. I confirm that I am authorized to submit the material for publication on the Portal and that the submission is made in full compliance with all applicable legislation and/or policy.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 2",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I understand that the material I am submitting is intended to be made publicly available, and I confirm that the material contains no confidential information and that all necessary steps have been taken to protect intellectual property appropriately.",
+                    "en": "2. I understand that the material I am submitting is intended to be made publicly available, and I confirm that the material contains no confidential information and that all necessary steps have been taken to protect intellectual property appropriately.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 3",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I confirm that, to the best of my knowledge, the material is accurate, does not violate any relevant legislation, and does not infringe upon the intellectual property rights of any third party.",
+                    "en": "3. I confirm that, to the best of my knowledge, the material is accurate, does not violate any relevant legislation, and does not infringe upon the intellectual property rights of any third party.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 4",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I agree that I may not hold Citizen Entrepreneurial Development Agency (CEDA) liable for any breach in regard to clauses 1 to 3 above.",
+                    "en": "4. I agree that I may not hold Citizen Entrepreneurial Development Agency (CEDA) liable for any breach in regard to clauses 1 to 3 above.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 5",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I provide consent to Citizen Entrepreneurial Development Agency (CEDA) to edit and/or curate the material for the purpose of clarity, consistency, and/or space. I understand that failure to respond within two weeks of a written request for such approval shall be deemed as consent that Citizen Entrepreneurial Development Agency (CEDA) may publish the material concerned.",
+                    "en": "5. I provide consent to Citizen Entrepreneurial Development Agency (CEDA) to edit and/or curate the material for the purpose of clarity, consistency, and/or space. I understand that failure to respond within two weeks of a written request for such approval shall be deemed as consent that Citizen Entrepreneurial Development Agency (CEDA) may publish the material concerned.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 6",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I undertake to respond promptly to any requests from Citizen Entrepreneurial Development Agency (CEDA) for further information, revision, or clarification.",
+                    "en": "6. I undertake to respond promptly to any requests from Citizen Entrepreneurial Development Agency (CEDA) for further information, revision, or clarification.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 7",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I authorize Citizen Entrepreneurial Development Agency (CEDA) to use the material submitted for publication on the Portal and for reasonable related purposes, including (without limitation) on relevant social media platforms, for the sole purpose of promoting the Portal and the technologies listed there.",
+                    "en": "7. I authorize Citizen Entrepreneurial Development Agency (CEDA) to use the material submitted for publication on the Portal and for reasonable related purposes, including (without limitation) on relevant social media platforms, for the sole purpose of promoting the Portal and the technologies listed there.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 8",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I acknowledge that Citizen Entrepreneurial Development Agency (CEDA) may upload and/or remove information about the technology/technologies I submit at its sole discretion, and that Citizen Entrepreneurial Development Agency (CEDA) has no obligation to notify me when my submitted material is uploaded or removed.",
+                    "en": "8. I acknowledge that Citizen Entrepreneurial Development Agency (CEDA) may upload and/or remove information about the technology/technologies I submit at its sole discretion, and that Citizen Entrepreneurial Development Agency (CEDA) has no obligation to notify me when my submitted material is uploaded or removed.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 9",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "I acknowledge that Citizen Entrepreneurial Development Agency (CEDA) may choose not to upload any material submitted.",
+                    "en": "9. I acknowledge that Citizen Entrepreneurial Development Agency (CEDA) may choose not to upload any material submitted.",
                     "tn": ""
                 }
             },
             {
-                "heading": {
-                    "en": "Clause 10",
-                    "tn": ""
-                },
+                "heading": {"en": "", "tn": ""},
                 "body": {
-                    "en": "Should I require any material that I have submitted to the Portal to be removed or amended, Citizen Entrepreneurial Development Agency (CEDA) shall remove or amend the material concerned (as the case may be) within two weeks of receipt of a written request.",
+                    "en": "10. Should I require any material that I have submitted to the Portal to be removed or amended, Citizen Entrepreneurial Development Agency (CEDA) shall remove or amend the material concerned (as the case may be) within two weeks of receipt of a written request.",
                     "tn": ""
                 }
             }

@@ -36,6 +36,7 @@ class Migration(migrations.Migration):
                 ("title", models.JSONField(blank=True, default=dict)),
                 ("intro", models.JSONField(blank=True, default=dict)),
                 ("sections", models.JSONField(blank=True, default=list)),
+                ("version", models.PositiveIntegerField(default=1, help_text="Goes up by one each time an approved change goes live.")),
                 ("published_at", models.DateTimeField(blank=True, null=True)),
                 ("draft", models.JSONField(blank=True, help_text="Unpublished edits: {title, intro, sections}. Null when there are none.", null=True)),
                 ("draft_updated_at", models.DateTimeField(blank=True, null=True)),

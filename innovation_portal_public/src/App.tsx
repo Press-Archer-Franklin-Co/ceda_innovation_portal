@@ -10,6 +10,7 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
 const FAQ = lazy(() => import('./pages/FAQ'))
+const Accessibility = lazy(() => import('./pages/Accessibility'))
 const Challenges = lazy(() => import('./pages/Challenges'))
 const Submit = lazy(() => import('./pages/Submit'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
@@ -142,6 +143,7 @@ function AppRoutes() {
         <Route path="/about"       element={<About />} />
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
+        <Route path="/accessibility" element={<Accessibility />} />
         <Route path="/challenges"  element={<Challenges />} />
         <Route path="/challenges/:slug" element={<ChallengeDetail />} />
         <Route path="/submit"      element={<Submit />} />

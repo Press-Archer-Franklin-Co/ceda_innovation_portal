@@ -88,7 +88,7 @@ export default function Footer() {
             <span aria-hidden>·</span>
             <Link className={link + ' !text-d-cap'} to="/privacy-policy#cookies">{t('footer.cookies')}</Link>
             <span aria-hidden>·</span>
-            <Link className={link + ' !text-d-cap'} to={settings.accessibility_url ?? '/faq' /* TODO(U2): accessibility statement page */}>{t('utility.accessibility')}</Link>
+            <Link className={link + ' !text-d-cap'} to="/accessibility">{t('utility.accessibility')}</Link>
           </p>
         </div>
       </div>

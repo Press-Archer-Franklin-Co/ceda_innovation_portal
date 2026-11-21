@@ -105,7 +105,7 @@ class StaffEditTests(PolicyTestCase):
         row = next(row for row in rows if row["key"] == "privacy")
         self.assertEqual((row["has_draft"], row["pending_approval"], row["missing_setswana"]), (False, False, True))
         detail = data(self.client.get("/api/content/policies/about/"))
-        self.assertEqual(set(detail), {"key", "name", "live", "published_at", "published_by", "draft", "draft_updated_at", "draft_updated_by", "pending_approval"})
+        self.assertEqual(set(detail), {"key", "name", "live", "version", "published_at", "published_by", "draft", "draft_updated_at", "draft_updated_by", "pending_approval"})
         self.assertEqual(set(detail["live"]), {"title", "intro", "sections"})
         self.assertIsNone(detail["draft"])
 
@@ -169,6 +169,7 @@ class ApprovalTests(PolicyTestCase):
         stored = PolicyPage.objects.get(key="privacy")
         self.assertIsNone(stored.draft)
         self.assertEqual(stored.published_by, self.officer)
+        self.assertEqual((stored.version, page["version"]), (2, 2))
         self.assertEqual(ApprovalRequest.objects.get(pk=approval["id"]).status, "approved")
 
     def test_sending_back_leaves_the_live_text_and_the_draft(self):
