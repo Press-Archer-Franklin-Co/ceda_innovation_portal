@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
+import { CalendarClock, Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { Checkbox } from '../../components/ui/Choice'
@@ -20,6 +20,9 @@ import {
 import { useI18n } from '../../i18n'
 import { formsService } from '../../services/forms.service'
 import { intakeService } from '../../services/intake.service'
+import { challengeEntryService } from '../../services/challengeEntry.service'
+import { useAsync } from '../../lib/useAsync'
+import { formatDate } from '../../lib/dates'
 import type { FormStep, IntakeDraft, Lang, PublishedForm, SimilarIdea } from '../../types/innovator'
 import { parseApiError } from '../../utils/apiError'
 
@@ -36,9 +39,13 @@ const AUTOSAVE_MS = 1200
 const SIMILAR_MS = 1500
 const SIMILAR_MIN_CHARS = 40
 
-/** Screen 2.3: the full idea form, one step at a time, saved as you go. */
+/**
+ * Screen 2.3: the full idea form, one step at a time, saved as you go.
+ * Opened as /challenges/:slug/entry/:id it is 2.10, the challenge's own entry form (Figma 108:367, 108:578):
+ * the challenge name and closing date in the header, and the entry is sent to that challenge (U10).
+ */
 export default function IdeaForm() {
-  const { id = '' } = useParams()
+  const { id = '', slug } = useParams()
   const [params] = useSearchParams()
   /** Set by "Link it" on 2.1: open at the first unanswered question's step. */
   const askedStep = params.get('step')
@@ -46,6 +53,9 @@ export default function IdeaForm() {
   const navigate = useNavigate()
   const toast = useToast()
   const settings = useShellSettings()
+
+  // 2.10: the challenge's name and closing date for the header.
+  const challenge = useAsync(() => (slug ? challengeEntryService.status(slug) : Promise.resolve(null)), [slug, lang]).data?.challenge ?? null
 
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [forms, setForms] = useState<Partial<Record<Lang, PublishedForm>>>({})
@@ -90,6 +100,12 @@ export default function IdeaForm() {
   }, [loadDraft])
 
   const draft = load.kind === 'ready' ? load.draft : null
+
+  // A challenge entry opened from My ideas uses the challenge's own address (2.10).
+  const entrySlug = !slug && draft && !draft.program_detail?.is_general_intake ? draft.program_detail?.slug : null
+  useEffect(() => {
+    if (entrySlug) navigate(`/challenges/${entrySlug}/entry/${id}`, { replace: true })
+  }, [entrySlug, id, navigate])
   const form = forms[lang] ?? forms.en ?? forms.tn
 
   useEffect(() => {
@@ -174,7 +190,7 @@ export default function IdeaForm() {
   }, [answers, step])
 
   useEffect(() => {
-    if (similarText.length < SIMILAR_MIN_CHARS) return
+    if (slug || similarText.length < SIMILAR_MIN_CHARS) return // a challenge entry is not checked against other ideas
     let alive = true
     const timer = window.setTimeout(() => {
       intakeService
@@ -186,7 +202,7 @@ export default function IdeaForm() {
       alive = false
       window.clearTimeout(timer)
     }
-  }, [similarText, draft?.sector])
+  }, [similarText, draft?.sector, slug])
 
   // ── Moving between steps ─────────────────────────────────────────────────
   function goTo(index: number) {
@@ -241,7 +257,8 @@ export default function IdeaForm() {
     try {
       const result = await intakeService.submit(id, { consent: true })
       // 1.5 replaces the form in the history, so Back cannot reopen a form that would send the idea twice.
-      navigate('/idea-sent', { replace: true, state: { result } })
+      const sentFor = challenge ? { title: challenge.title, slug: challenge.slug } : undefined
+      navigate('/idea-sent', { replace: true, state: { result, challenge: sentFor } })
     } catch (error) {
       toast.show({ tone: 'error', title: parseApiError(error, t('common.somethingWrong')) })
     } finally {
@@ -281,6 +298,7 @@ export default function IdeaForm() {
 
   const stepNames = [...steps.map((s) => s.title), t('form.reviewStep')]
   const programLabel = draft.program_detail?.is_general_intake ? t('form.generalIdea') : draft.program_detail?.title
+  const challengeTitle = challenge?.title ?? (slug ? draft.program_detail?.title : null)
 
   return (
     <div className="bg-bg">
@@ -288,15 +306,30 @@ export default function IdeaForm() {
       <div className="border-b border-border">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="font-heading text-d-h3 text-text break-words">{draft.title}</h1>
-              {programLabel && <Tag tone="neutral" className="mt-2">{programLabel}</Tag>}
-            </div>
+            {slug && challengeTitle ? (
+              <div className="min-w-0">
+                <p className="text-d-over uppercase font-heading text-muted">{t('ent.formHeader')}</p>
+                <h1 className="font-heading text-d-h3 text-text break-words">
+                  <Link to={`/challenges/${challenge?.slug ?? slug}`} className="hover:underline">{challengeTitle}</Link>
+                </h1>
+                {challenge?.closes_at && (
+                  <p className="mt-1 flex items-center gap-1.5 text-d-label-s text-muted">
+                    <CalendarClock size={14} aria-hidden />
+                    {t('ent.closes', { when: formatDate(challenge.closes_at, lang) })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="min-w-0">
+                <h1 className="font-heading text-d-h3 text-text break-words">{draft.title}</h1>
+                {programLabel && <Tag tone="neutral" className="mt-2">{programLabel}</Tag>}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-3">
               <SaveStatus save={save} now={now} />
               <LanguageSwitch />
               <Button variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>
-                {t('form.saveExit')}
+                {slug ? t('ent.saveExit') : t('form.saveExit')}
               </Button>
             </div>
           </div>

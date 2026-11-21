@@ -6,6 +6,9 @@ import PrivateRoute  from './components/ui/PrivateRoute'
 const Home = lazy(() => import('./pages/Home'))
 const IdeaSent = lazy(() => import('./pages/IdeaSent'))
 const ChallengeDetail = lazy(() => import('./pages/ChallengeDetail'))
+const ChallengeEnter = lazy(() => import('./pages/ChallengeEnter'))
+const ChallengeResults = lazy(() => import('./pages/ChallengeResults'))
+const MyResult = lazy(() => import('./pages/innovator/MyResult'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
@@ -86,7 +89,7 @@ function HomeOrDashboard() {
 
 /**
  * The old submission page (/innovate) is gone. Its links still work:
- * ?draft= opens that draft in the full form, ?program= starts an idea for that challenge,
+ * ?draft= opens that draft in the full form, ?program= enters that challenge (its own form, U10),
  * ?submission= opens the idea's page, and the bare address starts a new idea.
  */
 function InnovateRedirect() {
@@ -99,7 +102,7 @@ function InnovateRedirect() {
     : submission
       ? `/my-ideas/${encodeURIComponent(submission)}`
       : program
-        ? `/submit?challenge=${encodeURIComponent(program)}`
+        ? `/challenges/${encodeURIComponent(program)}/enter`
         : '/submit'
   return <Navigate to={to} replace />
 }
@@ -146,6 +149,8 @@ function AppRoutes() {
         <Route path="/judge-invite/:token" element={<JudgeInvite />} />
         <Route path="/challenges"  element={<Challenges />} />
         <Route path="/challenges/:slug" element={<ChallengeDetail />} />
+        <Route path="/challenges/:slug/enter" element={<ChallengeEnter />} />
+        <Route path="/challenges/:slug/results" element={<ChallengeResults />} />
         <Route path="/submit"      element={<Submit />} />
         <Route path="/innovate"    element={<InnovateRedirect />} />
         {/* Old pages nothing links to any more (D3): sent somewhere useful instead. */}
@@ -169,6 +174,8 @@ function AppRoutes() {
           <Route path="/dashboard"          element={<InnovatorHome />} />
           <Route path="/my-ideas"           element={<MyIdeas />} />
           <Route path="/my-ideas/draft/:id" element={<IdeaForm />} />
+          <Route path="/challenges/:slug/entry/:id" element={<IdeaForm />} />
+          <Route path="/challenges/:slug/my-result" element={<MyResult />} />
           <Route path="/my-ideas/:id"       element={<TrackIdea />} />
           <Route path="/notifications"      element={<Notifications />} />
           <Route path="/submissions/:id"    element={<SubmissionRedirect />} />

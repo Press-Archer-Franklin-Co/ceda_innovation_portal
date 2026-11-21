@@ -69,8 +69,6 @@ export default function ScoreIdea() {
   const [declaring, setDeclaring] = useState(null)
   const [save, setSave] = useState('idle')
   const [errors, setErrors] = useState({})
-  // Criteria the API says need a comment for the chosen score (until R-42 sends comment_required_scores).
-  const [serverNeeds, setServerNeeds] = useState({})
   const [sending, setSending] = useState(false)
   const loaded = useRef(false)
   const dirty = useRef(false)
@@ -93,8 +91,12 @@ export default function ScoreIdea() {
     setScores(s)
     setComments(c)
     setOverall(mine?.overall_comment ?? '')
-    if (mine || row?.conflict === 'confirmed_none' || row?.status === 'in_progress') setNoConflict(true)
-  }, [data, mine, row])
+  }, [data, mine])
+
+  // Already confirmed earlier (the judge's own accept): keep the tick.
+  useEffect(() => {
+    if (row?.conflict === 'confirmed_none') setNoConflict(true)
+  }, [row?.conflict])
 
   useEffect(() => {
     if (idea.data?.title) document.title = `${idea.data.title} · CEDA Innovation`
@@ -110,13 +112,18 @@ export default function ScoreIdea() {
   // Draft autosave, a moment after the last change.
   useEffect(() => {
     if (!dirty.current || locked) return
+    // The API refuses a draft with a score that needs a comment and has none: wait for the comment instead.
+    if (criteria.some((c) => commentNeeded(c, scores[c.id]) && !(comments[c.id] ?? '').trim())) {
+      setSave('needsComment')
+      return
+    }
     const timer = setTimeout(async () => {
       setSave('saving')
       try {
         await judgingApi.save(id, payload())
         setSave('saved')
-      } catch (err) {
-        if (!markCommentNeeded(err)) setSave('error')
+      } catch {
+        setSave('error')
       }
     }, AUTOSAVE_MS)
     return () => clearTimeout(timer)
@@ -124,27 +131,17 @@ export default function ScoreIdea() {
 
   const change = (fn) => { dirty.current = true; fn() }
 
-  /** "Add a comment to explain a score of 5 for 'Team'." opens Team's comment box. True when it matched. */
-  function markCommentNeeded(err) {
-    const messages = [].concat(err?.data?.errors ?? []).map(String)
-    const hits = criteria.filter((c) => messages.some((m) => /comment/i.test(m) && m.includes(`'${c.name}'`)))
-    if (!hits.length) return false
-    setServerNeeds((n) => ({ ...n, ...Object.fromEntries(hits.map((c) => [c.id, true])) }))
-    setErrors((e) => ({ ...e, ...Object.fromEntries(hits.filter((c) => !(comments[c.id] ?? '').trim()).map((c) => [c.id, t('judging.commentNeeded')])) }))
-    setSave('needsComment')
-    return true
-  }
-
   const totalWeight = criteria.reduce((sum, c) => sum + Number(c.weight || 0), 0)
   const scoredCount = criteria.filter((c) => scores[c.id] != null).length
   const weighted = totalWeight
     ? criteria.reduce((sum, c) => (scores[c.id] == null ? sum : sum + (scores[c.id] / Number(c.max_score || 5)) * Number(c.weight || 0)), 0) / totalWeight * 100
     : null
 
-  // Confirming "no conflict" accepts the assignment, which opens scoring (the cycle's can_score).
+  // Confirming "no conflict" is the judge's own accept (R-42: the API records conflict "confirmed_none" from it;
+  // challenge judges' assignments are accepted for them, so this still matters). It also opens scoring.
   async function confirmNoConflict(checked) {
     setNoConflict(checked)
-    if (checked && row?.assignment_id && row.status === 'assigned') {
+    if (checked && row?.assignment_id && row.conflict !== 'confirmed_none') {
       try {
         await judgingApi.accept(row.assignment_id)
         await Promise.all([cycle.refetch(), list.refetch()])
@@ -159,7 +156,7 @@ export default function ScoreIdea() {
     const next = {}
     for (const c of criteria) {
       if (scores[c.id] == null) next[c.id] = t('judging.scoreNeeded')
-      else if ((commentNeeded(c, scores[c.id]) || serverNeeds[c.id]) && !(comments[c.id] ?? '').trim()) next[c.id] = t('judging.commentNeeded')
+      else if (commentNeeded(c, scores[c.id]) && !(comments[c.id] ?? '').trim()) next[c.id] = t('judging.commentNeeded')
     }
     setErrors(next)
     if (Object.keys(next).length) {
@@ -168,12 +165,7 @@ export default function ScoreIdea() {
     }
     setSending(true)
     try {
-      try {
-        await judgingApi.save(id, payload())
-      } catch (err) {
-        if (markCommentNeeded(err)) return
-        throw err
-      }
+      await judgingApi.save(id, payload())
       await judgingApi.submit(id, payload())
       qc.invalidateQueries({ queryKey: ['ideas'] })
       toast.show({ tone: 'success', title: t('judging.sent', { title: idea.data?.title ?? '' }) })
@@ -251,7 +243,7 @@ export default function ScoreIdea() {
             criteria.map((c) => {
               const score = scores[c.id]
               const meaning = meaningOf(c, score, lang)
-              const needComment = commentNeeded(c, score) || Boolean(serverNeeds[c.id])
+              const needComment = commentNeeded(c, score)
               const showComment = needComment || openComment[c.id] || Boolean(comments[c.id])
               const weight = totalWeight ? Math.round((Number(c.weight || 0) / totalWeight) * 100) : null
               return (
@@ -268,7 +260,7 @@ export default function ScoreIdea() {
                         type="button"
                         role="radio"
                         aria-checked={score === n}
-                        onClick={() => change(() => { setScores((s) => ({ ...s, [c.id]: n })); setErrors((e) => ({ ...e, [c.id]: undefined })); setServerNeeds((x) => ({ ...x, [c.id]: false })) })}
+                        onClick={() => change(() => { setScores((s) => ({ ...s, [c.id]: n })); setErrors((e) => ({ ...e, [c.id]: undefined })) })}
                         className={cn(
                           'h-9 min-w-[44px] flex-1 rounded-control border text-[14px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-60',
                           score === n ? 'border-primary bg-primary text-on-primary' : 'border-border bg-surface text-text hover:bg-surface2',

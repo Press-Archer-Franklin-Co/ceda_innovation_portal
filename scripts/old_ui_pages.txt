@@ -23,7 +23,6 @@ admin/src/pages/content/HackathonContentEditor.jsx
 admin/src/pages/content/WinnersManager.jsx
 admin/src/pages/reports/FormAnswers.jsx
 admin/src/pages/settings/Settings.jsx
-public/src/pages/ChallengeDetail.tsx
 # Added when the guard was first set up (U8): also still in the old look.
 # Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
 admin/src/components/brand/CedaInnovationHubLogo.jsx

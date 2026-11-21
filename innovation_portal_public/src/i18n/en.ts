@@ -8,6 +8,7 @@ import { a11yEn } from './a11y'
 import { statusEn } from './status'
 import { inviteEn } from './invite'
 import { accountEn } from './account'
+import { challengeEntryEn } from './challengeEntry'
 
 const en = {
   'lang.en': 'English',
@@ -437,6 +438,7 @@ const en = {
   ...statusEn,
   ...inviteEn,
   ...accountEn,
+  ...challengeEntryEn,
 } as const
 
 export type StringKey = keyof typeof en

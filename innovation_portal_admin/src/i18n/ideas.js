@@ -23,7 +23,6 @@ export const ideasEn = {
   'ideas.saveViewHint': 'Keeps the filters you have chosen, so you can come back to this list in one click.',
   'ideas.viewName': 'Name of the view',
   'ideas.viewNameNeeded': 'Give the view a name.',
-  'ideas.viewsNotYet': 'Saving views is not switched on yet. Your filters still work, and stay in the address bar.',
   'ideas.viewSaved': 'Saved the view "{name}".',
   'ideas.filters': 'Filters',
   'ideas.searchPlaceholder': 'Search title, name or reference',
@@ -34,6 +33,7 @@ export const ideasEn = {
   'ideas.filter.anyDistrict': 'Any district',
   'ideas.filter.date': 'Date sent',
   'ideas.filter.anyDate': 'Any date',
+  'ideas.filter.since': 'Since {date}',
   'ideas.filter.lastDays': 'Last {n} days',
   'ideas.col.idea': 'Idea',
   'ideas.col.reference': 'Reference',
@@ -202,7 +202,7 @@ export const ideasEn = {
   'judging.saving': 'Saving…',
   'judging.draftSaved': 'Draft saved',
   'judging.saveError': 'Not saved. We will try again.',
-  'judging.saveNeedsComment': 'Not saved: add the comment that score needs.',
+  'judging.saveNeedsComment': 'Not saved yet: add the comment that score needs.',
   'judging.submit': 'Submit scores',
   'judging.sent': 'Scores sent for "{title}".',
   'judging.sendError': 'We could not send your scores.',
@@ -274,7 +274,10 @@ export const ideasEn = {
   'work.dueLabel': 'Due',
   'work.overdue': 'Overdue',
   'work.whyYou': 'Why you',
-  'work.assignedBy': 'Assigned by {name}',
+  'work.why.person': 'Assigned by {name}',
+  'work.why.workflow': 'Assigned by the {name} workflow',
+  'work.why.applicant': '{name} is waiting for your reply',
+  'work.why.invite': 'Invited by {name}',
   'work.step': 'Step',
   'work.stepOf': '{name} ({n} of {total})',
   'work.oneLine': 'Their idea in one line',
@@ -309,7 +312,6 @@ export const ideasTn = {
   'ideas.saveViewHint': 'E boloka ditlhopho tsa gago, gore o boele mo lenaneong le ka go tobetsa gangwe.', // TODO tn-review
   'ideas.viewName': 'Leina la tebo', // TODO tn-review
   'ideas.viewNameNeeded': 'Naya tebo leina.', // TODO tn-review
-  'ideas.viewsNotYet': 'Go boloka ditebo ga go ise go bulwe. Ditlhopho tsa gago di sa ntse di dira, mme di nna mo aterese.', // TODO tn-review
   'ideas.viewSaved': 'Tebo "{name}" e bolokilwe.', // TODO tn-review
   'ideas.filters': 'Ditlhopho', // TODO tn-review
   'ideas.searchPlaceholder': 'Batla setlhogo, leina kgotsa nomoro', // TODO tn-review
@@ -320,6 +322,7 @@ export const ideasTn = {
   'ideas.filter.anyDistrict': 'Kgaolo nngwe le nngwe', // TODO tn-review
   'ideas.filter.date': 'Letlha la go romela', // TODO tn-review
   'ideas.filter.anyDate': 'Letlha lengwe le lengwe', // TODO tn-review
+  'ideas.filter.since': 'Go simolola ka {date}', // TODO tn-review
   'ideas.filter.lastDays': 'Malatsi a le {n} a a fetileng', // TODO tn-review
   'ideas.col.idea': 'Kakanyo', // TODO tn-review
   'ideas.col.reference': 'Nomoro', // TODO tn-review
@@ -488,7 +491,7 @@ export const ideasTn = {
   'judging.saving': 'E a boloka…', // TODO tn-review
   'judging.draftSaved': 'Setlhangwa se bolokilwe', // TODO tn-review
   'judging.saveError': 'Ga e a bolokwa. Re tla leka gape.', // TODO tn-review
-  'judging.saveNeedsComment': 'Ga e a bolokwa: tsenya maikutlo a maduo ao a a tlhokang.', // TODO tn-review
+  'judging.saveNeedsComment': 'Ga e ise e bolokwe: tsenya maikutlo a maduo ao a a tlhokang.', // TODO tn-review
   'judging.submit': 'Romela maduo', // TODO tn-review
   'judging.sent': 'Maduo a "{title}" a rometswe.', // TODO tn-review
   'judging.sendError': 'Ga re a kgona go romela maduo a gago.', // TODO tn-review
@@ -560,7 +563,10 @@ export const ideasTn = {
   'work.dueLabel': 'Letlha', // TODO tn-review
   'work.overdue': 'E fetile nako', // TODO tn-review
   'work.whyYou': 'Goreng wena', // TODO tn-review
-  'work.assignedBy': 'E abilwe ke {name}', // TODO tn-review
+  'work.why.person': 'E abilwe ke {name}', // TODO tn-review
+  'work.why.workflow': 'E abilwe ke tsamaiso ya {name}', // TODO tn-review
+  'work.why.applicant': '{name} o emetse karabo ya gago', // TODO tn-review
+  'work.why.invite': 'O laleditswe ke {name}', // TODO tn-review
   'work.step': 'Kgato', // TODO tn-review
   'work.stepOf': '{name} ({n} go {total})', // TODO tn-review
   'work.oneLine': 'Kakanyo ya bone ka mola o le mongwe', // TODO tn-review

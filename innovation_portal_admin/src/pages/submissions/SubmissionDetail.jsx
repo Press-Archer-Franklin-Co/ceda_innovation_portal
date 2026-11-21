@@ -22,8 +22,8 @@ import { EMPTY_CELL } from '../../lib/format'
 
 // 3.16 One submission (Figma 103:843 website, 103:1112 phone). ① The stage bar; "Move to next stage" asks for
 // a short reason the innovator sees. ② Tabs: Answers, Documents, Messages, Notes (staff only), History, Related.
-// ③ Answers in the innovator's language with a switch. ④ AI hints show only when the AI helper is on; until the
-// API says so (R-42, C3) they are not rendered. ⑤ The person card. Phone: tabs scroll, the main action sits at
+// ③ Answers in the innovator's language with a switch. ④ AI hints show only when the AI helper is on; the
+// page has no way to know that yet (C3), so they are not rendered. ⑤ The person card. Phone: tabs scroll, the main action sits at
 // the bottom.
 
 const TAB_KEYS = ['answers', 'documents', 'messages', 'notes', 'history', 'related']
@@ -144,7 +144,7 @@ export default function SubmissionDetail() {
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-bold text-text">{s.innovator?.name || EMPTY_CELL}</p>
                 {(s.innovator?.district || s.innovator?.age) && (
-                  <p className="text-[12px] text-muted">{[s.innovator.district?.name ?? s.innovator.district, s.innovator.age].filter(Boolean).join(' · ')}</p>
+                  <p className="text-[12px] text-muted">{[s.innovator.district, s.innovator.age].filter(Boolean).join(' · ')}</p>
                 )}
               </div>
             </div>
