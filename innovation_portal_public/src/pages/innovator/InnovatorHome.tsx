@@ -19,6 +19,7 @@ import type {
   ChallengeMatch, IdeaItem, MySummary, NextAction, ProfileCompleteness, RecommendedChallenge, UpdateItem,
 } from '../../types/innovator'
 import { parseApiError } from '../../utils/apiError'
+import { SUBMIT_PATH } from '../../lib/paths'
 
 type Async<T> = { status: 'loading' } | { status: 'error' } | { status: 'ready'; data: T }
 
@@ -106,7 +107,7 @@ function Banner({ name, next, active }: { name: string; next: NextAction | null;
   const { t, lang } = useI18n()
   let headline = t('home.headlineNone')
   let body = t('home.nextNone')
-  let primary: { to: string; label: string } = { to: '/innovate', label: t('home.startIdea') }
+  let primary: { to: string; label: string } = { to: SUBMIT_PATH, label: t('home.startIdea') }
   let secondary: { to: string; label: string } | null = { to: '/my-ideas', label: t('home.myIdeas') }
 
   if (next?.type === 'answer_question') {

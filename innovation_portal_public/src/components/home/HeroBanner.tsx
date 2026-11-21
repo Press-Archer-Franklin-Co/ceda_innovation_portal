@@ -2,6 +2,7 @@ import { Fragment, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CircleCheck } from 'lucide-react'
 import { buttonClasses } from '../ui/Button'
+import Skeleton, { SkeletonText } from '../ui/Skeleton'
 import { useI18n } from '../../i18n'
 import watermarkUrl from '../../assets/brand/ceda-watermark.png'
 import type { ButtonLink } from '../../services/publicContent.service'
@@ -95,5 +96,22 @@ export default function HeroBanner({ settings, card }: { settings: HeroSettings;
         {settings.show_quick_start && card}
       </div>
     </section>
+  )
+}
+
+/** The banner while its words load: same size, so nothing jumps when they arrive. */
+export function HeroBannerSkeleton() {
+  return (
+    <div aria-hidden className="bg-banner">
+      <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-12 lg:py-20 flex flex-col lg:flex-row gap-8 lg:justify-between">
+        <div className="flex flex-col gap-5 lg:w-[640px]">
+          <Skeleton className="h-7 w-56 rounded-full bg-on-banner/10" />
+          <Skeleton className="h-14 w-full bg-on-banner/10" />
+          <Skeleton className="h-14 w-3/4 bg-on-banner/10" />
+          <SkeletonText lines={3} className="[&>span]:bg-on-banner/10" />
+        </div>
+        <Skeleton className="h-[540px] w-full lg:w-[470px] rounded-[16px] bg-on-banner/10" />
+      </div>
+    </div>
   )
 }

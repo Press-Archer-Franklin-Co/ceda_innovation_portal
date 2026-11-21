@@ -1,127 +1,97 @@
-import { useEffect, useState } from 'react'
-import { CheckCircle2 } from 'lucide-react'
-import { focusAreas, milestones } from '../data/about'
-import StandardHero from '../components/ui/StandardHero'
-import { contentService, type PublicStat } from '../services/content.service'
+import { CircleCheck, Compass, Eye, Heart } from 'lucide-react'
+import PageBanner from '../components/layout/PageBanner'
+import SectionHead from '../components/home/SectionHead'
+import HelpContactCard from '../components/help/HelpContactCard'
+import { useI18n, hasString, StringKey } from '../i18n'
+import { useAsync } from '../lib/useAsync'
+import { usePageTitle } from '../lib/usePageTitle'
+import { contentService } from '../services/content.service'
 
-const colorMap: Record<string, string> = {
-  network:   'bg-[#A01E0A] text-white',
-  fintech:   'bg-emerald-700 text-white',
-  agri:      'bg-green-700 text-white',
-  health:    'bg-blue-700 text-white',
-  education: 'bg-violet-700 text-white',
-  city:      'bg-amber-700 text-white',
-}
+// About (footer "About the portal", "Contact"). Option D look of 1.6 and 1.7: page banner with the CEDA mark,
+// three cards, why it matters on the chocolate band with the live portal numbers, the five steps, and the
+// contact card at #contact. Numbers come only from GET /api/content/public-stats/; a number the page has no
+// words for is left out, and nothing shows while they load or if they fail.
 
-const FALLBACK_STATS: PublicStat[] = [
-  { key: 'innovators', label: 'Registered Innovators', value: '—',         description: '' },
-  { key: 'challenges', label: 'Challenges Hosted',     value: '—',         description: '' },
-]
+const CARDS = [
+  { icon: Compass, title: 'about.missionTitle', body: 'about.missionBody' },
+  { icon: Eye, title: 'about.visionTitle', body: 'about.visionBody' },
+  { icon: Heart, title: 'about.valuesTitle', body: 'about.valuesBody' },
+] as const
+
+const WHY = ['about.why1', 'about.why2', 'about.why3', 'about.why4'] as const
+const STEPS = [1, 2, 3, 4, 5] as const
 
 export default function About() {
-  const [stats, setStats] = useState<PublicStat[]>(FALLBACK_STATS)
-
-  useEffect(() => {
-    contentService.getPublicStats()
-      .then(s => { if (s.length) setStats(s) })
-      .catch(() => {})
-  }, [])
+  const { t } = useI18n()
+  usePageTitle(t('about.over'))
+  const stats = useAsync(() => contentService.getPublicStats(), [])
+  const numbers = (stats.data ?? []).filter((s) => hasString(`about.stat.${s.key}`) && /^\d[\d,\s]*$/.test(String(s.value)))
 
   return (
-    <div className="bg-white">
-      <StandardHero
-        eyebrow="About Us"
-        title={"Powering Botswana's Digital Future"}
-        subtitle="The CEDA Innovation Portal is our commitment to harnessing the power of collaboration, technology, and creativity to solve Botswana's most pressing challenges and unlock new opportunities."
-        image={{ src: '/pages/about_us.png' }}
-      />
+    <>
+      <PageBanner id="about-title" overline={t('about.over')} title={t('about.title')} subtitle={t('about.sub')} />
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {[
-            { title: 'Our Mission', text: "To accelerate digital transformation in Botswana by fostering a thriving ecosystem of innovators, entrepreneurs, and technologists who build impactful solutions." },
-            { title: 'Our Vision',  text: "To be the leading force behind a digitally-enabled Botswana — where every citizen benefits from accessible technology and every innovator has a platform to grow." },
-            { title: 'Our Values', text: "Collaboration, inclusivity, excellence, and impact. The best innovations emerge from diverse perspectives, shared resources, and a genuine commitment to improving lives." },
-          ].map(({ title, text }) => (
-            <div key={title} className="rounded-2xl border border-gray-100 shadow-card p-6">
-              <h3 className="font-bold text-[#A01E0A] text-lg mb-3">{title}</h3>
-              <p className="text-gray-600 text-sm leading-relaxed">{text}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10 lg:py-[72px] grid grid-cols-1 md:grid-cols-3 gap-5 lg:gap-6">
+        {CARDS.map(({ icon: Icon, title, body }) => (
+          <article key={title} className="flex flex-col gap-3 p-6 rounded-card border border-border">
+            <span aria-hidden className="w-11 h-11 rounded-[10px] bg-accent-soft text-accent flex items-center justify-center">
+              <Icon size={22} />
+            </span>
+            <h2 className="text-d-h4 font-heading text-text">{t(title)}</h2>
+            <p className="text-d-body-s text-muted">{t(body)}</p>
+          </article>
+        ))}
+      </div>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <div className="rounded-3xl px-10 py-10" style={{ background: '#A01E0A' }}>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div>
-              <p className="text-xs font-bold tracking-[0.18em] text-white/60 uppercase mb-3">Why It Matters</p>
-              <h2 className="text-3xl font-extrabold text-white mb-5 leading-tight">
-                Innovation is the Engine of National Progress
-              </h2>
-              <ul className="space-y-3">
-                {[
-                  'Connecting talented innovators to real-world challenges',
-                  'Providing funding, mentorship, and market access',
-                  'Building solutions that scale across Botswana and the region',
-                  'Creating employment opportunities in the digital sector',
-                  'Driving government and private sector digital transformation',
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2.5">
-                    <CheckCircle2 size={16} className="text-[#F0641E] shrink-0 mt-0.5" />
-                    <span className="text-white/80 text-sm">{item}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {stats.map(({ value, label }) => (
-                <div key={label} className="bg-white/10 rounded-2xl p-5 text-center">
-                  <p className="text-3xl font-extrabold text-white">{value}</p>
-                  <p className="text-white/60 text-xs mt-1">{label}</p>
+      <section aria-labelledby="about-why-title" className="bg-banner text-on-banner">
+        <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-12 lg:py-[72px] grid grid-cols-1 lg:grid-cols-2 gap-10 lg:items-center">
+          <div>
+            <SectionHead id="about-why-title" overline={t('about.whyOver')} title={t('about.whyTitle')} tone="dark" />
+            <ul className="flex flex-col gap-3">
+              {WHY.map((k) => (
+                <li key={k} className="flex items-start gap-2.5 text-d-body">
+                  <CircleCheck size={20} aria-hidden className="text-yellow shrink-0 mt-0.5" />
+                  {t(k)}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {numbers.length > 0 && (
+            <dl aria-label={t('about.statsLabel')} className="grid grid-cols-2 gap-4">
+              {numbers.map((s) => (
+                <div key={s.key} className="rounded-card bg-on-banner/10 p-5 flex flex-col-reverse gap-1">
+                  <dt className="text-d-label-s text-banner-muted">{t(`about.stat.${s.key}` as StringKey)}</dt>
+                  <dd className="font-heading font-extrabold text-d-h2 text-on-banner">{s.value}</dd>
                 </div>
               ))}
-            </div>
-          </div>
+            </dl>
+          )}
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <p className="eyebrow mb-1.5">What We Focus On</p>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Our Innovation Focus Areas</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {focusAreas.map((area) => (
-            <div key={area.id} className="rounded-2xl border border-gray-100 shadow-card p-6">
-              <div className={`w-10 h-10 rounded-xl ${colorMap[area.icon] ?? 'bg-gray-700 text-white'} flex items-center justify-center text-sm font-bold mb-4`}>
-                {area.title.slice(0, 2)}
-              </div>
-              <h3 className="font-bold text-gray-900 mb-2">{area.title}</h3>
-              <p className="text-gray-500 text-sm leading-relaxed">{area.description}</p>
-            </div>
-          ))}
+      <section aria-labelledby="about-how-title">
+        <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-12 lg:py-[72px]">
+          <SectionHead id="about-how-title" overline={t('about.howOver')} title={t('about.howTitle')} link={{ to: '/guidelines', label: t('help.guide') }} />
+          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+            {STEPS.map((n) => (
+              <li key={n} className="flex lg:flex-col gap-3">
+                <span aria-hidden className={`w-8 h-8 rounded-full flex items-center justify-center text-d-label-s shrink-0 ${n === 1 ? 'bg-primary text-on-primary' : 'bg-surface2 text-text'}`}>
+                  {n}
+                </span>
+                <span className="flex flex-col gap-1">
+                  <span className="text-d-h5 font-heading text-text">{t(`about.step${n}` as StringKey)}</span>
+                  <span className="text-d-body-s text-muted">{t(`about.step${n}Body` as StringKey)}</span>
+                </span>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        <p className="eyebrow mb-1.5">Our Journey</p>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Innovation Milestones</h2>
-        <div className="space-y-4">
-          {milestones.map((m) => (
-            <div key={m.year} className="flex gap-5 items-start">
-              <div
-                className="shrink-0 w-14 h-14 rounded-full flex items-center justify-center text-white text-xs font-extrabold"
-                style={{ background: '#A01E0A' }}
-              >
-                {m.year}
-              </div>
-              <div className="flex-1 rounded-2xl border border-gray-100 shadow-card p-4 pt-3.5">
-                <p className="font-bold text-gray-900 text-sm">{m.title}</p>
-                <p className="text-gray-500 text-xs mt-1">{m.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-    </div>
+      <div id="contact" className="scroll-mt-6 max-w-[1200px] mx-auto px-5 lg:px-6 pb-12 lg:pb-[72px]">
+        <p className="text-d-over uppercase font-heading text-accent mb-3">{t('about.contactOver')}</p>
+        <HelpContactCard id="about-contact-title" title={t('about.contactTitle')} />
+      </div>
+    </>
   )
 }

@@ -5,6 +5,7 @@ import { contentTn } from './content'
 import { dashboardTn } from './dashboard'
 import { u7Tn } from './u7'
 import { formsTn } from './forms'
+import { ideasTn } from './ideas'
 
 const tn = {
   'lang.en': 'English',
@@ -140,6 +141,7 @@ const tn = {
   'crop.createError': 'Ga re a kgona go dira setshwantsho se se segilweng. Tsweetswee leka gape.', // TODO tn-review
   'crop.taintedError': 'Setshwantsho se ga se kgone go segelwa fano. Tsenya faele ya ntlha gape mme o e sege pele o boloka.', // TODO tn-review
   ...formsTn,
+  ...ideasTn,
   ...challengesTn,
   ...rolesTn,
   ...contentTn,

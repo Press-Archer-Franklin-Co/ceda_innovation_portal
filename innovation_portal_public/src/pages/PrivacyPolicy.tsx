@@ -1,3 +1,6 @@
+import LegalPage from '../components/legal/LegalPage'
+import { useI18n } from '../i18n'
+
 
 const SECTIONS = [
   {
@@ -12,7 +15,7 @@ By registering for or using the Portal, you consent to the practices described i
 
 • Identity information: your full name
 • Contact information: email address, phone number
-• Account credentials: password (stored in hashed form — we never store plain-text passwords)
+• Account credentials: password (stored in hashed form; we never store plain-text passwords)
 • Submitted content: ideas, innovation proposals, and any supporting material you upload
 • Usage data: pages visited, features used, time and date of access
 • Device information: browser type, operating system, IP address
@@ -88,47 +91,22 @@ CEDA Head Office, Gaborone, Botswana`,
 ]
 
 export default function PrivacyPolicy() {
+  const { t } = useI18n()
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-
-      <div className="mb-10">
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <strong>Draft for demonstration.</strong> This text is a placeholder and has not been approved by CEDA. The official version will replace it before launch.
-        </div>
-        <p className="eyebrow mb-3">Legal</p>
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Privacy Policy</h1>
-        <p className="text-sm text-gray-400 mb-4">CEDA Innovation Portal</p>
-        <div className="h-1 w-12 rounded-full" style={{ background: '#A01E0A' }} />
-      </div>
-
-      <div className="space-y-10">
-        {SECTIONS.map(({ title, body }, i) => (
-          <section key={title}>
-            <h2 className="text-base font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                style={{ background: '#A01E0A' }}
-              >
-                {i + 1}
-              </span>
-              {title}
-            </h2>
-            <div className="pl-8">
-              {body.split('\n\n').map((para, j) => (
-                <p key={j} className="text-[15px] text-gray-700 leading-relaxed mb-3 last:mb-0 whitespace-pre-line">
-                  {para}
-                </p>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      <div className="mt-12 pt-8 border-t border-gray-100">
-        <p className="text-xs text-gray-400">
-          Citizen Entrepreneurial Development Agency (CEDA)
-        </p>
-      </div>
-    </div>
+    <LegalPage id="privacy-title" title={t('legal.privacyTitle')}>
+      {SECTIONS.map(({ title, body }, i) => (
+        <section key={title} aria-labelledby={`privacy-${i}`} className="flex flex-col gap-3">
+          <h2 id={`privacy-${i}`} className="flex items-center gap-2.5 text-d-h4 font-heading text-text">
+            <span aria-hidden className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center text-d-label-s shrink-0">{i + 1}</span>
+            {title}
+          </h2>
+          <div className="pl-[38px] flex flex-col gap-3">
+            {body.split('\n\n').map((para, j) => (
+              <p key={j} className="text-d-body text-text whitespace-pre-line">{para}</p>
+            ))}
+          </div>
+        </section>
+      ))}
+    </LegalPage>
   )
 }
