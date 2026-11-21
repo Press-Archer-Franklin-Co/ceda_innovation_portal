@@ -27,6 +27,8 @@ import { EMPTY_CELL } from '../../lib/format'
 const TABS = ['open', 'done_week', 'assigned_by_me']
 const ICONS = { review: Eye, quick_check: Eye, reply: MessageCircle, approve: Check, score: Star, invite: Users }
 const GROUPS = ['overdue', 'today', 'week', 'later', 'none']
+// R-42: why is { kind: person | workflow | applicant | invite, name }.
+const WHY = { person: 'work.why.person', workflow: 'work.why.workflow', applicant: 'work.why.applicant', invite: 'work.why.invite' }
 
 function groupOf(item, now = new Date()) {
   if (!item.due_at) return 'none'
@@ -60,13 +62,13 @@ function Detail({ item, onReassign, reassignRef }) {
       <h2 className="font-heading text-[20px] font-bold text-text">{s?.title ?? item.title}</h2>
       {s && (
         <p className="flex flex-wrap items-center gap-x-1.5 text-[12px] text-muted">
-          {[s.innovator, s.program, sent ? t('work.sent', { date: sent }) : null].filter(Boolean).join(' · ')}
+          {[s.innovator?.name ?? s.innovator, s.program?.title ?? s.program, sent ? t('work.sent', { date: sent }) : null].filter(Boolean).join(' · ')}
           {s.channel && <><span aria-hidden>·</span><ChannelLabel channel={s.channel} /></>}
         </p>
       )}
       <dl className="grid grid-cols-[100px_1fr] gap-x-4 gap-y-3 text-[14px]">
         <dt className="text-muted">{t('work.whyYou')}</dt>
-        <dd className="text-text">{item.why?.name ? t('work.assignedBy', { name: item.why.name }) : item.why?.label ?? EMPTY_CELL}</dd>
+        <dd className="text-text">{item.why?.name && WHY[item.why.kind] ? t(WHY[item.why.kind], { name: item.why.name }) : EMPTY_CELL}</dd>
         <dt className="text-muted">{t('work.step')}</dt>
         <dd className="text-text">{item.step ? (item.step.number ? t('work.stepOf', { name: item.step.name, n: item.step.number, total: item.step.of }) : item.step.name) : EMPTY_CELL}</dd>
         <dt className="text-muted">{t('work.dueLabel')}</dt>

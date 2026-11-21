@@ -16,7 +16,6 @@ import { useToast } from '../../components/ui/toast'
 import ChannelLabel from '../../components/ideas/ChannelLabel'
 import { AssignIdeas, MoveIdeas } from '../../components/ideas/IdeaActionDialogs'
 import { useT, useI18n } from '../../i18n/context'
-import { useAuth } from '../../lib/auth/AuthContext'
 import { reference } from '../../lib/api/endpoints'
 import { VIEWS, savedViews, staffList } from '../../lib/api/ideas'
 import { usePrograms } from '../../lib/queries/programs'
@@ -31,7 +30,7 @@ import { statusWord } from '../../lib/status'
 // ④ Ticked rows show the action bar: assign, move stage, export. Filters and paging live in the URL.
 
 const PAGE_SIZE = 20
-const FILTERS = ['view', 'program', 'stage', 'channel', 'district', 'since', 'search']
+const FILTERS = ['view', 'program', 'stage', 'channel', 'district', 'since', 'from', 'search']
 const STAGES = ['submitted', 'in_review', 'needs_input', 'shortlisted', 'approved', 'not_taken']
 const CHANNELS = ['web', 'whatsapp', 'ussd', 'sms']
 const SINCE = { '7': 7, '30': 30, '90': 90 }
@@ -49,7 +48,6 @@ export default function Submissions() {
   const navigate = useNavigate()
   const toast = useToast()
   const qc = useQueryClient()
-  const { user } = useAuth()
   const [params, setParams] = useSearchParams()
   const [selected, setSelected] = useState([])
   const [dialog, setDialog] = useState(null)
@@ -95,12 +93,13 @@ export default function Submissions() {
     ...(get('stage') ? { stage: get('stage') } : {}),
     ...(get('channel') ? { channel: get('channel') } : {}),
     ...(get('district') ? { district: get('district') } : {}),
-    ...(get('since') ? { submitted_from: sinceDate(get('since')) } : {}),
+    // "Last 30 days" in the filter row, or the exact date a saved view keeps.
+    ...(get('since') ? { submitted_from: sinceDate(get('since')) } : get('from') ? { submitted_from: get('from') } : {}),
     ...(get('search') ? { search: get('search') } : {}),
   }
   const listQuery = useQuery({
     queryKey: ['ideas', 'staff-list', request],
-    queryFn: () => staffList(request, user?.id),
+    queryFn: () => staffList(request),
     placeholderData: keepPreviousData,
   })
   const programs = usePrograms()
@@ -132,7 +131,7 @@ export default function Submissions() {
     if (key.startsWith('saved:')) {
       const v = savedList.find((x) => `saved:${x.id}` === key)
       const f = v?.filters ?? {}
-      update({ saved: v?.id, view: f.view ?? 'all', program: f.program, stage: f.stage, channel: f.channel, district: f.district, since: f.since, search: f.search })
+      update({ saved: v?.id, view: f.view ?? 'all', program: f.program, stage: f.stage, channel: f.channel, district: f.district, since: '', from: f.submitted_from, search: f.search })
       setSearchDraft(f.search ?? '')
     } else {
       update({ view: key, saved: '' })
@@ -184,9 +183,9 @@ export default function Submissions() {
     try {
       let list = onlySelected ? rows.filter((r) => selected.includes(r.id)) : []
       if (!onlySelected) {
-        const first = await staffList({ ...request, page: 1, page_size: 50 }, user?.id)
+        const first = await staffList({ ...request, page: 1, page_size: 50 })
         list = first.results
-        for (let p = 2; p <= Math.ceil((first.count ?? 0) / 50); p += 1) list = list.concat((await staffList({ ...request, page: p, page_size: 50 }, user?.id)).results)
+        for (let p = 2; p <= Math.ceil((first.count ?? 0) / 50); p += 1) list = list.concat((await staffList({ ...request, page: p, page_size: 50 })).results)
       }
       downloadCsv(`submissions-${new Date().toISOString().slice(0, 10)}.csv`, [
         [t('ideas.col.reference'), t('ideas.col.idea'), t('ideas.col.innovator'), t('ideas.col.challenge'), t('ideas.col.channel'), t('ideas.col.stage'), t('ideas.col.score'), t('ideas.col.updated')],
@@ -242,9 +241,13 @@ export default function Submissions() {
         <SelectControl aria-label={t('ideas.filter.district')} options={districtOptions} value={get('district')} onChange={(v) => update({ district: v, saved: '' })} className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[140px]" />
         <SelectControl
           aria-label={t('ideas.filter.date')}
-          options={[{ value: '', label: t('ideas.filter.anyDate') }, ...Object.keys(SINCE).map((k) => ({ value: k, label: t('ideas.filter.lastDays', { n: k }) }))]}
-          value={get('since')}
-          onChange={(v) => update({ since: v, saved: '' })}
+          options={[
+            { value: '', label: t('ideas.filter.anyDate') },
+            ...Object.keys(SINCE).map((k) => ({ value: k, label: t('ideas.filter.lastDays', { n: k }) })),
+            ...(get('from') ? [{ value: 'from', label: t('ideas.filter.since', { date: get('from') }) }] : []),
+          ]}
+          value={get('since') || (get('from') ? 'from' : '')}
+          onChange={(v) => v !== 'from' && update({ since: v, from: '', saved: '' })}
           className="w-[calc(50%-4px)] sm:w-auto sm:min-w-[130px]"
         />
       </div>
@@ -289,7 +292,7 @@ export default function Submissions() {
         open={dialog === 'save'}
         onClose={() => setDialog(null)}
         triggerRef={saveRef}
-        filters={Object.fromEntries(FILTERS.map((k) => [k, get(k)]).filter(([, v]) => v))}
+        filters={savedFilters(get, request)}
         onSaved={(v) => {
           qc.invalidateQueries({ queryKey: ['ideas', 'saved-views'] })
           update({ saved: v?.id }, { keepPage: true })
@@ -299,7 +302,13 @@ export default function Submissions() {
   )
 }
 
-/** "Save view": a name for the current filters (R-42 adds the "submissions" scope). */
+/** A saved view keeps the API's filter names; a "last 30 days" preset is kept as the date it means today. */
+function savedFilters(get, request) {
+  const f = { view: get('view'), program: get('program'), stage: get('stage'), channel: get('channel'), district: get('district'), search: get('search'), submitted_from: request.submitted_from }
+  return Object.fromEntries(Object.entries(f).filter(([, v]) => v))
+}
+
+/** "Save view": a name for the current filters . */
 function SaveView({ open, onClose, triggerRef, filters, onSaved }) {
   const t = useT()
   const toast = useToast()
@@ -318,9 +327,7 @@ function SaveView({ open, onClose, triggerRef, filters, onSaved }) {
       onClose()
     } catch (err) {
       const errs = err?.data?.errors ?? {}
-      // TODO(R-42): the API accepts the "submissions" scope and these filters once R-42 item 2 lands.
-      if (errs.scope || errs.filters) setError(t('ideas.viewsNotYet'))
-      else setError(errs.name?.[0] ?? err?.message ?? t('common.somethingWrong'))
+      setError(errs.name?.[0] ?? errs.filters?.[0] ?? err?.message ?? t('common.somethingWrong'))
     } finally {
       setBusy(false)
     }
