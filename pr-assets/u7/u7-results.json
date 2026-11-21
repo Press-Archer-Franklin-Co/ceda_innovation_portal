@@ -1,0 +1,188 @@
+[
+  {
+    "item": "2.0 sign-in page shows one field",
+    "ok": true,
+    "detail": "",
+    "shot": "u7-2.0-closed-1440.png"
+  },
+  {
+    "item": "header has exactly four links (visitor)",
+    "ok": true,
+    "detail": "['Home', 'Challenges', 'News & Stories', 'FAQ']",
+    "shot": ""
+  },
+  {
+    "item": "Submit an idea is a button, not a nav link",
+    "ok": true,
+    "detail": "",
+    "shot": ""
+  },
+  {
+    "item": "test accounts list shows five accounts",
+    "ok": true,
+    "detail": "5 items",
+    "shot": "u7-2.0-open-1440.png"
+  },
+  {
+    "item": "Esc closes the list",
+    "ok": true,
+    "detail": "",
+    "shot": ""
+  },
+  {
+    "item": "2.6 One more step for a new email",
+    "ok": true,
+    "detail": "",
+    "shot": "u7-2.6-1440.png"
+  },
+  {
+    "item": "2.0b password step (owner chose password)",
+    "ok": true,
+    "detail": "",
+    "shot": "u7-2.0b-password-1440.png"
+  },
+  {
+    "item": "Forgot password? sends a code (2.0b code step)",
+    "ok": true,
+    "detail": "",
+    "shot": "u7-2.0b-code-1440.png"
+  },
+  {
+    "item": "test account: Sign in as Neo Molefe, Innovator",
+    "ok": true,
+    "detail": "/dashboard",
+    "shot": "u7-demo-innovator.png"
+  },
+  {
+    "item": "header has exactly four links (signed-in innovator)",
+    "ok": true,
+    "detail": "['Home', 'Challenges', 'News & Stories', 'FAQ']",
+    "shot": ""
+  },
+  {
+    "item": "signed-in header shows New idea",
+    "ok": true,
+    "detail": "",
+    "shot": ""
+  },
+  {
+    "item": "test account: Sign in as Kago Tau, Innovation Officer",
+    "ok": true,
+    "detail": "/staff/dashboard",
+    "shot": "u7-demo-innovation-officer.png"
+  },
+  {
+    "item": "test account: Sign in as Dr Kefilwe M., Judge",
+    "ok": true,
+    "detail": "/staff/judging",
+    "shot": "u7-demo-judge.png"
+  },
+  {
+    "item": "test account: Sign in as Tebogo M., Innovation Manager",
+    "ok": true,
+    "detail": "/staff/dashboard",
+    "shot": "u7-demo-innovation-manager.png"
+  },
+  {
+    "item": "test account: Sign in as Lorato S., Administrator",
+    "ok": true,
+    "detail": "/staff/dashboard",
+    "shot": "u7-demo-administrator.png"
+  },
+  {
+    "item": "/staff/login goes to /sign-in",
+    "ok": true,
+    "detail": "/sign-in?next=%2Fstaff%2F",
+    "shot": ""
+  },
+  {
+    "item": "/login goes to /sign-in",
+    "ok": true,
+    "detail": "/sign-in",
+    "shot": ""
+  },
+  {
+    "item": "/signup goes to /sign-in",
+    "ok": true,
+    "detail": "/sign-in",
+    "shot": ""
+  },
+  {
+    "item": "/forgot-password goes to /sign-in",
+    "ok": true,
+    "detail": "/sign-in",
+    "shot": ""
+  },
+  {
+    "item": "/mfa goes to /sign-in",
+    "ok": true,
+    "detail": "/sign-in",
+    "shot": ""
+  },
+  {
+    "item": "phone: closed pill does not cover the field",
+    "ok": true,
+    "detail": "",
+    "shot": "u7-2.0-closed-390.png"
+  },
+  {
+    "item": "phone menu: four nav items",
+    "ok": true,
+    "detail": "['Home', 'Challenges', 'News & Stories', 'FAQ']",
+    "shot": "u7-1.3-menu-390.png"
+  },
+  {
+    "item": "hero photo upload accepts a transparent PNG",
+    "ok": true,
+    "detail": "status 201",
+    "shot": ""
+  },
+  {
+    "item": "draft saved with the photo (not published)",
+    "ok": true,
+    "detail": "status 200",
+    "shot": ""
+  },
+  {
+    "item": "preview hero has photo with srcset and alt",
+    "ok": true,
+    "detail": "",
+    "shot": ""
+  },
+  {
+    "item": "hero photo at 1440: visible, no overlap, fits the screen, card 410 px, stands on the bottom edge",
+    "ok": true,
+    "detail": "photo {'x': 591.71875, 'y': 186, 'width': 262.28125, 'height': 620} title {'x': 144, 'y': 238, 'width': 415.71875, 'height': 192} card {'x': 886, 'y': 80, 'width': 410, 'height': 638}",
+    "shot": "u7-1.1-1440.png"
+  },
+  {
+    "item": "hero photo at 1280: visible, no overlap, fits the screen, card 410 px, stands on the bottom edge",
+    "ok": true,
+    "detail": "photo {'x': 511.71875, 'y': 186, 'width': 262.28125, 'height': 620} title {'x': 64, 'y': 238, 'width': 415.71875, 'height': 192} card {'x': 806, 'y': 80, 'width': 410, 'height': 638}",
+    "shot": "u7-1.1-1280.png"
+  },
+  {
+    "item": "hero photo at 1024: visible, no overlap, fits the screen, card 410 px, stands on the bottom edge",
+    "ok": true,
+    "detail": "photo {'x': 406, 'y': 255.875, 'width': 160, 'height': 550.125} title {'x': 24, 'y': 238, 'width': 358, 'height': 192} card {'x': 590, 'y': 80, 'width': 410, 'height': 638}",
+    "shot": "u7-1.1-1024.png"
+  },
+  {
+    "item": "hero photo at 390: visible, no overlap, fits the screen",
+    "ok": true,
+    "detail": "photo {'x': 25, 'y': 380, 'width': 340, 'height': 300} title {'x': 20, 'y': 80, 'width': 350, 'height': 80} card {'x': 20, 'y': 712, 'width': 350, 'height': 648}",
+    "shot": "u7-1.1-390.png"
+  },
+  {
+    "item": "3.8 Hero photo block shows the uploaded photo",
+    "ok": true,
+    "detail": "",
+    "shot": "u7-3.8-1440.png"
+  },
+  {
+    "item": "draft put back as it was",
+    "ok": true,
+    "detail": "status 200",
+    "shot": ""
+  }
+]
