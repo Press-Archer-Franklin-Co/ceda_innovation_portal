@@ -17,6 +17,7 @@ import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
 import { isStaff } from '../../lib/roles'
 import { SUBMIT_PATH } from '../../lib/paths'
+import { NAV_LINKS, type NavItem } from '../../lib/nav'
 
 // Figma 1 · Public home › Header (10:190), Mobile header (10:801), Menu drawer (11:695).
 
@@ -26,22 +27,8 @@ export const SIGN_IN_PATH = '/sign-in'
 /** The public home for everyone. "/" sends signed-in innovators to their dashboard. */
 export const WEBSITE_HOME_PATH = '/home'
 
-interface NavItem {
-  to: string
-  key: StringKey
-  end?: boolean
-}
-
-const mainLinks: NavItem[] = [
-  { to: '/', key: 'nav.home', end: true },
-  { to: SUBMIT_PATH, key: 'nav.submit' },
-  { to: '/challenges', key: 'nav.challenges' },
-  { to: '/news', key: 'nav.news' },
-  { to: '/stories', key: 'nav.stories' },
-  { to: '/faq', key: 'nav.help' },
-]
-
-const myIdeas: NavItem = { to: '/my-ideas', key: 'nav.myIdeas' }
+// U7: exactly four links (Home, Challenges, News & Stories, FAQ), shared with the phone menu.
+// "My ideas" is in the account menu and on the dashboard; Submit / New idea is a button.
 
 /** Phone menu icons (Figma 11:694), by path. */
 const MENU_ICONS: Record<string, LucideIcon> = {
@@ -261,6 +248,8 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
           })}
           {isAuthenticated && (
             <>
+              {/* U7: My ideas is not a nav link any more; on the phone it sits with the account rows. */}
+              <Link to="/my-ideas" onClick={onClose} className={row}>{t('nav.myIdeas')}</Link>
               <Link to={WEBSITE_HOME_PATH} onClick={onClose} className={row}>{t('nav.websiteHome')}</Link>
               <Link to="/profile" onClick={onClose} className={row}>{t('nav.profile')}</Link>
               {canStaff && <a href="/staff/dashboard" className={row}>{t('nav.staff')}</a>}
@@ -284,7 +273,7 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
         </nav>
         <div className="p-5 border-t border-border shrink-0 space-y-3">
           <Link to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
-            {t('nav.submit')} <ArrowRight size={18} aria-hidden />
+            {t(isAuthenticated ? 'nav.newIdea' : 'nav.submit')} <ArrowRight size={18} aria-hidden />
           </Link>
           {!isAuthenticated && (
             <Link to={SIGN_IN_PATH} onClick={onClose} className={buttonClasses({ variant: 'secondary', block: true })}>
@@ -307,8 +296,10 @@ export default function Navbar() {
 
   const canStaff = isAuthenticated && isStaff(user)
   // Signed-in innovators: "Home" is their dashboard ("/" sends them there); the website home is in the account menu.
-  const homeLink: NavItem = isAuthenticated && !canStaff ? { to: '/dashboard', key: 'nav.home' } : mainLinks[0]
-  const links = isAuthenticated ? [homeLink, mainLinks[1], myIdeas, ...mainLinks.slice(2)] : mainLinks
+  const homeLink: NavItem = isAuthenticated && !canStaff ? { to: '/dashboard', key: 'nav.home' } : NAV_LINKS[0]
+  const links = [homeLink, ...NAV_LINKS.slice(1)]
+  // An action, not a tab: "Submit an idea" for visitors, "New idea" once signed in.
+  const submitKey: StringKey = isAuthenticated ? 'nav.newIdea' : 'nav.submit'
 
   useEffect(() => setMenuOpen(false), [pathname])
 
@@ -347,7 +338,7 @@ export default function Navbar() {
               </Link>
             )}
             <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
-              {t('nav.submit')}
+              {t(submitKey)}
             </Link>
           </div>
 
