@@ -240,8 +240,8 @@ export default function IdeaForm() {
     setSending(true)
     try {
       const result = await intakeService.submit(id, { consent: true })
-      toast.show({ tone: 'success', title: t('form.sent', { reference: result.reference }) })
-      navigate(`/my-ideas/${result.submission_id}`, { replace: true })
+      // 1.5 replaces the form in the history, so Back cannot reopen a form that would send the idea twice.
+      navigate('/idea-sent', { replace: true, state: { result } })
     } catch (error) {
       toast.show({ tone: 'error', title: parseApiError(error, t('common.somethingWrong')) })
     } finally {

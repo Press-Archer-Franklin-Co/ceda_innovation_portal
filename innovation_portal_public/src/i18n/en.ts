@@ -265,7 +265,7 @@ const en = {
   'sent.trackTitle': 'Track it any way you like',
   'sent.trackBody': 'Your account, WhatsApp updates, or dial {ussd} and enter your reference.',
   'sent.trackBodyNoUssd': 'Your account or WhatsApp updates, with your reference.',
-  'sent.trackCta': 'Open my dashboard',
+  'sent.trackCta': 'Track this idea',
   'sent.signInCta': 'Sign in to track',
   'sent.moreTitle': 'Got another idea?',
   'sent.moreBody': 'Check open challenges. Some come with grants and mentoring.',

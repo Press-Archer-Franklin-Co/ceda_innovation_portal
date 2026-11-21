@@ -145,20 +145,28 @@ export default function IdeaSent() {
               {
                 icon: Smartphone, title: t('sent.trackTitle'),
                 body: settings.ussd_code ? t('sent.trackBody', { ussd: settings.ussd_code }) : t('sent.trackBodyNoUssd'),
-                cta: hasAccount ? { to: '/dashboard', label: t('sent.trackCta') } : { to: '/sign-in', label: t('sent.signInCta') },
+                cta: hasAccount ? { to: `/my-ideas/${result.submission_id}`, label: t('sent.trackCta') } : { to: '/sign-in', label: t('sent.signInCta') },
+                also: hasAccount ? { to: '/my-ideas', label: t('nav.myIdeas') } : undefined,
               },
               { icon: Trophy, title: t('sent.moreTitle'), body: t('sent.moreBody'), cta: { to: '/challenges', label: t('sent.moreCta') } },
-            ].map(({ icon: Icon, title, body, cta }) => (
+            ].map(({ icon: Icon, title, body, cta, also }: { icon: typeof Upload; title: string; body: string; cta: { to: string; label: string; primary?: boolean }; also?: { to: string; label: string } }) => (
               <div key={title} className="flex flex-col gap-3 items-start p-6 rounded-card border border-border">
                 <span aria-hidden className="w-11 h-11 rounded-[10px] bg-accent-soft text-accent flex items-center justify-center">
                   <Icon size={22} />
                 </span>
                 <h2 className="text-d-h4 font-heading text-text">{title}</h2>
                 <p className="text-d-body-s text-muted">{body}</p>
-                <Link to={cta.to} className={buttonClasses({ variant: 'primary' in cta && cta.primary ? 'primary' : 'secondary', size: 'sm', className: 'mt-auto' })}>
-                  {cta.label}
-                  {'primary' in cta && cta.primary && <ArrowRight size={16} aria-hidden />}
-                </Link>
+                <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Link to={cta.to} className={buttonClasses({ variant: cta.primary ? 'primary' : 'secondary', size: 'sm' })}>
+                    {cta.label}
+                    {cta.primary && <ArrowRight size={16} aria-hidden />}
+                  </Link>
+                  {also && (
+                    <Link to={also.to} className="text-d-label text-primary hover:underline underline-offset-4 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      {also.label}
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>
