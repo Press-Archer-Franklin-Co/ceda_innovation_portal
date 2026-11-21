@@ -1,4 +1,5 @@
 import { Fragment, ReactNode } from 'react'
+import clsx from 'clsx'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CircleCheck } from 'lucide-react'
 import { buttonClasses } from '../ui/Button'
@@ -67,7 +68,7 @@ function HeroPhotoBlock({ photo }: { photo: HeroPhoto }) {
   return (
     <div
       data-testid="hero-photo"
-      className="relative mx-auto h-[300px] w-full max-w-[340px] overflow-hidden lg:mx-0 lg:h-auto lg:min-w-[160px] lg:max-w-none lg:flex-[0_1_var(--hero-photo-w)] lg:self-end lg:overflow-visible lg:-mb-[88px]"
+      className="relative mx-auto h-[300px] w-full max-w-[340px] overflow-hidden lg:mx-0 lg:h-auto lg:min-w-[160px] lg:max-w-none lg:flex-[0_3_var(--hero-photo-w)] lg:self-end lg:overflow-visible lg:-mb-[88px]"
       style={{ ['--hero-photo-w' as string]: `${width}px` }}
     >
       <span aria-hidden className="absolute bottom-[14%] left-1/2 aspect-square w-full -translate-x-1/2 rounded-full bg-accent" />
@@ -104,8 +105,8 @@ export default function HeroBanner({ settings, card, photo = null }: { settings:
       {settings.show_watermark && (
         <img src={watermarkUrl} alt="" aria-hidden className="pointer-events-none select-none absolute left-[-160px] bottom-[-40px] w-[760px] max-w-none lg:hidden" />
       )}
-      <div className="relative max-w-[1200px] mx-auto px-5 lg:px-6 pt-8 pb-10 lg:pt-20 lg:pb-[88px] flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-        <div className={photo ? 'flex flex-col gap-5 lg:gap-6 lg:max-w-[450px] lg:flex-[0_0.2_450px] lg:min-w-0' : 'flex flex-col gap-5 lg:gap-6 lg:max-w-[640px]'}>
+      <div className={clsx("relative max-w-[1200px] mx-auto px-5 lg:px-6 pt-8 pb-10 lg:pt-20 lg:pb-[88px] flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between", photo && "lg:gap-6 xl:gap-8")}>
+        <div className={photo ? 'flex flex-col gap-5 lg:gap-6 lg:max-w-[450px] lg:flex-[0_1_450px] lg:min-w-0' : 'flex flex-col gap-5 lg:gap-6 lg:max-w-[640px]'}>
           <p className="inline-flex items-center gap-2 self-start rounded-full bg-on-banner/[0.14] px-3 py-1.5 text-d-label-s">
             <span aria-hidden className="w-2 h-2 rounded-full bg-yellow" />
             {t('home.pill')}
