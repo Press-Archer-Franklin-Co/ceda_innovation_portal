@@ -673,3 +673,36 @@ class HeroPhoto(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return self.filename or str(self.id)
+
+
+class PolicyPage(UUIDModel, TimeStampedModel):
+    """U11C: the text of a policy page (About, Guidelines, Privacy, Terms of use, Terms of agreement).
+
+    Texts are {"en": ..., "tn": ...}. ``sections`` is [{"heading": {en, tn}, "body": {en, tn}}].
+    Bodies are plain text: a blank line starts a new paragraph, a line starting with "• " is a bullet.
+    Staff edit ``draft`` (same shape as the live fields); it goes live only when the website
+    approval is approved (apps.content.policies).
+    """
+
+    class Key(models.TextChoices):
+        ABOUT = "about", "About"
+        GUIDELINES = "guidelines", "Guidelines"
+        PRIVACY = "privacy", "Privacy policy"
+        TERMS_OF_USE = "terms_of_use", "Terms of use"
+        TERMS_OF_AGREEMENT = "terms_of_agreement", "Terms of agreement"
+
+    key = models.CharField(max_length=40, choices=Key.choices, unique=True)
+    title = models.JSONField(default=dict, blank=True)
+    intro = models.JSONField(default=dict, blank=True)
+    sections = models.JSONField(default=list, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    draft = models.JSONField(null=True, blank=True, help_text="Unpublished edits: {title, intro, sections}. Null when there are none.")
+    draft_updated_at = models.DateTimeField(null=True, blank=True)
+    draft_updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["key"]
+
+    def __str__(self) -> str:
+        return self.key
