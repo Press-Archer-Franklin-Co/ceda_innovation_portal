@@ -38,6 +38,8 @@ const GROUPS = [
     label: 'staff.group.challenges',
     items: [
       { label: 'staff.nav.challenges', href: '/programs', icon: Layers, capability: 'challenges.manage' },
+      // Figma 3.21a: Workflows sits with the challenges it serves.
+      { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
       { label: 'staff.nav.criteria', href: '/marking-criteria', icon: BookOpen, capability: 'criteria.manage' },
       { label: 'staff.nav.forms', href: '/forms', icon: FileText, capability: 'forms.manage' },
     ],
@@ -64,7 +66,6 @@ const GROUPS = [
       { label: 'staff.nav.users', href: '/users', icon: Users, capability: 'users.manage' },
       { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
-      { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
       { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, capability: 'challenges.manage' },
       { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
     ],

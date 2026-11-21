@@ -8,9 +8,7 @@ admin/src/pages/admin/platform/PlatformSettings.jsx
 admin/src/pages/audit/AuditLogs.jsx
 admin/src/pages/history/History.jsx
 admin/src/pages/history/HistorySnapshot.jsx
-admin/src/pages/admin/workflows/AdminWorkflows.jsx
 admin/src/pages/admin/workflows/WorkflowBuilder.jsx
-admin/src/pages/admin/workflows/WorkflowInstances.jsx
 admin/src/pages/programs/Programs.jsx
 admin/src/pages/programs/ProgramDetail.jsx
 admin/src/pages/programs/ProgramEditor.jsx

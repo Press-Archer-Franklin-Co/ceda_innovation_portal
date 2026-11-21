@@ -28,9 +28,9 @@ const ScoreIdea = lazy(() => import('./pages/judging/ScoreIdea'))
 const AllScores = lazy(() => import('./pages/judging/AllScores'))
 const Reports = lazy(() => import('./pages/reports/Reports'))
 const Settings = lazy(() => import('./pages/settings/Settings'))
-const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows'))
+const Workflows = lazy(() => import('./pages/admin/workflows/Workflows'))
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
-const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
+const WorkflowIdeas = lazy(() => import('./pages/admin/workflows/WorkflowIdeas'))
 const MarkingCriteria = lazy(() => import('./pages/challenges/MarkingCriteria'))
 const ChallengeBuilder = lazy(() => import('./pages/challenges/ChallengeBuilder'))
 const Forms = lazy(() => import('./pages/forms/Forms'))
@@ -126,9 +126,10 @@ export default function App() {
 
                 {/* Each group asks for the capability the API checks on the endpoints behind it (S1). */}
                 <Route element={<CapabilityRoute need="entries.assign" />}>
-                  <Route path="/admin/workflows"               element={<ErrorBoundary><AdminWorkflows /></ErrorBoundary>} />
+                  <Route path="/admin/workflows"               element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
+                  <Route path="/workflows"                     element={<Navigate to="/admin/workflows" replace />} />
                   <Route path="/admin/workflows/:id/builder"   element={<ErrorBoundary><WorkflowBuilder /></ErrorBoundary>} />
-                  <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
+                  <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowIdeas /></ErrorBoundary>} />
                 </Route>
                 <Route element={<CapabilityRoute need="challenges.manage" />}>
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
