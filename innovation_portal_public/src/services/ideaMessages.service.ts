@@ -14,6 +14,11 @@ export const ideaMessagesService = {
     return unwrapData<IdeaMessage>(data)
   },
 
+  /** U11C (R-52): tells the officer you are typing. Sent at most every few seconds. */
+  async typing(ideaId: string): Promise<void> {
+    await api.post(`/me/ideas/${ideaId}/messages/typing/`, {})
+  },
+
   async markRead(ideaId: string): Promise<void> {
     await api.post(`/me/ideas/${ideaId}/messages/read/`, {})
   },

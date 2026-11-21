@@ -1,498 +1,319 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import {
-  CheckCircle2, User, Users, Bell, ShieldCheck,
-  Globe, Linkedin, Calendar, MapPin, CreditCard, RefreshCw,
-} from 'lucide-react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Bell, ChevronLeft, ChevronRight, Globe, LucideIcon, Monitor, ShieldCheck, Smartphone, User } from 'lucide-react'
+import clsx from 'clsx'
 import { useAuth } from '../context/AuthContext'
-import Button from '../components/ui/Button'
-import { profileService } from '../services/profile.service'
-import { securityService } from '../services/security.service'
-import { parseApiError, parseFieldErrors } from '../utils/apiError'
-import type { InnovatorProfile } from '../types/api'
-import type { AccountSecurity } from '../types/security'
-import type { SocialProvider } from '../services/auth.service'
-import { getSortedActions, providerLinkedSuccessMsg } from '../utils/securityLabels'
-import SecurityOverview   from '../components/security/SecurityOverview'
-import RecommendedActions from '../components/security/RecommendedActions'
-import PasswordManagement from '../components/security/PasswordManagement'
+import Avatar from '../components/ui/Avatar'
+import Button, { buttonClasses } from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Field from '../components/ui/Field'
+import { SelectControl } from '../components/ui/Select'
+import Tag from '../components/ui/Tag'
+import Skeleton from '../components/ui/Skeleton'
+import { ErrorState } from '../components/ui/EmptyState'
+import PasswordRows from '../components/account/PasswordRows'
+import { Lang, LANGS, useI18n } from '../i18n'
+import { CONTACT_EMAIL } from '../lib/contact'
+import { useAsync } from '../lib/useAsync'
+import { useMediaQuery } from '../lib/useMediaQuery'
+import { usePageTitle } from '../lib/usePageTitle'
 import { useSecondStep } from '../lib/useSecondStep'
-import LinkedProviders    from '../components/security/LinkedProviders'
+import { authService } from '../services/auth.service'
+import { profileService } from '../services/profile.service'
+import { referenceService } from '../services/reference.service'
+import { securityService } from '../services/security.service'
 
+// Figma 2.9 Profile and security (110:606 website, 110:827 phone): one page. /security redirects here.
+// ① "Your account" on the left jumps to Profile, Security, Notifications and Language (on phones it is a list
+// that opens each part). ② Language is the person's language for the portal. ③ Security: where you are signed
+// in, and the password rows only when the second sign-in step is "password" (U7). ④ Delete my account.
+// Waiting on the API (R-51): editing the name, the photo, other devices and deleting from here.
 
-type Tab = 'profile' | 'security' | 'teams' | 'preferences' | 'activity'
+type Section = 'profile' | 'security' | 'language'
 
-type FormState = {
-  national_id:   string
-  gender:        string
-  date_of_birth: string
-  region:        string
-  bio:           string
-  portfolio_url: string
-  linkedin_url:  string
-}
-
-function toForm(p: InnovatorProfile): FormState {
-  return {
-    national_id:   p.national_id   ?? '',
-    gender:        p.gender        ?? '',
-    date_of_birth: p.date_of_birth ?? '',
-    region:        p.region        ?? '',
-    bio:           p.bio           ?? '',
-    portfolio_url: p.portfolio_url ?? '',
-    linkedin_url:  p.linkedin_url  ?? '',
-  }
-}
-
-
-const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
-
-const REGION_OPTIONS = [
-  'Central', 'Chobe', 'Francistown', 'Gaborone', 'Ghanzi',
-  'Kgalagadi', 'Kgatleng', 'Kweneng', 'Lobatse', 'North East',
-  'North West', 'South East', 'Southern', 'Selebi-Phikwe', 'Orapa',
+const SECTIONS: { id: Section | 'notifications'; icon: LucideIcon; label: 'account.profile' | 'account.security' | 'account.notifications' | 'account.language'; sub: 'account.profileSub' | 'account.securitySub' | 'account.notificationsSub' | null }[] = [
+  { id: 'profile', icon: User, label: 'account.profile', sub: 'account.profileSub' },
+  { id: 'security', icon: ShieldCheck, label: 'account.security', sub: 'account.securitySub' },
+  { id: 'notifications', icon: Bell, label: 'account.notifications', sub: 'account.notificationsSub' },
+  { id: 'language', icon: Globe, label: 'account.language', sub: null },
 ]
 
-const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'profile',     label: 'Profile',     icon: <User size={14} />         },
-  { id: 'security',    label: 'Security',    icon: <ShieldCheck size={14} />  },
-  { id: 'teams',       label: 'Teams',       icon: <Users size={14} />        },
-  { id: 'preferences', label: 'Preferences', icon: <Bell size={14} />         },
-  { id: 'activity',    label: 'Activity',    icon: <CheckCircle2 size={14} /> },
-]
+/** "Chrome on Windows" from the browser itself: this device is the one row we know without the API. */
+function thisDevice(): { browser: string; os: string; phone: boolean } {
+  const ua = navigator.userAgent
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser'
+  const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iPhone' : /Windows/.test(ua) ? 'Windows' : /Mac OS X/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'this device'
+  return { browser, os, phone: /Android|iPhone/.test(ua) }
+}
 
-
-function PlaceholderPanel({
-  icon, title, body,
-}: { icon: React.ReactNode; title: string; body: string }) {
+function Card({ id, title, children, className }: { id: string; title: string; children: ReactNode; className?: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-gray-200 bg-white p-10 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4 text-gray-300">
-        {icon}
+    <section id={id} aria-labelledby={`${id}-title`} className={clsx('scroll-mt-24 w-full rounded-card border border-border p-5 flex flex-col gap-[14px]', className)}>
+      <h2 id={`${id}-title`} className="text-d-h5 font-heading text-text">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
+function LanguageRow() {
+  const { t, lang, setLang } = useI18n()
+  return (
+    <div id="language" className="scroll-mt-24 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-d-label text-text">{t('account.language')}</p>
+        <p className="text-d-cap text-muted">{t('account.languageHint')}</p>
       </div>
-      <p className="text-sm font-semibold text-gray-500 mb-1">{title}</p>
-      <p className="text-xs text-gray-400 max-w-xs mx-auto leading-relaxed">{body}</p>
+      <div role="group" aria-label={t('account.language')} className="inline-flex gap-0.5 p-[3px] rounded-[10px] bg-surface2 self-start sm:self-auto">
+        {LANGS.map((l: Lang) => (
+          <button
+            key={l}
+            type="button"
+            lang={l}
+            aria-pressed={lang === l}
+            onClick={() => setLang(l)}
+            className={clsx(
+              'px-3.5 py-[7px] rounded-control text-d-btn-s font-heading focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+              lang === l ? 'bg-bg text-text shadow-[0_10px_15px_rgb(46_26_15/0.08)]' : 'text-muted hover:text-text',
+            )}
+          >
+            {t(l === 'en' ? 'lang.en' : 'lang.tn')}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
 
-
-function ProfileTab() {
+function ProfileCard() {
+  const { t, lang } = useI18n()
   const { user } = useAuth()
-  const [form,        setForm]        = useState<FormState>({
-    national_id: '', gender: '', date_of_birth: '', region: '',
-    bio: '', portfolio_url: '', linkedin_url: '',
-  })
-  const [loading,     setLoading]     = useState(true)
-  const [saving,      setSaving]      = useState(false)
-  const [error,       setError]       = useState('')
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
-  const [saved,       setSaved]       = useState(false)
-
-  const up = (k: keyof FormState, v: string) => setForm(f => ({ ...f, [k]: v }))
+  const profile = useAsync(() => profileService.get(), [])
+  const districts = useAsync(() => Promise.all([referenceService.districts('en'), referenceService.districts(lang)]), [lang])
+  const [region, setRegion] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle')
+  const [linkSent, setLinkSent] = useState(false)
 
   useEffect(() => {
-    profileService.get()
-      .then(p => setForm(toForm(p)))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+    if (profile.data) setRegion(profile.data.region ?? '')
+  }, [profile.data])
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // Stored as the English district name (as before); shown in the current language.
+  const options = useMemo(() => {
+    const [en, local] = districts.data ?? [[], []]
+    const names = new Map(local.map((d) => [d.slug, d.name]))
+    return en.map((d) => ({ value: d.name, label: names.get(d.slug) ?? d.name }))
+  }, [districts.data])
+
+  if (!user) return null
+  const changed = profile.data && region !== null && region !== (profile.data.region ?? '')
+
+  async function save() {
     setSaving(true)
-    setError('')
-    setFieldErrors({})
-    setSaved(false)
+    setStatus('idle')
     try {
-      await profileService.update({
-        national_id:   form.national_id   || undefined,
-        gender:        form.gender        || undefined,
-        date_of_birth: form.date_of_birth || undefined,
-        region:        form.region        || undefined,
-        bio:           form.bio           || undefined,
-        portfolio_url: form.portfolio_url || undefined,
-        linkedin_url:  form.linkedin_url  || undefined,
-      })
-      setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
-    } catch (err) {
-      setFieldErrors(parseFieldErrors(err))
-      setError(parseApiError(err, 'Failed to save profile. Please try again.'))
+      await profileService.update({ region: region || undefined })
+      profile.reload()
+      setStatus('saved')
+    } catch {
+      setStatus('error')
     } finally {
       setSaving(false)
     }
   }
 
-  const inp     = 'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#A01E0A]/30 bg-white'
-  const errInp  = (key: keyof FormState) => `${inp} ${fieldErrors[key] ? 'border-red-400' : ''}`
-  const readInp = `${inp} bg-gray-50 text-gray-500 cursor-default`
-
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="rounded-2xl border border-gray-100 p-5">
-            <div className="h-4 bg-gray-200 rounded w-1/3 mb-3" />
-            <div className="h-10 bg-gray-100 rounded-xl" />
-          </div>
-        ))}
-      </div>
-    )
+  async function sendLink() {
+    try {
+      await authService.resendVerification(user!.email)
+      setLinkSent(true)
+    } catch {
+      setStatus('error')
+    }
   }
 
+  const emailHint = user.email_verified ? (
+    t('account.confirmed')
+  ) : linkSent ? (
+    t('account.linkSent')
+  ) : (
+    <>
+      {t('account.notConfirmed')} ·{' '}
+      <button type="button" onClick={sendLink} className="text-primary hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        {t('account.sendLink')}
+      </button>
+    </>
+  )
+
   return (
-    <form onSubmit={handleSave} className="space-y-5">
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">{error}</div>
-      )}
-      {saved && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
-          <CheckCircle2 size={15} /> Profile saved successfully.
+    <Card id="profile" title={t('account.profile')}>
+      <Avatar name={user.name || user.email || '?'} size="lg" decorative className="!w-16 !h-16 !text-[23px] !bg-yellow !text-banner" />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input label={t('account.fullName')} value={user.name} readOnly hint={t('account.nameHint')} />
+        <Field label={t('account.district')}>
+          {profile.loading || districts.loading ? (
+            <Skeleton className="h-[46px] w-full rounded-control" />
+          ) : (
+            <SelectControl value={region || null} onChange={(v) => { setRegion(v); setStatus('idle') }} options={options} placeholder={t('account.districtPick')} />
+          )}
+        </Field>
+        <Input label={t('account.phone')} value={user.phone_number || t('account.notGiven')} readOnly hint={user.phone_number ? (user.phone_verified ? t('account.confirmed') : t('account.notConfirmed')) : undefined} />
+        <Input label={t('account.email')} value={user.email || t('account.notGiven')} readOnly hint={user.email ? emailHint : undefined} />
+      </div>
+      {(changed || status !== 'idle') && (
+        <div className="flex items-center justify-end gap-3">
+          {status === 'saved' && <p role="status" className="text-d-cap text-success">{t('account.saved')}</p>}
+          {status === 'error' && <p role="alert" className="text-d-cap text-danger">{t('account.saveError')}</p>}
+          {changed && <Button size="sm" onClick={save} loading={saving}>{t('account.save')}</Button>}
         </div>
       )}
-
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6">
-        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <User size={14} className="text-gray-400" /> Account Information
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">First Name</label>
-            <input className={readInp} value={user?.first_name ?? ''} readOnly />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Last Name</label>
-            <input className={readInp} value={user?.last_name ?? ''} readOnly />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Email</label>
-            <input className={readInp} value={user?.email ?? ''} readOnly />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Phone</label>
-            <input className={readInp} value={user?.phone_number ?? '—'} readOnly />
-          </div>
-        </div>
-        <p className="text-[11px] text-gray-400 mt-3">
-          To change your email or password, visit{' '}
-          <Link to="/security" className="font-medium hover:underline" style={{ color: '#A01E0A' }}>
-            Account Security
-          </Link>.
-        </p>
-      </div>
-
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6">
-        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <CreditCard size={14} className="text-gray-400" /> Personal Details
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              <span className="flex items-center gap-1"><CreditCard size={11} /> National ID</span>
-            </label>
-            <input
-              className={errInp('national_id')}
-              placeholder="000000000"
-              value={form.national_id}
-              onChange={e => up('national_id', e.target.value)}
-            />
-            {fieldErrors.national_id && <p className="text-xs text-red-500 mt-1">{fieldErrors.national_id}</p>}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              <span className="flex items-center gap-1"><Calendar size={11} /> Date of Birth</span>
-            </label>
-            <input
-              type="date"
-              className={errInp('date_of_birth')}
-              value={form.date_of_birth}
-              onChange={e => up('date_of_birth', e.target.value)}
-            />
-            {fieldErrors.date_of_birth && <p className="text-xs text-red-500 mt-1">{fieldErrors.date_of_birth}</p>}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Gender</label>
-            <select className={errInp('gender')} value={form.gender} onChange={e => up('gender', e.target.value)}>
-              <option value="">Select…</option>
-              {GENDER_OPTIONS.map(g => <option key={g}>{g}</option>)}
-            </select>
-            {fieldErrors.gender && <p className="text-xs text-red-500 mt-1">{fieldErrors.gender}</p>}
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-              <span className="flex items-center gap-1"><MapPin size={11} /> Region</span>
-            </label>
-            <select className={errInp('region')} value={form.region} onChange={e => up('region', e.target.value)}>
-              <option value="">Select…</option>
-              {REGION_OPTIONS.map(r => <option key={r}>{r}</option>)}
-            </select>
-            {fieldErrors.region && <p className="text-xs text-red-500 mt-1">{fieldErrors.region}</p>}
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] p-6">
-        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Globe size={14} className="text-gray-400" /> Bio & Links
-        </h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Bio</label>
-            <textarea
-              rows={3}
-              className={`${errInp('bio')} resize-none`}
-              placeholder="Tell us about yourself and your work…"
-              value={form.bio}
-              onChange={e => up('bio', e.target.value)}
-            />
-            {fieldErrors.bio && <p className="text-xs text-red-500 mt-1">{fieldErrors.bio}</p>}
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                <span className="flex items-center gap-1"><Globe size={11} /> Portfolio URL</span>
-              </label>
-              <input
-                type="url"
-                className={errInp('portfolio_url')}
-                placeholder="https://yourportfolio.com"
-                value={form.portfolio_url}
-                onChange={e => up('portfolio_url', e.target.value)}
-              />
-              {fieldErrors.portfolio_url && <p className="text-xs text-red-500 mt-1">{fieldErrors.portfolio_url}</p>}
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                <span className="flex items-center gap-1"><Linkedin size={11} /> LinkedIn URL</span>
-              </label>
-              <input
-                type="url"
-                className={errInp('linkedin_url')}
-                placeholder="https://linkedin.com/in/…"
-                value={form.linkedin_url}
-                onChange={e => up('linkedin_url', e.target.value)}
-              />
-              {fieldErrors.linkedin_url && <p className="text-xs text-red-500 mt-1">{fieldErrors.linkedin_url}</p>}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button type="submit" loading={saving}>Save changes</Button>
-      </div>
-    </form>
+      <LanguageRow />
+    </Card>
   )
 }
 
-
-function SecurityTab() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  // U7 (2.9): no two-step row; a password row only when people sign in with a password.
+function SecurityCard() {
+  const { t } = useI18n()
   const secondStep = useSecondStep()
-  const [secData,    setSecData]    = useState<AccountSecurity | null>(null)
-  const [providers,  setProviders]  = useState<SocialProvider[]>([])
-  const [loading,    setLoading]    = useState(true)
-  const [error,      setError]      = useState('')
-  const [refreshing, setRefreshing] = useState(false)
-  const [banner,     setBanner]     = useState<string | null>(null)
-
-  const passwordRef  = useRef<HTMLDivElement>(null)
-  const providersRef = useRef<HTMLDivElement>(null)
-
-  const fetchData = useCallback(async (quiet = false) => {
-    if (!quiet) setLoading(true)
-    else        setRefreshing(true)
-    setError('')
-    try {
-      const [sec, prov] = await Promise.all([
-        securityService.getAccountSecurity(),
-        securityService.getSocialProviders(),
-      ])
-      setSecData(sec)
-      setProviders(prov)
-    } catch (err) {
-      setError(parseApiError(err, 'Could not load your account security information. Please try again.'))
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }, [])
-
-  useEffect(() => { fetchData() }, [fetchData])
-
-  useEffect(() => {
-    const linked = searchParams.get('linked')
-    if (linked) {
-      setBanner(providerLinkedSuccessMsg(linked))
-      setSearchParams({}, { replace: true })
-      setTimeout(() => setBanner(null), 6000)
-    }
-  }, [searchParams, setSearchParams])
-
-  const handleActionClick = (code: string) => {
-    if (['add_password', 'set_password', 'change_password', 'avoid_unlink'].includes(code)) {
-      passwordRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else if (['link_provider', 'add_provider', 'add_recovery_method'].includes(code)) {
-      providersRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
-  }
-
-  const topActionCode = secData ? (getSortedActions(secData)[0]?.code ?? '') : ''
-  const passwordStartExpanded = ['set_password', 'add_password'].includes(topActionCode)
-
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="rounded-2xl border border-gray-100 bg-white h-[100px]" />
-        <div className="rounded-2xl border border-gray-100 bg-white h-[88px]" />
-        <div className="rounded-2xl border border-gray-100 bg-white h-[160px]" />
-        <div className="rounded-2xl border border-gray-100 bg-white h-[180px]" />
-      </div>
-    )
-  }
-
+  const security = useAsync(() => securityService.getAccountSecurity(), [])
+  const device = useMemo(thisDevice, [])
+  const DeviceIcon = device.phone ? Smartphone : Monitor
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-          className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-[#A01E0A] transition-colors disabled:opacity-40"
-        >
-          <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} />
-          Refresh
-        </button>
+    <Card id="security" title={t('account.security')}>
+      <p className="text-d-label-s text-muted">{t('account.signedIn')}</p>
+      <div className="flex items-center gap-3">
+        <DeviceIcon size={18} aria-hidden className="shrink-0 text-text" />
+        <div className="flex-1 min-w-0">
+          <p className="text-d-body-s text-text">{t('account.device', { browser: device.browser, os: device.os })}</p>
+          <p className="text-d-cap text-muted">{t('account.now')}</p>
+        </div>
+        <Tag tone="green">{t('account.thisDevice')}</Tag>
       </div>
+      {secondStep === 'password' &&
+        (security.data ? (
+          <PasswordRows hasPassword={security.data.has_password} onSaved={security.reload} />
+        ) : security.error ? (
+          <ErrorState framed={false} title={t('account.loadError')} onRetry={security.reload} retrying={security.fetching} />
+        ) : (
+          <Skeleton className="h-12 w-full" />
+        ))}
+    </Card>
+  )
+}
 
-      {banner && (
-        <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
-          <CheckCircle2 size={15} className="shrink-0" />
-          {banner}
-        </div>
-      )}
-
-      {error && (
-        <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-8 text-center">
-          <p className="text-sm font-semibold text-red-600 mb-1">Couldn't load security info</p>
-          <p className="text-sm text-red-500 mb-4 leading-relaxed">{error}</p>
-          <button onClick={() => fetchData()} className="text-sm font-semibold text-[#A01E0A] hover:underline">
-            Try again
-          </button>
-        </div>
-      )}
-
-      {!error && secData && (
-        <>
-          <SecurityOverview data={secData} onActionClick={handleActionClick} />
-
-          {secondStep === 'password' && getSortedActions(secData).length > 0 && (
-            <RecommendedActions data={secData} onActionClick={handleActionClick} />
-          )}
-
-          <div ref={providersRef} className="scroll-mt-4">
-            <LinkedProviders
-              data={secData}
-              providers={providers}
-              onRefresh={() => fetchData(true)}
-            />
-          </div>
-
-          {secondStep === 'password' && (
-            <div ref={passwordRef} className="scroll-mt-4">
-              <PasswordManagement
-                data={secData}
-                onRefresh={() => fetchData(true)}
-                startExpanded={passwordStartExpanded}
-              />
-            </div>
-          )}
-        </>
-      )}
+function DeleteRow() {
+  const { t } = useI18n()
+  // Until the API can delete an account (R-51), the request goes to the innovation team by email.
+  const href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(t('account.deleteMailSubject'))}`
+  return (
+    <div className="w-full rounded-card border border-border px-4 py-[14px] flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <p className="text-d-label text-danger">{t('account.delete')}</p>
+        <p className="text-d-cap text-muted">{t('account.deleteBody')}</p>
+      </div>
+      <a href={href} className={buttonClasses({ variant: 'danger', size: 'sm', className: 'self-start sm:self-auto' })}>{t('account.deleteButton')}</a>
     </div>
   )
 }
 
-
-export default function Profile() {
-  const { user } = useAuth()
-  const [tab, setTab] = useState<Tab>('profile')
-
-  const initials = user
-    ? (user.first_name.charAt(0) + user.last_name.charAt(0)).toUpperCase()
-    : ''
-
+function SideNav() {
+  const { t } = useI18n()
+  const [active, setActive] = useState<string>('profile')
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <nav aria-labelledby="account-nav-title" className="hidden lg:flex flex-col gap-1 w-[240px] shrink-0 lg:sticky lg:top-28">
+      <h1 id="account-nav-title" className="font-heading text-d-h4 text-text mb-2">{t('account.title')}</h1>
+      {SECTIONS.map(({ id, icon: Icon, label }) => {
+        const cls = clsx(
+          'flex items-center gap-2.5 rounded-[10px] px-3 py-2.5 text-d-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+          active === id ? 'bg-surface2 text-text' : 'text-muted hover:text-text hover:bg-surface2',
+        )
+        const icon = <Icon size={18} aria-hidden className={active === id ? 'text-primary' : ''} />
+        return id === 'notifications' ? (
+          <Link key={id} to="/notifications" className={cls}>{icon}{t(label)}</Link>
+        ) : (
+          <a key={id} href={`#${id}`} onClick={() => setActive(id)} aria-current={active === id ? 'location' : undefined} className={cls}>{icon}{t(label)}</a>
+        )
+      })}
+    </nav>
+  )
+}
 
-      <div className="bg-white border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
-          <div className="flex flex-col sm:flex-row sm:items-end gap-5">
-
-            <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-extrabold shrink-0"
-              style={{ background: '#A01E0A' }}
-            >
-              {initials}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-extrabold text-gray-900 leading-tight">
-                {user?.first_name} {user?.last_name}
-              </h1>
-              <p className="text-sm text-gray-500 mt-0.5">{user?.email}</p>
-            </div>
-
-          </div>
-
-          <div className="flex gap-1 mt-7 -mb-px">
-            {TABS.map(({ id, label, icon }) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                className={[
-                  'flex items-center gap-1.5 px-4 py-2.5 text-[13px] font-semibold rounded-t-xl border-b-2 transition-colors duration-150',
-                  tab === id
-                    ? 'text-[#A01E0A] border-[#A01E0A] bg-white'
-                    : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-50',
-                ].join(' ')}
-              >
-                {icon} {label}
-              </button>
-            ))}
-          </div>
+/** Phones: the account list (110:827); each row opens one part on its own. */
+function PhoneIndex() {
+  const { t, lang } = useI18n()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  if (!user) return null
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3 mb-1">
+        <Avatar name={user.name || user.email || '?'} size="lg" decorative className="!w-[52px] !h-[52px] !text-[19px] !bg-yellow !text-banner" />
+        <div className="min-w-0">
+          <h1 className="font-heading text-d-h4 text-text truncate">{user.name || user.email}</h1>
+          <p className="text-d-body-s text-muted truncate">{user.phone_number || user.email}</p>
         </div>
       </div>
+      {SECTIONS.map(({ id, icon: Icon, label, sub }) => (
+        <Link
+          key={id}
+          to={id === 'notifications' ? '/notifications' : `/profile?section=${id}`}
+          className="flex items-center gap-3 rounded-card border border-border px-4 py-3.5 hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          <Icon size={18} aria-hidden className="shrink-0 text-primary" />
+          <span className="flex-1 min-w-0">
+            <span className="block text-d-label text-text">{t(label)}</span>
+            <span className="block text-d-cap text-muted">{sub ? t(sub) : t(lang === 'en' ? 'lang.en' : 'lang.tn')}</span>
+          </span>
+          <ChevronRight size={18} aria-hidden className="shrink-0 text-muted" />
+        </Link>
+      ))}
+      <button type="button" onClick={() => logout().then(() => navigate('/'))} className="self-start mt-1 text-d-label text-primary hover:underline underline-offset-4 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        {t('account.signOut')}
+      </button>
+    </div>
+  )
+}
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 pb-16">
-        {tab === 'profile' && <ProfileTab />}
+export default function Profile() {
+  const { t } = useI18n()
+  usePageTitle(t('account.title'))
+  const wide = useMediaQuery('(min-width: 1024px)')
+  const [params] = useSearchParams()
+  const section = params.get('section') as Section | null
 
-        {tab === 'security' && <SecurityTab />}
-
-        {tab === 'teams' && (
-          <PlaceholderPanel
-            icon={<Users size={28} />}
-            title="Teams coming soon"
-            body="You'll be able to form and join teams for hackathons and challenges here. Team collaboration features are on their way."
-          />
+  // Phones show the list first, then one part at a time.
+  if (!wide) {
+    return (
+      <div className="px-4 py-5">
+        {!section ? (
+          <PhoneIndex />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <Link to="/profile" className="self-start inline-flex items-center gap-1.5 font-heading text-d-h4 text-text rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              <ChevronLeft size={20} aria-hidden /> {t('account.back')}
+            </Link>
+            {section === 'security' ? (
+              <>
+                <SecurityCard />
+                <DeleteRow />
+              </>
+            ) : section === 'language' ? (
+              <Card id="language-card" title={t('account.language')}><LanguageRow /></Card>
+            ) : (
+              <ProfileCard />
+            )}
+          </div>
         )}
+      </div>
+    )
+  }
 
-        {tab === 'preferences' && (
-          <PlaceholderPanel
-            icon={<Bell size={28} />}
-            title="Preferences coming soon"
-            body="Notification preferences, communication settings, and portal customisation options will appear here."
-          />
-        )}
-
-        {tab === 'activity' && (
-          <PlaceholderPanel
-            icon={<CheckCircle2 size={28} />}
-            title="Activity coming soon"
-            body="A timeline of your submissions, status changes, team activity, and portal interactions will appear here."
-          />
-        )}
+  return (
+    <div className="max-w-[1200px] mx-auto px-6 pt-10 pb-[72px] flex gap-10 items-start">
+      <SideNav />
+      <div className="flex-1 min-w-0 flex flex-col gap-5">
+        <ProfileCard />
+        <SecurityCard />
+        <DeleteRow />
       </div>
     </div>
   )

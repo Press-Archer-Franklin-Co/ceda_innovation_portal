@@ -183,6 +183,8 @@ export const innovatorEn = {
   'track.messagesEmpty': 'No messages yet. If an officer has a question, it shows here.',
   'track.messagesOff': 'Messages are not switched on yet. An officer will contact you by SMS or email.',
   'track.replyBy': 'Reply by {date}',
+  'track.seenBy': 'Seen by {name} · {time}',
+  'track.typing': '{name} is typing…',
   'track.replyLabel': 'Your reply',
   'track.replyPlaceholder': 'Write your reply',
   'track.send': 'Send reply',
@@ -405,6 +407,8 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'track.messagesEmpty': 'Ga go ise go nne le melaetsa. Fa motlhankedi a na le potso, e tla bonala fa.',
   'track.messagesOff': 'Melaetsa ga e ise e bulwe. Motlhankedi o tla ikgolaganya le wena ka SMS kgotsa imeile.',
   'track.replyBy': 'Araba pele ga {date}',
+  'track.seenBy': 'E bonwe ke {name} · {time}', // TODO tn-review
+  'track.typing': '{name} o a kwala…', // TODO tn-review
   'track.replyLabel': 'Karabo ya gago',
   'track.replyPlaceholder': 'Kwala karabo ya gago',
   'track.send': 'Romela karabo',

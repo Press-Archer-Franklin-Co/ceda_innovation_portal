@@ -8,6 +8,7 @@ import { policiesTn } from './policies'
 import { a11yTn } from './a11y'
 import { statusTn } from './status'
 import { inviteTn } from './invite'
+import { accountTn } from './account'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -436,6 +437,7 @@ const tn: Record<StringKey, string> = {
   ...a11yTn,
   ...statusTn,
   ...inviteTn,
+  ...accountTn,
 }
 
 export default tn
