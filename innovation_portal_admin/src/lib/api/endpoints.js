@@ -165,6 +165,18 @@ export const analytics = {
   programPipeline:     (progId) => client.get(`/api/analytics/programs/${progId}/pipeline/`),
   programSummary:      (progId) => client.get(`/api/analytics/programs/${progId}/summary/`),
   formResponses:       (progId, params) => client.get(`/api/analytics/programs/${progId}/form-responses/`, params),
+  // B7 (R-35): one filter row {from, to, program, sector, district, channel} for every call. dashboard.view.
+  kpis:          (filters)           => client.get('/api/analytics/kpis/', filters),
+  series:        (filters, interval) => client.get('/api/analytics/submissions-series/', { ...filters, interval }),
+  pipeline:      (filters)           => client.get('/api/analytics/pipeline/', filters),
+  funnel:        (filters)           => client.get('/api/analytics/funnel/', filters),
+  sources:       (filters)           => client.get('/api/analytics/sources/', filters),
+  sectors:       (filters)           => client.get('/api/analytics/sectors/', filters),
+  inclusion:     (filters)           => client.get('/api/analytics/inclusion/', filters),
+  // Exports need reports.export. The download needs the sign-in, so it is fetched as a blob, not opened as a link.
+  createExport:  (body)              => client.post('/api/analytics/exports/', body),
+  exportStatus:  (id)                => client.get(`/api/analytics/exports/${id}/`),
+  downloadExport: (id)               => client.getBlob(`/api/analytics/exports/${id}/download/`),
 }
 
 export const audit = {
@@ -340,4 +352,10 @@ export const platform = {
   deactivate:        (id)        => client.post(`/api/platform/integrations/${id}/deactivate/`, {}),
   history:           (id)        => client.get(`/api/platform/integrations/${id}/history/`),
   startSsoTrial:     (id)        => client.post(`/api/platform/integrations/${id}/sso-trial/start/`, {}),
+}
+
+// Sectors and districts (public lists), for filter rows. Names arrive in the asked language.
+export const reference = {
+  sectors:   (lang) => client.get('/api/reference/sectors/', { lang }),
+  districts: (lang) => client.get('/api/reference/districts/', { lang }),
 }

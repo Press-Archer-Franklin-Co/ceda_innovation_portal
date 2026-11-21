@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
@@ -20,7 +20,7 @@ const Submissions = lazy(() => import('./pages/submissions/Submissions'))
 const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail'))
 const MyWork = lazy(() => import('./pages/assignments/MyWork'))
 const EvaluationForm = lazy(() => import('./pages/evaluation/EvaluationForm'))
-const Analytics = lazy(() => import('./pages/analytics/Analytics'))
+const Reports = lazy(() => import('./pages/reports/Reports'))
 const Settings = lazy(() => import('./pages/settings/Settings'))
 const AssignmentDetail = lazy(() => import('./pages/assignments/AssignmentDetail'))
 const DocumentPage = lazy(() => import('./pages/documents/DocumentPage'))
@@ -121,9 +121,11 @@ export default function App() {
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
                   <Route path="/admin/roles"                   element={<ErrorBoundary><RolesPermissions /></ErrorBoundary>} />
                 </Route>
-                <Route element={<CapabilityRoute need="analytics.view" />}>
-                  <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
+                <Route element={<CapabilityRoute need={['dashboard.view', 'analytics.view']} />}>
+                  <Route path="/reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
                 </Route>
+                {/* U4: Analytics became Reports; old links (and ?tab=responses) still land in the right place. */}
+                <Route path="/analytics" element={<OldAnalyticsLink />} />
                 <Route element={<CapabilityRoute need="users.manage" />}>
                   <Route path="/users"     element={<ErrorBoundary><Users /></ErrorBoundary>} />
                 </Route>
@@ -182,4 +184,13 @@ export default function App() {
       </AuthProvider>
     </QueryClientProvider>
   )
+}
+
+function OldAnalyticsLink() {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  if (params.get('tab') === 'responses') params.set('tab', 'answers')
+  else params.delete('tab')
+  const query = params.toString()
+  return <Navigate to={`/reports${query ? `?${query}` : ''}`} replace />
 }

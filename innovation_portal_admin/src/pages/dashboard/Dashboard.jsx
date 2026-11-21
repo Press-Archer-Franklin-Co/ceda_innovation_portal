@@ -24,6 +24,7 @@ import {
   useMyAssignedEvaluations,
 } from '../../lib/queries/dashboard'
 import { cn } from '../../lib/cn'
+import StaffOverview from './StaffOverview'
 
 
 function todayLabel() {
@@ -548,9 +549,11 @@ function OfficerDashboard({ user }) {
 
 
 export default function Dashboard() {
-  const { user } = useAuth()
+  const { user, can } = useAuth()
   const judgeOnly = useJudgeOnly()
 
   if (judgeOnly) return <JudgeDashboard user={user} />
+  // 3.1 (U4): the B7 numbers for people who may see them; others keep their work overview.
+  if (can('dashboard.view')) return <StaffOverview />
   return <OfficerDashboard user={user} />
 }
