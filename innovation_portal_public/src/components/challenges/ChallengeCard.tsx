@@ -7,6 +7,7 @@ import { buttonClasses } from '../ui/Button'
 import { useI18n } from '../../i18n'
 import { formatDate } from '../../lib/dates'
 import type { ChallengeCard as Challenge } from '../../services/publicContent.service'
+import { SUBMIT_PATH } from '../../lib/paths'
 
 // Figma 1.1 › Challenges › Challenge card (10:375). Used on the home page and the challenges list (1.7).
 // The whole card is a link; on hover it lifts with an orange outline. Top bar: orange when open,
@@ -107,7 +108,7 @@ export function GeneralIdeaCard({ className }: { className?: string }) {
       </span>
       <h3 className="text-d-h4 font-heading">{t('ch.generalTitle')}</h3>
       <p className="text-d-body-s text-banner-muted">{t('ch.generalBody')}</p>
-      <Link to="/innovate" className={buttonClasses({ variant: 'accent', size: 'sm', className: 'self-start mt-auto' })}>
+      <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'accent', size: 'sm', className: 'self-start mt-auto' })}>
         {t('ch.generalCta')}
         <ArrowRight size={16} aria-hidden />
       </Link>

@@ -1,3 +1,6 @@
+import LegalPage from '../components/legal/LegalPage'
+import { useI18n } from '../i18n'
+
 const CLAUSES = [
   {
     n: 1,
@@ -42,46 +45,18 @@ const CLAUSES = [
 ]
 
 export default function TermsOfAgreement() {
+  const { t } = useI18n()
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-16">
-
-      <div className="mb-10">
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <strong>Draft for demonstration.</strong> This text is a placeholder and has not been approved by CEDA. The official version will replace it before launch.
-        </div>
-        <p className="eyebrow mb-3">Legal</p>
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-4">
-          Innovation Portal<br />Terms of Agreement
-        </h1>
-        <div className="h-1 w-12 rounded-full" style={{ background: '#A01E0A' }} />
-      </div>
-
-      <div
-        className="rounded-xl px-5 py-4 mb-10 text-sm font-semibold"
-        style={{ background: '#fff3cd', color: '#856404', border: '1px solid #ffc107' }}
-      >
-        PLEASE NOTE THAT BY SUBMITTING YOUR IDEA YOU AGREE TO THESE TERMS
-      </div>
-
-      <ol className="space-y-6">
+    <LegalPage id="agreement-title" title={t('legal.agreementTitle')}>
+      <p className="rounded-control border border-border bg-surface2 px-4 py-3 text-d-label text-text">{t('legal.agreementNote')}</p>
+      <ol className="flex flex-col gap-5">
         {CLAUSES.map(({ n, text }) => (
-          <li key={n} className="flex gap-4">
-            <span
-              className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white mt-0.5"
-              style={{ background: '#A01E0A' }}
-            >
-              {n}
-            </span>
-            <p className="text-[15px] text-gray-700 leading-relaxed">{text}</p>
+          <li key={n} className="flex gap-3">
+            <span aria-hidden className="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center text-d-label-s shrink-0">{n}</span>
+            <p className="text-d-body text-text">{text}</p>
           </li>
         ))}
       </ol>
-
-      <div className="mt-12 pt-8 border-t border-gray-100">
-        <p className="text-xs text-gray-400">
-          Citizen Entrepreneurial Development Agency (CEDA)
-        </p>
-      </div>
-    </div>
+    </LegalPage>
   )
 }

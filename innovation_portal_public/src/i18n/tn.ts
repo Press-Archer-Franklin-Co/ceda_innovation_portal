@@ -2,6 +2,7 @@
 // First draft: needs review by a Setswana speaker at CEDA before launch.
 import type { StringKey } from './en'
 import { innovatorTn } from './innovator'
+import { pagesTn } from './pages'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -77,6 +78,9 @@ const tn: Record<StringKey, string> = {
   'home.check1': 'Ga go duelelwe', // TODO tn-review
   'home.check2': 'Latela mo webosaeteng, WhatsApp kgotsa USSD', // TODO tn-review
   'home.check3': 'Motlhankedi wa CEDA o a araba', // TODO tn-review
+  'submit.headline': 'Abelana kakanyo ya gago le CEDA', // TODO tn-review
+  'submit.highlight': 'kakanyo ya gago', // TODO tn-review
+  'submit.text': 'Re bolelele ka yona mo metsotsong e mebedi. Ga o tlhoke akhaonto go simolola.', // TODO tn-review
   'qs.title': 'Simolola kakanyo ya gago ka metsotso e le 2', // TODO tn-review
   'qs.step': 'Kgato {n} go 2', // TODO tn-review
   'qs.intro': 'Ditlhaloso tsa motheo fela jaanong. O ka oketsa dintlha, ditshwantsho le dikwalo morago.', // TODO tn-review
@@ -421,6 +425,7 @@ const tn: Record<StringKey, string> = {
   'tabs.news': 'Dikgang',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorTn,
+  ...pagesTn,
 }
 
 export default tn

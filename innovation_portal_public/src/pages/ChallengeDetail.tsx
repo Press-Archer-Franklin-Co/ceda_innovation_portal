@@ -15,6 +15,7 @@ import { useAsync } from '../lib/useAsync'
 import { formatDate } from '../lib/dates'
 import watermarkUrl from '../assets/brand/ceda-watermark.png'
 import { publicContent, ChallengeDetail as Detail } from '../services/publicContent.service'
+import { SUBMIT_PATH } from '../lib/paths'
 
 // Screen 1.8 Challenge detail (Figma 14:641 website, 14:962 phone). GET /api/programs/public/{slug}/ (B5).
 // Everything needed to decide on one page: the problem, who can enter, support, how entries are judged (with
@@ -164,7 +165,7 @@ export default function ChallengeDetail() {
     )
   }
 
-  const enterTo = `/home?challenge=${encodeURIComponent(c.id)}#hero-title`
+  const enterTo = `${SUBMIT_PATH}?challenge=${encodeURIComponent(c.id)}`
   const sector = c.sector ?? c.sectors[0]
   const facts = [
     c.support_headline && { icon: Trophy, label: t('chd.support'), value: c.support_headline },
