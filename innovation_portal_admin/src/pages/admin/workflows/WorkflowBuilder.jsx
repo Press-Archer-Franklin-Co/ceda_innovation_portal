@@ -1,26 +1,19 @@
-import React, { useDeferredValue, useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import {
-  ArrowLeft,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-  Clock3,
-  FileSearch,
-  Filter,
-  GitBranch,
-  Plus,
-  Save,
-  Search,
-  Trash2,
-  Users,
-} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowDown, ArrowUp, CheckCircle2, Eye, FileText, MessageCircle, Plus, Star, Trash2 } from 'lucide-react'
 import PageHeader from '../../../components/ui/PageHeader'
-import SectionCard from '../../../components/ui/SectionCard'
-import ErrorState from '../../../components/ui/ErrorState'
+import Button from '../../../components/ui/Button'
+import Input from '../../../components/ui/Input'
+import Select from '../../../components/ui/Select'
+import Textarea from '../../../components/ui/Textarea'
+import Tag from '../../../components/ui/Tag'
 import StatusPill from '../../../components/ui/StatusPill'
-import Tabs from '../../../components/ui/Tabs'
-import ActionDrawer from '../../../components/assignments/ActionDrawer'
+import Skeleton from '../../../components/ui/Skeleton'
+import EmptyState from '../../../components/ui/EmptyState'
+import ErrorState from '../../../components/ui/ErrorState'
+import { Checkbox, Toggle } from '../../../components/ui/Choice'
+import { useConfirm } from '../../../components/ui/confirm'
+import { useToast } from '../../../components/ui/toast'
 import { cn } from '../../../lib/cn'
 import {
   useActivateWorkflowDef,
@@ -33,45 +26,29 @@ import {
   useWorkflowDefinition,
   useWorkflowSteps,
 } from '../../../lib/queries/workflowBuilder'
-import {
-  useMarkingCriteriaList,
-  useSetStageConfig,
-  useStageConfig,
-} from '../../../lib/queries/evaluations'
-import { useConfirm } from '../../../components/ui/confirm'
-import { Toggle } from '../../../components/ui/Choice'
+import { useMarkingCriteriaList, useSetStageConfig, useStageConfig } from '../../../lib/queries/evaluations'
 import { useT } from '../../../i18n/context'
 
-const ROLE_OPTIONS = ['', 'innovator', 'innovation_officer', 'innovation_manager', 'judge', 'specialist', 'mentor', 'administrator']
+// 3.21 Workflow builder (Figma 143:1902 website, 143:2270 phone). A restyle of the step builder: same steps,
+// same save logic, laid out as the frame. ① A palette of steps to add. ② Each step card shows who has it, what
+// they do and which marking criteria it uses. ③ Who has it (role and how many). ④ What they do (the buttons they
+// get, and whether the idea moves on by itself). ⑤ Marking criteria from 3.7 with the pass mark. ⑥ Time limit.
+// A plain-words summary sits under the steps. Phone: read the flow; building is done on a computer.
+
+const ROLE_OPTIONS = ['innovator', 'innovation_officer', 'innovation_manager', 'judge', 'specialist', 'mentor', 'administrator']
 const EXECUTION_OPTIONS = ['sequential', 'parallel_all', 'parallel_any', 'parallel_minimum']
-const ASSIGNMENT_ROLE_OPTIONS = ['', 'reviewer', 'officer', 'manager', 'judge', 'specialist', 'mentor', 'analyst', 'staff', 'exo']
-const ACTION_OPTIONS = ['approve', 'reject', 'return']
-const STATUS_OPTIONS = ['', 'submitted', 'screening', 'under_review', 'assigned_to_judges', 'under_judging', 'approved', 'rejected', 'finalist', 'winner', 'selected_for_hackathon']
-const OVERVIEW_TABS = [
-  { key: 'overview', label: 'Workflow Overview' },
-  { key: 'steps', label: 'Workflow Steps' },
-]
-const STEP_TYPE_FILTERS = [
-  { value: 'all', label: 'All steps' },
-  { value: 'assignment', label: 'Assignment steps' },
-  { value: 'evaluation', label: 'Scoring steps' },
-  { value: 'inactive', label: 'Inactive steps' },
-]
-const STATUS_FILTER_OPTIONS = [
-  { value: 'all', label: 'Any status' },
-  { value: 'active', label: 'Active only' },
-  { value: 'inactive', label: 'Inactive only' },
-]
-const HEALTH_FILTER_OPTIONS = [
-  { value: 'all', label: 'Any setup' },
-  { value: 'attention', label: 'Needs setup' },
-  { value: 'ready', label: 'Ready' },
-]
-const AGGREGATION_OPTIONS = [
-  { value: 'average', label: 'Average score' },
-  { value: 'min', label: 'Lowest score' },
-  { value: 'max', label: 'Highest score' },
-  { value: 'median', label: 'Median score' },
+const ASSIGNMENT_ROLE_OPTIONS = ['reviewer', 'officer', 'manager', 'judge', 'specialist', 'mentor', 'analyst', 'staff', 'exo']
+const ACTION_OPTIONS = ['approve', 'return', 'reject']
+const STATUS_OPTIONS = ['submitted', 'screening', 'under_review', 'assigned_to_judges', 'under_judging', 'approved', 'rejected', 'finalist', 'winner', 'selected_for_hackathon']
+const AGGREGATION_OPTIONS = ['average', 'min', 'max', 'median']
+
+// ① The palette: each kind adds a step with sensible settings that can then be changed.
+const PALETTE = [
+  { kind: 'form', icon: FileText, preset: { role_required: 'innovator', actions_allowed: ['approve'] } },
+  { kind: 'officer', icon: Eye, preset: { role_required: 'innovation_officer', requires_assignment: true, assignment_role: 'officer', minimum_assignments: 1, actions_allowed: ['approve', 'reject', 'return'] } },
+  { kind: 'panel', icon: Star, preset: { role_required: 'judge', requires_assignment: true, assignment_role: 'judge', minimum_assignments: 3, requires_evaluation: true, minimum_evaluations: 3, execution_mode: 'parallel_all', actions_allowed: ['approve', 'reject'] } },
+  { kind: 'askInfo', icon: MessageCircle, preset: { role_required: 'innovation_officer', actions_allowed: ['approve', 'return'] } },
+  { kind: 'decision', icon: CheckCircle2, preset: { role_required: 'innovation_manager', actions_allowed: ['approve', 'reject'] } },
 ]
 
 function slugify(value) {
@@ -189,195 +166,94 @@ function reorderSteps(items, movingId, targetPosition) {
   return reordered.map((step, index) => ({ ...step, order: index + 1 }))
 }
 
-function formatExecutionMode(value) {
-  return String(value || 'sequential')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
-}
 
-function formatStatus(value) {
-  if (!value) return 'No status'
-  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
-}
-
+/** Setup problems as i18n keys (shown on the card and in the panel). */
 function getStepIssues(step) {
   const issues = []
-  if (!step.name?.trim()) issues.push('Add a step name')
-  if (!step.code?.trim()) issues.push('Add a step code')
-  if (!step.actions_allowed?.length) issues.push('Choose at least one outcome')
-  if (step.requires_assignment && !step.assignment_role) issues.push('Choose who this step is assigned to')
-  if (step.requires_assignment && Number(step.minimum_assignments || 0) < 1) issues.push('Assignment count must be at least 1')
-  if (step.requires_evaluation && Number(step.minimum_evaluations || 0) < 1) issues.push('Scoring count must be at least 1')
+  if (!step.name?.trim()) issues.push('wfb.issue.name')
+  if (!step.actions_allowed?.length) issues.push('wfb.issue.buttons')
+  if (step.requires_assignment && !step.assignment_role) issues.push('wfb.issue.who')
+  if (step.requires_assignment && Number(step.minimum_assignments || 0) < 1) issues.push('wfb.issue.howMany')
+  if (step.requires_evaluation && Number(step.minimum_evaluations || 0) < 1) issues.push('wfb.issue.scorers')
   return issues
 }
 
-function SummaryStat({ icon: Icon, label, value, tone = 'default' }) {
-  const toneClass = {
-    default: 'text-ceda-forest bg-ceda-green-pale/60',
-    muted: 'text-ceda-muted bg-ceda-surface',
-    accent: 'text-blue-700 bg-blue-50',
+const roleWord = (t, role) => (role ? t(`wfb.role.${role}`) : t('wfb.anyone'))
+
+function whoLine(t, step) {
+  if (step.requires_assignment) {
+    const n = Number(step.minimum_assignments || 1)
+    return t('wfb.whoAssigned', { n, role: t(`wfb.assignRole.${step.assignment_role || 'reviewer'}`) })
   }
+  return roleWord(t, step.role_required)
+}
 
+function doesLine(t, step) {
+  const buttons = ACTION_OPTIONS.filter((a) => (step.actions_allowed ?? []).includes(a)).map((a) => t(`wfb.action.${a}`))
+  return buttons.length ? buttons.join(', ') : t('wfb.noButtons')
+}
+
+/** The plain-words summary under the steps. */
+function plainWords(t, steps) {
+  if (!steps.length) return ''
+  return steps
+    .filter((s) => s.is_active !== false)
+    .map((s, i) => t(i === 0 ? 'wfb.plainFirst' : 'wfb.plainNext', { name: s.name, who: whoLine(t, s), scoring: s.requires_evaluation ? t('wfb.plainScored') : '' }))
+    .join(' ')
+}
+
+function StepCard({ step, index, count, selected, onSelect, onMove, busy }) {
+  const t = useT()
+  const issues = getStepIssues(step)
+  // The step list does not carry the stage config; scoring steps read theirs (cached, shared with the panel).
+  const { data: stageConfig } = useStageConfig(step.requires_evaluation ? step.id : null)
+  const criteriaName = stageConfig?.marking_criteria_detail?.title
+  const passMark = stageConfig?.threshold_pass_above != null ? Math.round(Number(stageConfig.threshold_pass_above)) : null
   return (
-    <div className="rounded-2xl border border-ceda-border bg-white px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', toneClass[tone] ?? toneClass.default)}>
-          <Icon size={17} />
-        </div>
-        <div>
-          <p className="text-lg font-semibold text-ceda-dark leading-none">{value}</p>
-          <p className="mt-1 text-xs text-ceda-muted">{label}</p>
+    <li className="relative">
+      {index > 0 && <span aria-hidden className="absolute -top-3 left-1/2 h-3 w-px bg-border" />}
+      <div className={cn('rounded-card border bg-surface p-4', selected ? 'border-primary ring-1 ring-primary' : 'border-border')}>
+        <div className="flex items-start gap-3">
+          <span aria-hidden className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-banner text-[12px] font-bold text-on-banner">{index + 1}</span>
+          <button type="button" onClick={onSelect} aria-pressed={selected} className="min-w-0 flex-1 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-[15px] font-bold text-text">{step.name || t('wfb.untitled')}</span>
+              {step.is_active === false && <Tag tone="neutral">{t('wfb.off')}</Tag>}
+              {issues.length > 0 && <Tag tone="amber">{t('wfb.needsSetup')}</Tag>}
+            </span>
+            <dl className="mt-2 grid grid-cols-[64px_1fr] gap-x-3 gap-y-1 text-[13px]">
+              <dt className="text-muted">{t('wfb.who')}</dt>
+              <dd className="text-text">{whoLine(t, step)}</dd>
+              <dt className="text-muted">{t('wfb.does')}</dt>
+              <dd className="text-text">{doesLine(t, step)}</dd>
+              {step.requires_evaluation && (
+                <>
+                  <dt className="text-muted">{t('wfb.marking')}</dt>
+                  <dd className="text-text">{criteriaName ? (passMark != null ? t('wfb.markingValue', { name: criteriaName, pass: passMark }) : criteriaName) : t('wfb.markingNotSet')}</dd>
+                </>
+              )}
+            </dl>
+          </button>
+          <span className="flex shrink-0 flex-col gap-1">
+            <button type="button" disabled={busy || index === 0} onClick={() => onMove(index)} aria-label={t('wfb.moveUp', { name: step.name })} className="flex h-7 w-7 items-center justify-center rounded-control text-muted hover:bg-surface2 disabled:opacity-40">
+              <ArrowUp size={15} aria-hidden />
+            </button>
+            <button type="button" disabled={busy || index === count - 1} onClick={() => onMove(index + 2)} aria-label={t('wfb.moveDown', { name: step.name })} className="flex h-7 w-7 items-center justify-center rounded-control text-muted hover:bg-surface2 disabled:opacity-40">
+              <ArrowDown size={15} aria-hidden />
+            </button>
+          </span>
         </div>
       </div>
-    </div>
+    </li>
   )
 }
 
-function StepChip({ children, tone = 'default' }) {
-  const toneClass = {
-    default: 'border-ceda-border bg-ceda-surface text-ceda-muted',
-    green: 'border-ceda-green/20 bg-ceda-green-pale text-ceda-forest',
-    amber: 'border-amber-200 bg-amber-50 text-amber-700',
-    blue: 'border-blue-200 bg-blue-50 text-blue-700',
-    red: 'border-ceda-red/20 bg-ceda-red-pale text-ceda-red',
-  }
-
-  return (
-    <span className={cn('inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium', toneClass[tone] ?? toneClass.default)}>
-      {children}
-    </span>
-  )
-}
-
-function WorkflowMetaCard({ definition, meta, setMeta, onSave, saving }) {
-  return (
-    <SectionCard
-      title="Workflow Details"
-      subtitle="Edit workflow-level information here. Steps are managed separately in the Workflow Steps tab."
-      actions={(
-        <button className="btn-secondary btn-sm" disabled={saving} onClick={onSave}>
-          <Save size={14} /> Save Details
-        </button>
-      )}
-    >
-      <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="label">Name</label>
-            <input className="input" value={meta.name} onChange={(e) => setMeta((prev) => ({ ...prev, name: e.target.value }))} />
-          </div>
-          <div>
-            <label className="label">Code</label>
-            <input className="input font-mono text-sm" value={meta.code} onChange={(e) => setMeta((prev) => ({ ...prev, code: slugify(e.target.value) }))} />
-          </div>
-          <div>
-            <label className="label">Workflow Type</label>
-            <input className="input" value={meta.workflow_type} onChange={(e) => setMeta((prev) => ({ ...prev, workflow_type: e.target.value }))} placeholder="e.g. idea, hackathon" />
-          </div>
-          <div>
-            <label className="label">Program</label>
-            <div className="rounded-xl border border-ceda-border bg-ceda-surface px-4 py-3 text-sm text-ceda-dark">
-              {definition.program_detail?.title ?? 'Not linked'}
-            </div>
-          </div>
-          <div className="md:col-span-2">
-            <label className="label">Description</label>
-            <textarea className="input min-h-28 resize-y" value={meta.description} onChange={(e) => setMeta((prev) => ({ ...prev, description: e.target.value }))} />
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-ceda-border bg-ceda-surface/40 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ceda-muted">Current Snapshot</p>
-          <div className="mt-4 space-y-3">
-            <div className="rounded-xl border border-ceda-border bg-white px-4 py-3">
-              <p className="text-xs text-ceda-muted">Version</p>
-              <p className="mt-1 text-sm font-medium text-ceda-dark">v{definition.version ?? 1}</p>
-            </div>
-            <div className="rounded-xl border border-ceda-border bg-white px-4 py-3">
-              <p className="text-xs text-ceda-muted">Status</p>
-              <p className="mt-1 text-sm font-medium text-ceda-dark">{formatStatus(definition.status)}</p>
-            </div>
-            <div className="rounded-xl border border-ceda-border bg-white px-4 py-3">
-              <p className="text-xs text-ceda-muted">Active Program</p>
-              <p className="mt-1 text-sm font-medium text-ceda-dark">{definition.program_detail?.title ?? 'Not linked'}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </SectionCard>
-  )
-}
-
-function ActiveFilterChips({ filters, onClear }) {
-  const chips = []
-  if (filters.stepType !== 'all') chips.push({ key: 'stepType', label: STEP_TYPE_FILTERS.find((item) => item.value === filters.stepType)?.label })
-  if (filters.status !== 'all') chips.push({ key: 'status', label: STATUS_FILTER_OPTIONS.find((item) => item.value === filters.status)?.label })
-  if (filters.health !== 'all') chips.push({ key: 'health', label: HEALTH_FILTER_OPTIONS.find((item) => item.value === filters.health)?.label })
-
-  if (chips.length === 0) return null
-
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {chips.map((chip) => (
-        <button
-          key={chip.key}
-          type="button"
-          className="inline-flex items-center rounded-full border border-ceda-border bg-ceda-surface px-3 py-1 text-xs text-ceda-muted hover:bg-white"
-          onClick={() => onClear(chip.key)}
-        >
-          {chip.label} ×
-        </button>
-      ))}
-    </div>
-  )
-}
-
-function CriteriaLinkField({ value, detail, onChange, disabled }) {
-  const { data: raw } = useMarkingCriteriaList({ active_only: true })
-  const criteria = Array.isArray(raw) ? raw : raw?.data ?? []
-
-  return (
-    <div className="rounded-2xl border border-ceda-border bg-ceda-surface/20 p-4 space-y-4">
-      <div>
-        <p className="text-sm font-medium text-ceda-dark">Linked Criteria</p>
-        <p className="mt-1 text-xs text-ceda-muted">Choose one criteria set from the library for this step. Create or edit criteria on the dedicated criteria page.</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 items-end">
-        <div>
-          <label className="label">Criteria Set</label>
-          <select className="input" value={value} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
-            <option value="">No criteria linked</option>
-            {criteria.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-        </div>
-        <a href="/marking-criteria" target="_blank" rel="noreferrer" className="btn-secondary btn-sm">
-          Manage Criteria
-        </a>
-      </div>
-
-      <div className="rounded-xl border border-ceda-border bg-white px-4 py-3">
-        <p className="text-xs text-ceda-muted">Current Link</p>
-        <p className="mt-1 text-sm font-medium text-ceda-dark">{detail?.title || 'No criteria linked'}</p>
-        {detail ? (
-          <p className="mt-1 text-xs text-ceda-muted">
-            {detail.items?.length ?? 0} item{(detail.items?.length ?? 0) === 1 ? '' : 's'} · Max score {detail.total_max_score}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-ceda-muted">This step will not have scoring criteria until a criteria set is linked.</p>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelete, onDirtyChange }) {
+/** ③ to ⑥: the selected step. Same fields and save as the old drawer, grouped as the frame. */
+function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
   const t = useT()
   const { data: stageConfig } = useStageConfig(step?.id)
+  const criteriaList = useMarkingCriteriaList({ active_only: true })
+  const criteria = Array.isArray(criteriaList.data) ? criteriaList.data : criteriaList.data?.data ?? criteriaList.data?.results ?? []
   const [draft, setDraft] = useState(() => stepToDraft(step ?? {}))
   const [stageDraft, setStageDraft] = useState(() => stageConfigToDraft(null))
   const payload = buildStepPayload(draft)
@@ -387,436 +263,138 @@ function StepEditorDrawer({ step, open, busy, allSteps, onClose, onSave, onDelet
   const stepDirty = !!step && !isPayloadEqual(payload, initialPayload)
   const stageDirty = !!step && !isPayloadEqual(currentStagePayload, initialStagePayload)
   const isDirty = stepDirty || stageDirty
-  const currentIndex = step ? allSteps.findIndex((item) => item.id === step.id) : -1
-  const previousStep = currentIndex > 0 ? allSteps[currentIndex - 1] : null
-  const nextStep = currentIndex >= 0 && currentIndex < allSteps.length - 1 ? allSteps[currentIndex + 1] : null
 
-  useEffect(() => {
-    if (!step) return
-    setDraft(stepToDraft(step))
-  }, [step])
-
-  useEffect(() => {
-    setStageDraft(stageConfigToDraft(stageConfig ?? null))
-  }, [stageConfig, step?.id])
-
+  useEffect(() => { if (step) setDraft(stepToDraft(step)) }, [step])
+  useEffect(() => { setStageDraft(stageConfigToDraft(stageConfig ?? null)) }, [stageConfig, step?.id])
   useEffect(() => {
     onDirtyChange?.(isDirty)
     return () => onDirtyChange?.(false)
   }, [isDirty, onDirtyChange])
 
   if (!step) return null
+  const set = (patch) => setDraft((prev) => ({ ...prev, ...patch }))
+  const setStage = (patch) => setStageDraft((prev) => ({ ...prev, ...patch }))
+  const scoring = stageDraft.scoring_mode === 'criteria'
+  const issues = getStepIssues({ ...step, ...payload })
+  const chosenCriteria = criteria.find((c) => c.id === stageDraft.marking_criteria) ?? stageConfig?.marking_criteria_detail ?? null
 
-  const issues = getStepIssues({ ...(step ?? {}), ...payload })
-  const linkedCriteriaMissing = stageDraft.scoring_mode === 'criteria' && !stageDraft.marking_criteria
-
-  const toggleAction = (actionKey) => {
-    setDraft((prev) => ({
-      ...prev,
-      actions_allowed: prev.actions_allowed.includes(actionKey)
-        ? prev.actions_allowed.filter((item) => item !== actionKey)
-        : normaliseActions([...prev.actions_allowed, actionKey]),
-    }))
+  const toggleAction = (key) => set({ actions_allowed: draft.actions_allowed.includes(key) ? draft.actions_allowed.filter((a) => a !== key) : normaliseActions([...draft.actions_allowed, key]) })
+  const setScoring = (on) => {
+    setStage({ scoring_mode: on ? 'criteria' : 'manual', marking_criteria: on ? stageDraft.marking_criteria : '' })
+    set({ requires_evaluation: on, minimum_evaluations: on ? Number(stageDraft.required_reviewer_count) || 1 : 0 })
   }
 
   return (
-    <ActionDrawer
-      open={open}
-      onClose={onClose}
-      title={draft.name || 'Untitled Step'}
-      subtitle={`Step ${draft.order} · ${draft.code || 'code pending'}`}
-      widthClassName="max-w-2xl"
-      footer={(
-        <div className="flex items-center justify-between gap-3">
-          <button className="btn-ghost btn-sm text-ceda-red" disabled={busy} onClick={onDelete}>
-            <Trash2 size={14} /> Remove Step
-          </button>
-          <div className="flex items-center gap-2">
-            <button className="btn-secondary btn-sm" onClick={onClose}>
-              Cancel
-            </button>
-            <button className="btn-primary btn-sm" disabled={busy || !payload.name || !payload.code || (!stepDirty && !stageDirty)} onClick={() => onSave(payload, currentStagePayload, stageDirty)}>
-              <Save size={14} /> {busy ? 'Saving…' : 'Save Step'}
-            </button>
-          </div>
-        </div>
-      )}
-    >
-      <div className="space-y-5">
-        <div className="rounded-2xl border border-ceda-border bg-ceda-surface/30 px-4 py-3">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Previous</p>
-              <p className="mt-1 font-medium text-ceda-dark">{previousStep?.name ?? 'Start of workflow'}</p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Current</p>
-              <p className="mt-1 font-medium text-ceda-dark">{draft.name || 'Untitled step'}</p>
-            </div>
-            <div>
-              <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Next</p>
-              <p className="mt-1 font-medium text-ceda-dark">{nextStep?.name ?? 'End of workflow'}</p>
-            </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {!draft.is_active ? <StepChip tone="red">Inactive</StepChip> : null}
-            {issues.length > 0 ? <StepChip tone="amber">{issues.length} setup item{issues.length === 1 ? '' : 's'}</StepChip> : null}
-            {linkedCriteriaMissing ? <StepChip tone="amber">No criteria linked</StepChip> : null}
-          </div>
-        </div>
+    <section aria-label={t('wfb.stepSettings')} className="flex flex-col gap-5 rounded-card border border-border bg-surface p-4">
+      <h2 className="flex items-center gap-2 text-[17px] font-heading font-bold text-text">
+        <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[12px] text-on-primary">{draft.order}</span>
+        {draft.name || t('wfb.untitled')}
+      </h2>
+      {issues.length > 0 && <p role="note" className="rounded-control bg-warning-soft px-3 py-2 text-[13px] text-warning">{issues.map((k) => t(k)).join(' · ')}</p>}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="label">Step Name</label>
-            <input
-              className="input"
-              value={draft.name}
-              onChange={(e) => setDraft((prev) => ({
-                ...prev,
-                name: e.target.value,
-                code: step?.id || (prev.code && prev.code !== slugify(prev.name)) ? prev.code : slugify(e.target.value),
-              }))}
-            />
-          </div>
-          <div>
-            <label className="label">Code</label>
-            <input
-              className="input font-mono text-sm"
-              value={draft.code}
-              onChange={(e) => setDraft((prev) => ({ ...prev, code: slugify(e.target.value) }))}
-            />
-          </div>
-          <div>
-            <label className="label">Position</label>
-            <select className="input" value={draft.order} onChange={(e) => setDraft((prev) => ({ ...prev, order: Number(e.target.value) }))}>
-              {allSteps.map((item, index) => (
-                <option key={item.id} value={index + 1}>
-                  Position {index + 1}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="label">Due in Hours</label>
-            <input
-              className="input"
-              type="number"
-              value={draft.due_in_hours}
-              onChange={(e) => setDraft((prev) => ({ ...prev, due_in_hours: e.target.value }))}
-              placeholder="Optional"
-            />
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-ceda-border p-4 space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-ceda-dark">Step Behavior</p>
-              <p className="mt-1 text-xs text-ceda-muted">Choose what this step can do and what status it moves the submission to.</p>
-            </div>
-            <label className="flex items-center gap-2 text-sm text-ceda-dark">
-              <input
-                type="checkbox"
-                checked={draft.is_active}
-                onChange={(e) => setDraft((prev) => ({ ...prev, is_active: e.target.checked }))}
-              />
-              Active
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Submission Status</label>
-              <select className="input" value={draft.submission_status} onChange={(e) => setDraft((prev) => ({ ...prev, submission_status: e.target.value }))}>
-                {STATUS_OPTIONS.map((option) => <option key={option || 'none'} value={option}>{option || 'None'}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Execution Mode</label>
-              <select className="input" value={draft.execution_mode} onChange={(e) => setDraft((prev) => ({ ...prev, execution_mode: e.target.value }))}>
-                {EXECUTION_OPTIONS.map((option) => <option key={option} value={option}>{formatExecutionMode(option)}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Role Required</label>
-              <select className="input" value={draft.role_required} onChange={(e) => setDraft((prev) => ({ ...prev, role_required: e.target.value }))}>
-                {ROLE_OPTIONS.map((option) => <option key={option || 'none'} value={option}>{option || 'None'}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Minimum Completions</label>
-              <p className="text-[11px] text-ceda-muted mb-1">Tasks that must finish before this step advances (used in Parallel Minimum mode)</p>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                value={draft.minimum_completions_required}
-                onChange={(e) => setDraft((prev) => ({ ...prev, minimum_completions_required: e.target.value }))}
-              />
-            </div>
-          </div>
-
-          <Toggle
-            label={t('wf.advanceAuto')}
-            description={draft.advance_automatically ? t('wf.advanceAutoOn') : t('wf.advanceAutoOff')}
-            checked={!!draft.advance_automatically}
-            onChange={(on) => setDraft((prev) => ({ ...prev, advance_automatically: on }))}
-          />
-
-          <div>
-            <label className="label">Allowed Outcomes</label>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {ACTION_OPTIONS.map((action) => {
-                const active = draft.actions_allowed.includes(action)
-                return (
-                  <button
-                    key={action}
-                    type="button"
-                    onClick={() => toggleAction(action)}
-                    className={cn(
-                      'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
-                      active
-                        ? 'border-ceda-forest bg-ceda-green-pale text-ceda-forest'
-                        : 'border-ceda-border bg-white text-ceda-muted hover:bg-ceda-surface'
-                    )}
-                  >
-                    {action}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-ceda-border p-4 space-y-4">
-          <label className="flex items-center gap-2 text-sm font-medium text-ceda-dark">
-            <input
-              type="checkbox"
-              checked={draft.requires_assignment}
-              onChange={(e) => setDraft((prev) => ({ ...prev, requires_assignment: e.target.checked }))}
-            />
-            This step needs assignment
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="label">Assign To</label>
-              <select
-                className="input"
-                value={draft.assignment_role}
-                onChange={(e) => setDraft((prev) => ({ ...prev, assignment_role: e.target.value }))}
-                disabled={!draft.requires_assignment}
-              >
-                {ASSIGNMENT_ROLE_OPTIONS.map((option) => <option key={option || 'none'} value={option}>{option || 'None'}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="label">Minimum Assignments</label>
-              <p className="text-[11px] text-ceda-muted mb-1">How many people must be assigned a task for this step</p>
-              <input
-                className="input"
-                type="number"
-                min="0"
-                value={draft.minimum_assignments}
-                onChange={(e) => setDraft((prev) => ({ ...prev, minimum_assignments: e.target.value }))}
-                disabled={!draft.requires_assignment}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-ceda-border p-4 space-y-4">
-          <div>
-            <p className="text-sm font-medium text-ceda-dark">Step Scoring</p>
-            <p className="mt-1 text-xs text-ceda-muted">
-              Choose how this step reviews submissions. Criteria-based steps score against a linked
-              criteria set, so any assignee role can be used. Manual steps rely on direct actions only.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { key: 'manual',   label: 'Manual (Actions Only)' },
-              { key: 'criteria', label: 'Criteria-Based Scoring' },
-            ].map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  setStageDraft((prev) => ({
-                    ...prev,
-                    scoring_mode: key,
-                    marking_criteria: key === 'manual' ? '' : prev.marking_criteria,
-                  }))
-                  setDraft((prev) => ({
-                    ...prev,
-                    requires_evaluation: key === 'criteria',
-                    minimum_evaluations: key === 'criteria' ? (Number(stageDraft.required_reviewer_count) || 1) : 0,
-                  }))
-                }}
-                className={cn(
-                  'rounded-xl border px-3 py-2 text-xs font-medium transition-colors text-center',
-                  stageDraft.scoring_mode === key
-                    ? 'border-ceda-forest bg-ceda-green-pale text-ceda-forest'
-                    : 'border-ceda-border bg-white text-ceda-muted hover:bg-ceda-surface'
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          {stageDraft.scoring_mode === 'manual' ? (
-            <div className="rounded-xl border border-ceda-border bg-ceda-surface/40 px-4 py-3">
-              <p className="text-xs text-ceda-muted">
-                <strong className="text-ceda-dark">Manual mode:</strong> Assignees will use
-                Approve, Return for Correction, or Reject actions directly. No scoring criteria required.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <CriteriaLinkField
-                value={stageDraft.marking_criteria}
-                detail={stageConfig?.marking_criteria_detail ?? null}
-                onChange={(value) => setStageDraft((prev) => ({ ...prev, marking_criteria: value }))}
-                disabled={false}
-              />
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Review Mode</label>
-                  <select
-                    className="input"
-                    value={stageDraft.review_mode}
-                    onChange={(e) => setStageDraft((prev) => ({ ...prev, review_mode: e.target.value }))}
-                  >
-                    <option value="fixed_count">Fixed reviewer count</option>
-                    <option value="time_window">Timed review window</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="label">{stageDraft.review_mode === 'time_window' ? 'Minimum Reviews' : 'Required Reviewers'}</label>
-                  <p className="text-[11px] text-ceda-muted mb-1">
-                    {stageDraft.review_mode === 'time_window' ? 'Minimum scorecards before auto-decision' : 'How many must submit a completed score sheet'}
-                  </p>
-                  <input
-                    className="input"
-                    type="number"
-                    min="1"
-                    value={stageDraft.review_mode === 'time_window' ? stageDraft.minimum_reviews_required : stageDraft.required_reviewer_count}
-                    onChange={(e) => {
-                      setStageDraft((prev) => (
-                        prev.review_mode === 'time_window'
-                          ? ({ ...prev, minimum_reviews_required: e.target.value })
-                          : ({ ...prev, required_reviewer_count: e.target.value })
-                      ))
-                      setDraft((prev) => ({ ...prev, minimum_evaluations: Number(e.target.value) || 1 }))
-                    }}
-                  />
-                </div>
-                {stageDraft.review_mode === 'time_window' && (
-                  <>
-                    <div>
-                      <label className="label">Review Window Hours</label>
-                      <input
-                        className="input"
-                        type="number"
-                        min="1"
-                        value={stageDraft.review_window_hours}
-                        onChange={(e) => setStageDraft((prev) => ({ ...prev, review_window_hours: e.target.value }))}
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Maximum Reviewers</label>
-                      <input
-                        className="input"
-                        type="number"
-                        min="1"
-                        placeholder="Optional"
-                        value={stageDraft.maximum_reviews_allowed}
-                        onChange={(e) => setStageDraft((prev) => ({ ...prev, maximum_reviews_allowed: e.target.value }))}
-                      />
-                    </div>
-                  </>
-                )}
-                <div>
-                  <label className="label">Score Aggregation</label>
-                  <select
-                    className="input"
-                    value={stageDraft.aggregation_method}
-                    onChange={(e) => setStageDraft((prev) => ({ ...prev, aggregation_method: e.target.value }))}
-                  >
-                    {AGGREGATION_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-ceda-border bg-ceda-surface/40 p-4 space-y-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-ceda-muted">
-                  Score Thresholds (%)
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="label">Reject if below</label>
-                    <input
-                      className="input"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={stageDraft.threshold_reject_below}
-                      onChange={(e) => setStageDraft((prev) => ({ ...prev, threshold_reject_below: e.target.value }))}
-                      placeholder="e.g. 40"
-                    />
-                  </div>
-                  <div>
-                    <label className="label">Proceed if above</label>
-                    <input
-                      className="input"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      value={stageDraft.threshold_pass_above}
-                      onChange={(e) => setStageDraft((prev) => ({ ...prev, threshold_pass_above: e.target.value }))}
-                      placeholder="e.g. 70"
-                    />
-                  </div>
-                </div>
-                {stageDraft.threshold_reject_below !== '' && stageDraft.threshold_pass_above !== '' && (
-                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                    <strong>Return for Correction</strong> when score is between {stageDraft.threshold_reject_below}% and {stageDraft.threshold_pass_above}%
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex items-center gap-2 text-sm text-ceda-dark cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={stageDraft.blind_scoring}
-                    onChange={(e) => setStageDraft((prev) => ({ ...prev, blind_scoring: e.target.checked }))}
-                  />
-                  Blind Scoring
-                </label>
-                <label className="flex items-center gap-2 text-sm text-ceda-dark cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={stageDraft.allow_applicant_feedback}
-                    onChange={(e) => setStageDraft((prev) => ({ ...prev, allow_applicant_feedback: e.target.checked }))}
-                  />
-                  Share Feedback with Applicant
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="flex flex-col gap-3">
+        <Input
+          label={t('wfb.stepName')}
+          value={draft.name}
+          onChange={(e) => set({ name: e.target.value, code: step.id || (draft.code && draft.code !== slugify(draft.name)) ? draft.code : slugify(e.target.value) })}
+          required
+        />
+        <Toggle label={t('wfb.stepOn')} checked={!!draft.is_active} onChange={(on) => set({ is_active: on })} />
       </div>
-    </ActionDrawer>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-[14px] font-bold text-text">{t('wfb.whoHasIt')}</legend>
+        <Select label={t('wfb.role')} options={[{ value: '', label: t('wfb.anyone') }, ...ROLE_OPTIONS.map((r) => ({ value: r, label: t(`wfb.role.${r}`) }))]} value={draft.role_required} onChange={(v) => set({ role_required: v })} />
+        <Toggle label={t('wfb.assignPeople')} description={t('wfb.assignPeopleHint')} checked={!!draft.requires_assignment} onChange={(on) => set({ requires_assignment: on })} />
+        {draft.requires_assignment && (
+          <div className="grid grid-cols-2 gap-3">
+            <Select label={t('wfb.assignTo')} options={ASSIGNMENT_ROLE_OPTIONS.map((r) => ({ value: r, label: t(`wfb.assignRole.${r}`) }))} value={draft.assignment_role} onChange={(v) => set({ assignment_role: v })} />
+            <Input label={t('wfb.howMany')} type="number" min="1" value={String(draft.minimum_assignments)} onChange={(e) => set({ minimum_assignments: e.target.value })} />
+          </div>
+        )}
+        <Select label={t('wfb.shareOut')} hint={t('wfb.shareOutHint')} options={EXECUTION_OPTIONS.map((m) => ({ value: m, label: t(`wfb.mode.${m}`) }))} value={draft.execution_mode} onChange={(v) => set({ execution_mode: v })} />
+        {draft.execution_mode === 'parallel_minimum' && (
+          <Input label={t('wfb.minDone')} type="number" min="1" value={String(draft.minimum_completions_required)} onChange={(e) => set({ minimum_completions_required: e.target.value })} />
+        )}
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-[14px] font-bold text-text">{t('wfb.whatTheyDo')}</legend>
+        <p className="text-[12px] text-muted">{t('wfb.buttonsHint')}</p>
+        <div className="flex flex-col gap-1.5">
+          {ACTION_OPTIONS.map((a) => (
+            <Checkbox key={a} label={t(`wfb.action.${a}`)} checked={draft.actions_allowed.includes(a)} onChange={() => toggleAction(a)} />
+          ))}
+        </div>
+        <Toggle label={t('wf.advanceAuto')} description={draft.advance_automatically ? t('wf.advanceAutoOn') : t('wf.advanceAutoOff')} checked={!!draft.advance_automatically} onChange={(on) => set({ advance_automatically: on })} />
+        <Select label={t('wfb.statusAfter')} options={[{ value: '', label: t('wfb.noStatus') }, ...STATUS_OPTIONS.map((s) => ({ value: s, label: t(`wfb.status.${s}`) }))]} value={draft.submission_status} onChange={(v) => set({ submission_status: v })} />
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-[14px] font-bold text-text">{t('wfb.markingCriteria')}</legend>
+        <Toggle label={t('wfb.scoreWithCriteria')} description={scoring ? t('wfb.scoreOn') : t('wfb.scoreOff')} checked={scoring} onChange={setScoring} />
+        {scoring && (
+          <>
+            <Select
+              label={t('wfb.criteriaSet')}
+              options={criteria.map((c) => ({ value: c.id, label: c.title }))}
+              value={stageDraft.marking_criteria}
+              onChange={(v) => setStage({ marking_criteria: v })}
+              placeholder={t('wfb.chooseSet')}
+              error={!stageDraft.marking_criteria ? t('wfb.setNeeded') : undefined}
+            />
+            {chosenCriteria?.items?.length > 0 && (
+              <ul className="flex flex-col gap-1 text-[13px]">
+                {chosenCriteria.items.map((item) => (
+                  <li key={item.id} className="flex justify-between gap-2"><span className="text-text">{item.name}</span><span className="text-muted">{Number(item.weight)}%</span></li>
+                ))}
+              </ul>
+            )}
+            <Link to="/marking-criteria" className="self-start text-[13px] font-bold text-primary hover:underline">{t('wfb.manageCriteria')}</Link>
+            <div className="grid grid-cols-2 gap-3">
+              <Input label={t('wfb.scorers')} type="number" min="1" value={String(stageDraft.required_reviewer_count)} onChange={(e) => { setStage({ required_reviewer_count: e.target.value }); set({ minimum_evaluations: Number(e.target.value) || 1 }) }} />
+              <Select label={t('wfb.combine')} options={AGGREGATION_OPTIONS.map((a) => ({ value: a, label: t(`wfb.agg.${a}`) }))} value={stageDraft.aggregation_method} onChange={(v) => setStage({ aggregation_method: v })} />
+              <Input label={t('wfb.passMark')} type="number" min="0" max="100" value={String(stageDraft.threshold_pass_above)} onChange={(e) => setStage({ threshold_pass_above: e.target.value })} />
+              <Input label={t('wfb.rejectBelow')} type="number" min="0" max="100" value={String(stageDraft.threshold_reject_below)} onChange={(e) => setStage({ threshold_reject_below: e.target.value })} />
+            </div>
+            <p className="text-[12px] text-muted">{t('wfb.betweenNote', { low: stageDraft.threshold_reject_below, high: stageDraft.threshold_pass_above })}</p>
+            <Checkbox label={t('wfb.blind')} checked={!!stageDraft.blind_scoring} onChange={(e) => setStage({ blind_scoring: e.target.checked })} />
+            <Checkbox label={t('wfb.feedback')} checked={!!stageDraft.allow_applicant_feedback} onChange={(e) => setStage({ allow_applicant_feedback: e.target.checked })} />
+          </>
+        )}
+      </fieldset>
+
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-[14px] font-bold text-text">{t('wfb.timeLimit')}</legend>
+        <Input label={t('wfb.dueHours')} hint={t('wfb.dueHoursHint')} type="number" min="1" value={String(draft.due_in_hours ?? '')} onChange={(e) => set({ due_in_hours: e.target.value })} />
+        <Select label={t('wfb.position')} options={allSteps.map((_, i) => ({ value: String(i + 1), label: t('wfb.positionN', { n: i + 1 }) }))} value={String(draft.order)} onChange={(v) => set({ order: Number(v) })} />
+      </fieldset>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
+        <Button variant="ghost" onClick={onDelete} disabled={busy} className="text-danger"><Trash2 size={15} aria-hidden />{t('wfb.remove')}</Button>
+        <Button onClick={() => onSave(payload, currentStagePayload, stageDirty)} loading={busy} disabled={!payload.name || (!stepDirty && !stageDirty)}>{t('wfb.saveStep')}</Button>
+      </div>
+    </section>
+  )
+}
+
+function DetailsPanel({ definition, meta, setMeta, onSave, saving }) {
+  const t = useT()
+  return (
+    <section aria-label={t('wfb.details')} className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4">
+      <h2 className="text-[17px] font-heading font-bold text-text">{t('wfb.details')}</h2>
+      <p className="text-[13px] text-muted">{t('wfb.detailsHint')}</p>
+      <Input label={t('wfl.name')} value={meta.name} onChange={(e) => setMeta((m) => ({ ...m, name: e.target.value }))} required />
+      <Textarea label={t('wfb.description')} optional rows={3} value={meta.description} onChange={(e) => setMeta((m) => ({ ...m, description: e.target.value }))} />
+      <Button variant="secondary" onClick={onSave} loading={saving} disabled={!meta.name.trim() || (meta.name === (definition.name ?? '') && meta.description === (definition.description ?? ''))} className="self-start">{t('common.save')}</Button>
+    </section>
   )
 }
 
 export default function WorkflowBuilder() {
+  const t = useT()
   const confirm = useConfirm()
+  const toast = useToast()
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: definition, isLoading, error, refetch } = useWorkflowDefinition(id)
@@ -831,90 +409,43 @@ export default function WorkflowBuilder() {
   const setStageConfig = useSetStageConfig()
 
   const [meta, setMeta] = useState({ name: '', code: '', description: '', workflow_type: '' })
-  const [message, setMessage] = useState(null)
-  const [actionError, setActionError] = useState(null)
-  const [activeTab, setActiveTab] = useState('steps')
-  const [search, setSearch] = useState('')
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [filters, setFilters] = useState({ stepType: 'all', status: 'all', health: 'all' })
-  const [expandedStepIds, setExpandedStepIds] = useState([])
   const [editingStepId, setEditingStepId] = useState(null)
-  const [reorderingId, setReorderingId] = useState(null)
-  const [recentlySavedStepId, setRecentlySavedStepId] = useState(null)
-  const [drawerDirty, setDrawerDirty] = useState(false)
+  const [reordering, setReordering] = useState(false)
+  const [panelDirty, setPanelDirty] = useState(false)
   const [localSteps, setLocalSteps] = useState([])
+  const panelRef = useRef(null)
 
-  const deferredSearch = useDeferredValue(search)
-  const serverSteps = useMemo(() => {
-    const items = Array.isArray(stepsData) ? stepsData : stepsData?.results ?? []
-    return sortSteps(items)
-  }, [stepsData])
-
-  useEffect(() => {
-    setLocalSteps(serverSteps)
-  }, [serverSteps])
-
+  const serverSteps = useMemo(() => sortSteps(Array.isArray(stepsData) ? stepsData : stepsData?.results ?? []), [stepsData])
+  useEffect(() => { setLocalSteps(serverSteps) }, [serverSteps])
   const steps = localSteps
-
-  const filteredSteps = useMemo(() => {
-    const searchTerm = deferredSearch.trim().toLowerCase()
-    return steps.filter((step) => {
-      if (filters.stepType === 'assignment' && !step.requires_assignment) return false
-      if (filters.stepType === 'evaluation' && !step.requires_evaluation) return false
-      if (filters.stepType === 'inactive' && step.is_active) return false
-      if (filters.status === 'active' && !step.is_active) return false
-      if (filters.status === 'inactive' && step.is_active) return false
-      const hasIssues = getStepIssues(step).length > 0
-      if (filters.health === 'attention' && !hasIssues) return false
-      if (filters.health === 'ready' && hasIssues) return false
-      if (!searchTerm) return true
-      return [step.name, step.code, step.role_required, step.submission_status]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(searchTerm))
-    })
-  }, [deferredSearch, filters, steps])
-
-  const editingStep = useMemo(
-    () => steps.find((step) => step.id === editingStepId) ?? null,
-    [editingStepId, steps],
-  )
+  const editingStep = useMemo(() => steps.find((s) => s.id === editingStepId) ?? null, [editingStepId, steps])
 
   useEffect(() => {
     if (!definition) return
-    setMeta({
-      name: definition.name ?? '',
-      code: definition.code ?? '',
-      description: definition.description ?? '',
-      workflow_type: definition.workflow_type ?? '',
-    })
+    setMeta({ name: definition.name ?? '', code: definition.code ?? '', description: definition.description ?? '', workflow_type: definition.workflow_type ?? '' })
+    document.title = `${definition.name} · CEDA Innovation`
   }, [definition])
 
   useEffect(() => {
-    if (editingStepId && !steps.some((step) => step.id === editingStepId)) {
-      setEditingStepId(null)
-    }
+    if (editingStepId && !steps.some((s) => s.id === editingStepId)) setEditingStepId(null)
   }, [editingStepId, steps])
 
   useEffect(() => {
-    if (!recentlySavedStepId) return undefined
-    const timeoutId = window.setTimeout(() => setRecentlySavedStepId(null), 2500)
-    return () => window.clearTimeout(timeoutId)
-  }, [recentlySavedStepId])
-
-  useEffect(() => {
-    if (!drawerDirty) return undefined
-    const beforeUnload = (event) => {
-      event.preventDefault()
-      event.returnValue = ''
-    }
+    if (!panelDirty) return undefined
+    const beforeUnload = (event) => { event.preventDefault(); event.returnValue = '' }
     window.addEventListener('beforeunload', beforeUnload)
     return () => window.removeEventListener('beforeunload', beforeUnload)
-  }, [drawerDirty])
+  }, [panelDirty])
+
+
+  const ok = (title) => toast.show({ tone: 'success', title })
+  const fail = (err) => toast.show({ tone: 'error', title: t('common.somethingWrong'), body: err?.message })
 
   const confirmDiscardChanges = async () => (
-    !drawerDirty || confirm({ title: 'Discard your step changes?', body: 'You have changes to this step that are not saved.', confirmLabel: 'Discard changes', cancelLabel: 'Keep editing' })
+    !panelDirty || confirm({ title: t('wfb.discardTitle'), body: t('wfb.discardBody'), confirmLabel: t('wfb.discard'), cancelLabel: t('wfb.keepEditing') })
   )
 
+  // A change to a published workflow makes a new version; follow it.
   const handleVersionedResult = (result, fallbackId = id) => {
     if (result?.workflow_definition_id && result.workflow_definition_id !== fallbackId) {
       navigate(`/admin/workflows/${result.workflow_definition_id}/builder`, { replace: true })
@@ -923,61 +454,50 @@ export default function WorkflowBuilder() {
     return false
   }
 
-  const clearFilter = (key) => {
-    setFilters((prev) => ({ ...prev, [key]: 'all' }))
-  }
-
-  const toggleExpanded = (stepId) => {
-    setExpandedStepIds((prev) => (
-      prev.includes(stepId)
-        ? prev.filter((item) => item !== stepId)
-        : [...prev, stepId]
-    ))
-  }
-
-  const openEditor = async (stepId) => {
+  const selectStep = async (stepId) => {
+    if (stepId === editingStepId) return
     if (!(await confirmDiscardChanges())) return
     setEditingStepId(stepId)
+    setTimeout(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
   }
 
   const runAction = async (action) => {
-    setActionError(null)
-    setMessage(null)
     try {
       let result = null
       if (action === 'save-meta') {
         result = await updateWorkflow.mutateAsync({ id, ...meta })
-        setMessage('Workflow details saved.')
+        ok(t('wfb.saved'))
       }
       if (action === 'validate') {
         result = await validateWorkflow.mutateAsync(id)
-        setMessage(result.valid ? 'Workflow validation passed.' : 'Workflow validation reported issues.')
+        if (result.valid) ok(t('wfb.checkPassed'))
+        else toast.show({ tone: 'error', title: t('wfb.checkFailed'), body: [].concat(result.errors ?? result.issues ?? []).slice(0, 3).join(' ') || undefined })
       }
       if (action === 'publish') {
         result = await publishWorkflow.mutateAsync(id)
-        setMessage('Workflow published.')
+        ok(t('wfb.published'))
       }
       if (action === 'activate') {
         result = await activateWorkflow.mutateAsync(id)
-        setMessage('Workflow activated for its program.')
+        ok(t('wfb.activated'))
       }
       handleVersionedResult(result)
       refetch()
       refetchSteps()
     } catch (err) {
-      setActionError(err.message)
+      fail(err)
     }
   }
 
-  const addStep = async () => {
+  const addStep = async (kind) => {
     if (!(await confirmDiscardChanges())) return
-    setActionError(null)
-    setMessage(null)
+    const preset = PALETTE.find((p) => p.kind === kind)?.preset ?? {}
+    const nextOrder = steps.length ? Math.max(...steps.map((s) => s.order ?? 0)) + 1 : 1
+    const name = t(`wfb.palette.${kind}`)
     try {
-      const nextOrder = steps.length ? Math.max(...steps.map((item) => item.order ?? 0)) + 1 : 1
       const result = await createStep.mutateAsync({
-        name: `Step ${nextOrder}`,
-        code: `step_${nextOrder}`,
+        name,
+        code: `${slugify(name)}_${nextOrder}`,
         order: nextOrder,
         actions_allowed: ['approve', 'reject', 'return'],
         execution_mode: 'sequential',
@@ -987,32 +507,16 @@ export default function WorkflowBuilder() {
         requires_evaluation: false,
         minimum_evaluations: 0,
         is_active: true,
+        ...preset,
       })
-      if (!handleVersionedResult(result)) {
-        const nextStep = result?.id ? result : {
-          id: `tmp-${Date.now()}`,
-          name: `Step ${nextOrder}`,
-          code: `step_${nextOrder}`,
-          order: nextOrder,
-          actions_allowed: ['approve', 'reject', 'return'],
-          execution_mode: 'sequential',
-          minimum_completions_required: 1,
-          requires_assignment: false,
-          minimum_assignments: 0,
-          requires_evaluation: false,
-          minimum_evaluations: 0,
-          is_active: true,
-        }
-        setLocalSteps((prev) => sortSteps([...prev, nextStep]))
-        setExpandedStepIds((prev) => [...new Set([...prev, nextStep.id])])
-        setEditingStepId(nextStep.id)
-        setRecentlySavedStepId(nextStep.id)
+      if (!handleVersionedResult(result) && result?.id) {
+        setLocalSteps((prev) => sortSteps([...prev, result]))
+        setEditingStepId(result.id)
         refetchSteps()
       }
-      setActiveTab('steps')
-      setMessage('Workflow step created.')
+      ok(t('wfb.added', { name }))
     } catch (err) {
-      setActionError(err.message)
+      fail(err)
     }
   }
 
@@ -1020,14 +524,8 @@ export default function WorkflowBuilder() {
     const nextSteps = reorderSteps(steps, stepId, targetPosition)
     if (isPayloadEqual(nextSteps, steps)) return
     const previousSteps = steps
-    const movedStep = previousSteps.find((item) => item.id === stepId)
-
-    setActionError(null)
-    setMessage(null)
-    setReorderingId(stepId)
+    setReordering(true)
     setLocalSteps(nextSteps)
-    setRecentlySavedStepId(stepId)
-
     try {
       let versionChanged = false
       for (const step of nextSteps) {
@@ -1036,360 +534,156 @@ export default function WorkflowBuilder() {
         const result = await updateStep.mutateAsync({ id: step.id, ...buildStepPayload(stepToDraft(step)) })
         versionChanged = handleVersionedResult(result) || versionChanged
       }
-      if (!versionChanged) {
-        refetchSteps()
-      }
-      setMessage(`Moved ${movedStep?.name || 'step'} to position ${targetPosition}.`)
+      if (!versionChanged) refetchSteps()
     } catch (err) {
       setLocalSteps(previousSteps)
-      setActionError(err.message)
+      fail(err)
     } finally {
-      setReorderingId(null)
+      setReordering(false)
     }
   }
 
   const saveStep = async (payload, stagePayload, isStageConfigDirty) => {
-    if (!editingStep) return
-    const previousStep = editingStep
+    if (!editingStep) return false
     const previousSteps = steps
-    const stepWithChanges = { ...editingStep, ...payload }
-    const optimisticSteps = payload.order !== editingStep.order
-      ? reorderSteps(
-          previousSteps.map((step) => (step.id === editingStep.id ? stepWithChanges : step)),
-          editingStep.id,
-          payload.order,
-        )
-      : sortSteps(previousSteps.map((step) => (
-          step.id === editingStep.id ? stepWithChanges : step
-        )))
-
-    setActionError(null)
-    setMessage(null)
-    setLocalSteps(optimisticSteps)
-    setRecentlySavedStepId(editingStep.id)
-
+    const withChanges = { ...editingStep, ...payload }
+    const optimistic = payload.order !== editingStep.order
+      ? reorderSteps(previousSteps.map((s) => (s.id === editingStep.id ? withChanges : s)), editingStep.id, payload.order)
+      : sortSteps(previousSteps.map((s) => (s.id === editingStep.id ? withChanges : s)))
+    setLocalSteps(optimistic)
     try {
       const result = await updateStep.mutateAsync({ id: editingStep.id, ...payload })
       if (payload.order !== editingStep.order) {
-        for (const step of optimisticSteps) {
+        for (const step of optimistic) {
           if (step.id === editingStep.id) continue
           const previous = previousSteps.find((item) => item.id === step.id)
           if (previous?.order === step.order) continue
           await updateStep.mutateAsync({ id: step.id, ...buildStepPayload(stepToDraft(step)) })
         }
       }
-      if (isStageConfigDirty) {
-        await setStageConfig.mutateAsync({ stepId: editingStep.id, body: stagePayload })
-      }
-      if (!handleVersionedResult(result)) {
-        refetchSteps()
-      }
-      setDrawerDirty(false)
-      setMessage(`Saved step ${payload.name}.`)
+      if (isStageConfigDirty) await setStageConfig.mutateAsync({ stepId: editingStep.id, body: stagePayload })
+      if (!handleVersionedResult(result)) refetchSteps()
+      setPanelDirty(false)
+      ok(t('wfb.stepSaved', { name: payload.name }))
       return true
     } catch (err) {
-      setLocalSteps(previousSteps.map((step) => (
-        step.id === previousStep.id ? previousStep : step
-      )))
-      setActionError(err.message)
+      setLocalSteps(previousSteps)
+      fail(err)
       return false
     }
   }
 
   const removeStep = async () => {
     if (!editingStep) return
-    if (!(await confirm({ title: `Remove the step "${editingStep.name}"?`, note: 'This cannot be undone.', confirmLabel: 'Remove step' }))) return
-    const removedStep = editingStep
+    if (!(await confirm({ title: t('wfb.removeTitle', { name: editingStep.name }), body: t('wfb.removeBody'), confirmLabel: t('wfb.remove') }))) return
+    const removed = editingStep
     const previousSteps = steps
-
-    setActionError(null)
-    setMessage(null)
-    setLocalSteps(steps.filter((step) => step.id !== editingStep.id))
+    setLocalSteps(steps.filter((s) => s.id !== removed.id))
     setEditingStepId(null)
-
     try {
-      const result = await deleteStep.mutateAsync(removedStep.id)
-      if (!handleVersionedResult(result)) {
-        refetchSteps()
-      }
-      setMessage(`Removed step ${removedStep.name}.`)
+      const result = await deleteStep.mutateAsync(removed.id)
+      if (!handleVersionedResult(result)) refetchSteps()
+      ok(t('wfb.removed', { name: removed.name }))
     } catch (err) {
       setLocalSteps(previousSteps)
-      setEditingStepId(removedStep.id)
-      setActionError(err.message)
+      setEditingStepId(removed.id)
+      fail(err)
     }
   }
 
-  if (isLoading) {
-    return <div className="h-32 rounded-xl bg-ceda-border/30 animate-pulse" />
-  }
+  if (isLoading) return <div aria-hidden className="flex flex-col gap-3"><Skeleton className="h-20" /><Skeleton className="h-96 rounded-card" /></div>
+  if (error || !definition) return <ErrorState framed title={t('wfb.loadError')} message={error?.message} onRetry={refetch} />
 
-  if (error) {
-    return <ErrorState message={error.message} onRetry={refetch} />
-  }
-
-  if (!definition) {
-    return <ErrorState message="Workflow definition not found." onRetry={refetch} />
-  }
+  const usedBy = definition.program_detail?.is_general_intake ? t('wfl.generalIdeas') : definition.program_detail?.title
+  const summary = plainWords(t, steps)
 
   return (
-    <div className="animate-fade-in">
+    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
       <PageHeader
+        back={
+          <span className="text-[12px] text-muted">
+            <Link to="/admin/workflows" className="hover:text-text hover:underline">{t('wfl.crumb')}</Link> / {definition.name}
+          </span>
+        }
         title={definition.name}
-        subtitle={`${definition.program_detail?.title ?? 'No program'} · Workflow overview and step management`}
-        back={(
-          <button onClick={async () => {
-            if (!(await confirmDiscardChanges())) return
-            navigate('/admin/workflows')
-          }} className="btn-ghost btn-sm -ml-2">
-            <ArrowLeft size={14} /> Workflows
-          </button>
-        )}
-        badge={<StatusPill status={definition.status} />}
-        actions={(
-          <>
-            <button className="btn-secondary btn-sm" disabled={validateWorkflow.isPending} onClick={() => runAction('validate')}>
-              <CheckCircle2 size={14} /> Validate
-            </button>
-            {definition.status === 'draft' && (
-              <button className="btn-secondary btn-sm" disabled={publishWorkflow.isPending} onClick={() => runAction('publish')}>
-                Publish
-              </button>
-            )}
-            {definition.status === 'published' && (
-              <button className="btn-primary btn-sm" disabled={activateWorkflow.isPending} onClick={() => runAction('activate')}>
-                Activate
-              </button>
-            )}
-          </>
-        )}
-      />
-
-      {(message || actionError) ? (
-        <div className={cn(
-          'mb-5 rounded-xl px-4 py-3 text-sm',
-          actionError
-            ? 'border border-ceda-red/20 bg-ceda-red-pale text-ceda-red'
-            : 'border border-ceda-green/20 bg-ceda-green-pale text-ceda-forest'
-        )}>
-          {actionError || message}
-        </div>
-      ) : null}
-
-      <Tabs tabs={OVERVIEW_TABS} active={activeTab} onChange={setActiveTab} className="mb-5" />
-
-      {activeTab === 'overview' ? (
-        <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-            <SummaryStat icon={GitBranch} label="Total Steps" value={steps.length} />
-            <SummaryStat icon={Users} label="Assignment Steps" value={steps.filter((step) => step.requires_assignment).length} tone="accent" />
-            <SummaryStat icon={FileSearch} label="Scoring Steps" value={steps.filter((step) => step.requires_evaluation).length} tone="accent" />
-            <SummaryStat icon={Clock3} label="Inactive Steps" value={steps.filter((step) => !step.is_active).length} tone="muted" />
+        subtitle={[usedBy ? t('wfl.usedByValue', { list: usedBy }) : t('wfl.notUsed'), t('wfb.subtitle')].join(' ')}
+        actions={
+          <div className="hidden flex-wrap items-center gap-2 md:flex">
+            <StatusPill status={definition.status} />
+            <Button variant="link" onClick={() => runAction('validate')} loading={validateWorkflow.isPending}>{t('wfb.check')}</Button>
+            {definition.status === 'draft' && <Button onClick={() => runAction('publish')} loading={publishWorkflow.isPending}>{t('wfb.publish')}</Button>}
+            {definition.status === 'published' && <Button onClick={() => runAction('activate')} loading={activateWorkflow.isPending}>{t('wfl.activate')}</Button>}
+            <Link to={`/admin/workflows/${id}/instances`} className="text-[13px] font-bold text-primary hover:underline">{t('wfl.seeIdeas')}</Link>
           </div>
+        }
+      />
+      <p className="text-[13px] text-muted md:hidden">{t('wfb.phoneNote')}</p>
 
-          <WorkflowMetaCard
-            definition={definition}
-            meta={meta}
-            setMeta={setMeta}
-            onSave={() => runAction('save-meta')}
-            saving={updateWorkflow.isPending}
-          />
-        </div>
-      ) : (
-        <SectionCard
-          title="Workflow Steps"
-          subtitle="Inspect steps here first. Expand a step for quick details, then open the editor only when you need to change it."
-          actions={(
-            <button className="btn-primary btn-sm" disabled={createStep.isPending} onClick={addStep}>
-              <Plus size={14} /> Add Step
-            </button>
-          )}
-        >
-          <div className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-              <div className="relative w-full md:max-w-sm">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ceda-muted" />
-                <input
-                  className="input w-full pl-9"
-                  placeholder="Search steps"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button type="button" className="btn-secondary btn-sm" onClick={() => setFiltersOpen((prev) => !prev)}>
-                  <Filter size={14} /> Filters
+      <div className="grid grid-cols-1 gap-[14px] md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_360px] 2xl:gap-[22px]">
+        <nav aria-label={t('wfb.addStep')} className="hidden md:block">
+          <p className="mb-2 text-[12px] font-bold text-muted">{t('wfb.addStep')}</p>
+          <ul className="flex flex-col gap-2">
+            {PALETTE.map(({ kind, icon: Icon }) => (
+              <li key={kind}>
+                <button
+                  type="button"
+                  onClick={() => addStep(kind)}
+                  disabled={createStep.isPending}
+                  className="flex w-full items-center gap-2.5 rounded-control border border-border bg-surface px-3 py-2.5 text-left text-[14px] text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
+                >
+                  <Icon size={16} aria-hidden className="shrink-0 text-muted" />
+                  {t(`wfb.palette.${kind}`)}
+                  <Plus size={14} aria-hidden className="ml-auto text-muted" />
                 </button>
-              </div>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="flex min-w-0 flex-col gap-3 rounded-card bg-surface2 p-4">
+          {stepsLoading ? (
+            <div aria-hidden className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-card" />)}</div>
+          ) : steps.length === 0 ? (
+            <EmptyState title={t('wfb.empty')} message={t('wfb.emptyBody')} />
+          ) : (
+            <ol className="mx-auto flex w-full max-w-[420px] flex-col gap-3">
+              {steps.map((step, i) => (
+                <StepCard
+                  key={step.id}
+                  step={step}
+                  index={i}
+                  count={steps.length}
+                  selected={step.id === editingStepId}
+                  onSelect={() => selectStep(step.id)}
+                  onMove={(pos) => moveStepToPosition(step.id, pos)}
+                  busy={reordering}
+                />
+              ))}
+            </ol>
+          )}
+          {summary && (
+            <div className="mx-auto mt-2 w-full max-w-[560px] rounded-card border border-border bg-surface px-4 py-3">
+              <p className="text-[12px] font-bold text-muted">{t('wfb.plainWords')}</p>
+              <p className="mt-1 text-[13px] text-text">{summary}</p>
             </div>
+          )}
+        </div>
 
-            {filtersOpen ? (
-              <div className="rounded-2xl border border-ceda-border bg-ceda-surface/20 p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <label className="label">Step Type</label>
-                    <select className="input" value={filters.stepType} onChange={(e) => setFilters((prev) => ({ ...prev, stepType: e.target.value }))}>
-                      {STEP_TYPE_FILTERS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Status</label>
-                    <select className="input" value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}>
-                      {STATUS_FILTER_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label">Setup</label>
-                    <select className="input" value={filters.health} onChange={(e) => setFilters((prev) => ({ ...prev, health: e.target.value }))}>
-                      {HEALTH_FILTER_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-
-            <ActiveFilterChips filters={filters} onClear={clearFilter} />
-
-            {stepsLoading ? (
-              <div className="h-20 rounded-xl bg-ceda-border/20 animate-pulse" />
-            ) : filteredSteps.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-ceda-border bg-ceda-surface/20 px-5 py-10 text-center">
-                <p className="text-sm font-medium text-ceda-dark">
-                  {steps.length === 0 ? 'No steps configured yet.' : 'No steps match the current search or filters.'}
-                </p>
-                <p className="mt-1 text-xs text-ceda-muted">
-                  {steps.length === 0
-                    ? 'Add the first step to start building the workflow.'
-                    : 'Clear a filter or try a different search term.'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredSteps.map((step) => {
-                  const expanded = expandedStepIds.includes(step.id)
-                  const moveTarget = String(step.order ?? 1)
-                  return (
-                    <div key={step.id} className="rounded-2xl border border-ceda-border bg-white">
-                      <div className={cn(recentlySavedStepId === step.id && 'rounded-2xl ring-1 ring-ceda-green/40')}>
-                        <div className="flex items-start gap-4 px-4 py-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-ceda-surface text-sm font-semibold text-ceda-dark">
-                            {step.order}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <p className="text-sm font-semibold text-ceda-dark truncate">{step.name || 'Untitled step'}</p>
-                                  {!step.is_active ? <StepChip tone="red">Inactive</StepChip> : null}
-                                  {getStepIssues(step).length > 0 ? <StepChip tone="amber">Needs setup</StepChip> : null}
-                                  {recentlySavedStepId === step.id ? <StepChip tone="green">Updated</StepChip> : null}
-                                </div>
-                                <p className="mt-1 text-xs font-mono text-ceda-muted">{step.code || 'No code yet'}</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button type="button" className="btn-secondary btn-sm" onClick={() => openEditor(step.id)}>
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  className="rounded-lg border border-ceda-border p-2 text-ceda-muted hover:bg-ceda-surface"
-                                  onClick={() => toggleExpanded(step.id)}
-                                  aria-label={expanded ? `Collapse ${step.name}` : `Expand ${step.name}`}
-                                >
-                                  {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              <StepChip>{step.submission_status ? formatStatus(step.submission_status) : 'No status selected'}</StepChip>
-                              <StepChip>{formatExecutionMode(step.execution_mode)}</StepChip>
-                              {step.requires_assignment ? <StepChip tone="blue">Assign to {step.assignment_role || 'role needed'}</StepChip> : null}
-                              {step.requires_evaluation ? <StepChip tone="green">Scoring × {step.minimum_evaluations || 1}</StepChip> : null}
-                              {step.due_in_hours ? <StepChip tone="amber">Due in {step.due_in_hours}h</StepChip> : null}
-                            </div>
-
-                            {getStepIssues(step).length > 0 ? (
-                              <p className="mt-3 text-xs text-amber-700">{getStepIssues(step)[0]}</p>
-                            ) : null}
-                          </div>
-                        </div>
-
-                        {expanded ? (
-                          <div className="border-t border-ceda-border bg-ceda-surface/20 px-4 py-4">
-                            <div className="grid grid-cols-1 xl:grid-cols-[1fr_auto] gap-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Actions</p>
-                                  <p className="mt-1 text-sm text-ceda-dark">{step.actions_allowed?.length ? normaliseActions(step.actions_allowed).join(', ') : 'None set'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Role Gate</p>
-                                  <p className="mt-1 text-sm text-ceda-dark">{step.role_required || 'No role gate'}</p>
-                                </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Assignment</p>
-                                  <p className="mt-1 text-sm text-ceda-dark">
-                                    {step.requires_assignment
-                                      ? `${step.assignment_role || 'Role needed'} · min ${step.minimum_assignments || 1}`
-                                      : 'Not required'}
-                                  </p>
-                                </div>
-                                <div>
-                                  <p className="text-[11px] uppercase tracking-wide text-ceda-muted">Scoring</p>
-                                  <p className="mt-1 text-sm text-ceda-dark">
-                                    {step.requires_evaluation
-                                      ? `Criteria-based · ${step.minimum_evaluations || 1} reviewer${Number(step.minimum_evaluations || 1) === 1 ? '' : 's'}`
-                                      : 'Manual actions'}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="flex items-end gap-2">
-                                <div className="min-w-[160px]">
-                                  <label className="label">Move Step To</label>
-                                  <select
-                                    className="input"
-                                    defaultValue={moveTarget}
-                                    onChange={(e) => moveStepToPosition(step.id, e.target.value)}
-                                    disabled={reorderingId === step.id || updateStep.isPending}
-                                  >
-                                    {steps.map((item, index) => (
-                                      <option key={item.id} value={index + 1}>
-                                        Position {index + 1}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </SectionCard>
-      )}
-
-      <StepEditorDrawer
-        step={editingStep}
-        open={!!editingStep}
-        busy={updateStep.isPending || deleteStep.isPending || setStageConfig.isPending}
-        allSteps={steps}
-        onClose={async () => {
-          if (!(await confirmDiscardChanges())) return
-          setDrawerDirty(false)
-          setEditingStepId(null)
-        }}
-        onSave={saveStep}
-        onDelete={removeStep}
-        onDirtyChange={setDrawerDirty}
-      />
+        <div ref={panelRef} className="hidden md:col-span-2 md:block xl:col-span-1">
+          {editingStep ? (
+            <StepPanel
+              step={editingStep}
+              busy={updateStep.isPending || deleteStep.isPending || setStageConfig.isPending}
+              allSteps={steps}
+              onSave={saveStep}
+              onDelete={removeStep}
+              onDirtyChange={setPanelDirty}
+            />
+          ) : (
+            <DetailsPanel definition={definition} meta={meta} setMeta={setMeta} onSave={() => runAction('save-meta')} saving={updateWorkflow.isPending} />
+          )}
+        </div>
+      </div>
     </div>
   )
 }

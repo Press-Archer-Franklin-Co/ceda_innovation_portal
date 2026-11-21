@@ -162,7 +162,7 @@ function CreateWorkflow({ open, onClose, triggerRef, workflows }) {
               <RadioGroup
                 name="wf-copy"
                 legend={t('wfl.copyWhich')}
-                options={workflows.filter((w) => w.status !== 'archived').map((w) => ({ value: w.id, label: w.name, description: t('wfl.stepsCount', { n: w.node_count ?? 0 }) }))}
+                options={workflows.filter((w) => w.status !== 'archived').map((w) => ({ value: w.id, label: w.name, description: t('wfl.stepsCount', { n: w.steps?.length || w.node_count || 0 }) }))}
                 value={copyOf}
                 onChange={setCopyOf}
               />
@@ -274,7 +274,7 @@ export default function Workflows() {
                 <p className="text-[13px] text-muted">{usedBy(wf) ? t('wfl.usedByValue', { list: usedBy(wf) }) : t('wfl.notUsed')}</p>
                 <div className={cn('mt-auto flex flex-wrap items-center gap-2')}>
                   <StatusPill status={wf.status} />
-                  <Tag>{t('wfl.stepsCount', { n: wf.node_count ?? (wf.steps?.length ?? 0) })}</Tag>
+                  <Tag>{t('wfl.stepsCount', { n: wf.steps?.length || wf.node_count || 0 })}</Tag>
                 </div>
               </Card>
             </li>

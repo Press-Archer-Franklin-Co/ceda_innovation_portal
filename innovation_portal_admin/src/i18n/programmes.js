@@ -70,6 +70,133 @@ export const programmesEn = {
   'wfi.notYet': 'The board is not available yet',
   'wfi.notYetBody': 'You can see the same ideas in the submissions list for this challenge.',
   'wfi.openList': 'Open the submissions list',
+  'wfb.subtitle': 'Click a step to say who has it, what they do and how it is marked.',
+  'wfb.phoneNote': 'You can read the flow here. Building is done on a computer.',
+  'wfb.loadError': 'We could not load this workflow',
+  'wfb.check': 'Check the workflow',
+  'wfb.checkPassed': 'The workflow is ready.',
+  'wfb.checkFailed': 'The workflow needs a few fixes.',
+  'wfb.publish': 'Publish',
+  'wfb.published': 'Published. Make it the one in use when you are ready.',
+  'wfb.activated': 'This workflow is now in use.',
+  'wfb.saved': 'Saved.',
+  'wfb.addStep': 'Add a step',
+  'wfb.palette.form': 'Applicant form',
+  'wfb.palette.officer': 'Officer review',
+  'wfb.palette.panel': 'Panel scoring',
+  'wfb.palette.askInfo': 'Ask for more info',
+  'wfb.palette.decision': 'Decision',
+  'wfb.added': 'Added "{name}". Set it up on the right.',
+  'wfb.empty': 'No steps yet',
+  'wfb.emptyBody': 'Add the first step from the list on the left.',
+  'wfb.untitled': 'Untitled step',
+  'wfb.off': 'Off',
+  'wfb.needsSetup': 'Needs setting up',
+  'wfb.who': 'Who',
+  'wfb.does': 'Does',
+  'wfb.marking': 'Marking',
+  'wfb.markingNotSet': 'Not set yet',
+  'wfb.markingValue': '{name} · pass {pass}',
+  'wfb.anyone': 'Anyone with access',
+  'wfb.whoAssigned': '{n} × {role}',
+  'wfb.noButtons': 'No buttons yet',
+  'wfb.moveUp': 'Move "{name}" up',
+  'wfb.moveDown': 'Move "{name}" down',
+  'wfb.plainWords': 'In plain words',
+  'wfb.plainFirst': 'First, {name}: {who}{scoring}.',
+  'wfb.plainNext': 'Then {name}: {who}{scoring}.',
+  'wfb.plainScored': ', scored with marking criteria',
+  'wfb.stepSettings': 'Step settings',
+  'wfb.issue.name': 'Give the step a name',
+  'wfb.issue.buttons': 'Choose at least one button',
+  'wfb.issue.who': 'Choose who is assigned',
+  'wfb.issue.howMany': 'Assign at least one person',
+  'wfb.issue.scorers': 'At least one person must score',
+  'wfb.stepName': 'Step name',
+  'wfb.stepOn': 'This step is on',
+  'wfb.whoHasIt': 'Who has it',
+  'wfb.role': 'Role',
+  'wfb.assignPeople': 'Give it to named people',
+  'wfb.assignPeopleHint': 'Each idea is assigned to people with this role.',
+  'wfb.assignTo': 'Assign to',
+  'wfb.howMany': 'How many per idea',
+  'wfb.shareOut': 'How the work is shared',
+  'wfb.shareOutHint': 'Whether people work one after another or at the same time.',
+  'wfb.minDone': 'How many must finish',
+  'wfb.whatTheyDo': 'What they do',
+  'wfb.buttonsHint': 'The buttons they get on the idea.',
+  'wfb.statusAfter': 'Status the idea shows',
+  'wfb.noStatus': 'Keep the current status',
+  'wfb.markingCriteria': 'Marking criteria',
+  'wfb.scoreWithCriteria': 'Score with marking criteria',
+  'wfb.scoreOn': 'On: each person scores the idea against a criteria set.',
+  'wfb.scoreOff': 'Off: people use the buttons only.',
+  'wfb.criteriaSet': 'Criteria set',
+  'wfb.chooseSet': 'Choose a set…',
+  'wfb.setNeeded': 'Choose the criteria set for this step.',
+  'wfb.manageCriteria': 'Open marking criteria',
+  'wfb.scorers': 'People who score',
+  'wfb.combine': 'How scores combine',
+  'wfb.passMark': 'Pass mark (out of 100)',
+  'wfb.rejectBelow': 'Not taken forward below',
+  'wfb.betweenNote': 'Between {low} and {high}, the idea goes back for changes.',
+  'wfb.blind': 'Scorers cannot see each other’s scores',
+  'wfb.feedback': 'Share the feedback with the applicant',
+  'wfb.timeLimit': 'Time limit and order',
+  'wfb.dueHours': 'Time limit (hours)',
+  'wfb.dueHoursHint': 'After this the step shows as overdue.',
+  'wfb.position': 'Position',
+  'wfb.positionN': 'Step {n}',
+  'wfb.remove': 'Remove step',
+  'wfb.removeTitle': 'Remove the step "{name}"?',
+  'wfb.removeBody': 'This cannot be undone.',
+  'wfb.removed': 'Removed "{name}".',
+  'wfb.saveStep': 'Save step',
+  'wfb.stepSaved': 'Saved "{name}".',
+  'wfb.discardTitle': 'Discard your step changes?',
+  'wfb.discardBody': 'You have changes to this step that are not saved.',
+  'wfb.discard': 'Discard changes',
+  'wfb.keepEditing': 'Keep editing',
+  'wfb.details': 'Workflow details',
+  'wfb.detailsHint': 'Click a step to set it up. The name shows wherever this workflow is chosen.',
+  'wfb.description': 'Description',
+  'wfb.role.innovator': 'The applicant',
+  'wfb.role.innovation_officer': 'Innovation officers',
+  'wfb.role.innovation_manager': 'Innovation managers',
+  'wfb.role.judge': 'Judges',
+  'wfb.role.specialist': 'Specialists',
+  'wfb.role.mentor': 'Mentors',
+  'wfb.role.administrator': 'Administrators',
+  'wfb.assignRole.reviewer': 'reviewer',
+  'wfb.assignRole.officer': 'officer',
+  'wfb.assignRole.manager': 'manager',
+  'wfb.assignRole.judge': 'judge',
+  'wfb.assignRole.specialist': 'specialist',
+  'wfb.assignRole.mentor': 'mentor',
+  'wfb.assignRole.analyst': 'analyst',
+  'wfb.assignRole.staff': 'staff member',
+  'wfb.assignRole.exo': 'EXO',
+  'wfb.mode.sequential': 'One after another',
+  'wfb.mode.parallel_all': 'At the same time, everyone finishes',
+  'wfb.mode.parallel_any': 'At the same time, the first one decides',
+  'wfb.mode.parallel_minimum': 'At the same time, enough finish',
+  'wfb.action.approve': 'Move on',
+  'wfb.action.return': 'Send back for changes',
+  'wfb.action.reject': 'Not taken forward',
+  'wfb.agg.average': 'Average',
+  'wfb.agg.min': 'Lowest',
+  'wfb.agg.max': 'Highest',
+  'wfb.agg.median': 'Middle',
+  'wfb.status.submitted': 'Submitted',
+  'wfb.status.screening': 'Screening',
+  'wfb.status.under_review': 'In review',
+  'wfb.status.assigned_to_judges': 'With the judges',
+  'wfb.status.under_judging': 'Being judged',
+  'wfb.status.approved': 'Approved',
+  'wfb.status.rejected': 'Not taken forward',
+  'wfb.status.finalist': 'Finalist',
+  'wfb.status.winner': 'Winner',
+  'wfb.status.selected_for_hackathon': 'Selected for the hackathon',
 }
 
 export const programmesTn = {
@@ -138,4 +265,131 @@ export const programmesTn = {
   'wfi.notYet': 'Boto ga e ise e nne teng', // TODO tn-review
   'wfi.notYetBody': 'O ka bona dikakanyo tse di tshwanang mo lenaneong la dikopo la kgwetlho e.', // TODO tn-review
   'wfi.openList': 'Bula lenaane la dikopo', // TODO tn-review
+  'wfb.subtitle': 'Tobetsa kgato go bolela gore ke mang yo o nang le yone, ba dira eng le gore e tshwaiwa jang.', // TODO tn-review
+  'wfb.phoneNote': 'O ka bala tsamaiso fa. Go aga go dirwa ka khomputara.', // TODO tn-review
+  'wfb.loadError': 'Ga re a kgona go bula tsamaiso e', // TODO tn-review
+  'wfb.check': 'Tlhola tsamaiso', // TODO tn-review
+  'wfb.checkPassed': 'Tsamaiso e siametse.', // TODO tn-review
+  'wfb.checkFailed': 'Tsamaiso e tlhoka diphetolo di le mmalwa.', // TODO tn-review
+  'wfb.publish': 'Phasalatsa', // TODO tn-review
+  'wfb.published': 'E phasaladitswe. E dire e e dirisiwang fa o ipaakantse.', // TODO tn-review
+  'wfb.activated': 'Tsamaiso e jaanong e a dirisiwa.', // TODO tn-review
+  'wfb.saved': 'E bolokilwe.', // TODO tn-review
+  'wfb.addStep': 'Tsenya kgato', // TODO tn-review
+  'wfb.palette.form': 'Foromo ya mokopi', // TODO tn-review
+  'wfb.palette.officer': 'Tshekatsheko ya motlhankedi', // TODO tn-review
+  'wfb.palette.panel': 'Go tshwaya ga phanele', // TODO tn-review
+  'wfb.palette.askInfo': 'Kopa tshedimosetso e nngwe', // TODO tn-review
+  'wfb.palette.decision': 'Tshwetso', // TODO tn-review
+  'wfb.added': '"{name}" e tsentswe. E rulaganye ka fa mojeng.', // TODO tn-review
+  'wfb.empty': 'Ga go ise go nne le dikgato', // TODO tn-review
+  'wfb.emptyBody': 'Tsenya kgato ya ntlha go tswa mo lenaneong le le kafa molemeng.', // TODO tn-review
+  'wfb.untitled': 'Kgato e e senang leina', // TODO tn-review
+  'wfb.off': 'E tsamaile', // TODO tn-review
+  'wfb.needsSetup': 'E tlhoka go rulaganngwa', // TODO tn-review
+  'wfb.who': 'Mang', // TODO tn-review
+  'wfb.does': 'Dira', // TODO tn-review
+  'wfb.marking': 'Go tshwaya', // TODO tn-review
+  'wfb.markingNotSet': 'Ga e ise e beiwe', // TODO tn-review
+  'wfb.markingValue': '{name} · go feta {pass}', // TODO tn-review
+  'wfb.anyone': 'Mongwe le mongwe yo o nang le phitlhelelo', // TODO tn-review
+  'wfb.whoAssigned': '{n} × {role}', // TODO tn-review
+  'wfb.noButtons': 'Ga go ise go nne le dikonopo', // TODO tn-review
+  'wfb.moveUp': 'Tsholetsa "{name}"', // TODO tn-review
+  'wfb.moveDown': 'Fokotsa "{name}"', // TODO tn-review
+  'wfb.plainWords': 'Ka mafoko a a motlhofo', // TODO tn-review
+  'wfb.plainFirst': 'Sa ntlha, {name}: {who}{scoring}.', // TODO tn-review
+  'wfb.plainNext': 'Morago {name}: {who}{scoring}.', // TODO tn-review
+  'wfb.plainScored': ', ka ditekanyetso tsa go tshwaya', // TODO tn-review
+  'wfb.stepSettings': 'Dithulaganyo tsa kgato', // TODO tn-review
+  'wfb.issue.name': 'Naya kgato leina', // TODO tn-review
+  'wfb.issue.buttons': 'Tlhopha bonnye konopo e le nngwe', // TODO tn-review
+  'wfb.issue.who': 'Tlhopha yo o abelwang', // TODO tn-review
+  'wfb.issue.howMany': 'Abela bonnye motho a le mongwe', // TODO tn-review
+  'wfb.issue.scorers': 'Bonnye motho a le mongwe o tshwanetse go tshwaya', // TODO tn-review
+  'wfb.stepName': 'Leina la kgato', // TODO tn-review
+  'wfb.stepOn': 'Kgato e e a dira', // TODO tn-review
+  'wfb.whoHasIt': 'Ke mang yo o nang le yone', // TODO tn-review
+  'wfb.role': 'Seabe', // TODO tn-review
+  'wfb.assignPeople': 'E neela batho ba ba itsiweng', // TODO tn-review
+  'wfb.assignPeopleHint': 'Kakanyo nngwe le nngwe e abelwa batho ba ba nang le seabe se.', // TODO tn-review
+  'wfb.assignTo': 'Abela', // TODO tn-review
+  'wfb.howMany': 'Ba le kae mo kakanyong nngwe', // TODO tn-review
+  'wfb.shareOut': 'Kafa tiro e abelanwang ka teng', // TODO tn-review
+  'wfb.shareOutHint': 'Gore batho ba dira ka tatelano kgotsa ka nako e le nngwe.', // TODO tn-review
+  'wfb.minDone': 'Ba le kae ba tshwanetse go fetsa', // TODO tn-review
+  'wfb.whatTheyDo': 'Ba dira eng', // TODO tn-review
+  'wfb.buttonsHint': 'Dikonopo tse ba di bonang mo kakanyong.', // TODO tn-review
+  'wfb.statusAfter': 'Seemo se kakanyo e se bontshang', // TODO tn-review
+  'wfb.noStatus': 'Tsaya seemo sa jaanong', // TODO tn-review
+  'wfb.markingCriteria': 'Ditekanyetso tsa go tshwaya', // TODO tn-review
+  'wfb.scoreWithCriteria': 'Tshwaya ka ditekanyetso', // TODO tn-review
+  'wfb.scoreOn': 'E bulegile: motho mongwe le mongwe o tshwaya kakanyo go ya ka ditekanyetso.', // TODO tn-review
+  'wfb.scoreOff': 'E tswetswe: batho ba dirisa dikonopo fela.', // TODO tn-review
+  'wfb.criteriaSet': 'Setlhopha sa ditekanyetso', // TODO tn-review
+  'wfb.chooseSet': 'Tlhopha setlhopha…', // TODO tn-review
+  'wfb.setNeeded': 'Tlhopha setlhopha sa ditekanyetso sa kgato e.', // TODO tn-review
+  'wfb.manageCriteria': 'Bula ditekanyetso tsa go tshwaya', // TODO tn-review
+  'wfb.scorers': 'Batho ba ba tshwayang', // TODO tn-review
+  'wfb.combine': 'Kafa maduo a kopanngwang ka teng', // TODO tn-review
+  'wfb.passMark': 'Maduo a go feta (go 100)', // TODO tn-review
+  'wfb.rejectBelow': 'Ga e tswelediwe fa tlase ga', // TODO tn-review
+  'wfb.betweenNote': 'Magareng ga {low} le {high}, kakanyo e busediwa go fetolwa.', // TODO tn-review
+  'wfb.blind': 'Batshwai ga ba bone maduo a ba bangwe', // TODO tn-review
+  'wfb.feedback': 'Abelana dikakgelo le mokopi', // TODO tn-review
+  'wfb.timeLimit': 'Nako le tatelano', // TODO tn-review
+  'wfb.dueHours': 'Nako (diura)', // TODO tn-review
+  'wfb.dueHoursHint': 'Morago ga nako e kgato e bontsha e fetile nako.', // TODO tn-review
+  'wfb.position': 'Maemo', // TODO tn-review
+  'wfb.positionN': 'Kgato {n}', // TODO tn-review
+  'wfb.remove': 'Tlosa kgato', // TODO tn-review
+  'wfb.removeTitle': 'Tlosa kgato "{name}"?', // TODO tn-review
+  'wfb.removeBody': 'Se ga se kgone go busediwa.', // TODO tn-review
+  'wfb.removed': '"{name}" e tlositswe.', // TODO tn-review
+  'wfb.saveStep': 'Boloka kgato', // TODO tn-review
+  'wfb.stepSaved': '"{name}" e bolokilwe.', // TODO tn-review
+  'wfb.discardTitle': 'Latlha diphetolo tsa kgato?', // TODO tn-review
+  'wfb.discardBody': 'O na le diphetolo mo kgatong e tse di sa bolokwang.', // TODO tn-review
+  'wfb.discard': 'Latlha diphetolo', // TODO tn-review
+  'wfb.keepEditing': 'Tswelela o fetola', // TODO tn-review
+  'wfb.details': 'Dintlha tsa tsamaiso', // TODO tn-review
+  'wfb.detailsHint': 'Tobetsa kgato go e rulaganya. Leina le bonala gongwe le gongwe fa tsamaiso e tlhophiwa.', // TODO tn-review
+  'wfb.description': 'Tlhaloso', // TODO tn-review
+  'wfb.role.innovator': 'Mokopi', // TODO tn-review
+  'wfb.role.innovation_officer': 'Batlhankedi ba boitlhamedi', // TODO tn-review
+  'wfb.role.innovation_manager': 'Batsamaisi ba boitlhamedi', // TODO tn-review
+  'wfb.role.judge': 'Baatlhodi', // TODO tn-review
+  'wfb.role.specialist': 'Baitseanape', // TODO tn-review
+  'wfb.role.mentor': 'Bakaedi', // TODO tn-review
+  'wfb.role.administrator': 'Batsamaisi', // TODO tn-review
+  'wfb.assignRole.reviewer': 'motshekatsheki', // TODO tn-review
+  'wfb.assignRole.officer': 'motlhankedi', // TODO tn-review
+  'wfb.assignRole.manager': 'motsamaisi', // TODO tn-review
+  'wfb.assignRole.judge': 'moatlhodi', // TODO tn-review
+  'wfb.assignRole.specialist': 'moitseanape', // TODO tn-review
+  'wfb.assignRole.mentor': 'mokaedi', // TODO tn-review
+  'wfb.assignRole.analyst': 'mosekaseki', // TODO tn-review
+  'wfb.assignRole.staff': 'modiri', // TODO tn-review
+  'wfb.assignRole.exo': 'EXO', // TODO tn-review
+  'wfb.mode.sequential': 'Mongwe morago ga yo mongwe', // TODO tn-review
+  'wfb.mode.parallel_all': 'Ka nako e le nngwe, botlhe ba a fetsa', // TODO tn-review
+  'wfb.mode.parallel_any': 'Ka nako e le nngwe, wa ntlha o a swetsa', // TODO tn-review
+  'wfb.mode.parallel_minimum': 'Ka nako e le nngwe, ba ba lekaneng ba a fetsa', // TODO tn-review
+  'wfb.action.approve': 'Tswelela', // TODO tn-review
+  'wfb.action.return': 'Busetsa go fetolwa', // TODO tn-review
+  'wfb.action.reject': 'Ga e tswelediwe', // TODO tn-review
+  'wfb.agg.average': 'Palogare', // TODO tn-review
+  'wfb.agg.min': 'E e kwa tlase', // TODO tn-review
+  'wfb.agg.max': 'E e kwa godimo', // TODO tn-review
+  'wfb.agg.median': 'Ya magareng', // TODO tn-review
+  'wfb.status.submitted': 'E rometswe', // TODO tn-review
+  'wfb.status.screening': 'Tlhatlhobo', // TODO tn-review
+  'wfb.status.under_review': 'E a sekasekwa', // TODO tn-review
+  'wfb.status.assigned_to_judges': 'E kwa baatlhoding', // TODO tn-review
+  'wfb.status.under_judging': 'E a atlholwa', // TODO tn-review
+  'wfb.status.approved': 'E amogetswe', // TODO tn-review
+  'wfb.status.rejected': 'Ga e tswelediwe', // TODO tn-review
+  'wfb.status.finalist': 'Mofenyi wa bofelo', // TODO tn-review
+  'wfb.status.winner': 'Mofenyi', // TODO tn-review
+  'wfb.status.selected_for_hackathon': 'E tlhophetswe hackathon', // TODO tn-review
 }
