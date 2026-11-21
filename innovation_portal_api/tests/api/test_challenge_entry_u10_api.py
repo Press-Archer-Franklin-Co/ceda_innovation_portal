@@ -166,7 +166,8 @@ class ResultsTests(EntryTestCase):
         results = data(self.client.get("/api/programs/public/done/results/"))
         self.assertTrue(results["published"])
         self.assertEqual([(w["position"], w["title"], w["prize_amount"]) for w in results["winners"]], [("1st", "Cool boxes", "P50 000")])
-        self.assertEqual(results["shortlisted"], [{"name": "Neo Kebadile", "title": "Solar milk cooler"}])
+        self.assertEqual(results["shortlisted"], [{"title": "Solar milk cooler"}])
+        self.assertNotIn("Neo", str(results["shortlisted"]))
         self.assertNotIn("score", str(results))
 
         self.client.force_authenticate(self.innovator)

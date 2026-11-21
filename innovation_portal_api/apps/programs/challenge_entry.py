@@ -180,15 +180,8 @@ def results_published(program) -> bool:
     return challenge_status(program) == "closed" and has_results(program)
 
 
-def _display_name(submission) -> str:
-    if submission.team_id:
-        return submission.team.name
-    user = submission.innovator
-    return (getattr(user, "full_name", "") or "").strip() if user else ""
-
-
 def public_results(program, lang: str) -> dict:
-    """1.10: winners and the shortlist, only once the challenge has published results. Never scores or judges."""
+    """1.10: winners (with names) and the shortlist (titles only), once the challenge has published results. Never scores or judges."""
     published = results_published(program)
     data = {
         "challenge": {"id": str(program.id), "slug": program.slug, "title": program.title, "status": challenge_status(program)},
@@ -219,10 +212,10 @@ def public_results(program, lang: str) -> dict:
     shortlisted = (
         program.submissions.filter(submitted_at__isnull=False, current_status__in=SHORTLIST_STATUSES)
         .exclude(id__in=winner_ids)
-        .select_related("team", "innovator")
         .order_by("title")
     )
-    data["shortlisted"] = [{"name": _display_name(s), "title": s.title} for s in shortlisted]
+    # Nshathisi (22 Nov): shortlisted entries show the idea title only; winners keep their names.
+    data["shortlisted"] = [{"title": s.title} for s in shortlisted]
     data["entries_count"] = program.submissions.filter(submitted_at__isnull=False).count()
     return data
 

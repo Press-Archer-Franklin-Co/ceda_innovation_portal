@@ -16,7 +16,7 @@ import { challengeEntryService, type Winner } from '../services/challengeEntry.s
 
 // U10 screen 1.10 Challenge results (Figma 107:794 website, 107:1028 phone). GET /api/programs/public/{slug}/results/.
 // Winners and the shortlist show only once the challenge has published its results; before that the page says
-// when they are planned. Never shows scores, judges or notes. Signed in: a link to "My result" (2.11).
+// when they are planned. Winners are named; shortlisted entries show the idea title only. Never shows scores, judges or notes. Signed in: a link to "My result" (2.11).
 
 const PLACE_STYLE: Record<string, string> = {
   '1st': 'bg-yellow text-banner-deep',
@@ -101,10 +101,7 @@ export default function ChallengeResults() {
                   {r.shortlisted.map((s, i) => (
                     <li key={`${s.title}-${i}`} className="flex items-start gap-3 rounded-card border border-border bg-surface p-4">
                       <Medal size={20} aria-hidden className="text-accent shrink-0 mt-0.5" />
-                      <span className="min-w-0">
-                        <span className="block text-d-label text-text break-words">{s.title}</span>
-                        {s.name && <span className="block text-d-cap text-muted">{s.name}</span>}
-                      </span>
+                      <span className="min-w-0 text-d-label text-text break-words">{s.title}</span>
                     </li>
                   ))}
                 </ul>

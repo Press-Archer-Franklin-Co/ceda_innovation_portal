@@ -66,7 +66,8 @@ export interface ChallengeResults {
   published_at: string | null
   results_publish_at: string | null
   winners: Winner[]
-  shortlisted: { name: string; title: string }[]
+  /** Titles only: shortlisted people are not named in public. */
+  shortlisted: { title: string }[]
   entries_count: number
 }
 

@@ -97,7 +97,7 @@ class ChallengeResultsView(APIView):
         summary="Challenge results: winners and shortlist (1.10)",
         description="published false until the challenge has closed and published its results; then winners "
         "[{position, name, title, description, prize_label, prize_amount, members_count, photo_url}] and shortlisted "
-        "[{name, title}]. Never scores, judges or notes.",
+        "[{title}] (titles only). Never scores, judges or notes.",
         parameters=[LANG],
         responses=OpenApiTypes.OBJECT,
     )
