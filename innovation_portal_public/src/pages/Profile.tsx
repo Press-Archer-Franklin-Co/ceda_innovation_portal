@@ -16,6 +16,7 @@ import { getSortedActions, providerLinkedSuccessMsg } from '../utils/securityLab
 import SecurityOverview   from '../components/security/SecurityOverview'
 import RecommendedActions from '../components/security/RecommendedActions'
 import PasswordManagement from '../components/security/PasswordManagement'
+import { useSecondStep } from '../lib/useSecondStep'
 import LinkedProviders    from '../components/security/LinkedProviders'
 
 
@@ -288,6 +289,8 @@ function ProfileTab() {
 
 function SecurityTab() {
   const [searchParams, setSearchParams] = useSearchParams()
+  // U7 (2.9): no two-step row; a password row only when people sign in with a password.
+  const secondStep = useSecondStep()
   const [secData,    setSecData]    = useState<AccountSecurity | null>(null)
   const [providers,  setProviders]  = useState<SocialProvider[]>([])
   const [loading,    setLoading]    = useState(true)
@@ -384,7 +387,7 @@ function SecurityTab() {
         <>
           <SecurityOverview data={secData} onActionClick={handleActionClick} />
 
-          {getSortedActions(secData).length > 0 && (
+          {secondStep === 'password' && getSortedActions(secData).length > 0 && (
             <RecommendedActions data={secData} onActionClick={handleActionClick} />
           )}
 
@@ -396,13 +399,15 @@ function SecurityTab() {
             />
           </div>
 
-          <div ref={passwordRef} className="scroll-mt-4">
-            <PasswordManagement
-              data={secData}
-              onRefresh={() => fetchData(true)}
-              startExpanded={passwordStartExpanded}
-            />
-          </div>
+          {secondStep === 'password' && (
+            <div ref={passwordRef} className="scroll-mt-4">
+              <PasswordManagement
+                data={secData}
+                onRefresh={() => fetchData(true)}
+                startExpanded={passwordStartExpanded}
+              />
+            </div>
+          )}
         </>
       )}
     </div>

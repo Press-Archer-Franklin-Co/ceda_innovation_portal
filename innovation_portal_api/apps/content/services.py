@@ -617,7 +617,21 @@ def _stories(settings, lang, request):
     }
 
 
+def _hero(settings, lang, request):
+    """U7: the banner's cut-out photo, or None (then the banner looks as before)."""
+    from apps.content import hero_photo
+    from apps.content.models import HeroPhoto
+
+    photo_settings = settings.get("photo") or {}
+    asset = photo_settings.get("asset")
+    photo = HeroPhoto.objects.filter(id=asset).first() if asset else None
+    if photo is None:
+        return {"photo": None}
+    return {"photo": hero_photo.payload(photo, size=photo_settings.get("size"), alt=photo_settings.get("alt"), request=request)}
+
+
 SECTION_RESOLVERS = {
+    "hero_banner": _hero,
     "partners_strip": _partners,
     "challenges": _challenges,
     "leadership_quotes": _quotes,

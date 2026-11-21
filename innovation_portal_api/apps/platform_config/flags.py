@@ -37,6 +37,13 @@ class FlagDefinition:
 FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     FlagDefinition("password_sign_in", "Email and password sign-in", "People can sign in and register with an email address and password.", "sign_in", True, is_public=True),
     FlagDefinition("code_sign_in", "Sign-in with a code", "People can sign in with a one-time code sent to their phone or email.", "sign_in", True, is_public=True),
+    FlagDefinition(
+        "demo_logins",
+        "Show test accounts on sign-in",
+        "Demo servers only: the sign-in page lists test accounts that sign in with one click. Works only while the server allows it (INNOVATION_PORTAL_DEMO_LOGINS). Switch off before launch.",
+        "sign_in",
+        False,
+    ),
     FlagDefinition("staff_sso", "CEDA staff single sign-on", "Staff can sign in with their CEDA account. Needs an active, tested SSO connection.", "sign_in", False, is_public=True),
     FlagDefinition("guest_quick_start", "2-minute guest start", "People can start an idea before creating an account.", "ideas", True, is_public=True),
     FlagDefinition(

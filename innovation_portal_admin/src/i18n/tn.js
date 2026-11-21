@@ -3,6 +3,7 @@ import { challengesTn } from './challenges'
 import { rolesTn } from './roles'
 import { contentTn } from './content'
 import { dashboardTn } from './dashboard'
+import { u7Tn } from './u7'
 import { formsTn } from './forms'
 import { ideasTn } from './ideas'
 
@@ -145,6 +146,7 @@ const tn = {
   ...rolesTn,
   ...contentTn,
   ...dashboardTn,
+  ...u7Tn,
 }
 
 export default tn

@@ -12,7 +12,7 @@ import SecurityOverview   from '../components/security/SecurityOverview'
 import RecommendedActions from '../components/security/RecommendedActions'
 import PasswordManagement from '../components/security/PasswordManagement'
 import LinkedProviders    from '../components/security/LinkedProviders'
-import MfaManagement      from '../components/security/MfaManagement'
+import { useSecondStep } from '../lib/useSecondStep'
 
 
 function Skeleton() {
@@ -29,6 +29,8 @@ function Skeleton() {
 
 export default function Security() {
   const { user } = useAuth()
+  // U7 (2.9): no two-step row; a password row only when people sign in with a password.
+  const secondStep = useSecondStep()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const [secData,    setSecData]    = useState<AccountSecurity | null>(null)
@@ -128,7 +130,7 @@ export default function Security() {
           <>
             <SecurityOverview data={secData} onActionClick={handleActionClick} />
 
-            {getSortedActions(secData).length > 0 && (
+            {secondStep === 'password' && getSortedActions(secData).length > 0 && (
               <RecommendedActions data={secData} onActionClick={handleActionClick} />
             )}
 
@@ -140,15 +142,15 @@ export default function Security() {
               />
             </div>
 
-            <MfaManagement data={secData} onRefresh={() => fetchData(true)} />
-
-            <div ref={passwordRef} className="scroll-mt-4">
-              <PasswordManagement
-                data={secData}
-                onRefresh={() => fetchData(true)}
-                startExpanded={passwordStartExpanded}
-              />
-            </div>
+            {secondStep === 'password' && (
+              <div ref={passwordRef} className="scroll-mt-4">
+                <PasswordManagement
+                  data={secData}
+                  onRefresh={() => fetchData(true)}
+                  startExpanded={passwordStartExpanded}
+                />
+              </div>
+            )}
           </>
         )}
       </section>

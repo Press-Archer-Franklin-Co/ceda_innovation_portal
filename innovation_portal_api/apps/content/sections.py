@@ -5,10 +5,13 @@ Each type declares its settings. Field kinds:
 - ``string``, ``bool``, ``int`` (with ``min``/``max``)
 - ``button``: ``{"label": text, "url": string}``
 - ``list``: a list of objects whose fields are declared in ``item`` (``max`` items)
+- ``photo`` (U7): ``null`` or ``{"asset": "<HeroPhoto id>", "size": "small|medium|large", "alt": text}``;
+  the alt text (photo description) is required in English when a photo is set
 """
 
 from __future__ import annotations
 
+import uuid
 from copy import deepcopy
 from typing import Any
 
@@ -30,6 +33,8 @@ SECTION_TYPES: dict[str, dict] = {
             "headline": _text("Turn your idea into a business", required=True, max_length=120),
             "highlighted_words": {"kind": "string", "default": "", "max": 120},
             "text": _text(max_length=300),
+            # U7: after the supporting text, as in the Hero banner editor (Figma 3.8).
+            "photo": {"kind": "photo"},
             "primary_button": BUTTON,
             "secondary_button": BUTTON,
             "show_watermark": {"kind": "bool", "default": True},
@@ -179,6 +184,8 @@ def _normalize(value, spec, path, errors):
         if label["en"].strip() and not url.strip():
             errors.append({"path": f"{path}.url", "message": "A button with a label needs a link."})
         return {"label": label, "url": url}
+    if kind == "photo":
+        return _normalize_photo(value, path, errors)
     if kind == "list":
         value = value or []
         if not isinstance(value, list):
@@ -194,6 +201,29 @@ def _normalize(value, spec, path, errors):
             items.append({key: _normalize(item.get(key), sub, f"{path}[{index}].{key}", errors) for key, sub in spec["item"].items()})
         return items
     raise ValueError(kind)
+
+
+def _normalize_photo(value, path, errors):
+    if not value or not (isinstance(value, dict) and value.get("asset")):
+        if value not in (None, {}, "") and not isinstance(value, dict):
+            errors.append({"path": path, "message": "A photo is {asset, size, alt}."})
+        return None
+    from apps.content.hero_photo import DEFAULT_SIZE, SIZES
+    from apps.content.models import HeroPhoto
+
+    asset = str(value.get("asset"))
+    try:
+        exists = HeroPhoto.objects.filter(id=uuid.UUID(asset)).exists()
+    except ValueError:
+        exists = False
+    if not exists:
+        errors.append({"path": f"{path}.asset", "message": "Upload the photo again: this one was not found."})
+    size = value.get("size") or DEFAULT_SIZE
+    if size not in SIZES:
+        errors.append({"path": f"{path}.size", "message": "Choose Small, Medium or Large."})
+        size = DEFAULT_SIZE
+    alt = _normalize_text(value.get("alt"), {"max": 200, "required": True}, f"{path}.alt", errors)
+    return {"asset": asset, "size": size, "alt": alt}
 
 
 def normalize_settings(section_type: str, settings: Any, *, path: str = "settings") -> dict:

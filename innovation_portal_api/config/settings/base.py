@@ -261,6 +261,10 @@ REST_FRAMEWORK = {
 # Guest quick start (B2): how long the resume token kept by the browser is valid,
 # and which version of the consent text the submit screen shows.
 DRAFT_RESUME_TOKEN_MAX_AGE = int(os.getenv("INNOVATION_PORTAL_DRAFT_RESUME_TOKEN_MAX_AGE", str(30 * 24 * 3600)))
+# U7: test accounts on the sign-in page. Only for demo servers; never set in production.
+# Needs the "demo_logins" switch in Platform settings too (apps.accounts.demo_logins).
+DEMO_LOGINS = os.getenv("INNOVATION_PORTAL_DEMO_LOGINS", "False").strip().lower() in ("1", "true", "yes", "on")
+ACCOUNT_TERMS_VERSION = os.getenv("INNOVATION_PORTAL_ACCOUNT_TERMS_VERSION", "2026-11")
 IDEA_SUBMISSION_CONSENT_VERSION = os.getenv("INNOVATION_PORTAL_IDEA_SUBMISSION_CONSENT_VERSION", "2026-11")
 # Sign-in codes (R-4): seconds the screen waits before offering "Resend code".
 LOGIN_CODE_RESEND_AFTER_SECONDS = int(os.getenv("INNOVATION_PORTAL_LOGIN_CODE_RESEND_AFTER_SECONDS", "60"))

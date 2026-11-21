@@ -49,7 +49,7 @@ export default function JudgeInvite() {
       })
   }, [invite, authLoading, isAuthenticated, token])
 
-  const signIn = () => navigate('/login', { state: { from: { pathname: `/judge-invite/${token}` } } })
+  const signIn = () => navigate('/sign-in', { state: { from: { pathname: `/judge-invite/${token}` } } })
 
   if (error) {
     const wrongAccount = isAuthenticated && invite && user?.email?.toLowerCase() !== invite.email
@@ -104,7 +104,7 @@ export default function JudgeInvite() {
       <button onClick={signIn} className="btn-dark w-full mb-3">Sign in to start marking</button>
       <p className="text-xs text-gray-500 leading-relaxed">
         Sign in with <strong>{invite.email}</strong>. CEDA staff use their normal CEDA login.
-        First time here? <Link to="/signup" className="font-semibold text-[#A01E0A] hover:underline">Create an account</Link> with that
+        First time here? <Link to="/sign-in" className="font-semibold text-[#A01E0A] hover:underline">Create an account</Link> with that
         email, then open this link again.
       </p>
     </Shell>

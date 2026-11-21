@@ -62,7 +62,7 @@ export default function SpecialistInvite() {
   const handleAccept = () => {
     if (!isAuthenticated) {
       sessionStorage.setItem('specialist_invite_token', token ?? '')
-      navigate('/login', { state: { from: { pathname: `/specialist-invite/${token}` } } })
+      navigate('/sign-in', { state: { from: { pathname: `/specialist-invite/${token}` } } })
       return
     }
     claimInvite()

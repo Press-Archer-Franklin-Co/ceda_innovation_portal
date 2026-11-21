@@ -43,17 +43,9 @@ public/src/pages/Suggestions.tsx
 public/src/pages/Skills.tsx
 # Added when the guard was first set up (U8): also still in the old look.
 # Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
-admin/src/pages/auth/Login.jsx
 admin/src/components/brand/CedaInnovationHubLogo.jsx
-public/src/pages/Login.tsx
-public/src/pages/SignUp.tsx
-public/src/pages/ForgotPassword.tsx
-public/src/pages/ResetPassword.tsx
 public/src/pages/VerifyEmail.tsx
-public/src/pages/MfaChallenge.tsx
 public/src/pages/AuthCallback.tsx
-public/src/components/auth/AuthShell.tsx
-public/src/components/auth/StaffSignInButton.tsx
 # Parts of the Security page (listed above).
 public/src/components/security/LinkedProviders.tsx
 public/src/components/security/MfaManagement.tsx

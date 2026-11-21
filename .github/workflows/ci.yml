@@ -39,6 +39,8 @@ jobs:
         run: |
           git fetch --no-tags origin main
           bash scripts/check_em_dash.sh origin/main
+      - name: Removed sign-in pages and nav tab stay removed (U7)
+        run: bash scripts/check_u7_removed.sh
 
   old-ui:
     name: old-ui

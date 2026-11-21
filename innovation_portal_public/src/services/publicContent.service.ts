@@ -127,9 +127,21 @@ export interface StoryCard {
   year: number | null
 }
 
+/** U7: the banner's cut-out photo (PNG with a transparent background, saved as WebP and PNG). */
+export interface HeroPhoto {
+  src: string
+  srcset: string
+  png_src: string
+  width: number
+  height: number
+  alt_en: string
+  alt_tn: string
+  size: 'small' | 'medium' | 'large'
+}
+
 /** Sections the home page can return. Unknown types are skipped by the page, not treated as errors. */
 export type HomeSection =
-  | { id: string | null; type: 'hero_banner'; settings: { headline: string; highlighted_words: string; text: string; primary_button: ButtonLink | null; secondary_button: ButtonLink | null; show_watermark: boolean; show_quick_start: boolean }; data: null }
+  | { id: string | null; type: 'hero_banner'; settings: { headline: string; highlighted_words: string; text: string; primary_button: ButtonLink | null; secondary_button: ButtonLink | null; show_watermark: boolean; show_quick_start: boolean }; data: { photo: HeroPhoto | null } | null }
   | { id: string | null; type: 'partners_strip'; settings: { title: string; max_items: number }; data: { items: PartnerCard[] } }
   | { id: string | null; type: 'challenges'; settings: { title: string; max_items: number; only_open: boolean }; data: { items: ChallengeCard[] } }
   | { id: string | null; type: 'leadership_quotes'; settings: { title: string; max_items: number }; data: { rotation_seconds: number; items: QuoteCard[] } }

@@ -61,7 +61,7 @@ export default function AuthCallback() {
               email_hint: result.email_hint,
               expires_at: result.expires_at,
             })
-            navigate('/mfa', { replace: true })
+            navigate('/sign-in', { replace: true })
             return
           }
           if (!('access' in result)) {
@@ -164,7 +164,7 @@ export default function AuthCallback() {
                 Back to Account Security
               </button>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/sign-in')}
                 className="text-xs text-gray-400 hover:underline"
               >
                 Back to Log In

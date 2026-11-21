@@ -6,6 +6,7 @@ import ErrorState from '../../../components/ui/ErrorState'
 import { cn } from '../../../lib/cn'
 import { useFeatureFlags, useSetFeatureFlag } from '../../../lib/queries/platform'
 import { ErrorBanner } from './shared'
+import SignInSetting from './SignInSetting'
 import { formatWhen } from './utils'
 import { useConfirm } from '../../../components/ui/confirm'
 
@@ -99,6 +100,7 @@ export default function FeaturesTab() {
   return (
     <div className="space-y-4">
       <ErrorBanner error={problem} />
+      <SignInSetting />
       {groups.map((group) => (
         <SectionCard key={group.key} title={group.label}>
           <div className="-my-3">

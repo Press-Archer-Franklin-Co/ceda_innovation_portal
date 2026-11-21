@@ -23,7 +23,7 @@ export function ProtectedRoute() {
     if (loading) return
     if (!user) {
       const next = `/staff${location.pathname}${location.search}`
-      window.location.replace(`${PUBLIC_PORTAL}login?next=${encodeURIComponent(next)}`)
+      window.location.replace(`${PUBLIC_PORTAL}sign-in?next=${encodeURIComponent(next)}`)
     } else if (!staff) {
       window.location.replace(PUBLIC_PORTAL)
     }
@@ -57,3 +57,12 @@ export function CapabilityRoute({ need, children }) {
   if (capabilities !== undefined && !canAny(list)) return <ForbiddenState framed title={t('access.noPageTitle')} message={t('access.noPageBody')} className="m-6" />
   return children ?? <Outlet />
 }
+
+/** U7: old console sign-in paths (OLD_SIGN_IN_PATHS) go to the one sign-in page. */
+export function ToSignIn() {
+  useEffect(() => {
+    window.location.replace(`${PUBLIC_PORTAL}sign-in?next=${encodeURIComponent('/staff/')}`)
+  }, [])
+  return null
+}
+

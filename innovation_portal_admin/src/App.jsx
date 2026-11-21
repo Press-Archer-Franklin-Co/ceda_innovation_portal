@@ -4,7 +4,8 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { documents as documentsApi } from './lib/api/endpoints'
 import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
-import { ProtectedRoute, CapabilityRoute }  from './lib/auth/ProtectedRoute'
+import { ProtectedRoute, CapabilityRoute, ToSignIn }  from './lib/auth/ProtectedRoute'
+import { OLD_SIGN_IN_PATHS } from './lib/auth/signInPaths'
 import { useJudgeOnly } from './lib/auth/useJudgeOnly'
 import { useAuth } from './lib/auth/AuthContext'
 import AppLayout           from './layout/AppLayout'
@@ -78,6 +79,9 @@ export default function App() {
         <BrowserRouter basename="/staff">
           <Routes>
             <Route path="/" element={<Landing />} />
+            {OLD_SIGN_IN_PATHS.map((path) => (
+              <Route key={path} path={path} element={<ToSignIn />} />
+            ))}
 
             {Styleguide && (
               <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />

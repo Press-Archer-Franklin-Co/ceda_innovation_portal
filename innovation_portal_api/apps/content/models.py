@@ -649,3 +649,27 @@ class PostMonthlyViews(UUIDModel, TimeStampedModel):
         constraints = [models.UniqueConstraint(fields=["post", "month"], name="uq_post_month_views")]
         indexes = [models.Index(fields=["month"])]
 
+
+
+class HeroPhoto(UUIDModel, TimeStampedModel):
+    """U7: the cut-out innovator photo in the home page banner (Hero photo block, 3.8).
+
+    Staff upload a PNG whose background is already transparent. The server checks that,
+    trims the fully transparent edges and keeps WebP and PNG copies at three heights
+    (apps.content.hero_photo). The banner's settings point at it by id.
+    """
+
+    original = models.FileField(upload_to="hero_photos/originals/")
+    filename = models.CharField(max_length=255, blank=True)
+    size_bytes = models.PositiveIntegerField(default=0)
+    width = models.PositiveIntegerField(default=0, help_text="After trimming the transparent edges.")
+    height = models.PositiveIntegerField(default=0, help_text="After trimming the transparent edges.")
+    # [{"height": 480, "width": 230, "webp": "hero_photos/<id>/480.webp", "png": "hero_photos/<id>/480.png"}, ...]
+    variants = models.JSONField(default=list, blank=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return self.filename or str(self.id)

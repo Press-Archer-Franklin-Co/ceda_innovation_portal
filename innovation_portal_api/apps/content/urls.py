@@ -5,6 +5,8 @@ from .b6_views import (
     ApprovalDecisionView,
     ApprovalListView,
     ApprovalRejectView,
+    HeroPhotoDetailView,
+    HeroPhotoUploadView,
     HomeDraftView,
     HomePreviewView,
     HomeSubmitView,
@@ -60,6 +62,8 @@ urlpatterns = (
     + [
         path("section-types/", SectionTypeListView.as_view(), name="content-section-types"),
         path("pages/home/draft/", HomeDraftView.as_view(), name="content-home-draft"),
+        path("hero-photo/", HeroPhotoUploadView.as_view(), name="content-hero-photo"),
+        path("hero-photo/<uuid:photo_id>/", HeroPhotoDetailView.as_view(), name="content-hero-photo-detail"),
         path("pages/home/preview/", HomePreviewView.as_view(), name="content-home-preview"),
         path("pages/home/submit/", HomeSubmitView.as_view(), name="content-home-submit"),
         path("approvals/", ApprovalListView.as_view(), name="content-approvals"),

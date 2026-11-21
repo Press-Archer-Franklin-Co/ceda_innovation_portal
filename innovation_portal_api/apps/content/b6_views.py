@@ -7,6 +7,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, BasePermission
 from rest_framework.views import APIView
 
@@ -63,6 +64,43 @@ class HomeDraftView(APIView):
     def put(self, request):
         sections = request.data.get("sections") if isinstance(request.data, dict) else None
         return api_success(data=PageService.save_draft(PageService.home(), sections, actor=request.user), message="Draft saved.")
+
+
+class HeroPhotoUploadView(APIView):
+    """U7: upload the banner's cut-out photo (PNG with a transparent background). Used by the Hero photo block."""
+
+    permission_classes = [HasCapability.of("content.edit")]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        tags=STAFF_TAGS,
+        summary="Upload the home banner's cut-out photo",
+        description="PNG only, at least 1200 px tall, at most 10 MB, background already removed (transparent corners). "
+        "The server trims transparent edges and keeps WebP and PNG copies 480, 800 and 1200 px tall. "
+        "Put the returned id in the banner settings as photo.asset; it shows after the draft is approved.",
+        request={"multipart/form-data": {"type": "object", "properties": {"file": {"type": "string", "format": "binary"}}}},
+        responses={201: OpenApiTypes.OBJECT, 400: OpenApiResponse(description="{file: {code, detail}}")},
+    )
+    def post(self, request):
+        from apps.content import hero_photo
+
+        photo = hero_photo.create(request.FILES.get("file"), actor=request.user)
+        AuditService.log_action(actor=request.user, action_type="hero_photo_uploaded", target=photo, metadata={"size_bytes": photo.size_bytes})
+        return api_success(data=hero_photo.staff_payload(photo), message="Photo uploaded.", status_code=status.HTTP_201_CREATED)
+
+
+class HeroPhotoDetailView(APIView):
+    """U7: one uploaded banner photo, for the Hero photo block (file name, size, thumbnail)."""
+
+    permission_classes = [HasCapability.of("content.edit")]
+
+    @extend_schema(tags=STAFF_TAGS, summary="Get an uploaded home banner photo", responses=OpenApiTypes.OBJECT)
+    def get(self, request, photo_id):
+        from apps.content import hero_photo
+        from apps.content.models import HeroPhoto
+
+        photo = get_object_or_404(HeroPhoto, id=photo_id)
+        return api_success(data=hero_photo.staff_payload(photo))
 
 
 class HomePreviewView(APIView):

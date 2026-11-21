@@ -168,7 +168,7 @@ export default function VerifyEmail() {
                 >
                   {resendWait > 0 ? `Resend in ${resendWait}s` : 'Send new verification link'}
                 </button>
-                <Link to="/login" className="text-sm font-semibold hover:underline text-center" style={{ color: '#A01E0A' }}>
+                <Link to="/sign-in" className="text-sm font-semibold hover:underline text-center" style={{ color: '#A01E0A' }}>
                   Back to Log In
                 </Link>
               </div>
@@ -184,7 +184,7 @@ export default function VerifyEmail() {
               <p className="text-sm text-gray-500 mb-6 leading-relaxed">
                 This link is missing a verification token. Please use the link sent to your email.
               </p>
-              <Link to="/login" className="text-sm font-semibold hover:underline" style={{ color: '#A01E0A' }}>
+              <Link to="/sign-in" className="text-sm font-semibold hover:underline" style={{ color: '#A01E0A' }}>
                 Back to Log In
               </Link>
             </div>
