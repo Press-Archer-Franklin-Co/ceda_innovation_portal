@@ -1,15 +1,7 @@
 # Pages still in the old look (R0). The old-UI guard (scripts/check_old_ui.mjs) does not check these yet.
 # Each rebuild PR deletes its lines. Adding a line is not allowed: the guard fails if this list grows.
-admin/src/pages/submissions/Submissions.jsx
-admin/src/pages/submissions/SubmissionDetail.jsx
-admin/src/pages/evaluation/Evaluations.jsx
-admin/src/pages/evaluation/EvaluationForm.jsx
-admin/src/pages/evaluate/EvaluationView.jsx
-admin/src/pages/assignments/MyWork.jsx
-admin/src/pages/assignments/MyAssignments.jsx
-admin/src/pages/assignments/AssignmentDetail.jsx
-admin/src/pages/tasks/MyTasks.jsx
 admin/src/pages/users/Users.jsx
+admin/src/components/assignments/ActionDrawer.jsx
 admin/src/pages/admin/RolesPermissions.jsx
 admin/src/pages/content/Approvals.jsx
 admin/src/pages/admin/platform/PlatformSettings.jsx
@@ -30,7 +22,6 @@ admin/src/pages/content/ContentList.jsx
 admin/src/pages/content/HackathonContentEditor.jsx
 admin/src/pages/content/WinnersManager.jsx
 admin/src/pages/reports/FormAnswers.jsx
-admin/src/pages/documents/DocumentPage.jsx
 admin/src/pages/settings/Settings.jsx
 public/src/pages/ChallengeDetail.tsx
 public/src/pages/HackathonDetail.tsx

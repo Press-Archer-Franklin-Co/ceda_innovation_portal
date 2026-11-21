@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  ClipboardCheck, Handshake, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  ClipboardCheck, Handshake, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -21,8 +21,16 @@ const GROUPS = [
     items: [
       { label: 'staff.nav.dashboard', href: '/dashboard', icon: LayoutDashboard },
       { label: 'staff.nav.reports', href: '/reports', icon: BarChart3, anyOf: ['dashboard.view', 'analytics.view'] },
-      { label: 'staff.nav.reviewQueue', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
-      { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, capability: 'entries.review', match: ['/assignments', '/history', '/tasks', '/evaluate'] },
+      { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, capability: 'entries.review', match: ['/assignments', '/history', '/tasks'] },
+    ],
+  },
+  {
+    // Figma 3.15 sidebar. The review queue (3.3, screens lane) joins this group when it lands (R-43).
+    key: 'ideas',
+    label: 'staff.group.ideas',
+    items: [
+      { label: 'staff.nav.submissions', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
+      { label: 'staff.nav.judging', href: '/judging', icon: Star, capability: 'entries.score' },
     ],
   },
   {
@@ -63,6 +71,17 @@ const GROUPS = [
   },
 ]
 
+// Someone who only judges (3.17): one group, Judging, My work and the judging guide on the public site.
+const JUDGE_GROUP = {
+  key: 'judging',
+  label: 'staff.group.judging',
+  items: [
+    { label: 'staff.nav.judging', href: '/judging', icon: Star },
+    { label: 'staff.nav.myWork', href: '/assignments', icon: BriefcaseBusiness, match: ['/assignments', '/tasks'] },
+    { label: 'staff.nav.judgingGuide', href: '/guidelines#criteria', icon: Info, external: true },
+  ],
+}
+
 function useIsActive(item) {
   const { pathname, search } = useLocation()
   if (item.tab) {
@@ -71,6 +90,7 @@ function useIsActive(item) {
     if (pathname.startsWith('/content/')) return pathname.startsWith(`/content/${item.tab}`) || (item.tab === 'news' && pathname.startsWith('/content/hackathons'))
     return tab === item.tab || (!tab && item.defaultTab)
   }
+  if (item.external) return false
   const prefixes = item.match ?? [item.href]
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }
@@ -79,6 +99,18 @@ function NavItem({ item }) {
   const t = useT()
   const active = useIsActive(item)
   const Icon = item.icon
+  if (item.external) {
+    // Outside the console (the public site), so a plain link.
+    return (
+      <a
+        href={item.href}
+        className="flex items-center gap-2.5 px-2.5 h-8 2xl:h-[38px] rounded-control text-[13px] 2xl:text-[14px] font-body text-banner-muted transition-colors duration-150 hover:bg-on-banner/10 hover:text-on-banner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner"
+      >
+        {Icon && <Icon size={16} strokeWidth={1.75} aria-hidden className="flex-shrink-0" />}
+        <span className="truncate">{t(item.label)}</span>
+      </a>
+    )
+  }
   return (
     <NavLink
       to={item.href}
@@ -105,10 +137,14 @@ export default function Sidebar({ previewUser } = {}) {
   const capabilities = previewUser ? previewUser.capabilities ?? [] : auth?.capabilities ?? []
   const can = (c) => capabilities.includes(c)
 
-  const groups = GROUPS.map((g) => ({
-    ...g,
-    items: g.items.filter((item) => (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability))),
-  })).filter((g) => g.items.length > 0)
+  // Same rule as lib/auth/useJudgeOnly (kept inline for the styleguide's previewUser).
+  const judgeOnly = can('entries.score') && !can('entries.assign') && !can('entries.search')
+  const groups = judgeOnly
+    ? [JUDGE_GROUP]
+    : GROUPS.map((g) => ({
+        ...g,
+        items: g.items.filter((item) => (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability))),
+      })).filter((g) => g.items.length > 0)
 
   const roleLabel = can('settings.manage')
     ? 'Admin access'

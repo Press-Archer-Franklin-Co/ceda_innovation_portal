@@ -10,8 +10,8 @@ import { useToast } from '../ui/toast'
 import { useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
 import { useAddLibraryCriterion, useCriteriaLibrary } from '../../lib/queries/forms'
-import {
 import DataTable from '../ui/DataTable'
+import {
   SCORES, isTicked, move, normaliseMeanings, nudge, setCommentRule, setWeight, splitEvenly, toggleLibrary, total,
 } from '../../lib/challenges/judging'
 

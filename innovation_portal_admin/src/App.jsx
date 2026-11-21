@@ -1,9 +1,12 @@
 import React, { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { documents as documentsApi } from './lib/api/endpoints'
 import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
 import { ProtectedRoute, CapabilityRoute }  from './lib/auth/ProtectedRoute'
+import { useJudgeOnly } from './lib/auth/useJudgeOnly'
+import { useAuth } from './lib/auth/AuthContext'
 import AppLayout           from './layout/AppLayout'
 import PageErrorBoundary   from './components/ui/PageErrorBoundary'
 
@@ -18,12 +21,12 @@ const ProgramDetail = lazy(() => import('./pages/programs/ProgramDetail'))
 const ProgramEditor = lazy(() => import('./pages/programs/ProgramEditor'))
 const Submissions = lazy(() => import('./pages/submissions/Submissions'))
 const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail'))
-const MyWork = lazy(() => import('./pages/assignments/MyWork'))
-const EvaluationForm = lazy(() => import('./pages/evaluation/EvaluationForm'))
+const MyWork = lazy(() => import('./pages/mywork/MyWork'))
+const Judging = lazy(() => import('./pages/judging/Judging'))
+const ScoreIdea = lazy(() => import('./pages/judging/ScoreIdea'))
+const AllScores = lazy(() => import('./pages/judging/AllScores'))
 const Reports = lazy(() => import('./pages/reports/Reports'))
 const Settings = lazy(() => import('./pages/settings/Settings'))
-const AssignmentDetail = lazy(() => import('./pages/assignments/AssignmentDetail'))
-const DocumentPage = lazy(() => import('./pages/documents/DocumentPage'))
 const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows'))
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
 const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
@@ -51,7 +54,6 @@ const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
 const LeadershipCardEditor = lazy(() => import('./pages/content/LeadershipManager').then((m) => ({ default: m.LeadershipCardEditor })))
 const FaqList = lazy(() => import('./pages/content/FaqManager'))
 const FaqEditor = lazy(() => import('./pages/content/FaqManager').then((m) => ({ default: m.FaqEditor })))
-const EvaluationView = lazy(() => import('./pages/evaluate/EvaluationView'))
 const History = lazy(() => import('./pages/history/History'))
 
 // Dev-only component gallery; not part of the production bundle.
@@ -75,7 +77,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter basename="/staff">
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Landing />} />
 
             {Styleguide && (
               <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />
@@ -91,22 +93,32 @@ export default function App() {
                 <Route path="/programs/:id/edit" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
                 <Route path="/programs/:id/settings" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
 
-                <Route path="/submissions"     element={<ErrorBoundary><Submissions /></ErrorBoundary>} />
+                {/* U8 (3.15 to 3.20). Old addresses redirect to the new screens. */}
+                <Route element={<CapabilityRoute need="entries.search" />}>
+                  <Route path="/submissions"   element={<ErrorBoundary><Submissions /></ErrorBoundary>} />
+                </Route>
                 <Route path="/submissions/:id" element={<ErrorBoundary><SubmissionDetail /></ErrorBoundary>} />
-                <Route path="/documents/:id"   element={<ErrorBoundary><DocumentPage /></ErrorBoundary>} />
+                <Route element={<CapabilityRoute need={['entries.assign', 'dashboard.view']} />}>
+                  <Route path="/submissions/:id/scores" element={<ErrorBoundary><AllScores /></ErrorBoundary>} />
+                </Route>
+                <Route path="/documents/:id"   element={<ErrorBoundary><DocumentRedirect /></ErrorBoundary>} />
 
                 <Route path="/assignments"     element={<ErrorBoundary><MyWork /></ErrorBoundary>} />
-                <Route path="/assignments/:id" element={<ErrorBoundary><AssignmentDetail /></ErrorBoundary>} />
+                <Route path="/assignments/:id" element={<WorkItemRedirect />} />
+                <Route path="/tasks"           element={<Navigate to="/assignments" replace />} />
+                <Route path="/tasks/:id"       element={<WorkItemRedirect />} />
 
                 <Route path="/history" element={<ErrorBoundary><History /></ErrorBoundary>} />
                 <Route path="/history/:id" element={<ErrorBoundary><HistorySnapshot /></ErrorBoundary>} />
 
-                <Route path="/evaluate/:id" element={<ErrorBoundary><EvaluationView /></ErrorBoundary>} />
-                <Route path="/tasks"     element={<Navigate to="/assignments" replace />} />
-                <Route path="/tasks/:id" element={<ErrorBoundary><AssignmentDetail /></ErrorBoundary>} />
-
-                <Route path="/evaluations/mine" element={<Navigate to="/assignments" replace />} />
-                <Route path="/evaluations/:id"  element={<ErrorBoundary><EvaluationForm /></ErrorBoundary>} />
+                <Route element={<CapabilityRoute need="entries.score" />}>
+                  <Route path="/judging"       element={<ErrorBoundary><Judging /></ErrorBoundary>} />
+                </Route>
+                {/* Anyone with a review to score lands here; the API decides (cycle can_score). */}
+                <Route path="/judging/:id"     element={<ErrorBoundary><ScoreIdea /></ErrorBoundary>} />
+                <Route path="/evaluate/:id"    element={<ParamRedirect to="/judging/:id" />} />
+                <Route path="/evaluations/mine" element={<Navigate to="/judging" replace />} />
+                <Route path="/evaluations/:id" element={<ParamRedirect to="/judging/:id" />} />
 
                 {/* Each group asks for the capability the API checks on the endpoints behind it (S1). */}
                 <Route element={<CapabilityRoute need="entries.assign" />}>
@@ -184,6 +196,36 @@ export default function App() {
       </AuthProvider>
     </QueryClientProvider>
   )
+}
+
+/** People who only judge start on their judging list (3.17); everyone else on the dashboard. */
+function Landing() {
+  const judgeOnly = useJudgeOnly()
+  const { loading } = useAuth()
+  if (loading) return null
+  return <Navigate to={judgeOnly ? '/judging' : '/dashboard'} replace />
+}
+
+/** /evaluate/:id and the like: same id, new address. */
+function ParamRedirect({ to }) {
+  const { id } = useParams()
+  return <Navigate to={to.replace(':id', id)} replace />
+}
+
+/** Old task and assignment pages open the item in My work. */
+function WorkItemRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/assignments?item=${encodeURIComponent(id)}`} replace />
+}
+
+/** The old document page: the document now lives in its idea's Documents tab (3.16). */
+function DocumentRedirect() {
+  const { id } = useParams()
+  const doc = useQuery({ queryKey: ['documents', id], queryFn: () => documentsApi.get(id), retry: false })
+  if (doc.isLoading) return null
+  const submission = doc.data?.submission ?? doc.data?.submission_id
+  if (!submission) return <Navigate to="/submissions" replace />
+  return <Navigate to={`/submissions/${submission}?tab=documents`} replace />
 }
 
 function OldAnalyticsLink() {
