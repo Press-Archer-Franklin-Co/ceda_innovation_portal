@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     "apps.reference",
     "apps.media_library",
     "apps.platform_config",
+    "apps.channels",
 ]
 
 MIDDLEWARE = [
@@ -162,6 +163,8 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "loggers": {
         "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # C2: refused USSD and WhatsApp webhooks (security.webhook_rejected).
+        "security.webhook": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

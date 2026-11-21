@@ -441,9 +441,16 @@ class SignInSafetyRuleTests(PlatformSettingsTestBase):
         self.assertTrue(IntegrationConnection.objects.get(id=connection["id"]).is_active)
 
     def test_coming_soon_feature_cannot_be_switched_on(self):
-        response = self.client.patch(f"{BASE}/features/whatsapp_messages/", {"enabled": True}, format="json")
+        # C2 made WhatsApp and USSD real, so mark a switch as coming soon here.
+        FeatureFlag.objects.filter(key="translation_suggestions").update(coming_soon=True)
+        response = self.client.patch(f"{BASE}/features/translation_suggestions/", {"enabled": True}, format="json")
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["errors"]["code"], "coming_soon")
+
+    def test_whatsapp_and_ussd_switches_are_no_longer_coming_soon(self):
+        for key in ("whatsapp_messages", "ussd"):
+            response = self.client.patch(f"{BASE}/features/{key}/", {"enabled": True}, format="json")
+            self.assertEqual(response.status_code, 200, key)
 
     def test_flag_changes_are_audited(self):
         self.client.patch(f"{BASE}/features/similar_ideas/", {"enabled": False}, format="json")

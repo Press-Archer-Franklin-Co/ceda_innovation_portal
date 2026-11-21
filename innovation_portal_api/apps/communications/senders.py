@@ -112,6 +112,13 @@ class MessageSenderRegistry:
             result = SMSGateway.send_via_active_connection(to=to, body=body, purpose=purpose)
             if result is not None:
                 return result
+        if channel == "whatsapp":
+            # C2: the active WhatsApp connection, with the 24 hour window and templates.
+            from apps.channels.services import WhatsAppOutbound
+
+            result = WhatsAppOutbound.send(to=to, body=body, message_type=(metadata or {}).get("message_type") or "staff_reply")
+            if result is not None:
+                return result
         try:
             sender = MessageSenderRegistry.get(channel)
         except NoSenderConfigured:
