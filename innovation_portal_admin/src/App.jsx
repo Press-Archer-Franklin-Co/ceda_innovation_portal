@@ -17,9 +17,8 @@ function ErrorBoundary({ children }) {
 }
 
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
-const Programs = lazy(() => import('./pages/programs/Programs'))
-const ProgramDetail = lazy(() => import('./pages/programs/ProgramDetail'))
-const ProgramEditor = lazy(() => import('./pages/programs/ProgramEditor'))
+const Challenges = lazy(() => import('./pages/programs/Challenges'))
+const ChallengeStatus = lazy(() => import('./pages/programs/ChallengeStatus'))
 const Submissions = lazy(() => import('./pages/submissions/Submissions'))
 const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail'))
 const MyWork = lazy(() => import('./pages/mywork/MyWork'))
@@ -91,11 +90,11 @@ export default function App() {
               <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
 
-                <Route path="/programs"     element={<ErrorBoundary><Programs /></ErrorBoundary>} />
+                <Route path="/programs"     element={<ErrorBoundary><Challenges /></ErrorBoundary>} />
                 <Route path="/programs/new" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
-                <Route path="/programs/:id" element={<ErrorBoundary><ProgramDetail /></ErrorBoundary>} />
+                <Route path="/programs/:id" element={<ErrorBoundary><ChallengeStatus /></ErrorBoundary>} />
                 <Route path="/programs/:id/edit" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
-                <Route path="/programs/:id/settings" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/:id/settings" element={<ParamRedirect to="/programs/:id/edit?section=basics" />} />
 
                 {/* U8 (3.15 to 3.20). Old addresses redirect to the new screens. */}
                 <Route element={<CapabilityRoute need="entries.search" />}>

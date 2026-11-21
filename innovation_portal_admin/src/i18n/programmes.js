@@ -197,6 +197,112 @@ export const programmesEn = {
   'wfb.status.finalist': 'Finalist',
   'wfb.status.winner': 'Winner',
   'wfb.status.selected_for_hackathon': 'Selected for the hackathon',
+  'cbs.crumb': 'Challenges',
+  'cbs.subtitle': 'Each challenge is its own programme: its own rules, form, stages, judging and workflow.',
+  'cbs.preview': 'Preview as applicant',
+  'cbs.status': 'Challenge status',
+  'cbs.sections': 'Challenge sections',
+  'cbs.section.basics': 'Basics',
+  'cbs.section.eligibility': 'Eligibility and requirements',
+  'cbs.section.stages': 'Stages and forms',
+  'cbs.section.judging': 'Judging',
+  'cbs.section.workflow': 'Workflow',
+  'cbs.section.publish': 'Publish',
+  'cbs.description': 'Long description',
+  'cbs.descriptionHint': 'Shown where a longer text is needed. The summary is what most pages use.',
+  'cbs.date.screening_start': 'Screening starts',
+  'cbs.date.screening_end': 'Screening ends',
+  'cbs.date.judging_start': 'Judging starts',
+  'cbs.date.judging_end': 'Judging ends',
+  'cbs.date.event_date': 'Event day',
+  'cbs.whoCanEnter': 'Who can enter',
+  'cbs.audience': 'Open to',
+  'cbs.audience.both': 'Everyone',
+  'cbs.audience.public': 'The public only',
+  'cbs.audience.internal': 'CEDA staff only',
+  'cbs.audienceHint.both': 'Anyone can enter.',
+  'cbs.audienceHint.public': 'CEDA staff cannot enter.',
+  'cbs.audienceHint.internal': 'Only staff signed in with CEDA sign-in.',
+  'cbs.entriesPerPerson': 'Entries per person',
+  'cbs.entriesPerPersonHint': 'Leave empty for no limit.',
+  'cbs.individuals': 'People can enter on their own',
+  'cbs.teams': 'Teams can enter',
+  'cbs.teamSize': 'Largest team',
+  'cbs.rulesSoon': 'Rules such as age, citizenship, district and business stage, and the documents applicants must bring, come next.',
+  'cbs.terms': 'Terms',
+  'cbs.termsPick': 'Terms applicants agree to',
+  'cbs.noTerms': 'The standard terms',
+  'cbs.manageTerms': 'Open terms',
+  'cbs.noWorkflow': 'No workflow linked yet',
+  'cbs.noWorkflowBody': 'The stages follow the workflow this challenge uses. Choose one first.',
+  'cbs.chooseWorkflow': 'Choose a workflow',
+  'cbs.follows': 'Follows workflow "{name}", {n} steps',
+  'cbs.openWorkflow': 'Open workflow',
+  'cbs.noForm': 'No form',
+  'cbs.movesAuto': 'Moves on by itself when enough reviewers are done',
+  'cbs.movesOfficer': 'An officer moves it on',
+  'cbs.stagesSoon': 'A form, dates and who takes part for each stage come next. Change the steps themselves in the workflow.',
+  'cbs.currentWorkflow': 'Workflow in use',
+  'cbs.otherWorkflows': 'Other workflows for this challenge',
+  'cbs.noOtherWorkflows': 'There are no other workflows for this challenge.',
+  'cbs.useThis': 'Use this one',
+  'cbs.allWorkflows': 'All workflows',
+  'cbs.statusTitle': 'Status',
+  'cbs.statusNow': 'Now:',
+  'cbs.isPublic': 'Show on the public website',
+  'cbs.isPublicHint': 'Off keeps the challenge for invited people only.',
+  'cbs.close': 'Close entries',
+  'cbs.closeTitle': 'Close entries now?',
+  'cbs.closeBody': 'No new entries can start. Entries already sent carry on through the stages.',
+  'cbs.closed': 'Entries are closed.',
+  'cbs.reopen': 'Open entries again',
+  'cbs.reopened': 'Entries are open again.',
+  'cbs.archive': 'Archive',
+  'cbs.archived': 'The challenge is archived.',
+  'chl.crumb': 'Challenges',
+  'chl.title': 'Challenges',
+  'chl.subtitle': 'Every call for ideas, with its rules, form, stages and judging.',
+  'chl.create': 'New challenge',
+  'chl.search': 'Search challenges',
+  'chl.tab.all': 'All',
+  'chl.tab.published': 'Open',
+  'chl.tab.draft': 'Drafts',
+  'chl.tab.closed': 'Closed',
+  'chl.tab.archived': 'Archived',
+  'chl.loadError': 'We could not load the challenges',
+  'chl.empty': 'No challenges here',
+  'chl.emptyBody': 'Create a challenge to open a call for ideas.',
+  'chl.emptySearch': 'No challenges match "{q}"',
+  'chl.menu': 'Actions for {name}',
+  'chl.status': 'Status and numbers',
+  'chl.edit': 'Edit challenge',
+  'chl.workflow': 'Open its workflow',
+  'chl.ideas': 'See its ideas',
+  'chl.closes': 'Closes {date}',
+  'cst.loadError': 'We could not load this challenge',
+  'cst.edit': 'Edit challenge',
+  'cst.daysLeft': '{n} days left',
+  'cst.closesToday': 'Closes today',
+  'cst.numbersError': 'We could not load the numbers',
+  'cst.started': 'started',
+  'cst.submitted': 'submitted',
+  'cst.reviewed': 'reviewed',
+  'cst.toPanel': 'to panel',
+  'cst.postUpdate': 'Post an update to entrants',
+  'cst.updateHint': 'Everyone who started an entry gets it, by WhatsApp, SMS or email as they prefer.',
+  'cst.message': 'Message',
+  'cst.messageTn': 'Message in Setswana',
+  'cst.updateNeeded': 'Write the message.',
+  'cst.updateSent': 'Update sent to {n} people.',
+  'cst.updateNotYet': 'Posting updates is not available yet.',
+  'cst.send': 'Send update',
+  'cst.extend': 'Extend the deadline',
+  'cst.closesNow': 'Entries close {date}.',
+  'cst.newClose': 'New closing date and time',
+  'cst.extendLater': 'Choose a date after the current one.',
+  'cst.extendSave': 'Extend',
+  'cst.extended': 'The deadline is extended.',
+  'cst.seeIdeas': 'See the ideas sent',
 }
 
 export const programmesTn = {
@@ -392,4 +498,110 @@ export const programmesTn = {
   'wfb.status.finalist': 'Mofenyi wa bofelo', // TODO tn-review
   'wfb.status.winner': 'Mofenyi', // TODO tn-review
   'wfb.status.selected_for_hackathon': 'E tlhophetswe hackathon', // TODO tn-review
+  'cbs.crumb': 'Dikgwetlho', // TODO tn-review
+  'cbs.subtitle': 'Kgwetlho nngwe le nngwe ke lenaneo la yone: melawana, foromo, dikgato, katlholo le tsamaiso tsa yone.', // TODO tn-review
+  'cbs.preview': 'Bona jaaka mokopi', // TODO tn-review
+  'cbs.status': 'Seemo sa kgwetlho', // TODO tn-review
+  'cbs.sections': 'Dikarolo tsa kgwetlho', // TODO tn-review
+  'cbs.section.basics': 'Motheo', // TODO tn-review
+  'cbs.section.eligibility': 'Ba ba ka tsenang le se se tlhokegang', // TODO tn-review
+  'cbs.section.stages': 'Dikgato le diforomo', // TODO tn-review
+  'cbs.section.judging': 'Katlholo', // TODO tn-review
+  'cbs.section.workflow': 'Tsamaiso', // TODO tn-review
+  'cbs.section.publish': 'Phasalatsa', // TODO tn-review
+  'cbs.description': 'Tlhaloso e telele', // TODO tn-review
+  'cbs.descriptionHint': 'E bonala fa go tlhokega mafoko a mantsi. Kakaretso ke yone e e dirisiwang ke dikarolo tse dintsi.', // TODO tn-review
+  'cbs.date.screening_start': 'Tlhatlhobo e simolola', // TODO tn-review
+  'cbs.date.screening_end': 'Tlhatlhobo e fela', // TODO tn-review
+  'cbs.date.judging_start': 'Katlholo e simolola', // TODO tn-review
+  'cbs.date.judging_end': 'Katlholo e fela', // TODO tn-review
+  'cbs.date.event_date': 'Letsatsi la tiragalo', // TODO tn-review
+  'cbs.whoCanEnter': 'Ke mang yo o ka tsenang', // TODO tn-review
+  'cbs.audience': 'E bulegetse', // TODO tn-review
+  'cbs.audience.both': 'Botlhe', // TODO tn-review
+  'cbs.audience.public': 'Setšhaba fela', // TODO tn-review
+  'cbs.audience.internal': 'Badiri ba CEDA fela', // TODO tn-review
+  'cbs.audienceHint.both': 'Mongwe le mongwe o ka tsena.', // TODO tn-review
+  'cbs.audienceHint.public': 'Badiri ba CEDA ga ba kgone go tsena.', // TODO tn-review
+  'cbs.audienceHint.internal': 'Badiri fela ba ba tsenang ka CEDA.', // TODO tn-review
+  'cbs.entriesPerPerson': 'Dikopo mo mothong a le mongwe', // TODO tn-review
+  'cbs.entriesPerPersonHint': 'Tlogela go se na sepe go se na tekanyetso.', // TODO tn-review
+  'cbs.individuals': 'Batho ba ka tsena ba le bosi', // TODO tn-review
+  'cbs.teams': 'Ditlhopha di ka tsena', // TODO tn-review
+  'cbs.teamSize': 'Setlhopha se segolo', // TODO tn-review
+  'cbs.rulesSoon': 'Melawana e e jaaka dingwaga, boagi, kgaolo le kgato ya kgwebo, le dikwalo tse bakopi ba tshwanetseng go di tlisa, di tla latela.', // TODO tn-review
+  'cbs.terms': 'Melawana', // TODO tn-review
+  'cbs.termsPick': 'Melawana e bakopi ba dumelang mo go yone', // TODO tn-review
+  'cbs.noTerms': 'Melawana e e tlwaelegileng', // TODO tn-review
+  'cbs.manageTerms': 'Bula melawana', // TODO tn-review
+  'cbs.noWorkflow': 'Ga go ise go golaganngwe tsamaiso', // TODO tn-review
+  'cbs.noWorkflowBody': 'Dikgato di latela tsamaiso e kgwetlho e e dirisang. Tlhopha nngwe pele.', // TODO tn-review
+  'cbs.chooseWorkflow': 'Tlhopha tsamaiso', // TODO tn-review
+  'cbs.follows': 'E latela tsamaiso "{name}", dikgato di le {n}', // TODO tn-review
+  'cbs.openWorkflow': 'Bula tsamaiso', // TODO tn-review
+  'cbs.noForm': 'Ga go na foromo', // TODO tn-review
+  'cbs.movesAuto': 'E tswelela ka bo yone fa batshekatsheki ba ba lekaneng ba fetsa', // TODO tn-review
+  'cbs.movesOfficer': 'Motlhankedi o a e tswelela', // TODO tn-review
+  'cbs.stagesSoon': 'Foromo, matlha le ba ba tsayang karolo mo kgatong nngwe le nngwe di tla latela. Fetola dikgato ka bo tsone mo tsamaisong.', // TODO tn-review
+  'cbs.currentWorkflow': 'Tsamaiso e e dirisiwang', // TODO tn-review
+  'cbs.otherWorkflows': 'Ditsamaiso tse dingwe tsa kgwetlho e', // TODO tn-review
+  'cbs.noOtherWorkflows': 'Ga go na ditsamaiso tse dingwe tsa kgwetlho e.', // TODO tn-review
+  'cbs.useThis': 'Dirisa e', // TODO tn-review
+  'cbs.allWorkflows': 'Ditsamaiso tsotlhe', // TODO tn-review
+  'cbs.statusTitle': 'Seemo', // TODO tn-review
+  'cbs.statusNow': 'Jaanong:', // TODO tn-review
+  'cbs.isPublic': 'Bontsha mo webosaeteng ya setšhaba', // TODO tn-review
+  'cbs.isPublicHint': 'E tswetswe e boloka kgwetlho e le ya ba ba laleditsweng fela.', // TODO tn-review
+  'cbs.close': 'Tswala dikopo', // TODO tn-review
+  'cbs.closeTitle': 'Tswala dikopo jaanong?', // TODO tn-review
+  'cbs.closeBody': 'Ga go kopo e ntšha e e ka simololwang. Dikopo tse di setseng di rometswe di tswelela ka dikgato.', // TODO tn-review
+  'cbs.closed': 'Dikopo di tswetswe.', // TODO tn-review
+  'cbs.reopen': 'Bula dikopo gape', // TODO tn-review
+  'cbs.reopened': 'Dikopo di bulegile gape.', // TODO tn-review
+  'cbs.archive': 'Boloka mo polokelong', // TODO tn-review
+  'cbs.archived': 'Kgwetlho e bolokilwe mo polokelong.', // TODO tn-review
+  'chl.crumb': 'Dikgwetlho', // TODO tn-review
+  'chl.title': 'Dikgwetlho', // TODO tn-review
+  'chl.subtitle': 'Pitso nngwe le nngwe ya dikakanyo, le melawana, foromo, dikgato le katlholo ya yone.', // TODO tn-review
+  'chl.create': 'Kgwetlho e ntšha', // TODO tn-review
+  'chl.search': 'Batla dikgwetlho', // TODO tn-review
+  'chl.tab.all': 'Tsotlhe', // TODO tn-review
+  'chl.tab.published': 'Di bulegile', // TODO tn-review
+  'chl.tab.draft': 'Ditlhangwa', // TODO tn-review
+  'chl.tab.closed': 'Di tswetswe', // TODO tn-review
+  'chl.tab.archived': 'Di bolokilwe', // TODO tn-review
+  'chl.loadError': 'Ga re a kgona go bula dikgwetlho', // TODO tn-review
+  'chl.empty': 'Ga go na dikgwetlho fa', // TODO tn-review
+  'chl.emptyBody': 'Dira kgwetlho go bula pitso ya dikakanyo.', // TODO tn-review
+  'chl.emptySearch': 'Ga go na dikgwetlho tse di tsamaelanang le "{q}"', // TODO tn-review
+  'chl.menu': 'Ditiro tsa {name}', // TODO tn-review
+  'chl.status': 'Seemo le dipalo', // TODO tn-review
+  'chl.edit': 'Fetola kgwetlho', // TODO tn-review
+  'chl.workflow': 'Bula tsamaiso ya yone', // TODO tn-review
+  'chl.ideas': 'Bona dikakanyo tsa yone', // TODO tn-review
+  'chl.closes': 'E tswala ka {date}', // TODO tn-review
+  'cst.loadError': 'Ga re a kgona go bula kgwetlho e', // TODO tn-review
+  'cst.edit': 'Fetola kgwetlho', // TODO tn-review
+  'cst.daysLeft': 'Go setse malatsi a le {n}', // TODO tn-review
+  'cst.closesToday': 'E tswala gompieno', // TODO tn-review
+  'cst.numbersError': 'Ga re a kgona go bula dipalo', // TODO tn-review
+  'cst.started': 'ba simolotse', // TODO tn-review
+  'cst.submitted': 'di rometswe', // TODO tn-review
+  'cst.reviewed': 'di sekasekilwe', // TODO tn-review
+  'cst.toPanel': 'kwa phaneleng', // TODO tn-review
+  'cst.postUpdate': 'Romela kitsiso go bakopi', // TODO tn-review
+  'cst.updateHint': 'Mongwe le mongwe yo o simolotseng kopo o a e amogela, ka WhatsApp, SMS kgotsa imeile ka fa a ratang ka teng.', // TODO tn-review
+  'cst.message': 'Molaetsa', // TODO tn-review
+  'cst.messageTn': 'Molaetsa ka Setswana', // TODO tn-review
+  'cst.updateNeeded': 'Kwala molaetsa.', // TODO tn-review
+  'cst.updateSent': 'Kitsiso e rometswe batho ba le {n}.', // TODO tn-review
+  'cst.updateNotYet': 'Go romela dikitsiso ga go ise go nne teng.', // TODO tn-review
+  'cst.send': 'Romela kitsiso', // TODO tn-review
+  'cst.extend': 'Oketsa nako', // TODO tn-review
+  'cst.closesNow': 'Dikopo di tswala ka {date}.', // TODO tn-review
+  'cst.newClose': 'Letlha le nako e ntšha ya go tswala', // TODO tn-review
+  'cst.extendLater': 'Tlhopha letlha morago ga le le leng teng.', // TODO tn-review
+  'cst.extendSave': 'Oketsa', // TODO tn-review
+  'cst.extended': 'Nako e okeditswe.', // TODO tn-review
+  'cst.seeIdeas': 'Bona dikakanyo tse di rometsweng', // TODO tn-review
 }
