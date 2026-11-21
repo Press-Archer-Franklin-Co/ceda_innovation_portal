@@ -200,30 +200,38 @@ class StageConfigService:
         return getattr(workflow_step, "evaluation_config", None)
 
     @staticmethod
-    def effective_criteria(config: StageEvaluationConfig) -> list:
+    def effective_criteria(config: StageEvaluationConfig | None, *, lang: str = "en", program=None) -> list:
         """
         Return a unified list of criterion dicts from whichever source is active.
 
         Resolution order:
-          1. marking_criteria (library — preferred, reusable)
+          1. marking_criteria (library, preferred and reusable)
           2. rubric (legacy programme-level template)
           3. custom_criteria (per-step, fallback)
+          4. R-42: no config at all, the programme's own marking criteria
         """
+
+        def scored(c, kind):
+            return {
+                "id": str(c.id),
+                "type": kind,
+                "name": c.name,
+                "description": c.description,
+                "max_score": float(c.max_score),
+                "min_score": float(c.min_score),
+                "weight": float(c.weight),
+                "ordering": c.ordering,
+                "comment_required_below": float(c.comment_required_below) if c.comment_required_below is not None else None,
+                "score_meanings": score_meanings(c, lang),
+                "comment_required_scores": [int(score) for score in (getattr(c, "comment_required_scores", None) or [])],
+            }
+
+        if config is None:
+            if program is not None and program.marking_criteria_id:
+                return [scored(c, "library") for c in program.marking_criteria.items.order_by("ordering")]
+            return []
         if config.marking_criteria_id:
-            return [
-                {
-                    "id": str(c.id),
-                    "type": "library",
-                    "name": c.name,
-                    "description": c.description,
-                    "max_score": float(c.max_score),
-                    "min_score": float(c.min_score),
-                    "weight": float(c.weight),
-                    "ordering": c.ordering,
-                    "comment_required_below": float(c.comment_required_below) if c.comment_required_below is not None else None,
-                }
-                for c in config.marking_criteria.items.all()
-            ]
+            return [scored(c, "library") for c in config.marking_criteria.items.all()]
         if config.rubric_id:
             return [
                 {
@@ -236,24 +244,19 @@ class StageConfigService:
                     "weight": float(c.weight),
                     "ordering": c.ordering,
                     "comment_required_below": None,
+                    "score_meanings": [],
+                    "comment_required_scores": [],
                 }
                 for c in config.rubric.criteria.all()
             ]
-        return [
-            {
-                "id": str(c.id),
-                "type": "stage",
-                "name": c.name,
-                "description": c.description,
-                "max_score": float(c.max_score),
-                "min_score": float(c.min_score),
-                "weight": float(c.weight),
-                "ordering": c.ordering,
-                "comment_required_below": float(c.comment_required_below) if c.comment_required_below is not None else None,
-            }
-            for c in config.custom_criteria.all()
-        ]
+        return [scored(c, "stage") for c in config.custom_criteria.all()]
 
+
+def score_meanings(criterion, lang: str = "en") -> list[str]:
+    """R-42: what each score 1 to 5 means, in one language (English when the other is missing)."""
+    from apps.core.i18n import get_text
+
+    return [get_text(item if isinstance(item, dict) else {"en": str(item or "")}, lang) for item in (getattr(criterion, "score_meanings", None) or [])]
 
 
 def require_comment_for_score(criterion, raw, comment) -> None:
@@ -621,8 +624,8 @@ class EvaluationService:
             raise ValidationError("No draft scorecard found. Please save your scores first.")
 
         stage_config = review_cycle.stage_config
-        if stage_config:
-            expected_count = len(StageConfigService.effective_criteria(stage_config))
+        if stage_config or submission.program.marking_criteria_id:
+            expected_count = len(StageConfigService.effective_criteria(stage_config, program=submission.program))
             actual_count = sheet.criterion_scores.count()
             if actual_count < expected_count:
                 raise ValidationError(f"All {expected_count} criteria must be scored before submission ({actual_count} scored).")
@@ -931,7 +934,7 @@ class EvaluationService:
 
     @staticmethod
     def get_scorecard_for_reviewer(
-        *, submission, judge, review_cycle: ReviewCycle, reveal_identities: bool = False
+        *, submission, judge, review_cycle: ReviewCycle, reveal_identities: bool = False, lang: str = "en"
     ) -> dict:
         """
         Return the reviewer's full scorecard data.
@@ -966,7 +969,7 @@ class EvaluationService:
 
         own_submitted = own_sheet and own_sheet.status in {ScoreSheetStatus.SUBMITTED, ScoreSheetStatus.LOCKED}
 
-        criteria = StageConfigService.effective_criteria(stage_config) if stage_config else []
+        criteria = StageConfigService.effective_criteria(stage_config, lang=lang, program=submission.program)
 
         completed_count = review_cycle.completed_count
         pending_count = max(0, required - completed_count)
@@ -1011,6 +1014,7 @@ class EvaluationService:
                 "status": own_sheet.status,
                 "total_score": float(own_sheet.total_score),
                 "weighted_score": sheet_weighted_score(own_sheet),
+                "weighted_total": sheet_weighted_score(own_sheet),
                 "overall_comment": own_sheet.overall_comment,
                 "submitted_at": own_sheet.submitted_at.isoformat() if own_sheet.submitted_at else None,
                 "scores": [

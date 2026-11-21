@@ -11,7 +11,11 @@ from apps.assignments.models import SavedView
 from apps.core.api import api_success
 from apps.core.permissions import IsStaffWorker
 
-ALLOWED_FILTERS = {"program", "sector", "overdue", "channel", "stage", "role", "mine", "unassigned", "assigned", "completed"}
+ALLOWED_FILTERS = {
+    "program", "sector", "overdue", "channel", "stage", "role", "mine", "unassigned", "assigned", "completed",
+    # R-42: the staff submissions list (scope "submissions").
+    "view", "district", "status", "submitted_from", "submitted_to", "search", "ordering",
+}
 
 
 class SavedViewSerializer(serializers.ModelSerializer):

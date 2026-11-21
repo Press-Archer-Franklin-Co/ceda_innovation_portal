@@ -1,5 +1,7 @@
 """B5 endpoints: public challenge list and detail, setup status, judging settings, criteria library."""
 
+from decimal import Decimal
+
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -86,6 +88,7 @@ class JudgingInputSerializer(serializers.Serializer):
     criteria = CriterionInputSerializer(many=True)
     pass_mark = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=0, max_value=100, required=False, allow_null=True)
     reviewers_per_idea = serializers.IntegerField(min_value=1, max_value=50, required=False, allow_null=True)
+    disagreement_threshold = serializers.DecimalField(max_digits=3, decimal_places=1, min_value=Decimal("0"), max_value=Decimal("4"), required=False)
 
 
 class JudgingSettingsView(APIView):
@@ -94,7 +97,7 @@ class JudgingSettingsView(APIView):
     @extend_schema(
         tags=["Programs"],
         summary="A challenge's judging settings (3.6, 3.7)",
-        description="{criteria: [{id, library_id, name, description, weight, order, score_meanings, comment_required_scores}], total, pass_mark, reviewers_per_idea}.",
+        description="{criteria: [{id, library_id, name, description, weight, order, score_meanings, comment_required_scores}], total, pass_mark, reviewers_per_idea, disagreement_threshold}.",
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, program_id):
