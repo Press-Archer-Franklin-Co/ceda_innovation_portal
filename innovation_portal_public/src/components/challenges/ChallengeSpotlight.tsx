@@ -42,7 +42,7 @@ export default function ChallengeSpotlight() {
   if (live && entry?.can_enter) {
     cta = isAuthenticated
       ? { label: 'Enter Challenge', to: `/innovate?program=${program.id}` }
-      : { label: 'Sign in to Enter', to: '/login' }
+      : { label: 'Sign in to Enter', to: '/sign-in' }
   }
 
   return (

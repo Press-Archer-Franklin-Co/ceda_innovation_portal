@@ -10,6 +10,7 @@ import { useT } from '../../../i18n/context'
 import { client } from '../../../lib/api/client'
 import { addHighlight, highlightList, missingSetswana, removeHighlight } from '../../../lib/content/home'
 import { useSectionName } from './useSectionName'
+import HeroPhotoField from './HeroPhotoField'
 
 const list = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 // Settings written as a sentence or two get a text box; headings and labels stay one line.
@@ -193,6 +194,7 @@ export default function SectionSettings({ section, types, lang, onChange, errors
         }
         if (field.kind === 'button') return <ButtonField key={name} label={label(name)} value={value} lang={lang} onChange={set} errorFor={(part) => errors.find((e) => e.name === name && e.path?.includes(`.${part}`))?.message} />
         if (field.kind === 'list') return <ListField key={name} name={name} spec={field} value={value} lang={lang} onChange={set} errors={nested(name)} />
+        if (field.kind === 'photo') return <HeroPhotoField key={name} label={label(name)} value={value} lang={lang} onChange={set} errors={nested(name)} />
         return <Input key={name} label={label(name)} value={value ?? ''} maxLength={field.max} onChange={(e) => set(e.target.value)} error={errorOf(name)} />
       })}
     </div>

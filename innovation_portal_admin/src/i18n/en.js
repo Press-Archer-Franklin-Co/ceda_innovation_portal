@@ -3,6 +3,7 @@ import { challengesEn } from './challenges'
 import { rolesEn } from './roles'
 import { contentEn } from './content'
 import { dashboardEn } from './dashboard'
+import { u7En } from './u7'
 import { formsEn } from './forms'
 
 const en = {
@@ -143,6 +144,7 @@ const en = {
   ...rolesEn,
   ...contentEn,
   ...dashboardEn,
+  ...u7En,
 }
 
 export default en

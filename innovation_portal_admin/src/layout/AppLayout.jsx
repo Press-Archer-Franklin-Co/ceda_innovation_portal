@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Topbar  from './Topbar'
+import DemoLoginsBanner from './DemoLoginsBanner'
 import { LayoutContext } from './LayoutContext'
 import PageSkeleton from '../components/ui/PageSkeleton'
 import PageErrorBoundary from '../components/ui/PageErrorBoundary'
@@ -43,6 +44,7 @@ export default function AppLayout() {
           style={{ marginLeft: sidebarOpen ? 'var(--sidebar-width)' : '0' }}
         >
           <Topbar />
+          <DemoLoginsBanner />
           {location.pathname.startsWith('/evaluate/') ? (
             <main className="flex-1 overflow-hidden min-h-0">
               <div className="h-full w-full overflow-hidden">

@@ -26,7 +26,8 @@ from apps.accounts.models import AuthPolicy, LoginCode, User
 from apps.audit.services import AuditService
 from apps.core.phone import try_normalize_phone
 
-INNOVATOR_HOME = "/home"
+# The innovator home in the public app (InnovatorHome); /home is the website home page.
+INNOVATOR_HOME = "/dashboard"
 STAFF_HOME = "/staff/"
 # Paths only staff may be sent to after sign-in.
 STAFF_PREFIX = "/staff"

@@ -33,11 +33,12 @@ SECTION_TYPES: dict[str, dict] = {
             "headline": _text("Turn your idea into a business", required=True, max_length=120),
             "highlighted_words": {"kind": "string", "default": "", "max": 120},
             "text": _text(max_length=300),
+            # U7: after the supporting text, as in the Hero banner editor (Figma 3.8).
+            "photo": {"kind": "photo"},
             "primary_button": BUTTON,
             "secondary_button": BUTTON,
             "show_watermark": {"kind": "bool", "default": True},
             "show_quick_start": {"kind": "bool", "default": True},
-            "photo": {"kind": "photo"},
         },
     },
     "partners_strip": {

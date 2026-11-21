@@ -352,6 +352,11 @@ export const platform = {
   deactivate:        (id)        => client.post(`/api/platform/integrations/${id}/deactivate/`, {}),
   history:           (id)        => client.get(`/api/platform/integrations/${id}/history/`),
   startSsoTrial:     (id)        => client.post(`/api/platform/integrations/${id}/sso-trial/start/`, {}),
+  // U7: public switches (the console reads demo_logins for the Test accounts banner).
+  publicConfig:      ()          => client.get('/api/platform/public-config/'),
+  // U7: the one second step after phone or email: code or password (settings.manage).
+  signInSettings:    ()          => client.get('/api/auth/settings/sign-in/'),
+  setSignInSettings: (body)      => client.patch('/api/auth/settings/sign-in/', body),
 }
 
 // Sectors and districts (public lists), for filter rows. Names arrive in the asked language.

@@ -44,6 +44,8 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<LoginOutcome>
   signInWithCode: (target: OtpTarget, code: string) => Promise<LoginOutcome>
+  /** U7: store the answer of /api/auth/finish/, /signup/ or /demo-login/ (tokens or a two-step challenge). */
+  acceptSignIn: (result: Awaited<ReturnType<typeof authService.login>>) => Promise<LoginOutcome>
   completeMfa: (code: string) => Promise<void>
   updatePendingMfa: (challenge: PendingMfa) => void
   clearPendingMfa: () => void
@@ -246,6 +248,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         signInWithCode,
+        acceptSignIn: finishSignIn,
         completeMfa,
         updatePendingMfa,
         clearPendingMfa,

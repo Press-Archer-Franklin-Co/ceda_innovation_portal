@@ -31,7 +31,7 @@ function useChallengeEntry(detail: HackathonDetailType) {
   const enter = closed || notOpenYet || !info
     ? null
     : !isAuthenticated
-      ? { label: 'Sign in to enter', to: '/login' }
+      ? { label: 'Sign in to enter', to: '/sign-in' }
       : blocked ? null : { label: 'Enter Challenge', to: `/innovate?program=${detail.program}` }
   return { info, now, opens, closes, notOpenYet, closed, entry, blocked, enter, isAuthenticated }
 }

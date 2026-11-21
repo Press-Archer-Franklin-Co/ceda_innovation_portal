@@ -8,6 +8,8 @@ export const platformKeys = {
   integrations: (kind) => ['platform', 'integrations', kind],
   integration:  (id)   => ['platform', 'integration', id],
   history:      (id)   => ['platform', 'integration', id, 'history'],
+  publicConfig: ['platform', 'public-config'],
+  signIn:       ['platform', 'sign-in'],
 }
 
 function useInvalidatePlatform() {
@@ -87,3 +89,19 @@ export function useDeactivateIntegration() {
 export function useStartSsoTrial() {
   return useMutation({ mutationFn: (id) => api.startSsoTrial(id) })
 }
+
+/** U7: public switches; the console shows the "Test accounts are on" banner from it. */
+export function usePublicConfig() {
+  return useQuery({ queryKey: platformKeys.publicConfig, queryFn: () => api.publicConfig(), staleTime: 60_000 })
+}
+
+/** U7: how people prove who they are after typing their phone or email. Needs settings.manage. */
+export function useSignInSettings(options = {}) {
+  return useQuery({ queryKey: platformKeys.signIn, queryFn: () => api.signInSettings(), ...options })
+}
+
+export function useSetSignInSettings() {
+  const invalidate = useInvalidatePlatform()
+  return useMutation({ mutationFn: (body) => api.setSignInSettings(body), onSuccess: invalidate })
+}
+

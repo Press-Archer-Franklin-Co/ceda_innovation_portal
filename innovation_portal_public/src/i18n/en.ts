@@ -1,6 +1,7 @@
 // English strings for UI chrome. Content text arrives translated from the API.
 // Keys are grouped by area. Every key here must also exist in tn.ts.
 import { innovatorEn } from './innovator'
+import { signInEn } from './signin'
 
 const en = {
   'lang.en': 'English',
@@ -420,6 +421,7 @@ const en = {
   'tabs.news': 'News',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorEn,
+  ...signInEn,
 } as const
 
 export type StringKey = keyof typeof en

@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
-import { ProtectedRoute, CapabilityRoute }  from './lib/auth/ProtectedRoute'
+import { ProtectedRoute, CapabilityRoute, OLD_SIGN_IN_PATHS, ToSignIn }  from './lib/auth/ProtectedRoute'
 import AppLayout           from './layout/AppLayout'
 import PageErrorBoundary   from './components/ui/PageErrorBoundary'
 
@@ -76,6 +76,9 @@ export default function App() {
         <BrowserRouter basename="/staff">
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {OLD_SIGN_IN_PATHS.map((path) => (
+              <Route key={path} path={path} element={<ToSignIn />} />
+            ))}
 
             {Styleguide && (
               <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />

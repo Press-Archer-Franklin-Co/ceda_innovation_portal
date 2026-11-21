@@ -89,6 +89,20 @@ class HeroPhotoUploadView(APIView):
         return api_success(data=hero_photo.staff_payload(photo), message="Photo uploaded.", status_code=status.HTTP_201_CREATED)
 
 
+class HeroPhotoDetailView(APIView):
+    """U7: one uploaded banner photo, for the Hero photo block (file name, size, thumbnail)."""
+
+    permission_classes = [HasCapability.of("content.edit")]
+
+    @extend_schema(tags=STAFF_TAGS, summary="Get an uploaded home banner photo", responses=OpenApiTypes.OBJECT)
+    def get(self, request, photo_id):
+        from apps.content import hero_photo
+        from apps.content.models import HeroPhoto
+
+        photo = get_object_or_404(HeroPhoto, id=photo_id)
+        return api_success(data=hero_photo.staff_payload(photo))
+
+
 class HomePreviewView(APIView):
     permission_classes = [HasCapability.of("content.edit")]
 

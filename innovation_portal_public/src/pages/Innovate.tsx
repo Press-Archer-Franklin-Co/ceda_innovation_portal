@@ -262,10 +262,10 @@ function LockedState() {
               Submit your innovation to an active challenge, get reviewed by the CEDA committee, and track your progress from concept to reality.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link to="/login" className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold bg-white text-[#A01E0A] hover:bg-gray-50 transition-colors">
+              <Link to="/sign-in" className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold bg-white text-[#A01E0A] hover:bg-gray-50 transition-colors">
                 Log In to Submit
               </Link>
-              <Link to="/signup" className="inline-flex items-center gap-1.5 justify-center px-5 py-2.5 rounded-xl text-sm font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors">
+              <Link to="/sign-in" className="inline-flex items-center gap-1.5 justify-center px-5 py-2.5 rounded-xl text-sm font-semibold border border-white/30 text-white hover:bg-white/10 transition-colors">
                 Create Account <ArrowRight size={13} />
               </Link>
             </div>

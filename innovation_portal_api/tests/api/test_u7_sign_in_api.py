@@ -148,7 +148,7 @@ class SignInFlowTests(TestCase):
     def test_each_role_signs_in_with_a_password_and_goes_home(self):
         set_policy("password")
         expected = {
-            RoleType.INNOVATOR: "/home",
+            RoleType.INNOVATOR: "/dashboard",
             RoleType.INNOVATION_OFFICER: "/staff/",
             RoleType.JUDGE: "/staff/",
             RoleType.INNOVATION_MANAGER: "/staff/",
@@ -178,7 +178,7 @@ class SignInFlowTests(TestCase):
         self.start(PHONE)
         response = self.finish(PHONE, code=CODE, next="/staff/users")
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json()["redirect"], "/home")  # an innovator cannot go to /staff
+        self.assertEqual(response.json()["redirect"], "/dashboard")  # an innovator cannot go to /staff
 
         officer = make_user("officer.next@example.com", roles=(RoleType.INNOVATION_OFFICER,))
         set_policy("password")
@@ -227,7 +227,7 @@ class SignInFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200, response.content)
         self.assertIn("access", response.json())
-        self.assertEqual(response.json()["redirect"], "/home")
+        self.assertEqual(response.json()["redirect"], "/dashboard")
 
     def test_signup_needs_consent_and_a_free_phone(self):
         set_policy("code")
