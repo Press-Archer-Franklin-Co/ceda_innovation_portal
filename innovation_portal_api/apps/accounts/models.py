@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 
@@ -56,6 +57,12 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    preferred_language = models.CharField(
+        max_length=5, choices=(("en", "English"), ("tn", "Setswana")), default="en", help_text="Language for messages to this person."
+    )
+    # U7: test accounts for demos. They can sign in only while the server allows demo
+    # logins (INNOVATION_PORTAL_DEMO_LOGINS); see apps.accounts.demo_logins.
+    is_demo_account = models.BooleanField(default=False, db_index=True)
 
     objects = UserManager()
 
@@ -242,3 +249,32 @@ class LoginCode(UUIDModel, TimeStampedModel):
             models.Index(fields=["target_type", "target", "used_at"], name="login_code_lookup_idx"),
             models.Index(fields=["expires_at"], name="login_code_expiry_idx"),
         ]
+
+
+class AuthPolicy(models.Model):
+    """U7: how people prove who they are after typing their phone number or email.
+
+    One row (id 1). Read it with AuthPolicy.current(). Changed in the staff console
+    (Platform settings) by people with settings.manage.
+    """
+
+    class SecondStep(models.TextChoices):
+        CODE = "code", "A 6-digit code by WhatsApp, SMS or email"
+        PASSWORD = "password", "A password"
+
+    second_step = models.CharField(max_length=20, choices=SecondStep.choices, default=SecondStep.CODE)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def current(cls) -> "AuthPolicy":
+        policy, _ = cls.objects.get_or_create(pk=1)
+        return policy
+
+    def __str__(self) -> str:
+        return f"Second step: {self.second_step}"
+
