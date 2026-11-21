@@ -11,11 +11,9 @@ admin/src/pages/history/HistorySnapshot.jsx
 admin/src/pages/admin/workflows/AdminWorkflows.jsx
 admin/src/pages/admin/workflows/WorkflowBuilder.jsx
 admin/src/pages/admin/workflows/WorkflowInstances.jsx
-admin/src/pages/workflows/Workflows.jsx
 admin/src/pages/programs/Programs.jsx
 admin/src/pages/programs/ProgramDetail.jsx
 admin/src/pages/programs/ProgramEditor.jsx
-admin/src/pages/admin/MarkingCriteriaLibrary.jsx
 admin/src/pages/admin/TermsManager.jsx
 admin/src/pages/content/ContentIndex.jsx
 admin/src/pages/content/ContentList.jsx
@@ -31,7 +29,6 @@ public/src/pages/Security.tsx
 public/src/pages/DocumentPage.tsx
 # Added when the guard was first set up (U8): also still in the old look.
 # Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
-admin/src/components/brand/CedaInnovationHubLogo.jsx
 public/src/pages/VerifyEmail.tsx
 public/src/pages/AuthCallback.tsx
 # Parts of the Security page (listed above).
