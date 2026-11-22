@@ -22,7 +22,7 @@ from apps.platform_config.serializers import (
 from apps.platform_config.services import FeatureFlagService, IntegrationService, SMSStatusService, SSOTrialService
 from apps.platform_config.throttles import PlatformAdminThrottle, PlatformTestThrottle
 
-KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms or ai.", required=False, enum=["sso", "sms", "ai"])
+KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms, ussd, whatsapp or ai.", required=False, enum=["sso", "sms", "ussd", "whatsapp", "ai"])
 TAGS = ["Platform settings"]
 
 
@@ -184,7 +184,7 @@ class IntegrationTestView(_AdminView):
 @extend_schema(
     tags=TAGS,
     summary="Activate an integration connection",
-    description="Only after a test passed in the last 24 hours. Switches off the connection of the same kind that was active.",
+    description="Only after a test passed in the last 24 hours. Switches off the connection of the same kind that was active (USSD and WhatsApp may have several active).",
     request=None,
     responses={200: IntegrationConnectionSerializer},
 )

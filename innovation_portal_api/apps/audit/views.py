@@ -29,7 +29,7 @@ class AuditLogListView(generics.ListAPIView):
     permission_classes = [HasCapability.of("audit.view")]
     pagination_class   = AuditPagination
     filter_backends    = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields      = ["action_type", "target_model", "actor__first_name", "actor__last_name", "actor__email"]
+    search_fields      = ["action_type", "target_model", "target_id", "actor__first_name", "actor__last_name", "actor__email"]
     ordering_fields    = ["created_at", "action_type", "target_model"]
     ordering           = ["-created_at"]
 

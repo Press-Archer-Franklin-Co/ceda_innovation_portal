@@ -146,6 +146,8 @@ class ProgramSerializer(serializers.ModelSerializer):
             "judging_start",
             "judging_end",
             "event_date",
+            "share_scores_with_entrants",
+            "show_names_on_results",
             "owner",
             "max_team_size",
             "is_public",

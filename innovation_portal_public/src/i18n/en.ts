@@ -1,6 +1,15 @@
 // English strings for UI chrome. Content text arrives translated from the API.
 // Keys are grouped by area. Every key here must also exist in tn.ts.
 import { innovatorEn } from './innovator'
+import { signInEn } from './signin'
+import { pagesEn } from './pages'
+import { policiesEn } from './policies'
+import { a11yEn } from './a11y'
+import { statusEn } from './status'
+import { inviteEn } from './invite'
+import { accountEn } from './account'
+import { challengeEntryEn } from './challengeEntry'
+import { liveChatEn } from './livechat'
 
 const en = {
   'lang.en': 'English',
@@ -76,6 +85,9 @@ const en = {
   'home.check1': 'Free to submit',
   'home.check2': 'Track on web, WhatsApp or USSD',
   'home.check3': 'A real CEDA officer replies',
+  'submit.headline': 'Share your idea with CEDA',
+  'submit.highlight': 'your idea',
+  'submit.text': 'Tell us about it in two minutes. You do not need an account to start.',
   'qs.title': 'Start your idea in 2 minutes',
   'qs.step': 'Step {n} of 2',
   'qs.intro': 'Just the basics now. You can add details, photos and documents later.',
@@ -265,7 +277,7 @@ const en = {
   'sent.trackTitle': 'Track it any way you like',
   'sent.trackBody': 'Your account, WhatsApp updates, or dial {ussd} and enter your reference.',
   'sent.trackBodyNoUssd': 'Your account or WhatsApp updates, with your reference.',
-  'sent.trackCta': 'Open my dashboard',
+  'sent.trackCta': 'Track this idea',
   'sent.signInCta': 'Sign in to track',
   'sent.moreTitle': 'Got another idea?',
   'sent.moreBody': 'Check open challenges. Some come with grants and mentoring.',
@@ -420,6 +432,15 @@ const en = {
   'tabs.news': 'News',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorEn,
+  ...signInEn,
+  ...pagesEn,
+  ...policiesEn,
+  ...a11yEn,
+  ...statusEn,
+  ...inviteEn,
+  ...accountEn,
+  ...challengeEntryEn,
+  ...liveChatEn,
 } as const
 
 export type StringKey = keyof typeof en

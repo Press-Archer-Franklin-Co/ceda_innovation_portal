@@ -54,6 +54,9 @@ class NotificationPreference(UUIDModel, TimeStampedModel):
     email_enabled = models.BooleanField(default=True)
     sms_enabled = models.BooleanField(default=False)
     internal_enabled = models.BooleanField(default=True)
+    # R-48 (3.39): hold emails back and send one summary a day at 07:30 instead.
+    daily_summary = models.BooleanField(default=False)
+    daily_summary_sent_at = models.DateTimeField(null=True, blank=True)
 
 
 class NotificationTypePreference(UUIDModel, TimeStampedModel):
@@ -111,6 +114,7 @@ class Message(UUIDModel, TimeStampedModel):
     reply_by = models.DateField(null=True, blank=True, help_text="A question the applicant should answer by this date.")
     read_by_applicant_at = models.DateTimeField(null=True, blank=True)
     read_by_staff_at = models.DateTimeField(null=True, blank=True)
+    read_by_staff = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+", help_text="C1: who opened it first.")
     answered_at = models.DateTimeField(null=True, blank=True)
     reminder_sent_at = models.DateTimeField(null=True, blank=True)
     overdue_flagged_at = models.DateTimeField(null=True, blank=True)

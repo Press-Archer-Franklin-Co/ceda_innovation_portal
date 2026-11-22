@@ -38,7 +38,19 @@ export interface PublicConfig {
     code: boolean
     code_by_sms: boolean
     sso: { active: boolean; provider: string; label: string }
+    /** U7: the one second step after phone or email. */
+    second_step?: 'code' | 'password'
   }
+  /** U7: only present while test accounts are allowed on this server. Never emails or passwords. */
+  demo_logins?: { accounts: DemoAccount[] }
+}
+
+export interface DemoAccount {
+  id: string
+  name: string
+  initials: string
+  role: string
+  role_label: string
 }
 
 export interface SsoTrialStep {
@@ -161,7 +173,7 @@ export const authService = {
     const { data } = await axios.get<{ providers: Array<{ id: string; name: string; enabled: boolean }> }>(
       `${BASE_URL}/api/auth/social/providers/`,
     )
-    // CEDA staff sign-in has its own button (see StaffSignInButton), driven by public config.
+    // CEDA staff single sign-on starts from /api/auth/start/ when the email domain uses it (U7).
     return (data.providers ?? []).filter(p => p.id !== 'ceda_staff').map(p => ({
       provider: p.id as SocialProvider['provider'],
       label:    p.name,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRight, Bell, Briefcase, ChevronRight, FileText, FolderOpen, Globe, Heart, Home, LayoutDashboard, Lightbulb, LogOut, Megaphone, Menu, MessageCircle, Search, ShieldCheck, Trophy, User, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -16,31 +16,21 @@ import SiteSearch from '../search/SiteSearch'
 import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
 import { isStaff } from '../../lib/roles'
+import { SUBMIT_PATH } from '../../lib/paths'
+import { NAV_LINKS, type NavItem } from '../../lib/nav'
+import AccessibilityPanel from '../a11y/AccessibilityPanel'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 
 // Figma 1 · Public home › Header (10:190), Mobile header (10:801), Menu drawer (11:695).
 
-export const SUBMIT_PATH = '/innovate'
+export { SUBMIT_PATH }
 /** The code sign-in (2.0). Password sign-in stays at /login and is linked from there. */
 export const SIGN_IN_PATH = '/sign-in'
 /** The public home for everyone. "/" sends signed-in innovators to their dashboard. */
 export const WEBSITE_HOME_PATH = '/home'
 
-interface NavItem {
-  to: string
-  key: StringKey
-  end?: boolean
-}
-
-const mainLinks: NavItem[] = [
-  { to: '/', key: 'nav.home', end: true },
-  { to: SUBMIT_PATH, key: 'nav.submit' },
-  { to: '/challenges', key: 'nav.challenges' },
-  { to: '/news', key: 'nav.news' },
-  { to: '/stories', key: 'nav.stories' },
-  { to: '/faq', key: 'nav.help' },
-]
-
-const myIdeas: NavItem = { to: '/my-ideas', key: 'nav.myIdeas' }
+// U7: exactly four links (Home, Challenges, News & Stories, FAQ), shared with the phone menu.
+// "My ideas" is in the account menu and on the dashboard; Submit / New idea is a button.
 
 /** Phone menu icons (Figma 11:694), by path. */
 const MENU_ICONS: Record<string, LucideIcon> = {
@@ -48,7 +38,7 @@ const MENU_ICONS: Record<string, LucideIcon> = {
   '/stories': Heart, '/faq': MessageCircle, '/my-ideas': FolderOpen,
 }
 
-export function UtilityBar() {
+export function UtilityBar({ onAccessibility, accessibilityOpen = false, accessibilityRef }: { onAccessibility?: () => void; accessibilityOpen?: boolean; accessibilityRef?: RefObject<HTMLButtonElement> } = {}) {
   const { t } = useI18n()
   const settings = useShellSettings()
   const linkCls = 'hover:text-on-banner hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner rounded'
@@ -65,9 +55,14 @@ export function UtilityBar() {
           <Link className={linkCls} to={settings.help_centre_url ?? '/faq'}>
             {t('utility.helpCentre')}
           </Link>
-          <Link className={linkCls} to={settings.accessibility_url ?? '/faq' /* TODO(U2): accessibility statement page */}>
-            {t('utility.accessibility')}
-          </Link>
+          {/* U11C (1.12): opens the accessibility panel on any page. */}
+          {onAccessibility ? (
+            <button ref={accessibilityRef} type="button" className={linkCls} aria-haspopup="dialog" aria-expanded={accessibilityOpen} onClick={onAccessibility}>
+              {t('utility.accessibility')}
+            </button>
+          ) : (
+            <Link className={linkCls} to="/accessibility">{t('utility.accessibility')}</Link>
+          )}
           <LanguageSwitch tone="dark" />
         </div>
       </div>
@@ -224,7 +219,7 @@ function SearchButton() {
   )
 }
 
-function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolean; onClose: () => void; links: NavItem[]; canStaff: boolean; onLogout: () => void }) {
+function MenuDrawer({ open, onClose, links, canStaff, onLogout, onAccessibility }: { open: boolean; onClose: () => void; links: NavItem[]; canStaff: boolean; onLogout: () => void; onAccessibility: () => void }) {
   const { t } = useI18n()
   const { isAuthenticated } = useAuth()
   const settings = useShellSettings()
@@ -260,6 +255,8 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
           })}
           {isAuthenticated && (
             <>
+              {/* U7: My ideas is not a nav link any more; on the phone it sits with the account rows. */}
+              <Link to="/my-ideas" onClick={onClose} className={row}>{t('nav.myIdeas')}</Link>
               <Link to={WEBSITE_HOME_PATH} onClick={onClose} className={row}>{t('nav.websiteHome')}</Link>
               <Link to="/profile" onClick={onClose} className={row}>{t('nav.profile')}</Link>
               {canStaff && <a href="/staff/dashboard" className={row}>{t('nav.staff')}</a>}
@@ -271,6 +268,11 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
               <span className="text-d-label text-text">{t('lang.label')}</span>
               <LanguageSwitch variant="pill" />
             </div>
+            {/* U11C (1.12): the accessibility panel opens as a sheet on phones. */}
+            <button type="button" onClick={onAccessibility} aria-haspopup="dialog" className="flex items-center justify-between gap-3 w-full min-h-[44px] text-d-label text-text rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+              {t('a11y.title')}
+              <ChevronRight size={18} aria-hidden className="text-muted" />
+            </button>
             {(settings.whatsapp_number || settings.ussd_code || settings.call_centre_number) && (
               <div className="space-y-1.5">
                 <p className="text-d-label text-text">{t('footer.otherWays')}</p>
@@ -283,7 +285,7 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout }: { open: boolea
         </nav>
         <div className="p-5 border-t border-border shrink-0 space-y-3">
           <Link to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
-            {t('nav.submit')} <ArrowRight size={18} aria-hidden />
+            {t(isAuthenticated ? 'nav.newIdea' : 'nav.submit')} <ArrowRight size={18} aria-hidden />
           </Link>
           {!isAuthenticated && (
             <Link to={SIGN_IN_PATH} onClick={onClose} className={buttonClasses({ variant: 'secondary', block: true })}>
@@ -302,12 +304,19 @@ export default function Navbar() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [a11yOpen, setA11yOpen] = useState(false)
+  const a11yRef = useRef<HTMLButtonElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  // The top bar shows from lg up; on phones the panel grows out of the menu button.
+  const a11yTrigger = useMediaQuery('(min-width: 1024px)') ? a11yRef : menuButtonRef
   const unread = useUnreadCount(isAuthenticated)
 
   const canStaff = isAuthenticated && isStaff(user)
   // Signed-in innovators: "Home" is their dashboard ("/" sends them there); the website home is in the account menu.
-  const homeLink: NavItem = isAuthenticated && !canStaff ? { to: '/dashboard', key: 'nav.home' } : mainLinks[0]
-  const links = isAuthenticated ? [homeLink, mainLinks[1], myIdeas, ...mainLinks.slice(2)] : mainLinks
+  const homeLink: NavItem = isAuthenticated && !canStaff ? { to: '/dashboard', key: 'nav.home' } : NAV_LINKS[0]
+  const links = [homeLink, ...NAV_LINKS.slice(1)]
+  // An action, not a tab: "Submit an idea" for visitors, "New idea" once signed in.
+  const submitKey: StringKey = isAuthenticated ? 'nav.newIdea' : 'nav.submit'
 
   useEffect(() => setMenuOpen(false), [pathname])
 
@@ -319,7 +328,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 bg-bg">
-      <UtilityBar />
+      <UtilityBar onAccessibility={() => setA11yOpen((o) => !o)} accessibilityOpen={a11yOpen} accessibilityRef={a11yRef} />
       <div className="border-b border-border">
         <div className="max-w-[1200px] mx-auto px-5 lg:px-6 h-[60px] lg:h-[72px] flex items-center justify-between gap-6">
           <Link to="/" className="shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-4">
@@ -346,13 +355,14 @@ export default function Navbar() {
               </Link>
             )}
             <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
-              {t('nav.submit')}
+              {t(submitKey)}
             </Link>
           </div>
 
           <div className="flex lg:hidden items-center gap-1 -mr-2">
             {isAuthenticated && <BellButton count={unread} />}
             <button
+              ref={menuButtonRef}
               type="button"
               onClick={() => setMenuOpen(true)}
               aria-label={t('common.menu')}
@@ -364,7 +374,18 @@ export default function Navbar() {
           </div>
         </div>
       </div>
-      <MenuDrawer open={menuOpen} onClose={() => setMenuOpen(false)} links={links} canStaff={canStaff} onLogout={handleLogout} />
+      <MenuDrawer
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        links={links}
+        canStaff={canStaff}
+        onLogout={handleLogout}
+        onAccessibility={() => {
+          setMenuOpen(false)
+          setA11yOpen(true)
+        }}
+      />
+      <AccessibilityPanel open={a11yOpen} onClose={() => setA11yOpen(false)} triggerRef={a11yTrigger} />
     </header>
   )
 }

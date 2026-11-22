@@ -1,10 +1,21 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from apps.content.all_content_views import AllContentView
+from apps.content.hackathon_views import (
+    ActiveHackathonView,
+    HackathonPageSubmitView,
+    HackathonPageView,
+    HackathonUpdateDetailView,
+    HackathonUpdatesView,
+)
+
 from .b6_views import (
     ApprovalDecisionView,
     ApprovalListView,
     ApprovalRejectView,
+    HeroPhotoDetailView,
+    HeroPhotoUploadView,
     HomeDraftView,
     HomePreviewView,
     HomeSubmitView,
@@ -28,6 +39,7 @@ from .part2_views import (
     StoryViewSet,
     SubscriberCountsView,
 )
+from .policy_views import PolicyDetailView, PolicyDraftView, PolicyListView, PolicySubmitView, PublicPolicyView
 from .views import ContentItemViewSet, HackathonDetailViewSet, HackathonMediaViewSet, LeadershipCardViewSet, PublicStatsView, SiteSettingsView, WinnerSpotlightViewSet
 
 news_router = DefaultRouter()
@@ -51,7 +63,15 @@ leadership_router = DefaultRouter()
 leadership_router.register(r"leadership", LeadershipCardViewSet, basename="leadership-card")
 
 urlpatterns = (
-    news_router.urls
+    [
+        # Before the routers, so "active" is not read as a hackathon id.
+        path("hackathons/active/", ActiveHackathonView.as_view(), name="hackathon-active"),
+        path("hackathons/<uuid:pk>/page/", HackathonPageView.as_view(), name="hackathon-page"),
+        path("hackathons/<uuid:pk>/page/submit/", HackathonPageSubmitView.as_view(), name="hackathon-page-submit"),
+        path("hackathons/<uuid:pk>/updates/", HackathonUpdatesView.as_view(), name="hackathon-updates"),
+        path("hackathons/<uuid:pk>/updates/<uuid:update_id>/", HackathonUpdateDetailView.as_view(), name="hackathon-update-detail"),
+    ]
+    + news_router.urls
     + hackathon_router.urls
     + media_router.urls
     + winners_router.urls
@@ -60,8 +80,15 @@ urlpatterns = (
     + [
         path("section-types/", SectionTypeListView.as_view(), name="content-section-types"),
         path("pages/home/draft/", HomeDraftView.as_view(), name="content-home-draft"),
+        path("hero-photo/", HeroPhotoUploadView.as_view(), name="content-hero-photo"),
+        path("hero-photo/<uuid:photo_id>/", HeroPhotoDetailView.as_view(), name="content-hero-photo-detail"),
         path("pages/home/preview/", HomePreviewView.as_view(), name="content-home-preview"),
         path("pages/home/submit/", HomeSubmitView.as_view(), name="content-home-submit"),
+        path("policies/", PolicyListView.as_view(), name="content-policies"),
+        path("policies/<slug:key>/", PolicyDetailView.as_view(), name="content-policy"),
+        path("policies/<slug:key>/draft/", PolicyDraftView.as_view(), name="content-policy-draft"),
+        path("policies/<slug:key>/submit/", PolicySubmitView.as_view(), name="content-policy-submit"),
+        path("public/policies/<slug:key>/", PublicPolicyView.as_view(), name="content-public-policy"),
         path("approvals/", ApprovalListView.as_view(), name="content-approvals"),
         path("approvals/<uuid:approval_id>/approve/", ApprovalDecisionView.as_view(), name="content-approval-approve"),
         path("approvals/<uuid:approval_id>/reject/", ApprovalRejectView.as_view(), name="content-approval-reject"),
@@ -79,6 +106,7 @@ urlpatterns = (
         path("subscribers/counts/", SubscriberCountsView.as_view(), name="content-subscriber-counts"),
         path("posts/<uuid:post_id>/blast/", PostBlastView.as_view(), name="content-post-blast"),
         path("site-settings/", SiteSettingsView.as_view(), name="site-settings"),
+        path("all/", AllContentView.as_view(), name="content-all"),
         path("public-stats/", PublicStatsView.as_view(), name="public-stats"),
     ]
 )

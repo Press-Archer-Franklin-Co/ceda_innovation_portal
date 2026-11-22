@@ -13,11 +13,23 @@ class SpecialistInvitationStatus(models.TextChoices):
     COMPLETED = "completed", "Completed"
     EXPIRED   = "expired",   "Expired"
     REVOKED   = "revoked",   "Revoked"
+    DECLINED  = "declined",  "Declined"
 
 
 class ReviewPanel(UUIDModel, TimeStampedModel):
+    """A staff team (R-48, 3.21), for example "Agribusiness panel". A workflow step can give its work to a team."""
+
     name = models.CharField(max_length=255)
-    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, related_name="review_panels")
+    description = models.CharField(max_length=300, blank=True, default="")
+    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, null=True, blank=True, related_name="review_panels", help_text="Empty: any challenge.")
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="review_panels")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Assignment(UUIDModel, TimeStampedModel):
@@ -71,6 +83,7 @@ class SpecialistInvitation(UUIDModel, TimeStampedModel):
     expires_at    = models.DateTimeField()
     accepted_by   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="specialist_invitations_accepted")
     assignment    = models.OneToOneField(Assignment, on_delete=models.SET_NULL, null=True, blank=True, related_name="specialist_invitation")
+    decline_reason = models.CharField(max_length=500, blank=True, default="", help_text="R-50: why the invitee said no.")
 
     def save(self, *args, **kwargs):
         if not self.expires_at:
@@ -96,6 +109,7 @@ class SavedView(UUIDModel, TimeStampedModel):
 
     class Scope(models.TextChoices):
         REVIEW_QUEUE = "review_queue", "Review queue"
+        SUBMISSIONS = "submissions", "Staff submissions list"
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="saved_views")
     name = models.CharField(max_length=120)

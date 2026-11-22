@@ -19,21 +19,40 @@ export default function MessageThread({ ideaId }: { ideaId: string }) {
   const { t, lang } = useI18n()
   const [messages, setMessages] = useState<IdeaMessage[] | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'off'>('loading')
+  const [typing, setTyping] = useState<{ name: string } | null>(null)
+  const [typingSupported, setTypingSupported] = useState(false)
+  const readCount = useRef(-1)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (quiet = false) => {
     try {
       const thread = await ideaMessagesService.thread(ideaId)
       setMessages(thread.results)
+      setTyping(thread.typing ?? null)
+      setTypingSupported(Boolean(thread.typing_supported))
       setState('ready')
-      ideaMessagesService.markRead(ideaId).catch(() => undefined)
+      if (thread.results.length !== readCount.current) {
+        readCount.current = thread.results.length
+        ideaMessagesService.markRead(ideaId).catch(() => undefined)
+      }
     } catch {
-      setState('off')
+      if (!quiet) setState('off')
     }
   }, [ideaId])
 
   useEffect(() => {
     load()
   }, [load])
+
+  // U11C (2.4): refresh while the page is open, so "Seen" and "typing" stay current.
+  useEffect(() => {
+    if (state !== 'ready') return
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') load(true)
+    }, typingSupported ? 5000 : 20000)
+    return () => window.clearInterval(timer)
+  }, [state, typingSupported, load])
+
+  const lastMine = messages ? [...messages].reverse().find((m) => m.author_role === 'applicant') : undefined
 
   return (
     <section id="messages" aria-labelledby="messages-title" className="scroll-mt-24">
@@ -77,7 +96,23 @@ export default function MessageThread({ ideaId }: { ideaId: string }) {
               })}
             </ol>
           )}
-          <Composer ideaId={ideaId} onSent={(message) => setMessages((prev) => [...(prev ?? []), message])} />
+          <Composer ideaId={ideaId} typingSupported={typingSupported} onSent={(message) => setMessages((prev) => [...(prev ?? []), message])} />
+          {lastMine?.seen_by && (
+            <p className="mt-3 text-d-cap text-muted">{t('track.seenBy', { name: lastMine.seen_by.name, time: formatDateTime(lastMine.seen_by.at, lang) })}</p>
+          )}
+          <div aria-live="polite" className="mt-3 min-h-[24px]">
+            {typing && (
+              <p className="flex items-center gap-2 text-d-cap text-muted">
+                <Avatar name={typing.name} size="xs" decorative className="!bg-banner-muted !text-banner" />
+                <span aria-hidden className="inline-flex items-center gap-1 rounded-full bg-surface2 px-2.5 py-1.5">
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className="h-1.5 w-1.5 rounded-full bg-muted motion-safe:animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
+                  ))}
+                </span>
+                {t('track.typing', { name: typing.name.split(' ')[0] })}
+              </p>
+            )}
+          </div>
         </>
       )}
     </section>
@@ -116,7 +151,8 @@ const RECORD_TYPES: Array<{ mime: string; ext: string }> = [
   { mime: 'audio/webm', ext: 'webm' },
 ]
 
-function Composer({ ideaId, onSent }: { ideaId: string; onSent: (message: IdeaMessage) => void }) {
+function Composer({ ideaId, onSent, typingSupported = false }: { ideaId: string; onSent: (message: IdeaMessage) => void; typingSupported?: boolean }) {
+  const lastTyping = useRef(0)
   const { t } = useI18n()
   const toast = useToast()
   const [body, setBody] = useState('')
@@ -206,7 +242,14 @@ function Composer({ ideaId, onSent }: { ideaId: string; onSent: (message: IdeaMe
       <textarea
         id="reply"
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => {
+          setBody(e.target.value)
+          // U11C (R-52): a typing signal at most every 4 seconds.
+          if (typingSupported && Date.now() - lastTyping.current > 4000) {
+            lastTyping.current = Date.now()
+            ideaMessagesService.typing(ideaId).catch(() => undefined)
+          }
+        }}
         placeholder={t('track.replyPlaceholder')}
         rows={3}
         className="w-full resize-y rounded-control px-2 py-2 text-d-body-s text-text focus:outline-none focus:ring-2 focus:ring-primary"

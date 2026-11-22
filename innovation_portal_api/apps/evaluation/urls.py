@@ -1,5 +1,7 @@
 from django.urls import path
 
+from apps.evaluation.r42_views import MyAssignedSummaryView, ScoresOverviewView
+
 from apps.evaluation.views import (
     EvaluationSummaryView,
     EvaluationOverrideView,
@@ -33,6 +35,8 @@ from apps.evaluation.views import (
 
 urlpatterns = [
     path("my-assigned/", MyAssignedEvaluationsView.as_view(), name="my-assigned-evaluations"),
+    path("my-assigned/summary/", MyAssignedSummaryView.as_view(), name="my-assigned-evaluations-summary"),
+    path("<uuid:submission_id>/scores-overview/", ScoresOverviewView.as_view(), name="scores-overview"),
     path("pending/", PendingEvaluationsView.as_view(), name="pending-evaluations"),
     path("overdue/", OverdueEvaluationsView.as_view(), name="overdue-evaluations"),
 

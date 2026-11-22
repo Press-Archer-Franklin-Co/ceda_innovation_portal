@@ -165,6 +165,18 @@ export const analytics = {
   programPipeline:     (progId) => client.get(`/api/analytics/programs/${progId}/pipeline/`),
   programSummary:      (progId) => client.get(`/api/analytics/programs/${progId}/summary/`),
   formResponses:       (progId, params) => client.get(`/api/analytics/programs/${progId}/form-responses/`, params),
+  // B7 (R-35): one filter row {from, to, program, sector, district, channel} for every call. dashboard.view.
+  kpis:          (filters)           => client.get('/api/analytics/kpis/', filters),
+  series:        (filters, interval) => client.get('/api/analytics/submissions-series/', { ...filters, interval }),
+  pipeline:      (filters)           => client.get('/api/analytics/pipeline/', filters),
+  funnel:        (filters)           => client.get('/api/analytics/funnel/', filters),
+  sources:       (filters)           => client.get('/api/analytics/sources/', filters),
+  sectors:       (filters)           => client.get('/api/analytics/sectors/', filters),
+  inclusion:     (filters)           => client.get('/api/analytics/inclusion/', filters),
+  // Exports need reports.export. The download needs the sign-in, so it is fetched as a blob, not opened as a link.
+  createExport:  (body)              => client.post('/api/analytics/exports/', body),
+  exportStatus:  (id)                => client.get(`/api/analytics/exports/${id}/`),
+  downloadExport: (id)               => client.getBlob(`/api/analytics/exports/${id}/download/`),
 }
 
 export const audit = {
@@ -194,7 +206,7 @@ export const notifications = {
   list:        (params) => client.get('/api/notifications/', params),
   unreadCount: ()       => client.get('/api/notifications/unread-count/'),
   markRead:    (id)     => client.post(`/api/notifications/${id}/mark-read/`),
-  markAllRead: ()       => client.post('/api/notifications/mark-read/'),
+  markAllRead: ()       => client.post('/api/notifications/mark-read/', { mark_all: true }),
 }
 
 export const workflows = {
@@ -340,4 +352,15 @@ export const platform = {
   deactivate:        (id)        => client.post(`/api/platform/integrations/${id}/deactivate/`, {}),
   history:           (id)        => client.get(`/api/platform/integrations/${id}/history/`),
   startSsoTrial:     (id)        => client.post(`/api/platform/integrations/${id}/sso-trial/start/`, {}),
+  // U7: public switches (the console reads demo_logins for the Test accounts banner).
+  publicConfig:      ()          => client.get('/api/platform/public-config/'),
+  // U7: the one second step after phone or email: code or password (settings.manage).
+  signInSettings:    ()          => client.get('/api/auth/settings/sign-in/'),
+  setSignInSettings: (body)      => client.patch('/api/auth/settings/sign-in/', body),
+}
+
+// Sectors and districts (public lists), for filter rows. Names arrive in the asked language.
+export const reference = {
+  sectors:   (lang) => client.get('/api/reference/sectors/', { lang }),
+  districts: (lang) => client.get('/api/reference/districts/', { lang }),
 }

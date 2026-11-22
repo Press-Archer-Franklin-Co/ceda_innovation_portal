@@ -1,5 +1,7 @@
 from django.urls import path
 
+from apps.accounts.sign_in_views import AuthFinishView, AuthPolicyView, AuthSignupView, AuthStartView, DemoLoginView
+
 from apps.accounts.views import (
     AccountSecurityView,
     AdminResendVerificationView,
@@ -22,7 +24,11 @@ from apps.accounts.views import (
     UserListView,
     VerifyEmailView,
     ResendVerificationView,
+    AccountSessionSignOutView,
+    AccountSessionsView,
+    AuthMePhotoView,
     AuthMeView,
+    DeleteMyAccountView,
     MFASetupView,
     MFASetupConfirmView,
     MFADisableStartView,
@@ -35,6 +41,12 @@ from apps.accounts.views import (
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
+    # U7: one sign-in for everyone.
+    path("start/", AuthStartView.as_view(), name="auth-start"),
+    path("finish/", AuthFinishView.as_view(), name="auth-finish"),
+    path("signup/", AuthSignupView.as_view(), name="auth-signup"),
+    path("demo-login/", DemoLoginView.as_view(), name="auth-demo-login"),
+    path("settings/sign-in/", AuthPolicyView.as_view(), name="auth-sign-in-settings"),
     path("otp/request/", LoginCodeRequestView.as_view(), name="otp-request"),
     path("otp/verify/", LoginCodeVerifyView.as_view(), name="otp-verify"),
     path("refresh/", RefreshView.as_view(), name="token-refresh"),
@@ -45,6 +57,10 @@ urlpatterns = [
     path("resend-verification/", ResendVerificationView.as_view(), name="resend-verification"),
     path("change-email/", ChangeEmailView.as_view(), name="change-email"),
     path("me/", AuthMeView.as_view(), name="auth-me"),
+    path("me/delete/", DeleteMyAccountView.as_view(), name="auth-me-delete"),
+    path("sessions/", AccountSessionsView.as_view(), name="auth-sessions"),
+    path("sessions/<uuid:session_id>/sign-out/", AccountSessionSignOutView.as_view(), name="auth-session-sign-out"),
+    path("me/photo/", AuthMePhotoView.as_view(), name="auth-me-photo"),
     path("account-security/", AccountSecurityView.as_view(), name="account-security"),
     path("set-password/", SetPasswordView.as_view(), name="set-password"),
     path("change-password/", ChangePasswordView.as_view(), name="change-password"),

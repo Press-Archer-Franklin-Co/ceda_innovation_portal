@@ -203,6 +203,12 @@ class HackathonDetail(UUIDModel, TimeStampedModel):
         help_text='Array of {date, label, description}',
     )
     is_published = models.BooleanField(default=False)
+    # R-59 (3.36): the live hackathon page. These are the live version; `draft` waits for approval.
+    page_sections = models.JSONField(default=list, blank=True, help_text='[{"key": "banner|schedule|venue|prizes|teams|updates|faqs", "enabled": true, "order": 1}]')
+    venue = models.JSONField(default=dict, blank=True, help_text='{"name": "...", "address": "...", "map_url": "..."}')
+    schedule_items = models.JSONField(default=list, blank=True, help_text='[{"id": "...", "starts_at": "<iso>", "title": {"en": "...", "tn": "..."}}]')
+    prize_items = models.JSONField(default=list, blank=True, help_text='[{"place": "1st", "label": "...", "amount": "...", "sponsor_partner_id": null}]')
+    draft = models.JSONField(default=dict, blank=True, help_text="The page as staff are editing it: {page_sections, venue, schedule_items, prize_items}.")
 
     class Meta:
         verbose_name = "Hackathon Detail"
@@ -649,3 +655,87 @@ class PostMonthlyViews(UUIDModel, TimeStampedModel):
         constraints = [models.UniqueConstraint(fields=["post", "month"], name="uq_post_month_views")]
         indexes = [models.Index(fields=["month"])]
 
+
+
+class HeroPhoto(UUIDModel, TimeStampedModel):
+    """U7: the cut-out innovator photo in the home page banner (Hero photo block, 3.8).
+
+    Staff upload a PNG whose background is already transparent. The server checks that,
+    trims the fully transparent edges and keeps WebP and PNG copies at three heights
+    (apps.content.hero_photo). The banner's settings point at it by id.
+    """
+
+    original = models.FileField(upload_to="hero_photos/originals/")
+    filename = models.CharField(max_length=255, blank=True)
+    size_bytes = models.PositiveIntegerField(default=0)
+    width = models.PositiveIntegerField(default=0, help_text="After trimming the transparent edges.")
+    height = models.PositiveIntegerField(default=0, help_text="After trimming the transparent edges.")
+    # [{"height": 480, "width": 230, "webp": "hero_photos/<id>/480.webp", "png": "hero_photos/<id>/480.png"}, ...]
+    variants = models.JSONField(default=list, blank=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self) -> str:
+        return self.filename or str(self.id)
+
+
+class ResultEntry(UUIDModel, TimeStampedModel):
+    """R-59 (3.37): how one winning or shortlisted entry shows on the public results (1.10)."""
+
+    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, related_name="result_entries")
+    submission = models.OneToOneField("submissions.Submission", on_delete=models.CASCADE, related_name="result_entry")
+    show_on_results = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    story = models.JSONField(default=dict, blank=True, help_text='{"en": "...", "tn": "..."}')
+    photo = models.ImageField(upload_to="content/result_photos/", null=True, blank=True)
+
+    class Meta:
+        ordering = ("order", "created_at")
+
+
+class HackathonUpdate(UUIDModel, TimeStampedModel):
+    """R-59 (3.36): a short live notice from the venue. Posts at once (no approval)."""
+
+    hackathon = models.ForeignKey(HackathonDetail, on_delete=models.CASCADE, related_name="updates")
+    body = models.JSONField(default=dict, help_text='{"en": "...", "tn": "..."}')
+    photo = models.ImageField(upload_to="content/hackathon_updates/", null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("-created_at",)
+
+
+class PolicyPage(UUIDModel, TimeStampedModel):
+    """U11C: the text of a policy page (About, Guidelines, Privacy, Terms of use, Terms of agreement).
+
+    Texts are {"en": ..., "tn": ...}. ``sections`` is [{"heading": {en, tn}, "body": {en, tn}}].
+    Bodies are plain text: a blank line starts a new paragraph, a line starting with "• " is a bullet.
+    Staff edit ``draft`` (same shape as the live fields); it goes live only when the website
+    approval is approved (apps.content.policies).
+    """
+
+    class Key(models.TextChoices):
+        ABOUT = "about", "About"
+        GUIDELINES = "guidelines", "Guidelines"
+        PRIVACY = "privacy", "Privacy policy"
+        TERMS_OF_USE = "terms_of_use", "Terms of use"
+        TERMS_OF_AGREEMENT = "terms_of_agreement", "Terms of agreement"
+
+    key = models.CharField(max_length=40, choices=Key.choices, unique=True)
+    title = models.JSONField(default=dict, blank=True)
+    intro = models.JSONField(default=dict, blank=True)
+    sections = models.JSONField(default=list, blank=True)
+    version = models.PositiveIntegerField(default=1, help_text="Goes up by one each time an approved change goes live.")
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    draft = models.JSONField(null=True, blank=True, help_text="Unpublished edits: {title, intro, sections}. Null when there are none.")
+    draft_updated_at = models.DateTimeField(null=True, blank=True)
+    draft_updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ["key"]
+
+    def __str__(self) -> str:
+        return self.key

@@ -53,6 +53,10 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     # C3 AI helper: officer hints and related ideas on submissions they can open; tune the helper.
     "assistant.hints": (R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     "assistant.manage": (R.ADMINISTRATOR,),
+    # C2: WhatsApp and USSD journeys, channel connections and their activity.
+    "channels.manage": OFFICER_ADMIN,
+    # C1: answer chats and hand-overs in the Inbox.
+    "conversations.reply": (R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
 }
 
 
@@ -86,6 +90,18 @@ CATALOGUE: dict[str, dict] = {
         "label_tn": "Baakanya mothusi wa AI",
         "description": "Write guidance, upload the user manual, switch helper features on or off and see what it costs.",
     },
+    "channels.manage": {
+        "group": "administration",
+        "label": "Run WhatsApp and USSD journeys",
+        "label_tn": "Tsamaisa maeto a WhatsApp le USSD",  # TODO tn-review
+        "description": "Design journeys, test them on the phone simulator, connect providers and see activity.",
+    },
+}
+CATALOGUE["conversations.reply"] = {
+    "group": "ideas",
+    "label": "Answer chats in the Inbox",
+    "label_tn": "Araba dipuisano mo Inbox",  # TODO tn-review
+    "description": "Take, answer and close live chats and hand-overs from WhatsApp, USSD and the AI helper.",
 }
 GROUPS = ("overview", "ideas", "challenges", "website", "administration")
 # Roles that never get staff capabilities, whatever is ticked.

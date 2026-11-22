@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 
@@ -56,6 +57,14 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     )
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    preferred_language = models.CharField(
+        max_length=5, choices=(("en", "English"), ("tn", "Setswana")), default="en", help_text="Language for messages to this person."
+    )
+    # U7: test accounts for demos. They can sign in only while the server allows demo
+    # logins (INNOVATION_PORTAL_DEMO_LOGINS); see apps.accounts.demo_logins.
+    is_demo_account = models.BooleanField(default=False, db_index=True)
+    # R-48 (3.39) and R-51 (2.9): the person's photo.
+    photo = models.ImageField(upload_to="profile-photos/", null=True, blank=True)
 
     objects = UserManager()
 
@@ -242,3 +251,45 @@ class LoginCode(UUIDModel, TimeStampedModel):
             models.Index(fields=["target_type", "target", "used_at"], name="login_code_lookup_idx"),
             models.Index(fields=["expires_at"], name="login_code_expiry_idx"),
         ]
+
+
+class AuthPolicy(models.Model):
+    """U7: how people prove who they are after typing their phone number or email.
+
+    One row (id 1). Read it with AuthPolicy.current(). Changed in the staff console
+    (Platform settings) by people with settings.manage.
+    """
+
+    class SecondStep(models.TextChoices):
+        CODE = "code", "A 6-digit code by WhatsApp, SMS or email"
+        PASSWORD = "password", "A password"
+
+    second_step = models.CharField(max_length=20, choices=SecondStep.choices, default=SecondStep.CODE)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def current(cls) -> "AuthPolicy":
+        policy, _ = cls.objects.get_or_create(pk=1)
+        return policy
+
+    def __str__(self) -> str:
+        return f"Second step: {self.second_step}"
+
+
+
+class AccountSession(UUIDModel, TimeStampedModel):
+    """R-51 (2.9): one place a person is signed in. Every refresh token of a sign-in carries its key ("sid")."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account_sessions")
+    key = models.UUIDField(unique=True, db_index=True)
+    device = models.CharField(max_length=120, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-last_seen_at", "-created_at")

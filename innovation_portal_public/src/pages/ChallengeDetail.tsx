@@ -77,6 +77,12 @@ function ApplyCard({ c, enterTo }: { c: Detail; enterTo: string }) {
           <ArrowRight size={18} aria-hidden />
         </Link>
       )}
+      {c.status === 'closed' && c.results_url && (
+        <Link to={c.results_url} className={buttonClasses({ block: true, variant: 'secondary' })}>
+          <Trophy size={18} aria-hidden />
+          {t('ent.seeResults')}
+        </Link>
+      )}
       <ul className="flex flex-col gap-2 pt-3 border-t border-border text-d-cap text-muted">
         {open && c.estimated_minutes ? (
           <li className="flex items-start gap-2"><Clock size={14} aria-hidden className="mt-0.5 shrink-0" />{t('chd.minutes', { n: c.estimated_minutes })}</li>
@@ -164,7 +170,8 @@ export default function ChallengeDetail() {
     )
   }
 
-  const enterTo = `/home?challenge=${encodeURIComponent(c.id)}#hero-title`
+  // U10: Enter goes to this challenge's own flow (1.9 Can you enter?, then its form 2.10), never the general idea form.
+  const enterTo = `/challenges/${c.slug}/enter`
   const sector = c.sector ?? c.sectors[0]
   const facts = [
     c.support_headline && { icon: Trophy, label: t('chd.support'), value: c.support_headline },

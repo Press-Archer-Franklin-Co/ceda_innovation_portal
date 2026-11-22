@@ -57,7 +57,6 @@ export const innovatorEn = {
   'form.consent': 'I agree CEDA may contact me about this idea and store my details as the privacy notice explains.',
   'form.consentNeeded': 'Please tick the box to agree before you send.',
   'form.send': 'Send my idea',
-  'form.sent': 'Your idea is in. Your reference is {reference}.',
   'form.loadError': 'We could not load your form.',
   'form.notPublished': 'This form is not ready yet. Please try again later, or ask an officer for help.',
   'form.alreadySent': 'This idea has been sent. You can follow it on its page.',
@@ -184,6 +183,8 @@ export const innovatorEn = {
   'track.messagesEmpty': 'No messages yet. If an officer has a question, it shows here.',
   'track.messagesOff': 'Messages are not switched on yet. An officer will contact you by SMS or email.',
   'track.replyBy': 'Reply by {date}',
+  'track.seenBy': 'Seen by {name} · {time}',
+  'track.typing': '{name} is typing…',
   'track.replyLabel': 'Your reply',
   'track.replyPlaceholder': 'Write your reply',
   'track.send': 'Send reply',
@@ -284,7 +285,6 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'form.consent': 'Ke dumela gore CEDA e ka ikgolaganya le nna ka ga kakanyo e mme e boloke dintlha tsa me jaaka kitsiso ya sephiri e tlhalosa.',
   'form.consentNeeded': 'Tsweetswee tshwaya lebokoso go dumela pele o romela.',
   'form.send': 'Romela kakanyo ya me',
-  'form.sent': 'Kakanyo ya gago e amogetswe. Nomoro ya yona ke {reference}.',
   'form.loadError': 'Ga re a kgona go bula foromo ya gago.',
   'form.notPublished': 'Foromo e ga e ise e siamele. Tsweetswee leka gape moragonyana, kgotsa kopa thuso mo motlhankeding.',
   'form.alreadySent': 'Kakanyo e e setse e rometswe. O ka e sala morago mo tsebeng ya yona.',
@@ -407,6 +407,8 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'track.messagesEmpty': 'Ga go ise go nne le melaetsa. Fa motlhankedi a na le potso, e tla bonala fa.',
   'track.messagesOff': 'Melaetsa ga e ise e bulwe. Motlhankedi o tla ikgolaganya le wena ka SMS kgotsa imeile.',
   'track.replyBy': 'Araba pele ga {date}',
+  'track.seenBy': 'E bonwe ke {name} · {time}', // TODO tn-review
+  'track.typing': '{name} o a kwala…', // TODO tn-review
   'track.replyLabel': 'Karabo ya gago',
   'track.replyPlaceholder': 'Kwala karabo ya gago',
   'track.send': 'Romela karabo',
