@@ -158,3 +158,59 @@ class PublishChallengeResultsView(APIView):
     def post(self, request, program_id):
         program = get_object_or_404(Program, id=program_id)
         return api_success(data=entry.publish_results(program, actor=request.user))
+
+
+# R-54 (2.11 and 3.37) ----------------------------------------------------------------------------------------------
+
+
+class AttendSerializer(serializers.Serializer):
+    attending = serializers.BooleanField(default=True)
+
+
+class MyChallengeAttendView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Challenges (public)"], summary="Confirm I will attend (2.11)", description="{attending: true|false}. Shortlisted and winning entries, before the event. Answers the attendance block.", request=AttendSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request, slug):
+        program = _challenge(slug)
+        serializer = AttendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return api_success(data=entry.answer_attendance(program, request.user, serializer.validated_data["attending"]))
+
+
+class PanelFeedbackSerializer(serializers.Serializer):
+    liked = serializers.ListField(child=serializers.CharField(max_length=300, allow_blank=True), max_length=6, default=list)
+    work_on = serializers.ListField(child=serializers.CharField(max_length=300, allow_blank=True), max_length=6, default=list)
+
+
+class EntryPanelFeedbackView(APIView):
+    permission_classes = [HasCapability.of("challenges.manage")]
+
+    @extend_schema(
+        tags=["Programs"],
+        summary="Panel feedback for one entry (3.37)",
+        description="GET or PUT {liked: [str], work_on: [str]} (up to 6 points each). The entrant sees them on My result once results are out and the entry is shortlisted or won. GET also shows the attendance answer.",
+        request=PanelFeedbackSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def put(self, request, program_id, submission_id):
+        program = get_object_or_404(Program, id=program_id)
+        serializer = PanelFeedbackSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return api_success(data=entry.save_panel_feedback(program, submission_id, liked=serializer.validated_data["liked"], work_on=serializer.validated_data["work_on"], actor=request.user))
+
+    def get(self, request, program_id, submission_id):
+        from apps.submissions.models import EntryPanelFeedback
+
+        program = get_object_or_404(Program, id=program_id)
+        submission = get_object_or_404(program.submissions, id=submission_id)
+        row = EntryPanelFeedback.objects.filter(submission=submission).first()
+        return api_success(
+            data={
+                "submission_id": str(submission.id),
+                "liked": row.liked if row else [],
+                "work_on": row.work_on if row else [],
+                "attending": row.attending if row else None,
+                "attendance_answered_at": row.attendance_answered_at.isoformat() if row and row.attendance_answered_at else None,
+            }
+        )
