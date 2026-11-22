@@ -50,3 +50,10 @@ def send_question_reminders():
 
     return run()
 
+
+
+@shared_task
+def send_daily_summaries() -> int:
+    from apps.notifications.daily_summary import send_daily_summaries as send
+
+    return send()
