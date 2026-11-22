@@ -1,14 +1,17 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  ClipboardCheck, Handshake, LayoutGrid, Sparkles, Award, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Eye,
+  ClipboardCheck, Handshake, LayoutGrid, Sparkles, Award, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Eye, MessageCircle, MessagesSquare,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
 import { useAuth } from '../lib/auth/AuthContext'
 import { useT } from '../i18n/context'
 import Logo from '../components/ui/Logo'
+import { useQuery } from '@tanstack/react-query'
 import { useActiveHackathon } from '../lib/queries/hackathon'
+import { inboxApi } from '../lib/api/inbox'
+import { usePublicConfig } from '../lib/queries/platform'
 
 // Staff sidebar: chocolate banner, grouped as Overview, Challenges, Website content, Admin.
 // Compact by default (216px wide, 32px rows, 13px text), roomier from 2xl (248px, 38px, 14px).
@@ -32,6 +35,7 @@ const GROUPS = [
     items: [
       { label: 'staff.nav.submissions', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
       { label: 'staff.nav.reviewQueue', href: '/review', icon: Eye, capability: 'entries.review' },
+      { label: 'staff.nav.inbox', href: '/inbox', icon: MessageCircle, capability: 'conversations.reply', feature: 'live_chat', badge: 'inbox' },
       { label: 'staff.nav.judging', href: '/judging', icon: Star, capability: 'entries.score' },
     ],
   },
@@ -72,6 +76,7 @@ const GROUPS = [
       { label: 'staff.nav.users', href: '/users', icon: Users, capability: 'users.manage' },
       { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
+      { label: 'staff.nav.liveChat', href: '/admin/live-chat', icon: MessagesSquare, capability: 'settings.manage' },
       { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
       { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
     ],
@@ -103,6 +108,15 @@ function useIsActive(item) {
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }
 
+/** C1: unread chats on the Inbox item. Quiet when live chat is off (the API answers 404). */
+function InboxBadge() {
+  const t = useT()
+  const q = useQuery({ queryKey: ['inbox', 'unread'], queryFn: inboxApi.unread, refetchInterval: 30_000, retry: false })
+  const n = q.data?.unread ?? 0
+  if (!n) return null
+  return <span className="ml-auto rounded-full bg-primary px-1.5 text-[11px] font-bold leading-[18px] text-white" aria-label={t('inbox.unreadN', { n })}>{n > 99 ? '99+' : n}</span>
+}
+
 function NavItem({ item }) {
   const t = useT()
   const active = useIsActive(item)
@@ -131,6 +145,7 @@ function NavItem({ item }) {
     >
       {Icon && <Icon size={16} strokeWidth={1.75} aria-hidden className="flex-shrink-0" />}
       <span className="truncate">{t(item.label)}</span>
+      {item.badge === 'inbox' && <InboxBadge />}
     </NavLink>
   )
 }
@@ -144,6 +159,8 @@ export default function Sidebar({ previewUser } = {}) {
   // previewUser (styleguide) carries its own capabilities list.
   const capabilities = previewUser ? previewUser.capabilities ?? [] : auth?.capabilities ?? []
   const can = (c) => capabilities.includes(c)
+  // Items with `feature` show only while that public switch is on (C1: live chat).
+  const publicConfig = usePublicConfig()
 
   // 3.36: the hackathon page item shows only while a hackathon is on (not in the styleguide preview).
   const activeHackathon = useActiveHackathon(!previewUser && can('content.edit'))
@@ -155,7 +172,7 @@ export default function Sidebar({ previewUser } = {}) {
     ? [JUDGE_GROUP]
     : GROUPS.map((g) => ({
         ...g,
-        items: g.items.filter((item) => (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability)) && (!item.when || flags[item.when])),
+        items: g.items.filter((item) => (!item.feature || publicConfig.data?.features?.[item.feature]) && (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability)) && (!item.when || flags[item.when])),
       })).filter((g) => g.items.length > 0)
 
   const roleLabel = can('settings.manage')

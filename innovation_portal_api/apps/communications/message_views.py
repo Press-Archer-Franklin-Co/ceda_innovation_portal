@@ -1,9 +1,13 @@
 """B3 message endpoints. Applicants see only their own threads; internal notes never appear."""
 
+import uuid
+
 from django.http import Http404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers, status
+from rest_framework.exceptions import ValidationError
+from rest_framework.throttling import UserRateThrottle
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
@@ -37,15 +41,44 @@ def _my_idea(user, idea_id):
     raise Http404
 
 
+def _after(thread, value: str):
+    """C1 ?after=: a message id or an ISO time. Returns the time to read after, or None for everything."""
+    from django.utils.dateparse import parse_datetime
+
+    if not value:
+        return None
+    try:
+        return thread.messages.get(id=uuid.UUID(value)).created_at
+    except (ValueError, Message.DoesNotExist):
+        pass
+    at = parse_datetime(value.replace(" ", "+"))
+    if at is None:
+        raise ValidationError({"after": "Use a message id or an ISO time."})
+    return at
+
+
 def _thread_payload(target, *, applicant: bool, request) -> dict:
+    from apps.conversations import live
+
     thread = getattr(target, "message_thread", None)
-    messages = thread.messages.select_related("author").prefetch_related("attachments") if thread else Message.objects.none()
+    messages = thread.messages.select_related("author", "read_by_staff").prefetch_related("attachments") if thread else Message.objects.none()
+    after = _after(thread, request.query_params.get("after", "")) if thread else None
+    if after is not None:
+        messages = messages.filter(created_at__gt=after)
     question = thread.open_question if thread else None
-    return {
+    rows = [message_payload(message, viewer_is_applicant=applicant, request=request) for message in messages]
+    data = {
         "idea_id": str(target.id),
         "open_question": message_payload(question, viewer_is_applicant=applicant, request=request) if question else None,
-        "results": [message_payload(message, viewer_is_applicant=applicant, request=request) for message in messages],
+        "results": rows,
+        # C1 live hints. Poll with ?after=<last id> for only the new messages.
+        "last_id": rows[-1]["id"] if rows else (request.query_params.get("after") or None),
+        "typing": live.typing("idea", target.id, "staff" if applicant else "person"),
+        "typing_supported": True,
     }
+    if applicant:
+        data["staff_online"] = live.staff_online()
+    return data
 
 
 class MyIdeaMessagesView(APIView):
@@ -54,6 +87,9 @@ class MyIdeaMessagesView(APIView):
     @extend_schema(tags=["Messages"], summary="Messages about one of my ideas (2.4)", responses=OpenApiTypes.OBJECT)
     def get(self, request, idea_id):
         target = _my_idea(request.user, idea_id)
+        thread = getattr(target, "message_thread", None)
+        if thread:
+            MessagingService.mark_read(thread, applicant=True)  # C1: read when fetched
         return api_success(data=_thread_payload(target, applicant=True, request=request))
 
     @extend_schema(
@@ -128,7 +164,10 @@ class SubmissionMessagesView(APIView):
         submission = self._submission(submission_id)
         thread = getattr(submission, "message_thread", None)
         if thread:
-            MessagingService.mark_read(thread, applicant=False)
+            MessagingService.mark_read(thread, applicant=False, user=request.user)
+        from apps.conversations import live
+
+        live.mark_online(request.user)
         return api_success(data=_thread_payload(submission, applicant=False, request=request))
 
     @extend_schema(
@@ -149,3 +188,37 @@ class SubmissionMessagesView(APIView):
         payload = message_payload(message, viewer_is_applicant=False, request=request)
         payload["submission_status"] = submission.current_status
         return api_success(data=payload, message="Sent.", status_code=status.HTTP_201_CREATED)
+
+
+class TypingThrottle(UserRateThrottle):
+    scope = "chat_typing"
+
+
+class MyIdeaTypingView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [TypingThrottle]
+
+    @extend_schema(tags=["Messages"], summary="I am typing a message about my idea (C1)", description="Shows the officer a typing hint for 10 seconds. Nothing is saved.", request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, idea_id):
+        from apps.conversations import live
+
+        target = _my_idea(request.user, idea_id)
+        live.set_typing("idea", target.id, "person", (request.user.first_name or "").strip() or "The applicant")
+        return api_success(data={"typing": True})
+
+
+class SubmissionTypingView(APIView):
+    permission_classes = [IsOfficerOrAdmin]
+    throttle_classes = [TypingThrottle]
+
+    @extend_schema(tags=["Messages"], summary="I am typing a reply to the applicant (C1)", description="Shows the applicant a typing hint for 10 seconds. Nothing is saved.", request=None, responses=OpenApiTypes.OBJECT)
+    def post(self, request, submission_id):
+        from apps.conversations import live
+        from apps.communications.messaging import short_name
+        from apps.submissions.models import Submission
+
+        if not Submission.objects.filter(id=submission_id).exists():
+            raise Http404
+        live.set_typing("idea", submission_id, "staff", short_name(request.user))
+        live.mark_online(request.user)
+        return api_success(data={"typing": True})

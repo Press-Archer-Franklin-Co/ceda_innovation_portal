@@ -21,7 +21,8 @@ class _StaffRedocView(SpectacularRedocView):
 
 from apps.audit.views import SubmissionAuditLogListView
 from apps.assignments.views import OverdueAssignmentListView, ReviewerQueueCountsView, ReviewerQueueStatsView, ReviewerQueueView, ReviewerSuggestionView
-from apps.communications.message_views import SubmissionMessagesView
+from apps.communications.message_views import SubmissionMessagesView, SubmissionTypingView
+from apps.conversations.views import LiveChatSettingsView
 from apps.assignments.saved_views import SavedViewDetailView, SavedViewListCreateView
 from apps.programs.challenge_views import CriteriaLibraryView
 from apps.submissions.staff_search import StaffSearchView
@@ -49,6 +50,10 @@ urlpatterns = [
     path("api/me/", include("apps.submissions.me_urls")),
     path("api/ideas/", include("apps.submissions.idea_urls")),
     path("api/submissions/<uuid:submission_id>/messages/", SubmissionMessagesView.as_view(), name="submission-messages"),
+    path("api/submissions/<uuid:submission_id>/messages/typing/", SubmissionTypingView.as_view(), name="submission-messages-typing"),
+    path("api/inbox/", include("apps.conversations.urls")),
+    path("api/help-chat/", include("apps.conversations.public_urls")),
+    path("api/live-chat/settings/", LiveChatSettingsView.as_view(), name="live-chat-settings"),
     path("api/submissions/", include("apps.submissions.urls")),
     path("api/documents/", include("apps.documents.urls")),
     path("api/screening/", include("apps.screening.urls")),

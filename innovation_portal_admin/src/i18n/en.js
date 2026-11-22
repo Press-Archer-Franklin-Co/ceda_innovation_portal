@@ -6,6 +6,7 @@ import { dashboardEn } from './dashboard'
 import { u7En } from './u7'
 import { formsEn } from './forms'
 import { ideasEn } from './ideas'
+import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 import { contentBEn } from './contentB'
 
@@ -144,6 +145,7 @@ const en = {
   'crop.taintedError': 'This picture cannot be cropped here. Upload the original file again and crop it before saving.',
   ...formsEn,
   ...ideasEn,
+  ...conversationsEn,
   ...reviewEn,
   ...contentBEn,
   ...challengesEn,

@@ -318,9 +318,11 @@ export function createGenieRenderer(panelEl, triggerSrc, opts = GENIE) {
 /* Running it                                                          */
 /* ------------------------------------------------------------------ */
 
+// Also honours "Less motion" in the site's accessibility panel (<html data-motion="reduce">, U11C).
 const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia &&
-  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  typeof window !== 'undefined' && (
+    document.documentElement.dataset.motion === 'reduce' ||
+    (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches));
 
 /**
  * Plays the genie.
