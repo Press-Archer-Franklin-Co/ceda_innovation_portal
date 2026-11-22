@@ -20,7 +20,7 @@ import { EMPTY_CELL } from '../../lib/format'
 
 // 3.6 Challenge status (Figma 20:840, phone; the website uses the same layout). Live numbers for a running call
 // and the two quick actions: post an update to everyone who started an entry, and extend the deadline.
-// Numbers come from GET /api/programs/{id}/status-numbers/ (R-49). Until it lands: "started" from the public
+// Numbers come from GET /api/programs/{id}/status-numbers/ (R-53). Until it lands: "started" from the public
 // challenge, "submitted" from the staff list, and a dash for the rest (never a guess).
 
 function toInput(value) {
@@ -35,7 +35,7 @@ async function statusNumbers(program) {
     return await client.get(`/api/programs/${program.id}/status-numbers/`)
   } catch (err) {
     if (err?.status !== 404 && err?.status !== 405) throw err
-    // TODO(R-49): drop this once status-numbers is on main.
+    // TODO(R-53): drop this once status-numbers is on main.
     const [publicDetail, list] = await Promise.all([
       program.slug ? client.get(`/api/programs/public/${program.slug}/`).catch(() => null) : null,
       client.get('/api/submissions/staff-list/', { program: program.id, page_size: 1 }).catch(() => null),

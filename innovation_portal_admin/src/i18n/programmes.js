@@ -303,6 +303,45 @@ export const programmesEn = {
   'cst.extendSave': 'Extend',
   'cst.extended': 'The deadline is extended.',
   'cst.seeIdeas': 'See the ideas sent',
+  'home.numbersTitle': 'Public numbers set by hand',
+  'home.numbersHint': 'The portal counts innovators and challenges itself. These two are set here and save at once.',
+  'home.prizeLabel': 'Prize money',
+  'home.prizeLabelHint': 'For example "P 2.4 million". Leave empty to hide it.',
+  'home.solutions': 'Solutions in use',
+  'home.solutionsHint': 'Set to 0 to hide it.',
+  'home.numbersSaved': 'Public numbers saved.',
+  'ntf.title': 'Notifications and profile',
+  'ntf.subtitle': 'What needs you, and how we tell you.',
+  'ntf.listTitle': 'Notifications',
+  'ntf.all': 'All',
+  'ntf.unread': 'Unread',
+  'ntf.unreadItem': 'Not read yet',
+  'ntf.markAll': 'Mark all read',
+  'ntf.allRead': 'All notifications marked as read',
+  'ntf.loadError': 'We could not load your notifications',
+  'ntf.none': 'No notifications yet',
+  'ntf.noneUnread': 'You have read everything',
+  'ntf.profile': 'Your profile',
+  'ntf.firstName': 'First name',
+  'ntf.lastName': 'Last name',
+  'ntf.language': 'Language',
+  'ntf.phone': 'Phone',
+  'ntf.phoneHint': 'For WhatsApp and SMS messages.',
+  'ntf.profileSaved': 'Profile saved',
+  'ntf.profileNotYet': 'Changing your profile is not available yet. We are adding it.',
+  'ntf.howToTell': 'How to tell me',
+  'ntf.what': 'What',
+  'ntf.alertsSaved': 'Saved. We will tell you this way from now on.',
+  'ntf.alertsError': 'We could not load how we tell you',
+  'ntf.channel.web': 'Portal',
+  'ntf.channel.email': 'Email',
+  'ntf.channel.whatsapp': 'WhatsApp',
+  'ntf.type.officer_message': 'Messages from officers',
+  'ntf.type.stage_change': 'An idea moves to a new stage',
+  'ntf.type.deadline': 'Deadlines coming up',
+  'ntf.type.new_challenge': 'New challenges',
+  'ntf.type.news': 'News',
+  'ntf.type.digest': 'Weekly summary',
 }
 
 export const programmesTn = {
@@ -604,4 +643,43 @@ export const programmesTn = {
   'cst.extendSave': 'Oketsa', // TODO tn-review
   'cst.extended': 'Nako e okeditswe.', // TODO tn-review
   'cst.seeIdeas': 'Bona dikakanyo tse di rometsweng', // TODO tn-review
+  'home.numbersTitle': 'Dipalo tsa setšhaba tse di baakanngwang ka seatla', // TODO tn-review
+  'home.numbersHint': 'Potale e bala baitlhami le dikgwetlho ka bo yone. Tse pedi tse di baakanngwa fa mme di bolokega ka yone nako eo.', // TODO tn-review
+  'home.prizeLabel': 'Madi a sekgele', // TODO tn-review
+  'home.prizeLabelHint': 'Sekai "P 2.4 milione". Tlogela go se na sepe go e fitlha.', // TODO tn-review
+  'home.solutions': 'Ditharabololo tse di dirisiwang', // TODO tn-review
+  'home.solutionsHint': 'Baya 0 go e fitlha.', // TODO tn-review
+  'home.numbersSaved': 'Dipalo tsa setšhaba di bolokilwe.', // TODO tn-review
+  'ntf.title': 'Dikitsiso le porofaele', // TODO tn-review
+  'ntf.subtitle': 'Se se go tlhokang, le kafa re go itsiseng ka teng.', // TODO tn-review
+  'ntf.listTitle': 'Dikitsiso', // TODO tn-review
+  'ntf.all': 'Tsotlhe', // TODO tn-review
+  'ntf.unread': 'Tse di sa balwang', // TODO tn-review
+  'ntf.unreadItem': 'Ga e ise e balwe', // TODO tn-review
+  'ntf.markAll': 'Tshwaya tsotlhe di badilwe', // TODO tn-review
+  'ntf.allRead': 'Dikitsiso tsotlhe di tshwailwe di badilwe', // TODO tn-review
+  'ntf.loadError': 'Ga re a kgona go tsenya dikitsiso tsa gago', // TODO tn-review
+  'ntf.none': 'Ga go ise go nne le dikitsiso', // TODO tn-review
+  'ntf.noneUnread': 'O badile tsotlhe', // TODO tn-review
+  'ntf.profile': 'Porofaele ya gago', // TODO tn-review
+  'ntf.firstName': 'Leina', // TODO tn-review
+  'ntf.lastName': 'Sefane', // TODO tn-review
+  'ntf.language': 'Puo', // TODO tn-review
+  'ntf.phone': 'Founu', // TODO tn-review
+  'ntf.phoneHint': 'Ya melaetsa ya WhatsApp le SMS.', // TODO tn-review
+  'ntf.profileSaved': 'Porofaele e bolokilwe', // TODO tn-review
+  'ntf.profileNotYet': 'Go fetola porofaele ga go ise go nne teng. Re a go tsenya.', // TODO tn-review
+  'ntf.howToTell': 'Kafa o ka nkitsiseng ka teng', // TODO tn-review
+  'ntf.what': 'Eng', // TODO tn-review
+  'ntf.alertsSaved': 'Go bolokilwe. Re tla go itsise jaana go tloga jaanong.', // TODO tn-review
+  'ntf.alertsError': 'Ga re a kgona go tsenya kafa re go itsiseng ka teng', // TODO tn-review
+  'ntf.channel.web': 'Potale', // TODO tn-review
+  'ntf.channel.email': 'Imeile', // TODO tn-review
+  'ntf.channel.whatsapp': 'WhatsApp', // TODO tn-review
+  'ntf.type.officer_message': 'Melaetsa e e tswang go batlhankedi', // TODO tn-review
+  'ntf.type.stage_change': 'Kakanyo e fetela kwa kgatong e ntšhwa', // TODO tn-review
+  'ntf.type.deadline': 'Malatsi a bofelo a a tlang', // TODO tn-review
+  'ntf.type.new_challenge': 'Dikgwetlho tse dintšhwa', // TODO tn-review
+  'ntf.type.news': 'Dikgang', // TODO tn-review
+  'ntf.type.digest': 'Kakaretso ya beke', // TODO tn-review
 }

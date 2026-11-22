@@ -26,7 +26,7 @@ const Judging = lazy(() => import('./pages/judging/Judging'))
 const ScoreIdea = lazy(() => import('./pages/judging/ScoreIdea'))
 const AllScores = lazy(() => import('./pages/judging/AllScores'))
 const Reports = lazy(() => import('./pages/reports/Reports'))
-const Settings = lazy(() => import('./pages/settings/Settings'))
+const NotificationsProfile = lazy(() => import('./pages/settings/NotificationsProfile'))
 const Workflows = lazy(() => import('./pages/admin/workflows/Workflows'))
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
 const WorkflowIdeas = lazy(() => import('./pages/admin/workflows/WorkflowIdeas'))
@@ -183,7 +183,7 @@ export default function App() {
                   <Route path="/content/approvals"              element={<ErrorBoundary><Approvals /></ErrorBoundary>} />
                 </Route>
 
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<NotificationsProfile />} />
 
 
 

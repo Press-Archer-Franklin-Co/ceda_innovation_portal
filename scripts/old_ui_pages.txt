@@ -14,7 +14,6 @@ admin/src/pages/content/ContentList.jsx
 admin/src/pages/content/HackathonContentEditor.jsx
 admin/src/pages/content/WinnersManager.jsx
 admin/src/pages/reports/FormAnswers.jsx
-admin/src/pages/settings/Settings.jsx
 public/src/pages/NotFound.tsx
 public/src/pages/JudgeInvite.tsx
 public/src/pages/SpecialistInvite.tsx
