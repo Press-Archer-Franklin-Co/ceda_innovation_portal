@@ -182,3 +182,46 @@ class TryItSerializer(serializers.Serializer):
 
 class UsageQuerySerializer(serializers.Serializer):
     days = serializers.IntegerField(min_value=1, max_value=366, default=30)
+
+
+class GuideTargetSerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=120)
+    label = serializers.CharField(max_length=160, allow_blank=True, required=False, default="")
+    kind = serializers.ChoiceField(choices=("button", "field", "menu", "tab", "link"), required=False, default="button")
+
+
+class GuideMenuSerializer(serializers.Serializer):
+    path = serializers.CharField(max_length=200)
+    label = serializers.CharField(max_length=160, allow_blank=True, required=False, default="")
+
+
+class GuideRequestSerializer(serializers.Serializer):
+    app = serializers.ChoiceField(choices=("public", "staff"))
+    route = serializers.CharField(max_length=200)
+    page_title = serializers.CharField(max_length=160, allow_blank=True, required=False, default="")
+    language = serializers.ChoiceField(choices=(("en", "English"), ("tn", "Setswana")), required=False)
+    question = serializers.CharField(max_length=500, allow_blank=True, required=False, default="")
+    targets = GuideTargetSerializer(many=True, required=False, default=list)
+    menu = GuideMenuSerializer(many=True, required=False, default=list)
+    done_step_ids = serializers.ListField(child=serializers.CharField(max_length=20), required=False, default=list, max_length=20)
+
+
+class BuilderDraftCreateSerializer(serializers.Serializer):
+    description = serializers.CharField(max_length=6000)
+    make = serializers.ChoiceField(choices=(("form", "Form"), ("workflow", "Workflow"), ("both", "Form and workflow")), default="both")
+    program_id = serializers.UUIDField(required=False, allow_null=True)
+    general_ideas = serializers.BooleanField(default=False)
+    language = serializers.ChoiceField(choices=(("en", "English"), ("tn", "Setswana")), required=False)
+
+    def validate(self, attrs):
+        if not attrs.get("program_id") and not attrs.get("general_ideas"):
+            raise serializers.ValidationError({"program_id": ["Choose a challenge, or General ideas."]})
+        return attrs
+
+
+class BuilderReviseSerializer(serializers.Serializer):
+    change = serializers.CharField(max_length=3000)
+
+
+class BuilderTestSerializer(serializers.Serializer):
+    answers = serializers.DictField(required=False, default=dict)
