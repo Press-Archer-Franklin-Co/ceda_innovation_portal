@@ -153,6 +153,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.audit.refusals.RefusalRecordingMiddleware",
+    "apps.accounts.sessions.CurrentRequestMiddleware",
 ]
 
 # S1: refusals are logged to "security.authorization" (ceda-security section 5).
