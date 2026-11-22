@@ -42,7 +42,8 @@ export default function AskHelper({ className = '' }: { className?: string }) {
     setState({ kind: 'asking' })
     const result = await assistantService.askHelp({ question, lang, page_path: pathname })
     if (!result.available) return setState({ kind: 'unavailable' })
-    setState(result.handed_over ? { kind: 'handed_over' } : { kind: 'answer', answer: result })
+    // When the helper answered and also passed the question on, show both.
+    setState(result.answer ? { kind: 'answer', answer: result } : { kind: 'handed_over' })
   }
 
   async function person() {
@@ -102,6 +103,7 @@ export default function AskHelper({ className = '' }: { className?: string }) {
           <div className="flex flex-col gap-3 rounded-card bg-surface2 p-4">
             <p className="text-d-cap text-muted">{t('ai.help.suggestion')}</p>
             <p className="whitespace-pre-line text-d-body text-text">{answer.answer}</p>
+            {answer.handed_over && <p className="rounded-control bg-success-soft px-4 py-3 text-d-body-s text-text">{t('ai.help.handedOver')}</p>}
             {(answer.screenshots ?? []).map((shot) => (
               <figure key={shot.id} className="flex flex-col gap-1">
                 <img
