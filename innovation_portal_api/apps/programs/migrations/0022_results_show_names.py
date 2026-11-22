@@ -3,7 +3,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("programs", "0020_u10_challenge_entry"),
+        ("programs", "0021_r48_eligibility_stages"),
     ]
 
     operations = [
