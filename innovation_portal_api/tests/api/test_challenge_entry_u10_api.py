@@ -166,9 +166,18 @@ class ResultsTests(EntryTestCase):
         results = data(self.client.get("/api/programs/public/done/results/"))
         self.assertTrue(results["published"])
         self.assertEqual([(w["position"], w["title"], w["prize_amount"]) for w in results["winners"]], [("1st", "Cool boxes", "P50 000")])
-        self.assertEqual(results["shortlisted"], [{"title": "Solar milk cooler"}])
-        self.assertNotIn("Neo", str(results["shortlisted"]))
+        # Names show by default, for winners and the shortlist (Nshathisi, 22 Nov).
+        self.assertEqual(results["shortlisted"], [{"title": "Solar milk cooler", "name": "Neo Kebadile", "district": ""}])
+        self.assertEqual((results["winners"][0]["name"], results["show_names"]), ("Mpho Dube", True))
         self.assertNotIn("score", str(results))
+        # Off: idea titles only, for everyone.
+        self.done.show_names_on_results = False
+        self.done.save()
+        hidden = data(self.client.get("/api/programs/public/done/results/"))
+        self.assertEqual(hidden["shortlisted"], [{"title": "Solar milk cooler", "name": "", "district": ""}])
+        self.assertEqual((hidden["winners"][0]["name"], hidden["winners"][0]["title"], hidden["show_names"]), ("", "Cool boxes", False))
+        self.assertNotIn("Neo", str(hidden))
+        self.assertNotIn("Mpho", str(hidden))
 
         self.client.force_authenticate(self.innovator)
         mine = data(self.client.get("/api/programs/public/done/my-result/"))
@@ -259,6 +268,22 @@ class StaffTests(EntryTestCase):
         self.assertTrue(result["published"])
         done.refresh_from_db()
         self.assertIsNotNone(done.results_announced_at)
+
+    def test_publish_can_hide_names_and_the_switch_is_editable(self):
+        done = self.challenge("Done", opens_in=-30, closes_in=-2)
+        entry = self.send(program=done, status=SubmissionStatus.WINNER)
+        WinnerSpotlight.objects.create(program=done, team_name="Neo", project_name="Solar milk cooler", position="1st", year=2026, submission=entry)
+        self.client.force_authenticate(self.officer)
+        result = data(self.client.post(f"/api/programs/{done.id}/results/publish/", {"show_names": False}, format="json"))
+        self.assertEqual((result["published"], result["show_names"]), (True, False))
+        self.assertTrue(AuditLog.objects.filter(action_type="challenge_results_names_changed").exists())
+        self.assertEqual(data(self.client.get("/api/programs/public/done/results/"))["winners"][0]["name"], "")
+        # After publishing, the switch can still change (staff programme endpoint), with the scores switch beside it.
+        response = self.client.patch(f"/api/programs/{done.id}/", {"show_names_on_results": True, "share_scores_with_entrants": True}, format="json")
+        self.assertEqual(response.status_code, 200, response.content)
+        done.refresh_from_db()
+        self.assertEqual((done.show_names_on_results, done.share_scores_with_entrants), (True, True))
+        self.assertEqual(data(self.client.get("/api/programs/public/done/results/"))["winners"][0]["name"], "Neo")
 
     def test_publish_waits_for_the_close(self):
         self.client.force_authenticate(self.officer)
