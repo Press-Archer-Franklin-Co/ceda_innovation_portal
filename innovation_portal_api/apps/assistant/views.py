@@ -26,6 +26,10 @@ from apps.assistant.models import AssistantSettings, Introduction, KnowledgeDocu
 from apps.assistant.providers import AssistantUnavailable
 from apps.assistant.serializers import (
     AnswerIntroductionSerializer,
+    BuilderDraftCreateSerializer,
+    BuilderReviseSerializer,
+    BuilderTestSerializer,
+    GuideRequestSerializer,
     DocumentReviewSerializer,
     DraftCheckSerializer,
     HelpQuestionSerializer,
@@ -589,3 +593,137 @@ for _view, _name, _serializer in (
 ):
     _crud_schema(_view, _name, _serializer)
 
+
+
+# -- Copilot Branch B: the guide and Create with AI ----------------------------------------------------
+
+
+class GuideView(AssistantThrottleMixin, APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=TAGS,
+        summary="Need help? guide: steps for this page (2.14, 3.40)",
+        description="Send what the page shows (route, title, buttons and fields with ids, menu). The server adds the person's role and "
+        "capabilities and the manual and knowledge for this page, and answers with at most 6 steps. Steps point only at targets and "
+        "routes the page sent. The guide never clicks, submits or changes anything. Guests only when the admin allows. "
+        "When the AI cannot answer or the person asks for a person: handoff_suggested true.",
+        request=GuideRequestSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        from apps.assistant import guide
+
+        serializer = GuideRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user if request.user.is_authenticated else None
+        if user is None and not AssistantSettings.load().guests_can_use_guide:
+            return api_success(data={"available": False, "handoff_suggested": True})
+        try:
+            data = guide.answer(user=user, payload=dict(serializer.validated_data))
+        except AssistantUnavailable:
+            return api_success(data={"available": False, "handoff_suggested": True})
+        return api_success(data=_available(data))
+
+
+class BuilderMixin:
+    permission_classes = [HasCapability.of("assistant.build")]
+    throttle_classes = [AssistantUserThrottle]
+
+    def check_builder_rights(self, make: str) -> None:
+        """Create with AI also needs the rights of the builders it drafts for."""
+        from rest_framework.exceptions import PermissionDenied
+
+        from apps.core.capabilities import user_has
+
+        if make in ("form", "both") and not user_has(self.request.user, "forms.manage"):
+            raise PermissionDenied({"code": "needs_forms_manage", "detail": "You need form builder rights to draft a form."})
+        if make in ("workflow", "both") and not user_has(self.request.user, "entries.assign"):
+            raise PermissionDenied({"code": "needs_workflow_rights", "detail": "You need workflow rights to draft a workflow."})
+
+    def draft(self, pk):
+        from apps.assistant.models import AIDraft
+
+        draft = get_object_or_404(AIDraft.objects.select_related("program"), pk=pk)
+        self.check_builder_rights(draft.make)
+        return draft
+
+
+class BuilderDraftListView(BuilderMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="My Create with AI drafts", responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        from apps.assistant import builder
+        from apps.assistant.models import AIDraft
+
+        drafts = AIDraft.objects.filter(created_by=request.user).exclude(status=AIDraft.Status.DISCARDED)[:50]
+        return api_success(data=[builder.draft_dict(draft) for draft in drafts])
+
+    @extend_schema(
+        tags=ADMIN_TAGS,
+        summary="Create with AI: draft a form and/or workflow from a description (3.41)",
+        description="Saves drafts only, through the existing builders. Never creates roles, teams or reference lists: what is missing "
+        "comes back as a check with a fix. Send for approval and Publish use the existing publish endpoints.",
+        request=BuilderDraftCreateSerializer,
+        responses={201: OpenApiTypes.OBJECT},
+    )
+    def post(self, request):
+        from apps.assistant import builder
+        from apps.programs.models import Program
+
+        serializer = BuilderDraftCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        self.check_builder_rights(values["make"])
+        program = get_object_or_404(Program, pk=values["program_id"]) if values.get("program_id") else None
+        if program is None:
+            from apps.programs.general_intake import GeneralIntakeService
+
+            program = GeneralIntakeService.program()
+        try:
+            draft = builder.create(actor=request.user, description=values["description"], make=values["make"], program=program, general_ideas=values["general_ideas"], requested_language=values.get("language"))
+        except AssistantUnavailable as exc:
+            return api_success(data={"available": False, "reason": exc.reason, "detail": exc.detail})
+        return api_success(data=_available(builder.draft_dict(draft)), message="Draft ready to check.", status_code=status.HTTP_201_CREATED)
+
+
+class BuilderDraftDetailView(BuilderMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="One Create with AI draft", responses=OpenApiTypes.OBJECT)
+    def get(self, request, pk):
+        from apps.assistant import builder
+
+        return api_success(data=builder.draft_dict(self.draft(pk)))
+
+
+class BuilderDraftReviseView(BuilderMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="Change the draft in words (same draft form and workflow, history kept)", request=BuilderReviseSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request, pk):
+        from apps.assistant import builder
+
+        draft = self.draft(pk)
+        serializer = BuilderReviseSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            draft = builder.revise(actor=request.user, draft=draft, change=serializer.validated_data["change"])
+        except AssistantUnavailable as exc:
+            return api_success(data={"available": False, "reason": exc.reason, "detail": exc.detail})
+        return api_success(data=_available(builder.draft_dict(draft)))
+
+
+class BuilderDraftTestView(BuilderMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="Test run: walk sample answers through every step without saving anything", request=BuilderTestSerializer, responses=OpenApiTypes.OBJECT)
+    def post(self, request, pk):
+        from apps.assistant import builder
+
+        draft = self.draft(pk)
+        serializer = BuilderTestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        draft = builder.test_run(actor=request.user, draft=draft, answers=serializer.validated_data.get("answers"))
+        return api_success(data=builder.draft_dict(draft))
+
+
+class BuilderDraftDiscardView(BuilderMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="Discard a Create with AI draft", responses=OpenApiTypes.OBJECT)
+    def post(self, request, pk):
+        from apps.assistant import builder
+
+        return api_success(data=builder.draft_dict(builder.discard(actor=request.user, draft=self.draft(pk))), message="Discarded.")

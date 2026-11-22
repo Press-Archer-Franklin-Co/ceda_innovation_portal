@@ -19,6 +19,7 @@ const NOT_IN_UI = {
   // C3: no screen asks for these yet; the screens lane builds 3.34 and 3.3b (prompt 17) and removes these lines.
   'assistant.hints': 'AI helper card and Related ideas on submission detail come with the screens lane (3.3b)',
   'assistant.manage': 'Admin > AI helper page comes with the screens lane (3.34)',
+  'assistant.build': 'Create with AI (3.41) comes with the screens lane',
 }
 
 // Role-name tests that are allowed: auth internals and display-only role pickers.

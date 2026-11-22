@@ -287,3 +287,39 @@ class DocumentReview(UUIDModel, TimeStampedModel):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["document", "version", "language"], name="uq_assistant_document_review")]
+
+
+class AIDraft(UUIDModel, TimeStampedModel):
+    """Create with AI (B2, 3.41): a description and the draft form and workflow it produced.
+
+    Drafts only. Publishing uses the existing publish endpoints and approval steps.
+    """
+
+    class Make(models.TextChoices):
+        FORM = "form", "Form"
+        WORKFLOW = "workflow", "Workflow"
+        BOTH = "both", "Form and workflow"
+
+    class Status(models.TextChoices):
+        DRAFTING = "drafting", "Drafting"
+        READY = "ready", "Ready to check"
+        SENT_FOR_APPROVAL = "sent_for_approval", "Sent for approval"
+        PUBLISHED = "published", "Published"
+        DISCARDED = "discarded", "Discarded"
+
+    description = models.TextField()
+    conversation = models.JSONField(default=list, blank=True)
+    make = models.CharField(max_length=10, choices=Make.choices, default=Make.BOTH)
+    program = models.ForeignKey("programs.Program", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    general_ideas = models.BooleanField(default=False)
+    language = models.CharField(max_length=5, default="en")
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.DRAFTING, db_index=True)
+    proposal = models.JSONField(default=dict, blank=True, help_text="The AI's last answer (form and workflow drafts).")
+    draft_form = models.ForeignKey("programs.SubmissionForm", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    draft_workflow = models.ForeignKey("workflow.WorkflowDefinition", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    checks = models.JSONField(default=list, blank=True)
+    test_result = models.JSONField(default=dict, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+
+    class Meta:
+        ordering = ("-created_at",)

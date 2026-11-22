@@ -389,7 +389,7 @@ class FormTranslationTests(FormBuilderTestCase):
         self.put_draft(form_id, sample_document(tn=False))
         response = self.client.post(f"{FORMS}{form_id}/translations/suggest/", {"keys": ["field.first_name.label"]}, format="json")
         self.assertEqual(response.status_code, 200, response.content)
-        self.assertEqual(response.json()["data"]["suggestions"], [{"key": "field.first_name.label", "en": "First name", "suggested": "[tn] First name"}])
+        self.assertEqual(response.json()["data"]["suggestions"], [{"key": "field.first_name.label", "en": "First name", "suggested": "[tn] First name", "needs_review": True}])
         rows = {row["key"]: row for row in self.client.get(f"{FORMS}{form_id}/translations/").json()["data"]["rows"]}
         self.assertTrue(rows["field.first_name.label"]["missing"])
 
