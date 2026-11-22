@@ -124,6 +124,8 @@ class WorkflowDefinitionViewSet(viewsets.ModelViewSet):
         return api_success(data=serializer.data)
 
     def create(self, request, *args, **kwargs):
+        if any(key in request.data for key in ("from_template", "copy_of", "general_ideas")):
+            return self._create_from(request)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         definition = WorkflowDefinitionService.create_definition(
@@ -166,6 +168,45 @@ class WorkflowDefinitionViewSet(viewsets.ModelViewSet):
             )
         definition.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _create_from(self, request):
+        """R-48 (3.21a): {from_template | copy_of, name, program | general_ideas: true}."""
+        from apps.programs.models import Program
+        from apps.workflow import builder
+
+        name = (request.data.get("name") or "").strip()
+        if not name:
+            raise ValidationError({"name": "Give the workflow a name."})
+        if bool(request.data.get("from_template")) == bool(request.data.get("copy_of")):
+            raise ValidationError({"from_template": "Send from_template or copy_of, not both."})
+        program = None
+        if request.data.get("program"):
+            program = Program.objects.filter(id=request.data["program"]).first()
+            if program is None:
+                raise ValidationError({"program": "Unknown challenge."})
+        copy_of = get_object_or_404(WorkflowDefinition, id=request.data["copy_of"]) if request.data.get("copy_of") else None
+        definition = builder.create_from(
+            name=name[:255],
+            program=program,
+            general_ideas=bool(request.data.get("general_ideas")),
+            from_template=request.data.get("from_template") or "",
+            copy_of=copy_of,
+            actor=request.user,
+        )
+        return api_success(data=WorkflowDefinitionSerializer(definition).data, status_code=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["get"], url_path="board")
+    @extend_schema(
+        tags=["Workflow builder (R-48)"],
+        summary="Ideas in this workflow (3.22)",
+        description="{average_days_waiting: [{step, name, days}] (last 30 days), time_limit_days: [{step, days}], columns: [{step, name, order, "
+        "time_limit_days, count, items: [{submission_id, title, reference, owner, days_waiting, overdue}]}], done: {count, items}}. "
+        "Items: overdue first, then longest waiting, up to 50 per column.",
+    )
+    def board(self, request, pk=None):
+        from apps.workflow import builder
+
+        return api_success(data=builder.board(self.get_object()))
 
     @action(detail=True, methods=["get", "post"], url_path="steps")
     def steps(self, request, pk=None):

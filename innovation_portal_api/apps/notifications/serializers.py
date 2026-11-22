@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from apps.communications.models import Notification
 from apps.core.constants import NotificationDeliveryChannel, NotificationType
+from apps.notifications.selectors import is_staff, staff_types, types_for
 
 
 # R-8: the bell panel's filter chips. A notification's category comes from its link,
@@ -12,6 +13,28 @@ CATEGORY_TYPES = {
 }
 LINK_CATEGORIES = {"idea": "ideas", "message": "ideas", "challenge": "challenges", "post": "news"}
 CATEGORIES = ("ideas", "challenges", "news")
+
+STAFF_TYPE_LABELS = {
+    "assignment_created": "An idea was given to you",
+    "assignment_conflict_declared": "A judge declared a conflict",
+    "evaluation_submitted": "A judge sent scores",
+    "form_translation_review": "A form translation needs checking",
+    "applicant_reply": "An applicant replied",
+    "conversation_waiting": "A chat is waiting",
+    "conversation_escalated": "A chat has had no reply",
+    "content_approval": "Website content waits for approval",
+    "story_consent": "A story waits for consent",
+    "assignment_overdue": "Work is overdue",
+    "question_overdue": "A question to an applicant is overdue",
+}
+
+# R-48 (3.39): the staff settings groups and the notification types in each.
+STAFF_GROUPS = {
+    "new_assignment": ("New assignment", ("assignment_created", "assignment_conflict_declared", "evaluation_submitted", "form_translation_review")),
+    "replies": ("Replies and messages", ("applicant_reply", "officer_message", "conversation_waiting", "conversation_escalated")),
+    "approvals": ("Approvals", ("content_approval", "story_consent")),
+    "deadlines": ("Deadlines", ("assignment_overdue", "question_overdue", "deadline")),
+}
 
 
 def category_for(notification) -> str:
@@ -77,12 +100,22 @@ class NotificationPreferencesSerializer(serializers.Serializer):
     preferences = serializers.DictField(
         child=serializers.DictField(child=serializers.BooleanField()),
         allow_empty=False,
+        required=False,
     )
+    daily_summary = serializers.BooleanField(required=False, help_text="R-48: one summary email a day at 07:30 instead of an email each time.")
+    staff_groups = serializers.SerializerMethodField(read_only=True)
     notification_types = serializers.SerializerMethodField(read_only=True)
     channels = serializers.SerializerMethodField(read_only=True)
 
+    def get_staff_groups(self, obj):
+        return [{"code": code, "label": label, "types": list(types)} for code, (label, types) in STAFF_GROUPS.items()]
+
     def get_notification_types(self, obj):
-        return [{"code": value, "label": label} for value, label in NotificationType.choices]
+        rows = [{"code": value, "label": label} for value, label in NotificationType.choices]
+        user = self.context.get("user")
+        if user is not None and is_staff(user):
+            rows += [{"code": code, "label": STAFF_TYPE_LABELS.get(code, code.replace("_", " ").capitalize())} for code in staff_types()]
+        return rows
 
     def get_channels(self, obj):
         return [{"code": value, "label": label} for value, label in NotificationDeliveryChannel.choices]
@@ -91,7 +124,9 @@ class NotificationPreferencesSerializer(serializers.Serializer):
         errors = {}
         valid_channels = set(NotificationDeliveryChannel.values)
         for notification_type, channels in value.items():
-            if notification_type not in NotificationType.values:
+            user = self.context.get("user")
+            allowed = types_for(user) if user is not None else NotificationType.values
+            if notification_type not in allowed:
                 errors[notification_type] = ["Unknown notification type."]
                 continue
             unknown = sorted(set(channels) - valid_channels)

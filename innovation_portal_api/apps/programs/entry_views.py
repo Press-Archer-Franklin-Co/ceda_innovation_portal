@@ -14,7 +14,7 @@ from apps.core.permissions import HasCapability, IPRateThrottle
 from apps.programs import challenge_entry as entry
 from apps.programs.challenge_public import public_queryset
 from apps.programs.challenge_views import LANG, PublicChallengeThrottle, _lang
-from apps.programs.models import Program
+from apps.programs.models import EligibilityRule, Program
 
 
 def _challenge(slug: str):
@@ -36,7 +36,10 @@ class EligibilityAnswersSerializer(serializers.Serializer):
 
 class EligibilityRuleInputSerializer(serializers.Serializer):
     id = serializers.UUIDField(required=False, allow_null=True)
-    question = serializers.CharField(max_length=300)
+    field = serializers.ChoiceField(choices=EligibilityRule.FIELDS, required=False, allow_null=True, allow_blank=True, help_text="R-48 rule block. Empty: a yes/no question.")
+    operator = serializers.ChoiceField(choices=EligibilityRule.OPERATORS, required=False, allow_null=True, allow_blank=True)
+    value = serializers.JSONField(required=False, allow_null=True, help_text="A number, a [low, high] pair, a list of ids, a choice or true/false.")
+    question = serializers.CharField(max_length=300, required=False, allow_blank=True, default="", help_text="Needed when there is no field.")
     help = serializers.CharField(required=False, allow_blank=True, default="")
     required_answer = serializers.BooleanField(required=False, default=True)
     reason = serializers.CharField(required=False, allow_blank=True, max_length=300, default="")
@@ -44,8 +47,27 @@ class EligibilityRuleInputSerializer(serializers.Serializer):
     translations = serializers.DictField(required=False, default=dict)
 
 
+    def validate(self, attrs):
+        if not attrs.get("field") and not (attrs.get("question") or "").strip():
+            raise serializers.ValidationError({"question": "Write the question, or pick a field."})
+        if attrs.get("field") and not attrs.get("operator"):
+            raise serializers.ValidationError({"operator": "Pick how the field is checked."})
+        return attrs
+
+
+class RequiredDocumentInputSerializer(serializers.Serializer):
+    id = serializers.UUIDField(required=False, allow_null=True)
+    name = serializers.CharField(max_length=200)
+    hint = serializers.CharField(max_length=300, required=False, allow_blank=True, default="")
+    required = serializers.BooleanField(required=False, default=True)
+    accept = serializers.ListField(child=serializers.CharField(max_length=100), required=False, default=list)
+    max_mb = serializers.IntegerField(min_value=1, max_value=50, required=False, default=5)
+    translations = serializers.DictField(required=False, default=dict)
+
+
 class EligibilityRulesSerializer(serializers.Serializer):
-    rules = EligibilityRuleInputSerializer(many=True)
+    rules = EligibilityRuleInputSerializer(many=True, required=False)
+    documents = RequiredDocumentInputSerializer(many=True, required=False, help_text="R-48. Left out: the list stays as it is.")
 
 
 class ChallengeEntryStateView(APIView):
@@ -97,7 +119,7 @@ class ChallengeResultsView(APIView):
         summary="Challenge results: winners and shortlist (1.10)",
         description="published false until the challenge has closed and published its results; then winners "
         "[{position, name, title, description, prize_label, prize_amount, members_count, photo_url}] and shortlisted "
-        "[{name, title}]. Never scores, judges or notes.",
+        "[{title}] (titles only). Never scores, judges or notes.",
         parameters=[LANG],
         responses=OpenApiTypes.OBJECT,
     )
@@ -128,12 +150,16 @@ class ChallengeEligibilityRulesView(APIView):
     @extend_schema(tags=["Programs"], summary="The challenge's Can you enter? questions (challenge builder)", responses=OpenApiTypes.OBJECT)
     def get(self, request, program_id):
         program = get_object_or_404(Program, id=program_id)
-        return api_success(data={"rules": entry.staff_rules(program)})
+        return api_success(data=entry.staff_eligibility(program))
 
     @extend_schema(
         tags=["Programs"],
-        summary="Replace the challenge's Can you enter? questions",
-        description="rules in the order asked. An item with id updates that question; questions left out are removed.",
+        summary="Replace the challenge's Can you enter? questions and documents",
+        description="{rules, documents}, each in order. An item with id updates it; items left out are removed. A key left out "
+        "leaves that list as it is. A rule is a yes/no question {question, required_answer} or a block {field: age|citizenship|"
+        "district|sector|business_stage|registered_company, operator: is|is_not|is_between|is_one_of|is_at_least, value}. "
+        "The answer: {rules, documents: [{id, name, hint, required, accept, max_mb, translations}], sentence: {en, tn}}; each rule "
+        "also has its own sentence.",
         request=EligibilityRulesSerializer,
         responses=OpenApiTypes.OBJECT,
     )
@@ -141,7 +167,12 @@ class ChallengeEligibilityRulesView(APIView):
         program = get_object_or_404(Program, id=program_id)
         serializer = EligibilityRulesSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return api_success(data={"rules": entry.save_rules(program, serializer.validated_data["rules"], actor=request.user)})
+        data = serializer.validated_data
+        if "rules" in data:
+            entry.save_rules(program, data["rules"], actor=request.user)
+        if "documents" in data:
+            entry.save_documents(program, data["documents"], actor=request.user)
+        return api_success(data=entry.staff_eligibility(program))
 
 
 class PublishChallengeResultsView(APIView):

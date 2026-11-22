@@ -359,6 +359,10 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="*"),
         "options": {"expires": 50},
     },
+    "daily-summaries": {
+        "task": "apps.notifications.tasks.send_daily_summaries",
+        "schedule": crontab(hour=7, minute=30),
+    },
     "question-reminders": {
         "task": "apps.notifications.tasks.send_question_reminders",
         "schedule": crontab(hour=7, minute=30),

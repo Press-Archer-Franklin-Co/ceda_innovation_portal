@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('communications', '0006_b3_messages'),
+        ('communications', '0007_r48_workflow_profile'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

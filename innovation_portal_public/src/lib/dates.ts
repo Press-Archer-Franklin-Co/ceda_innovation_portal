@@ -23,3 +23,11 @@ export function formatDuration(seconds: number | null | undefined): string {
   const s = Math.round(seconds % 60)
   return `${m}:${String(s).padStart(2, '0')}`
 }
+
+/** Whole days from now until `iso` (0 on the day itself), or null for no date. */
+export function daysLeft(iso: string | null | undefined, now: number = Date.now()): number | null {
+  if (!iso) return null
+  const d = new Date(iso).getTime()
+  if (Number.isNaN(d)) return null
+  return Math.ceil((d - now) / 86_400_000)
+}

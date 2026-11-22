@@ -10,8 +10,10 @@ from rest_framework.exceptions import ValidationError
 
 from apps.audit.services import AuditService
 from apps.core.constants import SubmissionStatus
+from apps.programs import eligibility_rules as blocks
 from apps.programs.access import ProgramAccessService
-from apps.programs.challenge_public import _iso, challenge_status, has_results
+from apps.core.i18n import get_text
+from apps.programs.challenge_public import _iso, challenge_status, has_results, text_in
 from apps.programs.models import EligibilityRule, Program
 
 GENERAL_IDEA_URL = "/submit"
@@ -29,12 +31,44 @@ def _rules(program):
     return list(program.eligibility_rules.filter(active=True))
 
 
+def asked(rule, lang: str) -> str:
+    """The question as asked: what staff wrote, else the question a rule block gives (R-48), else the title."""
+    written = _text(rule, "question", lang)
+    if lang == "tn" and rule.field and not (((rule.translations or {}).get("tn") or {}).get("question") or "").strip():
+        written = ""  # the English question staff wrote is not Setswana; the block can say it
+    if written:
+        return written
+    return blocks.question(rule, lang) if rule.field else rule.title
+
+
+def reason(rule, lang: str) -> str:
+    return _text(rule, "reason", lang) or (blocks.sentence([rule], lang) if rule.field else "")
+
+
 def question_payload(rule, lang: str) -> dict:
     return {
         "id": str(rule.id),
-        "question": _text(rule, "question", lang) or rule.title,
+        "question": asked(rule, lang),
         "help": _text(rule, "description", lang),
     }
+
+
+def documents_payload(program, lang: str) -> list[dict]:
+    """R-48: documents applicants must bring."""
+    rows = []
+    for document in program.required_documents.all():
+        tn = (document.translations or {}).get("tn") or {}
+        rows.append(
+            {
+                "id": str(document.id),
+                "name": (tn.get("name") if lang == "tn" else "") or document.name,
+                "hint": (tn.get("hint") if lang == "tn" else "") or document.hint,
+                "required": document.required,
+                "accept": document.accept or [],
+                "max_mb": document.max_mb,
+            }
+        )
+    return rows
 
 
 def _entry_link(submission) -> dict:
@@ -81,6 +115,8 @@ def entry_state(program, user, lang: str) -> dict:
             "closes_at": _iso(program.submission_closes_at),
             "opens_at": _iso(program.submission_opens_at),
             "has_results": status == "closed" and has_results(program),
+            "support_headline": text_in(program, "support_headline", lang),
+            "results_publish_at": _iso(program.results_publish_at),
         },
         "state": "",
         "message": "",
@@ -90,6 +126,8 @@ def entry_state(program, user, lang: str) -> dict:
         "entries_used": ProgramAccessService.entries_used(program, user),
         "max_entries": program.max_entries_per_person,
         "general_idea_url": GENERAL_IDEA_URL,
+        "eligibility_sentence": blocks.sentence(rules, lang),
+        "documents": documents_payload(program, lang),
     }
     latest = None
     if signed_in:
@@ -151,7 +189,7 @@ def check_eligibility(program, user, answers: dict, lang: str) -> dict:
         return {
             "eligible": False,
             "reasons": [
-                {"id": str(rule.id), "question": _text(rule, "question", lang) or rule.title, "reason": _text(rule, "reason", lang)}
+                {"id": str(rule.id), "question": asked(rule, lang), "reason": reason(rule, lang)}
                 for rule in failed
             ],
             "draft_id": None,
@@ -180,15 +218,8 @@ def results_published(program) -> bool:
     return challenge_status(program) == "closed" and has_results(program)
 
 
-def _display_name(submission) -> str:
-    if submission.team_id:
-        return submission.team.name
-    user = submission.innovator
-    return (getattr(user, "full_name", "") or "").strip() if user else ""
-
-
 def public_results(program, lang: str) -> dict:
-    """1.10: winners and the shortlist, only once the challenge has published results. Never scores or judges."""
+    """1.10: winners (with names) and the shortlist (titles only), once the challenge has published results. Never scores or judges."""
     published = results_published(program)
     data = {
         "challenge": {"id": str(program.id), "slug": program.slug, "title": program.title, "status": challenge_status(program)},
@@ -198,6 +229,8 @@ def public_results(program, lang: str) -> dict:
         "winners": [],
         "shortlisted": [],
         "entries_count": 0,
+        "districts_count": 0,
+        "criteria": [],
     }
     if not published:
         return data
@@ -213,18 +246,46 @@ def public_results(program, lang: str) -> dict:
             "prize_amount": w.prize_amount,
             "members_count": w.members_count,
             "photo_url": w.photo.url if w.photo else None,
+            "district": _district(w.submission, lang),
         }
         for w in spotlights
     ]
     shortlisted = (
         program.submissions.filter(submitted_at__isnull=False, current_status__in=SHORTLIST_STATUSES)
         .exclude(id__in=winner_ids)
-        .select_related("team", "innovator")
         .order_by("title")
     )
-    data["shortlisted"] = [{"name": _display_name(s), "title": s.title} for s in shortlisted]
-    data["entries_count"] = program.submissions.filter(submitted_at__isnull=False).count()
+    # Nshathisi (22 Nov): shortlisted entries show the idea title only; winners keep their names.
+    data["shortlisted"] = [{"title": s.title} for s in shortlisted]
+    sent = program.submissions.filter(submitted_at__isnull=False)
+    data["entries_count"] = sent.count()
+    data["districts_count"] = sent.exclude(district__isnull=True).values("district").distinct().count()
+    data["criteria"] = _criteria_weights(program)
     return data
+
+
+def _district(submission, lang: str) -> str:
+    district = getattr(submission, "district", None) if submission else None
+    return get_text(district.name, lang) if district else ""
+
+
+def _criteria_weights(program) -> list[dict]:
+    """1.10 "How we judged": each criterion's share of the total weight, in percent."""
+    if not program.marking_criteria_id:
+        return []
+    items = list(program.marking_criteria.items.order_by("ordering"))
+    total = sum(float(item.weight) for item in items)
+    if not total:
+        return []
+    return [{"name": item.name, "weight": round(float(item.weight) * 100 / total)} for item in items]
+
+
+def _panel_feedback(submission) -> str:
+    """The latest feedback the team released to this person (the comment only: never judges or raw scores)."""
+    snapshot = submission.feedback_snapshots.order_by("-released_at", "-created_at").first()
+    if not snapshot:
+        return ""
+    return (((snapshot.payload_json or {}).get("release") or {}).get("comment") or "").strip()
 
 
 def _score_summary(submission) -> dict | None:
@@ -266,9 +327,19 @@ def my_result(program, user, lang: str) -> dict:
         "prize_amount": "",
         "scores": None,
         "scores_shared": program.share_scores_with_entrants,
+        "first_name": (user.first_name or "").strip(),
+        "entries_count": 0,
+        "shortlisted_count": 0,
+        "feedback": "",
+        "next_step": None,
     }
     if entry is None or not published:
         return data
+    sent = program.submissions.filter(submitted_at__isnull=False)
+    data["entries_count"] = sent.count()
+    winner_ids = set(program.winner_spotlights.exclude(submission__isnull=True).values_list("submission_id", flat=True))
+    data["shortlisted_count"] = len(winner_ids | set(sent.filter(current_status__in=SHORTLIST_STATUSES).values_list("id", flat=True)))
+    data["feedback"] = _panel_feedback(entry)
     spotlight = program.winner_spotlights.filter(submission=entry).first()
     if spotlight:
         data.update(outcome="winner", position=spotlight.position, prize_label=spotlight.prize_label, prize_amount=spotlight.prize_amount)
@@ -276,6 +347,9 @@ def my_result(program, user, lang: str) -> dict:
         data["outcome"] = "shortlisted"
     else:
         data["outcome"] = "not_selected"
+    # 2.11 "Next step": the challenge's event (pitch day or awards), for winners and the shortlist, while it is ahead.
+    if data["outcome"] in ("winner", "shortlisted") and program.event_date and program.event_date > timezone.now():
+        data["next_step"] = {"at": _iso(program.event_date)}
     if program.share_scores_with_entrants:
         data["scores"] = _score_summary(entry)
     return data
@@ -287,6 +361,9 @@ def my_result(program, user, lang: str) -> dict:
 def staff_rule(rule) -> dict:
     return {
         "id": str(rule.id),
+        "field": rule.field or None,
+        "operator": rule.operator or None,
+        "value": rule.value if rule.field else None,
         "question": rule.question or rule.title,
         "help": rule.description,
         "required_answer": rule.required_answer,
@@ -294,6 +371,7 @@ def staff_rule(rule) -> dict:
         "ordering": rule.ordering,
         "active": rule.active,
         "translations": rule.translations or {},
+        "sentence": blocks.sentences([rule]),
     }
 
 
@@ -301,18 +379,72 @@ def staff_rules(program) -> list[dict]:
     return [staff_rule(rule) for rule in program.eligibility_rules.all()]
 
 
+def staff_eligibility(program) -> dict:
+    """GET /api/programs/{id}/eligibility/: rules, documents and the sentence the public page shows."""
+    from apps.programs.models import ProgramDocument  # noqa: F401  (documents come through the related name)
+
+    return {
+        "rules": staff_rules(program),
+        "documents": [
+            {
+                "id": str(document.id),
+                "name": document.name,
+                "hint": document.hint,
+                "required": document.required,
+                "accept": document.accept or [],
+                "max_mb": document.max_mb,
+                "translations": document.translations or {},
+            }
+            for document in program.required_documents.all()
+        ],
+        "sentence": blocks.sentences(_rules(program)),
+    }
+
+
+@transaction.atomic
+def save_documents(program, items: list[dict], *, actor) -> None:
+    """Replaces the challenge's document list with `items`, in order. Items with an id update that document."""
+    from apps.programs.models import ProgramDocument
+
+    before = staff_eligibility(program)["documents"]
+    existing = {str(document.id): document for document in program.required_documents.all()}
+    kept = set()
+    for index, item in enumerate(items, start=1):
+        document = existing.get(str(item.get("id") or "")) or ProgramDocument(program=program)
+        for name in ("name", "hint", "required", "accept", "max_mb", "translations"):
+            if name in item:
+                setattr(document, name, item[name])
+        document.ordering = index
+        document.save()
+        kept.add(str(document.id))
+    for document_id, document in existing.items():
+        if document_id not in kept:
+            document.delete()
+    AuditService.log_action(
+        actor=actor, action_type="challenge_documents_updated", target=program, before_state={"documents": before}, after_state={"documents": staff_eligibility(program)["documents"]}
+    )
+
+
 @transaction.atomic
 def save_rules(program, items: list[dict], *, actor) -> list[dict]:
-    """Replaces the challenge's questions with `items`, in order. Items with an id update that rule."""
+    """Replaces the challenge's questions with `items`, in order. Items with an id update that rule.
+
+    An item with `field` is a rule block (R-48): its question and the answer it needs come from the block
+    unless staff wrote a question.
+    """
     before = staff_rules(program)
     existing = {str(rule.id): rule for rule in program.eligibility_rules.all()}
     kept = set()
     for index, item in enumerate(items, start=1):
         rule = existing.get(str(item.get("id") or "")) or EligibilityRule(program=program)
-        rule.question = item["question"]
-        rule.title = item["question"][:255]
+        field = item.get("field") or ""
+        rule.field = field
+        rule.operator = item.get("operator") or "" if field else ""
+        rule.value = blocks.clean_block(field, rule.operator, item.get("value")) if field else None
+        rule.question = item.get("question") or ""
+        rule.title = (rule.question or (blocks.question(rule, "en") if field else ""))[:255]
         rule.description = item.get("help", "")
-        rule.required_answer = item.get("required_answer", True)
+        rule.required_answer = blocks.expects_yes(rule) if field else item.get("required_answer", True)
         rule.reason = item.get("reason", "")
         rule.translations = item.get("translations") or {}
         rule.active = item.get("active", True)
