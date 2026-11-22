@@ -244,16 +244,41 @@ class ApprovalCompareTests(U9Base):
         listed = {row["id"]: row for row in data(self.client.get("/api/content/approvals/"))}
         self.assertEqual(listed[str(self.approval.id)]["change_type"], "edit")
 
-    def test_nobody_approves_their_own_change_and_send_back_needs_a_comment(self):
+    def assert_send_back_needs_a_comment(self, who):
+        self.client.force_authenticate(who)
+        self.assertEqual(self.client.post(f"/api/content/approvals/{self.approval.id}/reject/", {"comment": ""}, format="json").status_code, 400)
+
+    def test_fresh_database_lets_people_approve_their_own_change(self):
+        from apps.content.models import ApprovalFlow
+        from apps.content.services import ApprovalService
+
+        self.assertTrue(ApprovalService.flow().approvers_can_approve_own_work)
+        self.assertTrue(ApprovalFlow._meta.get_field("approvers_can_approve_own_work").default)
+
+    def test_switch_on_the_author_can_approve(self):
+        self.assert_send_back_needs_a_comment(self.officer)
+        detail = data(self.client.get(f"/api/content/approvals/{self.approval.id}/"))
+        self.assertEqual((detail["own_change"], detail["can_approve"]), (True, True))
+        self.assertIn("Approval steps", detail["note"]["en"])
+        self.assertTrue(detail["note"]["tn"])
+        approved = self.client.post(f"/api/content/approvals/{self.approval.id}/approve/", {}, format="json")
+        self.assertEqual(approved.status_code, 200, approved.content)
+        self.assertEqual(data(approved)["status"], "approved")
+
+    def test_switch_off_needs_a_second_approver(self):
+        from apps.content.models import ApprovalFlow
+
+        ApprovalFlow.objects.update(approvers_can_approve_own_work=False)
         self.client.force_authenticate(self.officer)
+        # With the switch off the author cannot decide at all, so sending back is refused too.
+        self.assertEqual(self.client.post(f"/api/content/approvals/{self.approval.id}/reject/", {"comment": "Oops"}, format="json").status_code, 403)
         detail = data(self.client.get(f"/api/content/approvals/{self.approval.id}/"))
         self.assertEqual((detail["own_change"], detail["can_approve"]), (True, False))
         refused = self.client.post(f"/api/content/approvals/{self.approval.id}/approve/", {}, format="json")
         self.assertEqual(refused.status_code, 403)
         self.assertIn("own change", refused.content.decode())
 
-        self.client.force_authenticate(self.manager)
-        self.assertEqual(self.client.post(f"/api/content/approvals/{self.approval.id}/reject/", {"comment": ""}, format="json").status_code, 400)
+        self.assert_send_back_needs_a_comment(self.manager)
         approved = self.client.post(f"/api/content/approvals/{self.approval.id}/approve/", {}, format="json")
         self.assertEqual(approved.status_code, 200, approved.content)
         self.assertEqual(data(approved)["status"], "approved")
