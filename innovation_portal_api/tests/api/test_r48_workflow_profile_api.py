@@ -192,3 +192,27 @@ class DailySummaryAndProfileTests(B5TestCase):
         self.assertIsNone(data(self.client.delete("/api/auth/me/photo/"))["photo_url"])
         self.officer.refresh_from_db()
         self.assertFalse(self.officer.photo)
+
+
+class StaffPreferenceTypesTests(B5TestCase):
+    """R-57: staff can switch each staff group type per channel; innovators do not see them."""
+
+    def test_staff_types(self):
+        self.client.force_authenticate(self.officer)
+        prefs = data(self.client.get("/api/notifications/preferences/"))
+        self.assertIn("assignment_created", prefs["preferences"])
+        self.assertIn("assignment_created", [row["code"] for row in prefs["notification_types"]])
+        response = self.client.put("/api/notifications/preferences/", {"preferences": {"assignment_created": {"email": False}, "applicant_reply": {"whatsapp": True}}}, format="json")
+        self.assertEqual(response.status_code, 200, response.content)
+        saved = data(response)["preferences"]
+        self.assertFalse(saved["assignment_created"]["email"])
+        self.assertTrue(saved["applicant_reply"]["whatsapp"])
+        with patch("apps.communications.services.CommunicationService._dispatch_or_enqueue"):
+            NotificationService.notify(user=self.officer, notification_type="assignment_created", title="New idea", message="x", send_email=True)
+            NotificationService.notify(user=self.officer, notification_type="applicant_reply", title="Reply", message="y", send_email=True)
+        self.assertEqual(list(CommunicationLog.objects.filter(recipient=self.officer).values_list("subject", flat=True)), ["Reply"])
+
+        self.client.force_authenticate(self.innovator)
+        mine = data(self.client.get("/api/notifications/preferences/"))
+        self.assertNotIn("assignment_created", mine["preferences"])
+        self.assertEqual(self.client.put("/api/notifications/preferences/", {"preferences": {"assignment_created": {"email": False}}}, format="json").status_code, 400)

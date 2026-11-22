@@ -126,13 +126,13 @@ class NotificationPreferencesView(generics.GenericAPIView):
         from apps.communications.models import NotificationPreference
 
         daily = NotificationPreference.objects.filter(user=user, daily_summary=True).exists()
-        return NotificationPreferencesSerializer({"preferences": preferences, "daily_summary": daily}).data
+        return NotificationPreferencesSerializer({"preferences": preferences, "daily_summary": daily}, context={"user": user}).data
 
     def get(self, request, *args, **kwargs):
         return api_success(data=self._payload(request.user, NotificationPreferenceSelector.for_user(request.user)))
 
     def put(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = NotificationPreferencesSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         if "preferences" not in data and "daily_summary" not in data:

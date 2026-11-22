@@ -14,6 +14,14 @@ def wants_daily_summary(user) -> bool:
     return NotificationPreference.objects.filter(user=user, daily_summary=True).exists()
 
 
+def email_wanted(user, notification_type: str) -> bool:
+    """R-57: a type the person can switch (innovator or staff group types) follows their email switch."""
+    from apps.core.constants import NotificationDeliveryChannel
+
+    preferences = NotificationPreferenceSelector.for_user(user)
+    return preferences.get(notification_type, {}).get(NotificationDeliveryChannel.EMAIL.value, True)
+
+
 class NotificationService:
     @staticmethod
     def notify(*, user, notification_type: str, message: str, title: str = "", send_email: bool = False):
@@ -34,7 +42,7 @@ class NotificationService:
                 title=title or notification_type.replace("_", " ").title(),
                 body=message,
             )
-        if send_email and user.email and not wants_daily_summary(user):
+        if send_email and user.email and not wants_daily_summary(user) and email_wanted(user, notification_type):
             log = CommunicationService.log_communication(
                 recipient=user,
                 notification=notification,
