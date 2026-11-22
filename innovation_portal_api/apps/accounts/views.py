@@ -5,6 +5,7 @@ from django.db import models
 from django.middleware.csrf import get_token
 from rest_framework import generics, serializers, status
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -14,6 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from apps.accounts import me_profile
 from apps.accounts.models import User, UserMFAProfile, MFAChallenge, UserSecurityToken
 from apps.accounts.serializers import (
     AccountSecuritySummarySerializer,
@@ -557,7 +559,34 @@ class AuthMeView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        return api_success(data=AuthenticatedUserSerializer(request.user).data, status_code=status.HTTP_200_OK)
+        return api_success(data=AuthenticatedUserSerializer(request.user, context={"request": request}).data, status_code=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=["Authentication"],
+        summary="Change my name, phone or language (R-48 3.39, R-51 2.9)",
+        description="Any of first_name, last_name, phone_number (for WhatsApp alerts; changing it clears phone_verified), preferred_language: en|tn.",
+        request=me_profile.MeUpdateSerializer,
+    )
+    def patch(self, request, *args, **kwargs):
+        serializer = me_profile.MeUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        me_profile.update_me(request.user, serializer.validated_data)
+        return api_success(data=AuthenticatedUserSerializer(request.user, context={"request": request}).data, message="Saved.")
+
+
+class AuthMePhotoView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(tags=["Authentication"], summary="Change my photo", description="multipart file: a JPG or PNG up to 5 MB. Saved as a 512 px square.")
+    def post(self, request, *args, **kwargs):
+        me_profile.set_photo(request.user, request.FILES.get("file"))
+        return api_success(data={"photo_url": me_profile.photo_url(request.user, request)}, message="Photo saved.")
+
+    @extend_schema(tags=["Authentication"], summary="Remove my photo")
+    def delete(self, request, *args, **kwargs):
+        me_profile.remove_photo(request.user)
+        return api_success(data={"photo_url": None}, message="Photo removed.")
 
 
 class MFASetupView(generics.GenericAPIView):

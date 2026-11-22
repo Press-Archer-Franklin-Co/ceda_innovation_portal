@@ -297,6 +297,10 @@ class ReviewerQueueItemSerializer(serializers.ModelSerializer):
     my_assignment_id = serializers.SerializerMethodField()
     assignment_role = serializers.CharField(source="workflow_instance.current_step.assignment_role", read_only=True)
     requires_invitation = serializers.SerializerMethodField()
+    # R-55 (3.3)
+    due_at = serializers.SerializerMethodField(help_text="Your own assignment deadline when you have one, else the workflow's due date.")
+    program = serializers.SerializerMethodField()
+    stage_code = serializers.CharField(source="workflow_instance.current_step.code", read_only=True, default=None)
 
     class Meta:
         model = Submission
@@ -304,6 +308,9 @@ class ReviewerQueueItemSerializer(serializers.ModelSerializer):
             "id",
             "reference_number",
             "title",
+            "due_at",
+            "program",
+            "stage_code",
             "current_status",
             "current_step",
             "workflow_status",
@@ -316,6 +323,19 @@ class ReviewerQueueItemSerializer(serializers.ModelSerializer):
             "assignment_role",
             "requires_invitation",
         )
+
+    def get_due_at(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        instance = getattr(obj, "workflow_instance", None)
+        if user is not None and user.is_authenticated:
+            mine = next((item for item in obj.assignments.all() if item.assignee_id == user.id and item.deadline and item.status in ("assigned", "accepted")), None)
+            if mine is not None:
+                return mine.deadline.isoformat()
+        return instance.due_at.isoformat() if instance is not None and instance.due_at else None
+
+    def get_program(self, obj):
+        return {"id": str(obj.program_id), "title": obj.program.title} if obj.program_id else None
 
     def get_active_assignments(self, obj):
         current_step = getattr(getattr(obj, "workflow_instance", None), "current_step", None)

@@ -179,12 +179,15 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
     is_admin = serializers.SerializerMethodField()
     mfa_enabled = serializers.SerializerMethodField()
     mfa_method = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = (
             "id",
             "capabilities",
+            "preferred_language",
+            "photo_url",
             "email",
             "first_name",
             "last_name",
@@ -200,6 +203,11 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
             "roles",
             "profile",
         )
+
+    def get_photo_url(self, obj) -> str | None:
+        from apps.accounts.me_profile import photo_url
+
+        return photo_url(obj, self.context.get("request"))
 
     def get_capabilities(self, obj) -> list[str]:
         from apps.core.capabilities import capabilities_for

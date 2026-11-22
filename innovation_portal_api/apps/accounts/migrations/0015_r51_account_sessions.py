@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0013_u7_demo_accounts_auth_policy'),
+        ('accounts', '0014_r48_workflow_profile'),
     ]
 
     operations = [
