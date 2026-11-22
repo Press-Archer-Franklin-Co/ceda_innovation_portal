@@ -1,5 +1,5 @@
 """R-59 (3.37): the winners manager. Which winning and shortlisted entries show on the public results, in what
-order, with a photo and a short story; and whether winners' names show."""
+order, with a photo and a short story. Names follow Program.show_names_on_results (#72)."""
 
 from __future__ import annotations
 
@@ -40,12 +40,6 @@ def candidates(program):
     return rows
 
 
-def _settings(program):
-    from apps.content.models import ResultsPageSettings
-
-    return ResultsPageSettings.objects.filter(program=program).first()
-
-
 def entry_payload(submission, place, entry, request=None) -> dict:
     from apps.programs.challenge_entry import _district
 
@@ -73,11 +67,10 @@ def manage(program, request=None) -> dict:
     entries = {row.submission_id: row for row in ResultEntry.objects.filter(program=program)}
     rows = [entry_payload(submission, place, entries.get(submission.id), request) for submission, place in candidates(program)]
     rows.sort(key=lambda row: (row["order"] or 999, PLACE_ORDER.get(row["place"], 6 if row["place"] == "winner" else 9), row["title"]))
-    settings = _settings(program)
     return {
         "results_published": bool(program.results_announced_at),
         "published_at": _iso(program.results_announced_at),
-        "show_names": settings.show_names if settings else True,
+        "show_names": program.show_names_on_results,
         "entries": rows,
     }
 
@@ -127,20 +120,10 @@ def set_photo(program, submission_id, upload, *, actor, request=None) -> dict:
     return entry_payload(submission, place, entry, request)
 
 
-def set_show_names(program, show: bool, *, actor) -> None:
-    from apps.content.models import ResultsPageSettings
-
-    settings, _ = ResultsPageSettings.objects.get_or_create(program=program)
-    settings.show_names = bool(show)
-    settings.save(update_fields=["show_names", "updated_at"])
-    AuditService.log_action(actor=actor, action_type="challenge_results_names_set", target=program, after_state={"show_names": settings.show_names})
-
-
 def public_view(program):
-    """For 1.10: {submission id: entry}, the hidden ids, and whether names show."""
+    """For 1.10: {submission id: entry} and the hidden ids."""
     from apps.content.models import ResultEntry
 
     entries = {row.submission_id: row for row in ResultEntry.objects.filter(program=program)}
     hidden = {key for key, row in entries.items() if not row.show_on_results}
-    settings = _settings(program)
-    return entries, hidden, (settings.show_names if settings else True)
+    return entries, hidden

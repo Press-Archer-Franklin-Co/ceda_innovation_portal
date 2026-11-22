@@ -70,8 +70,9 @@ export interface ChallengeResults {
   published_at: string | null
   results_publish_at: string | null
   winners: Winner[]
-  /** Titles only: shortlisted people are not named in public. */
-  shortlisted: { title: string }[]
+  /** Name and district are empty when the challenge turns "Show names on the results page" off. */
+  shortlisted: { title: string; name: string; district: string }[]
+  show_names: boolean
   entries_count: number
   districts_count: number
   /** "How we judged": each criterion's share of the total, in percent. */

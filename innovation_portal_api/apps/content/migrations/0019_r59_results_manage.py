@@ -31,17 +31,4 @@ class Migration(migrations.Migration):
                 'ordering': ('order', 'created_at'),
             },
         ),
-        migrations.CreateModel(
-            name='ResultsPageSettings',
-            fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('show_names', models.BooleanField(default=True)),
-                ('program', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='results_page_settings', to='programs.program')),
-            ],
-            options={
-                'abstract': False,
-            },
-        ),
     ]

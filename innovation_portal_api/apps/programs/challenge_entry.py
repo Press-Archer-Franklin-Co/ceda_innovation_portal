@@ -218,8 +218,18 @@ def results_published(program) -> bool:
     return challenge_status(program) == "closed" and has_results(program)
 
 
+def _display_name(submission) -> str:
+    if submission.team_id:
+        return submission.team.name
+    user = submission.innovator
+    return (getattr(user, "full_name", "") or "").strip() if user else ""
+
+
 def public_results(program, lang: str) -> dict:
-    """1.10: winners (with names) and the shortlist (titles only), once the challenge has published results. Never scores or judges."""
+    """1.10: winners and the shortlist, once the challenge has published results. Never scores or judges.
+
+    Names (and districts) show for winners and shortlisted entries unless the challenge turns
+    "Show names on the results page" off; then every entry shows its idea title only (Nshathisi, 22 Nov)."""
     published = results_published(program)
     data = {
         "challenge": {"id": str(program.id), "slug": program.slug, "title": program.title, "status": challenge_status(program)},
@@ -231,13 +241,14 @@ def public_results(program, lang: str) -> dict:
         "entries_count": 0,
         "districts_count": 0,
         "criteria": [],
+        "show_names": program.show_names_on_results,
     }
     if not published:
         return data
     from apps.programs.results_manage import public_view
 
-    # R-59 (3.37): staff can hide entries, set their order, add a photo and a story, and hide names.
-    entries, hidden, show_names = public_view(program)
+    # R-59 (3.37): staff can hide entries, set their order, add a photo and a story, and names follow Program.show_names_on_results.
+    entries, hidden = public_view(program)
 
     def order(submission_id, fallback):
         entry = entries.get(submission_id)
@@ -252,33 +263,36 @@ def public_results(program, lang: str) -> dict:
         entry = entries.get(submission_id)
         return entry.photo.url if entry and entry.photo else fallback
 
+    names = program.show_names_on_results
     spotlights = [w for w in program.winner_spotlights.all() if w.submission_id not in hidden]
     spotlights.sort(key=lambda w: order(w.submission_id, (PLACE_ORDER.get(w.position, 9), w.team_name)))
     winner_ids = {w.submission_id for w in program.winner_spotlights.all() if w.submission_id}
     data["winners"] = [
         {
             "position": w.position,
-            "name": w.team_name if show_names else "",
+            "name": w.team_name if names else "",
             "title": w.project_name,
             "description": w.description,
             "story": story(w.submission_id),
             "prize_label": w.prize_label,
             "prize_amount": w.prize_amount,
-            "members_count": w.members_count,
+            "members_count": w.members_count if names else 0,
             "photo_url": photo(w.submission_id, w.photo.url if w.photo else None),
-            "district": _district(w.submission, lang),
+            "district": _district(w.submission, lang) if names else "",
         }
         for w in spotlights
     ]
     shortlisted = [
         s
-        for s in program.submissions.filter(submitted_at__isnull=False, current_status__in=SHORTLIST_STATUSES).exclude(id__in=winner_ids)
+        for s in program.submissions.filter(submitted_at__isnull=False, current_status__in=SHORTLIST_STATUSES)
+        .exclude(id__in=winner_ids)
+        .select_related("team", "innovator", "district")
         if s.id not in hidden
     ]
     shortlisted.sort(key=lambda s: order(s.id, s.title))
-    # Nshathisi (22 Nov): shortlisted entries show the idea title only; winners keep their names.
-    data["shortlisted"] = [{"title": s.title} for s in shortlisted]
-    data["show_names"] = show_names
+    data["shortlisted"] = [
+        {"title": s.title, "name": _display_name(s) if names else "", "district": _district(s, lang) if names else ""} for s in shortlisted
+    ]
     sent = program.submissions.filter(submitted_at__isnull=False)
     data["entries_count"] = sent.count()
     data["districts_count"] = sent.exclude(district__isnull=True).values("district").distinct().count()
@@ -481,13 +495,19 @@ def save_rules(program, items: list[dict], *, actor) -> list[dict]:
     return after
 
 
-def publish_results(program: Program, *, actor) -> dict:
+def publish_results(program: Program, *, actor, show_names: bool | None = None) -> dict:
     """Staff "Publish results" (1.10). Winners already chosen by hand are published as they are; otherwise the
-    automatic ranking runs now, without waiting for the results date. A tie or missing marks keeps them on hold."""
+    automatic ranking runs now, without waiting for the results date. A tie or missing marks keeps them on hold.
+    show_names (optional) sets "Show names on the results page" first; it can also change after publishing."""
     from apps.programs.challenge_results import ChallengeResultsService
 
+    if show_names is not None and show_names != program.show_names_on_results:
+        program.show_names_on_results = show_names
+        program.save(update_fields=["show_names_on_results", "updated_at"])
+        AuditService.log_action(actor=actor, action_type="challenge_results_names_changed", target=program, metadata={"show_names": show_names})
+
     if program.results_announced_at:
-        return {"published": True, "published_at": _iso(program.results_announced_at), "hold_reason": ""}
+        return {"published": True, "published_at": _iso(program.results_announced_at), "hold_reason": "", "show_names": program.show_names_on_results}
     if challenge_status(program) != "closed":
         raise ValidationError({"detail": {"code": "still_open", "detail": "Results can be published once the challenge has closed."}})
     if program.winner_spotlights.exists():
@@ -506,4 +526,9 @@ def publish_results(program: Program, *, actor) -> dict:
             program.refresh_from_db()
         if announced:
             AuditService.log_action(actor=actor, action_type="challenge_results_published", target=program, metadata={"by_hand": False})
-    return {"published": bool(program.results_announced_at), "published_at": _iso(program.results_announced_at), "hold_reason": program.results_hold_reason}
+    return {
+        "published": bool(program.results_announced_at),
+        "published_at": _iso(program.results_announced_at),
+        "hold_reason": program.results_hold_reason,
+        "show_names": program.show_names_on_results,
+    }

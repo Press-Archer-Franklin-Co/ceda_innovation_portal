@@ -176,6 +176,10 @@ class ChallengeEligibilityRulesView(APIView):
         return api_success(data=entry.staff_eligibility(program))
 
 
+class PublishResultsSerializer(serializers.Serializer):
+    show_names = serializers.BooleanField(required=False)
+
+
 class PublishChallengeResultsView(APIView):
     permission_classes = [HasCapability.of("challenges.manage")]
 
@@ -183,13 +187,16 @@ class PublishChallengeResultsView(APIView):
         tags=["Programs"],
         summary="Publish the challenge's results now (1.10)",
         description="Winners picked by hand are published as they are; otherwise the automatic ranking runs now. "
-        "{published, published_at, hold_reason}. 400 still_open before the challenge closes.",
-        request=None,
+        "Body (optional): {show_names: bool} sets \"Show names on the results page\" (on by default; off shows idea titles only). "
+        "{published, published_at, hold_reason, show_names}. 400 still_open before the challenge closes.",
+        request=PublishResultsSerializer,
         responses=OpenApiTypes.OBJECT,
     )
     def post(self, request, program_id):
         program = get_object_or_404(Program, id=program_id)
-        return api_success(data=entry.publish_results(program, actor=request.user))
+        body = PublishResultsSerializer(data=request.data or {})
+        body.is_valid(raise_exception=True)
+        return api_success(data=entry.publish_results(program, actor=request.user, show_names=body.validated_data.get("show_names")))
 
 
 # R-59 (3.37 winners manager) ---------------------------------------------------------------------------------------
@@ -208,23 +215,13 @@ class ResultsManageView(APIView):
         tags=["Programs"],
         summary="Winners manager (3.37)",
         description="{results_published, published_at, show_names, entries: [{submission_id, title, applicant, district, place: 1st|2nd|3rd|runner_up|special|winner|shortlisted, "
-        "order, show_on_results, photo_url, story {en, tn}}]}. PATCH {show_names} switches names on the public results.",
+        "order, show_on_results, photo_url, story {en, tn}}]}. show_names is Program.show_names_on_results (change it with PATCH /api/programs/{id}/).",
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, program_id):
         from apps.programs.results_manage import manage
 
         return api_success(data=manage(get_object_or_404(Program, id=program_id), request))
-
-    @extend_schema(tags=["Programs"], summary="Show or hide names on the public results", request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
-    def patch(self, request, program_id):
-        from apps.programs.results_manage import manage, set_show_names
-
-        program = get_object_or_404(Program, id=program_id)
-        if not isinstance(request.data.get("show_names"), bool):
-            raise serializers.ValidationError({"show_names": "Send true or false."})
-        set_show_names(program, request.data["show_names"], actor=request.user)
-        return api_success(data=manage(program, request))
 
 
 class ResultEntryManageView(APIView):

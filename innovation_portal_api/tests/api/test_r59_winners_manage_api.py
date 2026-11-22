@@ -43,12 +43,16 @@ class WinnersManageTests(u10.EntryTestCase):
         self.assertEqual(self.client.patch(f"{self.url}{self.first.id}/", {"order": 1, "story": {"en": "Cooling milk with the sun.", "tn": ""}}, format="json").status_code, 200)
         self.client.patch(f"{self.url}{self.second.id}/", {"show_on_results": False}, format="json")
         self.client.patch(f"{self.url}{self.winning.id}/", {"story": {"en": "Boxes that keep vegetables cold.", "tn": "Mabokose a a tsidifatsang merogo."}}, format="json")
-        self.assertFalse(data(self.client.patch(self.url, {"show_names": False}, format="json"))["show_names"])
+        # Names use the one switch on the challenge (#72), as the staff Winners screen does.
+        switched = self.client.patch(f"/api/programs/{self.done.id}/", {"show_names_on_results": False}, format="json")
+        self.assertEqual(switched.status_code, 200, switched.content)
+        self.assertFalse(data(self.client.get(self.url))["show_names"])
         self.assertTrue(AuditLog.objects.filter(action_type="challenge_result_entry_updated").exists())
 
         public = data(self.client.get("/api/programs/public/done/results/?lang=tn"))
-        self.assertEqual(public["shortlisted"], [{"title": "Solar milk cooler"}])
-        self.assertEqual((public["winners"][0]["name"], public["winners"][0]["story"]), ("", "Mabokose a a tsidifatsang merogo."))
+        self.assertEqual(public["shortlisted"], [{"title": "Solar milk cooler", "name": "", "district": ""}])
+        winner = public["winners"][0]
+        self.assertEqual((winner["name"], winner["members_count"], winner["district"], winner["story"]), ("", 0, "", "Mabokose a a tsidifatsang merogo."))
         self.assertFalse(public["show_names"])
 
         buffer = io.BytesIO()

@@ -23,6 +23,7 @@ import {
 import {
   useApprovals, useDecideApproval, useHomeDraft, useHomePreview, useSaveHomeDraft, useSectionTypes, useSubmitHome,
 } from '../../lib/queries/websiteContent'
+import PublicNumbersCard from '../../components/content/home/PublicNumbersCard'
 
 const AUTOSAVE_MS = 1000
 const fingerprint = (sections) => JSON.stringify(sections.map((s) => [s._key, s.type, s.enabled, s.settings]))
@@ -373,6 +374,7 @@ export default function HomePageEditor() {
               onMove={(from, to) => update((s) => moveSection(s, typeList, from, to))}
               onAdd={() => setAdding(true)}
             />
+            <PublicNumbersCard />
           </section>
 
           <section aria-label={t('home.sections')} className="flex flex-col gap-4 rounded-card border border-border bg-surface p-4 lg:sticky lg:top-4">

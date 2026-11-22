@@ -689,12 +689,6 @@ class ResultEntry(UUIDModel, TimeStampedModel):
         ordering = ("order", "created_at")
 
 
-class ResultsPageSettings(UUIDModel, TimeStampedModel):
-    """R-59 (3.37): per challenge, whether the public results show entrants' names."""
-
-    program = models.OneToOneField("programs.Program", on_delete=models.CASCADE, related_name="results_page_settings")
-    show_names = models.BooleanField(default=True)
-
 
 class PolicyPage(UUIDModel, TimeStampedModel):
     """U11C: the text of a policy page (About, Guidelines, Privacy, Terms of use, Terms of agreement).
