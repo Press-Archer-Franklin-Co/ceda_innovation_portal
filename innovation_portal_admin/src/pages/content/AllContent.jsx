@@ -13,35 +13,23 @@ import { SelectControl } from '../../components/ui/Select'
 import { useT } from '../../i18n/context'
 import { client } from '../../lib/api/client'
 import { relativeTime } from '../../lib/forms/format'
-import { LANGS, NEW_TYPES, PAGE_SIZE, STATUSES, TYPES, allParams, byRecent, filterRows, fromAll, fromPolicy } from '../../lib/content/allContent'
+import { LANGS, NEW_TYPES, PAGE_SIZE, STATUSES, TYPES, allParams, fromAll } from '../../lib/content/allContent'
 
 // 3.38 All content (Figma 141:2509 website, 141:2846 phone). ① Filter by type, status and language; search titles.
 // ② One table for pages, posts, stories, quotes, partners, FAQs and policies, with who changed it last and whether a
 // Setswana version exists. ③ New opens a small menu to pick the type, then the right editor. Rows waiting for
 // approval link to 3.25. Phone: the same rows as cards (DataTable).
-// Rows come from GET /api/content/all/ (R-59 part 1), which pages, searches, filters and sorts them. Policy pages
-// are not in it yet (TODO(R-62) item 1), so the "Policy page" type reads /api/content/policies/ instead.
+// Rows come from GET /api/content/all/ (R-59 part 1 and R-62), which pages, searches, filters and sorts them
+// (newest change first; the frame has no sort control).
 
 const TYPE_TONE = { page: 'dark', news: 'blue', story: 'green', quote: 'amber', partner: 'neutral', faq: 'orange', policy: 'cms' }
 
-function useAllContent(filters, enabled) {
+function useAllContent(filters) {
   const params = allParams(filters)
   return useQuery({
     queryKey: ['content', 'all', params],
     queryFn: () => client.get('/api/content/all/', params),
     placeholderData: keepPreviousData,
-    enabled,
-  })
-}
-
-function usePolicyRows(enabled) {
-  return useQuery({
-    queryKey: ['content', 'policies'],
-    queryFn: async () => {
-      const data = await client.get('/api/content/policies/')
-      return Array.isArray(data) ? data : data?.results ?? []
-    },
-    enabled,
   })
 }
 
@@ -79,18 +67,13 @@ function AllContentTable() {
   const [paging, setPaging] = useState({ filterKey, page: 1 })
   const page = paging.filterKey === filterKey ? paging.page : 1
   const setPage = (p) => setPaging({ filterKey, page: p })
-  const policyMode = type === 'policy'
-  const all = useAllContent({ type, status, lang, q: search, page }, !policyMode)
-  const policies = usePolicyRows(policyMode)
-  const source = policyMode ? policies : all
+  const all = useAllContent({ type, status, lang, q: search, page })
 
   useEffect(() => { document.title = `${t('all.title')} · CEDA Innovation` }, [t])
 
   const homeTitle = (r) => (r.type === 'page' && r.id === 'home' ? { ...r, title: t('all.homePage') } : r)
-  const rows = policyMode
-    ? filterRows((policies.data ?? []).map(fromPolicy), { status, lang, q: search }).sort(byRecent)
-    : (all.data?.results ?? []).map(fromAll).filter(Boolean).map(homeTitle)
-  const total = policyMode ? rows.length : all.data?.count ?? rows.length
+  const rows = (all.data?.results ?? []).map(fromAll).filter(Boolean).map(homeTitle)
+  const total = all.data?.count ?? rows.length
   const filtered = Boolean(q || type || status || lang)
 
   const columns = [
@@ -154,13 +137,15 @@ function AllContentTable() {
         columns={columns}
         data={rows}
         rowKey="key"
-        loading={source.isLoading}
-        error={source.isError ? t('all.loadError') : undefined}
-        onRetry={() => source.refetch()}
-        retrying={source.isFetching && source.isError}
+        loading={all.isLoading}
+        error={all.isError ? t('all.loadError') : undefined}
+        onRetry={() => all.refetch()}
+        retrying={all.isFetching && all.isError}
         onRowClick={(r) => navigate(r.href)}
         pageSize={PAGE_SIZE}
-        {...(policyMode ? {} : { page, total, onPageChange: setPage })}
+        page={page}
+        total={total}
+        onPageChange={setPage}
         emptyTitle={filtered ? t('all.emptyFilter') : t('all.empty')}
         emptyMessage={filtered ? t('all.emptyFilterBody') : undefined}
         caption={t('all.title')}

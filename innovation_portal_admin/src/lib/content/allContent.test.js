@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, PAGE_SIZE, STATUSES, allParams, byRecent, filterRows, fromAll, fromPolicy } from './allContent'
+import { LANGS, PAGE_SIZE, STATUSES, allParams, fromAll } from './allContent'
 
 describe('all content: request', () => {
   it('asks for the first page of 20 with no filters', () => {
@@ -18,13 +18,22 @@ describe('all content: request', () => {
     })
   })
 
+  it('asks for rows that have Setswana with tn_has', () => {
+    expect(allParams({ lang: 'tn' })).toMatchObject({ lang: 'tn_has' })
+    expect(allParams({ lang: 'something' })).not.toHaveProperty('lang')
+  })
+
+  it('passes Scheduled to the server', () => {
+    expect(allParams({ status: 'scheduled' })).toMatchObject({ status: 'scheduled' })
+  })
+
   it('leaves out a blank search', () => {
     expect(allParams({ q: '   ' })).not.toHaveProperty('search')
   })
 
-  it('offers only the filters the server takes', () => {
-    expect(STATUSES).toEqual(['draft', 'pending_approval', 'published', 'archived'])
-    expect(LANGS).toEqual(['missing'])
+  it('offers the filters in frame 3.38', () => {
+    expect(STATUSES).toEqual(['draft', 'pending_approval', 'scheduled', 'published', 'archived'])
+    expect(LANGS).toEqual(['tn', 'missing'])
   })
 })
 
@@ -75,26 +84,14 @@ describe('all content: rows from the single list', () => {
   })
 })
 
-describe('all content: policy pages (until R-62)', () => {
-  const policies = [
-    { key: 'privacy', name: 'Privacy', title: 'Privacy notice', published_at: '2026-11-20T08:00:00Z', pending_approval: false, missing_setswana: false },
-    { key: 'terms_of_use', name: 'Terms of use', title: '', published_at: '2026-11-21T08:00:00Z', pending_approval: true, missing_setswana: true },
-    { key: 'about', name: 'About', title: 'About', published_at: null, pending_approval: false, missing_setswana: null },
-  ].map(fromPolicy)
-
-  it('works out the status and Setswana from the policy list', () => {
-    expect(policies.map((r) => [r.id, r.status, r.hasSetswana, r.href])).toEqual([
-      ['privacy', 'published', true, '/content/policies?page=privacy'],
-      ['terms_of_use', 'pending_approval', false, '/content/policies?page=terms_of_use'],
-      ['about', 'draft', null, '/content/policies?page=about'],
-    ])
-    expect(policies[1].title).toBe('Terms of use')
+describe('all content: policy pages', () => {
+  it('opens a policy row in Terms and policies by its key', () => {
+    const r = fromAll({ type: 'policy', id: 'terms_of_use', title: 'Terms of use', has_setswana: true, status: 'pending_approval', updated_at: '2026-11-21T08:00:00+00:00', updated_by: 'Tebogo M.', pending_approval_id: 'p9' })
+    expect(r).toMatchObject({ key: 'policy:terms_of_use', id: 'terms_of_use', status: 'pending_approval', hasSetswana: true, approvalId: 'p9' })
+    expect(r.href).toBe('/content/policies?page=terms_of_use')
   })
 
-  it('filters by status, missing Setswana and title, and sorts newest first', () => {
-    expect(filterRows(policies, { lang: 'missing' }).map((r) => r.id)).toEqual(['terms_of_use'])
-    expect(filterRows(policies, { status: 'published' }).map((r) => r.id)).toEqual(['privacy'])
-    expect(filterRows(policies, { q: ' PRIV' }).map((r) => r.id)).toEqual(['privacy'])
-    expect([...policies].sort(byRecent).map((r) => r.id)).toEqual(['terms_of_use', 'privacy', 'about'])
+  it('shows a scheduled news post as scheduled', () => {
+    expect(fromAll({ type: 'news', id: '4', title: 'Results day', has_setswana: true, status: 'scheduled', updated_at: null, updated_by: '' }).status).toBe('scheduled')
   })
 })

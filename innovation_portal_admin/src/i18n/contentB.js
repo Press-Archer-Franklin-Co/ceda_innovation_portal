@@ -36,6 +36,7 @@ export const contentBEn = {
   'all.type.policy': 'Policy',
   'all.status.draft': 'Draft',
   'all.status.pending_approval': 'Waiting for approval',
+  'all.status.scheduled': 'Scheduled',
   'all.status.published': 'Published',
   'all.status.archived': 'Archived',
   'all.yes': 'Yes',
@@ -246,6 +247,7 @@ export const contentBTn = {
   'all.type.policy': 'Pholisi', // TODO tn-review
   'all.status.draft': 'Kakanyetso', // TODO tn-review
   'all.status.pending_approval': 'E emetse tetlelelo', // TODO tn-review
+  'all.status.scheduled': 'E rulagantswe', // TODO tn-review
   'all.status.published': 'E phasaladitswe', // TODO tn-review
   'all.status.archived': 'E bolokilwe', // TODO tn-review
   'all.yes': 'Ee', // TODO tn-review

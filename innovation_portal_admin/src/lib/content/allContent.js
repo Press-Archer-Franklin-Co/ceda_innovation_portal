@@ -1,16 +1,15 @@
 // 3.38 All content: one row shape for every kind of website content, so the page can show one table.
-// Rows come from the backend's single list, GET /api/content/all/ (R-59 part 1), which pages, searches, filters and
-// sorts them (newest change first). Policy pages are not in that list yet (TODO(R-62) item 1): when the type filter
-// is "Policy page" the rows come from /api/content/policies/ instead (five pages, filtered here).
+// Rows come from the backend's single list, GET /api/content/all/ (R-59 part 1 and R-62), which pages, searches,
+// filters and sorts them (newest change first; frame 3.38 has no sort control). Policy pages are in it with their
+// key as the id.
 // Row: { key, type, id, title, hasSetswana (true | false | null when the type has no Setswana), status, updatedAt,
 //        updatedBy, href, approvalId }
 
 export const TYPES = ['page', 'news', 'story', 'quote', 'partner', 'faq', 'policy']
-// The single list folds scheduled posts into published, so there is no "Scheduled" filter.
-export const STATUSES = ['draft', 'pending_approval', 'published', 'archived']
-// "Has Setswana" waits for lang=tn_has (TODO(R-62) item 2). Filtering one page in the browser would make the page
-// count wrong, so only "Missing Setswana" is offered until then.
-export const LANGS = ['missing']
+// Scheduled: published with a publish date still ahead (news approved for later, stories, quotes).
+export const STATUSES = ['draft', 'pending_approval', 'scheduled', 'published', 'archived']
+export const LANGS = ['tn', 'missing']
+const LANG_PARAM = { tn: 'tn_has', missing: 'tn_missing' }
 export const PAGE_SIZE = 20
 
 export const TYPE_HREF = {
@@ -64,36 +63,13 @@ export function fromAll(item) {
   })
 }
 
-/** One row of GET /api/content/policies/ (U11C). */
-export function fromPolicy(p) {
-  return row('policy', {
-    id: p.key,
-    title: p.title || p.name,
-    hasSetswana: p.missing_setswana == null ? null : !p.missing_setswana,
-    status: p.pending_approval ? 'pending_approval' : p.published_at ? 'published' : 'draft',
-    updatedAt: p.updated_at ?? p.draft_updated_at ?? p.published_at,
-    updatedBy: p.updated_by,
-  })
-}
-
 /** The query string for GET /api/content/all/ from the screen's filters. */
 export function allParams({ type, status, lang, q, page = 1 }) {
   const params = { page, page_size: PAGE_SIZE }
   if (type) params.type = type
   if (status) params.status = status
-  if (lang === 'missing') params.lang = 'tn_missing'
+  if (LANG_PARAM[lang]) params.lang = LANG_PARAM[lang]
   const search = (q ?? '').trim()
   if (search) params.search = search
   return params
 }
-
-/** Policy rows with the same filters the server applies to the single list. */
-export function filterRows(rows, { status, lang, q }) {
-  const query = (q ?? '').trim().toLowerCase()
-  return rows
-    .filter((r) => !status || r.status === status)
-    .filter((r) => !lang || (lang === 'tn' ? r.hasSetswana === true : r.hasSetswana === false))
-    .filter((r) => !query || r.title.toLowerCase().includes(query))
-}
-
-export const byRecent = (a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? ''))
