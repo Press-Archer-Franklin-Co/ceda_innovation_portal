@@ -66,7 +66,7 @@ FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     FlagDefinition(
         "ai_helper",
         "AI helper",
-        "Claude guides innovators, gives officers hints and answers questions about the portal. Needs an active, tested Claude connection.",
+        "The AI Copilot: guides innovators, gives officers summaries and answers questions about the portal. Needs an active, tested AI service.",
         "integrations",
         False,
         is_public=True,

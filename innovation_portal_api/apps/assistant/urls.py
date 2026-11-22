@@ -6,6 +6,7 @@ urlpatterns = [
     path("status/", views.StatusView.as_view(), name="assistant-status"),
     path("draft-check/", views.DraftCheckView.as_view(), name="assistant-draft-check"),
     path("help/", views.HelpView.as_view(), name="assistant-help"),
+    path("documents/<uuid:pk>/review/", views.DocumentReviewView.as_view(), name="assistant-document-review"),
     path("introductions/", views.MyIntroductionsView.as_view(), name="assistant-my-introductions"),
     path("introductions/<uuid:pk>/answer/", views.AnswerIntroductionView.as_view(), name="assistant-introduction-answer"),
     path("submissions/<uuid:pk>/hints/", views.HintsView.as_view(), name="assistant-hints"),
@@ -23,4 +24,7 @@ urlpatterns = [
     path("admin/manual-pages/<uuid:pk>/", views.ManualPageDetailView.as_view(), name="assistant-manual-page-detail"),
     path("admin/manual-pages/<uuid:pk>/screenshots/", views.ScreenshotUploadView.as_view(), name="assistant-screenshot-upload"),
     path("admin/screenshots/<uuid:pk>/", views.ScreenshotDetailView.as_view(), name="assistant-screenshot-detail"),
+    path("admin/knowledge-documents/", views.KnowledgeDocumentListView.as_view(), name="assistant-knowledge-documents"),
+    path("admin/knowledge-documents/<uuid:pk>/", views.KnowledgeDocumentDetailView.as_view(), name="assistant-knowledge-document-detail"),
+    path("admin/knowledge-documents/<uuid:pk>/reread/", views.KnowledgeDocumentRereadView.as_view(), name="assistant-knowledge-document-reread"),
 ]

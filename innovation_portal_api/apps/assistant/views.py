@@ -1,15 +1,16 @@
-"""AI helper endpoints (C3).
+"""AI Copilot endpoints.
 
-When the helper cannot answer (switch off, no connection, feature off, limit reached, time limit,
-Claude failed), feature endpoints answer 200 with ``{"available": false}`` and nothing else, so
-the screens hide the helper quietly. The reason is recorded for admins (usage report, log), never
-shown to the public.
+When the helper cannot answer (switch off, no working service, feature off, limit reached, time
+limit, the service failed), feature endpoints answer 200 with ``{"available": false}`` and nothing
+else, so the screens hide the helper quietly. The reason is recorded for admins (usage, log),
+never shown to the public. Every endpoint decides access on the server; nothing the browser sends
+about roles or pages is trusted.
 """
 
 from __future__ import annotations
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
@@ -19,14 +20,18 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
-from apps.assistant import selectors, services
-from apps.assistant.client import AssistantClient, AssistantUnavailable
-from apps.assistant.models import Introduction, KnowledgeEntry, ManualPage, ManualScreenshot
+from apps.assistant import document_review, features, selectors, services
+from apps.assistant.knowledge_services import KnowledgeDocumentService
+from apps.assistant.models import AssistantSettings, Introduction, KnowledgeDocument, KnowledgeEntry, ManualPage, ManualScreenshot
+from apps.assistant.providers import AssistantUnavailable
 from apps.assistant.serializers import (
     AnswerIntroductionSerializer,
+    DocumentReviewSerializer,
     DraftCheckSerializer,
     HelpQuestionSerializer,
     IntroductionStaffSerializer,
+    KnowledgeDocumentSerializer,
+    KnowledgeDocumentUploadSerializer,
     KnowledgeEntrySerializer,
     LangQuerySerializer,
     ManualPageSerializer,
@@ -37,7 +42,6 @@ from apps.assistant.serializers import (
     SettingsSerializer,
     SuggestIntroductionSerializer,
     TryItSerializer,
-    UsageQuerySerializer,
 )
 from apps.core.api import api_success
 from apps.core.permissions import HasCapability, IPRateThrottle
@@ -46,7 +50,7 @@ TAGS = ["AI helper"]
 ADMIN_TAGS = ["AI helper admin"]
 UNAVAILABLE = {"available": False}
 LANG_PARAMETERS = [
-    OpenApiParameter("lang", str, enum=["en", "tn"], required=False),
+    OpenApiParameter("lang", str, enum=["en", "tn"], required=False, description="Answer language (Show in Setswana). Defaults to the person's language."),
     OpenApiParameter("refresh", bool, required=False, description="Ask again even if a saved answer is still valid."),
 ]
 
@@ -72,26 +76,40 @@ def _available(data: dict) -> dict:
     return {"available": True, **data}
 
 
-# -- public and innovator -----------------------------------------------------------------------
+def _lang(request) -> str | None:
+    value = request.query_params.get("lang") or (request.data.get("lang") if hasattr(request, "data") and isinstance(request.data, dict) else None)
+    return value if value in ("en", "tn") else None
+
+
+# -- everyone ----------------------------------------------------------------------------------------
 
 
 class StatusView(AssistantThrottleMixin, APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT, tags=TAGS, summary="Which AI helper parts are on now", description="Never fails. Screens show a helper part only when its feature is true.")
+    @extend_schema(
+        tags=TAGS,
+        summary="Which AI helper parts are on for me now",
+        description="For the signed-in person (or a guest): each feature on or off, the answer language, and for staff with "
+        "assistant.manage the set-up state with a link to Integrations. Never fails.",
+        parameters=[OpenApiParameter("lang", str, enum=["en", "tn"], required=False)],
+        responses=OpenApiTypes.OBJECT,
+    )
     def get(self, request):
-        return api_success(data=AssistantClient.status())
+        return api_success(data=selectors.status_for(request.user, _lang(request)))
 
 
 class DraftCheckView(AssistantThrottleMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        responses=OpenApiTypes.OBJECT, tags=TAGS,
-        summary="Check my idea: feedback on one step of my draft",
-        description="Owner of the draft, or a guest with the draft's resume token (X-Draft-Token). Returns clear, unclear (with the quoted sentence), "
-        "missing and up to 3 officer questions. Suggestions only; it never rewrites the idea. {available: false} when the helper is off.",
+        tags=TAGS,
+        summary="Check my idea: coaching on one step of my draft and its files",
+        description="Owner of the draft, or a guest with the draft's resume token (X-Draft-Token). Returns one card per topic (clear, add more, missing) "
+        "with the field or the file and page, unclear sentences, up to 3 officer questions and what each uploaded file covers. "
+        "Suggestions only; it never rewrites the idea. {available: false} when the helper is off.",
         request=DraftCheckSerializer,
+        responses=OpenApiTypes.OBJECT,
     )
     def post(self, request):
         from apps.submissions.intake import DraftTokenService
@@ -113,9 +131,31 @@ class DraftCheckView(AssistantThrottleMixin, APIView):
         if draft is None or draft.status != ApplicationDraft.STATUS_DRAFT:
             raise Http404
         try:
-            data = services.check_draft(
-                draft=draft, step_code=values["step"], answers=values["answers"], language=values["lang"], user=request.user
-            )
+            data = features.check_draft(draft=draft, step_code=values["step"], answers=values["answers"], requested_language=values.get("lang"), user=request.user)
+        except AssistantUnavailable:
+            return api_success(data=UNAVAILABLE)
+        return api_success(data=_available(data))
+
+
+class DocumentReviewView(AssistantThrottleMixin, APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=TAGS,
+        summary="Review one uploaded file",
+        description="Summary, key points with page, what is missing and the file's language. For the owner of the draft or idea "
+        "(or a guest with the draft's resume token), and for officers and judges who can already open that idea. Cached per file version and language.",
+        request=DocumentReviewSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request, pk):
+        from apps.submissions.intake import DraftTokenService
+
+        serializer = DocumentReviewSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        document, role = document_review.document_for(request.user, pk, draft_token=DraftTokenService.token_from_request(request))
+        try:
+            data = document_review.review(user=request.user, document=document, role=role, requested_language=serializer.validated_data.get("lang"))
         except AssistantUnavailable:
             return api_success(data=UNAVAILABLE)
         return api_success(data=_available(data))
@@ -125,11 +165,12 @@ class HelpView(AssistantThrottleMixin, APIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
-        responses=OpenApiTypes.OBJECT, tags=TAGS,
+        tags=TAGS,
         summary="Ask how do I... about the portal",
-        description="Answers from the user manual with screenshots and page links. Signed-in people, and guests when the admin allows. "
-        "When unsure, or with handoff=true, the question goes to the staff inbox (handed_over: true).",
+        description="Answers from the user manual and knowledge base with screenshots and page links, in the person's language. "
+        "Signed-in people, and guests when the admin allows. When unsure, or with handoff=true, the question goes to the staff inbox.",
         request=HelpQuestionSerializer,
+        responses=OpenApiTypes.OBJECT,
     )
     def post(self, request):
         serializer = HelpQuestionSerializer(data=request.data)
@@ -137,15 +178,15 @@ class HelpView(AssistantThrottleMixin, APIView):
         values = serializer.validated_data
         user = request.user if request.user.is_authenticated else None
         contact = {"name": values["contact_name"], "phone": values["contact_phone"], "email": values["contact_email"]}
+        language = values.get("lang") or "en"
         if values["handoff"]:
             if user is None and not (values["contact_phone"] or values["contact_email"]):
                 return api_success(data={"available": True, "handed_over": False, "needs_contact": True})
-            return api_success(data=_available(services.hand_over(user=user, question=values["question"], language=values["lang"], contact=contact)))
-        runtime = AssistantClient.runtime()
-        if user is None and not (runtime and runtime.allow_guests_help):
+            return api_success(data=_available(features.hand_over(user=user, question=values["question"], language=language, contact=contact)))
+        if user is None and not AssistantSettings.load().guests_can_use_guide:
             return api_success(data=UNAVAILABLE)
         try:
-            data = services.ask_help(user=user, question=values["question"], language=values["lang"], page_path=values["page_path"], contact=contact)
+            data = features.ask_help(user=user, question=values["question"], requested_language=values.get("lang"), page_path=values["page_path"], contact=contact)
         except AssistantUnavailable:
             return api_success(data=UNAVAILABLE)
         for shot in data["screenshots"]:
@@ -157,7 +198,7 @@ class HelpView(AssistantThrottleMixin, APIView):
 class MyIntroductionsView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT, tags=TAGS, summary="Introductions suggested to me", description="The other person's name and contact show only after both said yes.")
+    @extend_schema(tags=TAGS, summary="Introductions suggested to me", description="The other person's name and contact show only after both said yes.", responses=OpenApiTypes.OBJECT)
     def get(self, request):
         from django.db.models import Q
 
@@ -170,7 +211,7 @@ class MyIntroductionsView(APIView):
 class AnswerIntroductionView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(responses=OpenApiTypes.OBJECT, tags=TAGS, summary="Say yes or no to an introduction", request=AnswerIntroductionSerializer)
+    @extend_schema(tags=TAGS, summary="Say yes or no to an introduction", request=AnswerIntroductionSerializer, responses=OpenApiTypes.OBJECT)
     def post(self, request, pk):
         from django.db.models import Q
 
@@ -183,11 +224,12 @@ class AnswerIntroductionView(APIView):
         return api_success(data=services.introduction_for_innovator(intro, request.user), message="Answer saved.")
 
 
-# -- officers ------------------------------------------------------------------------------------
+# -- officers and judges -----------------------------------------------------------------------------
 
 
 class SubmissionAccessMixin:
-    """Officers with assistant.hints, and only for submissions they can already open."""
+    """People with assistant.hints, and only for submissions they can already open
+    (judges: only the entries assigned to them)."""
 
     permission_classes = [HasCapability.of("assistant.hints")]
     throttle_classes = [AssistantUserThrottle]
@@ -196,49 +238,62 @@ class SubmissionAccessMixin:
         from apps.submissions.selectors import SubmissionSelector
 
         try:
-            return get_object_or_404(SubmissionSelector.for_user(self.request.user).select_related("sector", "district"), pk=pk)
+            return get_object_or_404(
+                SubmissionSelector.for_user(self.request.user).select_related("sector", "district", "program__marking_criteria", "innovator"), pk=pk
+            )
         except (DjangoValidationError, ValueError):
             raise Http404 from None
 
 
+class OfficerOnlyMixin(SubmissionAccessMixin):
+    """Similar ideas and introductions: officers who may search every idea (never judges or innovators)."""
+
+    permission_classes = [HasCapability.of("assistant.hints"), HasCapability.of("entries.search")]
+
+
 class HintsView(SubmissionAccessMixin, APIView):
     @extend_schema(
-        responses=OpenApiTypes.OBJECT, tags=TAGS,
-        summary="AI helper hints for a submission",
-        description="Summary (5 lines), strengths, points to check and a suggested next step, each labelled as a suggestion. Kept until the submission changes.",
+        tags=TAGS,
+        summary="AI helper summary for a submission (3.3b)",
+        description="Summary in the reader's language (?lang=en|tn), facts from the files with file and page, what is not in the files, "
+        "points to check against the marking criteria, other points and a suggested next step. Every item is a suggestion; "
+        "an answer containing a score or a decision is never shown. Kept until the submission or its files change.",
         parameters=LANG_PARAMETERS,
+        responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, pk):
         submission = self.submission(pk)
         query = LangQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         try:
-            data = services.submission_hints(submission=submission, user=request.user, language=query.validated_data["lang"], refresh=query.validated_data["refresh"])
+            data = features.submission_hints(submission=submission, user=request.user, requested_language=query.validated_data.get("lang"), refresh=query.validated_data["refresh"])
         except AssistantUnavailable:
             return api_success(data=UNAVAILABLE)
         return api_success(data=_available(data))
 
 
-class RelatedView(SubmissionAccessMixin, APIView):
+class RelatedView(OfficerOnlyMixin, APIView):
     @extend_schema(
-        responses=OpenApiTypes.OBJECT, tags=TAGS,
-        summary="Similar and complementary ideas",
-        description="A database shortlist of ideas this officer can open (title similarity, sector, district, keywords), sorted by Claude into "
-        "similar (could merge) and complementary (could work together), with one sentence why.",
+        tags=TAGS,
+        summary="Similar and complementary ideas, across languages (officers only)",
+        description="A database shortlist of ideas this officer can open (idea profiles in English, keywords in English and Setswana, "
+        "sector, district, and one idea's outputs matching another's inputs), sorted by the AI into similar (could merge) and "
+        "complementary (could work together), with one sentence why. Innovators and judges never get this endpoint.",
         parameters=LANG_PARAMETERS,
+        responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, pk):
         submission = self.submission(pk)
         query = LangQuerySerializer(data=request.query_params)
         query.is_valid(raise_exception=True)
         try:
-            data = services.related_ideas(submission=submission, user=request.user, language=query.validated_data["lang"], refresh=query.validated_data["refresh"])
+            data = features.related_ideas(submission=submission, user=request.user, requested_language=query.validated_data.get("lang"), refresh=query.validated_data["refresh"])
         except AssistantUnavailable:
             return api_success(data=UNAVAILABLE)
         return api_success(data=_available(data))
 
 
-class SuggestIntroductionView(SubmissionAccessMixin, APIView):
+class SuggestIntroductionView(OfficerOnlyMixin, APIView):
     @extend_schema(
         tags=TAGS,
         summary="Suggest working together",
@@ -257,7 +312,7 @@ class SuggestIntroductionView(SubmissionAccessMixin, APIView):
         return api_success(data=IntroductionStaffSerializer(intro).data, message="Both innovators were asked.", status_code=status.HTTP_201_CREATED)
 
 
-# -- admin ---------------------------------------------------------------------------------------
+# -- admin (3.34, 3.34b) -----------------------------------------------------------------------------
 
 
 class AdminMixin:
@@ -265,13 +320,24 @@ class AdminMixin:
 
 
 class OverviewView(AdminMixin, APIView):
-    @extend_schema(responses=OpenApiTypes.OBJECT, tags=ADMIN_TAGS, summary="AI helper status, switches and privacy note", parameters=[OpenApiParameter("lang", str, enum=["en", "tn"], required=False)])
+    @extend_schema(
+        tags=ADMIN_TAGS,
+        summary="AI services, keys in use, the service for each feature, switches and the privacy note (3.34b)",
+        parameters=[OpenApiParameter("lang", str, enum=["en", "tn"], required=False)],
+        responses=OpenApiTypes.OBJECT,
+    )
     def get(self, request):
         return api_success(data=selectors.overview(request.query_params.get("lang", "en")))
 
 
 class SettingsView(AdminMixin, APIView):
-    @extend_schema(responses=OpenApiTypes.OBJECT, tags=ADMIN_TAGS, summary="Change AI helper switches and the monthly limit", request=SettingsSerializer)
+    @extend_schema(
+        tags=ADMIN_TAGS,
+        summary="Change keys in use, the service for each feature, feature switches, the limit or privacy switches",
+        description="Keys themselves are only added and tested in Platform settings > Integrations.",
+        request=SettingsSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
     def patch(self, request):
         serializer = SettingsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -280,33 +346,97 @@ class SettingsView(AdminMixin, APIView):
 
 
 class UsageView(AdminMixin, APIView):
-    @extend_schema(responses=OpenApiTypes.OBJECT, tags=ADMIN_TAGS, summary="Calls and cost per day and per feature, limit left this month", parameters=[OpenApiParameter("days", int, required=False)])
+    @extend_schema(
+        tags=ADMIN_TAGS,
+        summary="This month: calls, tokens in and out, cost and failures per feature and per service",
+        description="?download=csv downloads the same table.",
+        parameters=[OpenApiParameter("download", str, enum=["csv"], required=False)],
+        responses=OpenApiTypes.OBJECT,
+    )
     def get(self, request):
-        query = UsageQuerySerializer(data=request.query_params)
-        query.is_valid(raise_exception=True)
-        return api_success(data=selectors.usage_report(days=query.validated_data["days"]))
+        if request.query_params.get("download") == "csv":
+            response = HttpResponse(selectors.usage_csv(), content_type="text/csv; charset=utf-8")
+            response["Content-Disposition"] = 'attachment; filename="ai-usage.csv"'
+            return response
+        return api_success(data=selectors.usage_report())
 
 
 class TryItView(AdminMixin, APIView):
     throttle_classes = [AssistantUserThrottle]
 
     @extend_schema(
-        responses=OpenApiTypes.OBJECT, tags=ADMIN_TAGS,
+        tags=ADMIN_TAGS,
         summary="Try a feature on sample text",
-        description="Runs innovator guidance, officer hints or help on the text, with optional unsaved guidance, so admins see the effect before saving. "
+        description="Runs the idea coach, the officer summary or help on the text, with optional unsaved guidance, and lists the sources used. "
         "Works while a feature is switched off for everyone else.",
         request=TryItSerializer,
+        responses=OpenApiTypes.OBJECT,
     )
     def post(self, request):
         serializer = TryItSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         values = serializer.validated_data
         try:
-            data = services.try_it(user=request.user, feature=values["feature"], text=values["text"], language=values["lang"], guidance=values["guidance"])
+            data = features.try_it(user=request.user, feature=values["feature"], text=values["text"], language=values["lang"], guidance=values["guidance"])
         except AssistantUnavailable as exc:
             # Admins may see why: it is their own settings.
-            return api_success(data={"available": False, "reason": exc.reason})
+            return api_success(data={"available": False, "reason": exc.reason, "detail": exc.detail})
         return api_success(data=_available(data))
+
+
+class KnowledgeDocumentListView(AdminMixin, APIView):
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    @extend_schema(tags=ADMIN_TAGS, summary="Knowledge base documents", responses=KnowledgeDocumentSerializer(many=True))
+    def get(self, request):
+        return api_success(data=KnowledgeDocumentSerializer(KnowledgeDocument.objects.select_related("asset"), many=True, context={"request": request}).data)
+
+    @extend_schema(
+        tags=ADMIN_TAGS,
+        summary="Upload a document to the knowledge base",
+        description="PDF, Word or text, with the media library's type and size rules. It is read in the background: status reading, then ready or failed.",
+        request=KnowledgeDocumentUploadSerializer,
+        responses={201: KnowledgeDocumentSerializer},
+    )
+    def post(self, request):
+        from rest_framework.exceptions import ValidationError
+
+        from apps.media_library.validation import MediaValidationError
+
+        serializer = KnowledgeDocumentUploadSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        values = serializer.validated_data
+        try:
+            document = KnowledgeDocumentService.upload(
+                actor=request.user, upload=values["file"], title=values.get("title", ""), kind=values["kind"], audience=values["audience"], language=values["language"]
+            )
+        except MediaValidationError as exc:
+            raise ValidationError({"file": [str(exc)]}) from None
+        document.refresh_from_db()
+        return api_success(data=KnowledgeDocumentSerializer(document, context={"request": request}).data, message="Uploaded. Reading it now.", status_code=status.HTTP_201_CREATED)
+
+
+class KnowledgeDocumentDetailView(AdminMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="Edit a knowledge document or switch it on or off", request=KnowledgeDocumentSerializer, responses=KnowledgeDocumentSerializer)
+    def patch(self, request, pk):
+        document = get_object_or_404(KnowledgeDocument, pk=pk)
+        serializer = KnowledgeDocumentSerializer(document, data=request.data, partial=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        document = KnowledgeDocumentService.update(actor=request.user, document=document, data=serializer.validated_data)
+        return api_success(data=KnowledgeDocumentSerializer(document, context={"request": request}).data, message="Saved.")
+
+    @extend_schema(tags=ADMIN_TAGS, summary="Delete a knowledge document", responses=OpenApiTypes.OBJECT)
+    def delete(self, request, pk):
+        KnowledgeDocumentService.delete(actor=request.user, document=get_object_or_404(KnowledgeDocument, pk=pk))
+        return api_success(message="Deleted.")
+
+
+class KnowledgeDocumentRereadView(AdminMixin, APIView):
+    @extend_schema(tags=ADMIN_TAGS, summary="Read a knowledge document again", responses=KnowledgeDocumentSerializer)
+    def post(self, request, pk):
+        document = KnowledgeDocumentService.reread(actor=request.user, document=get_object_or_404(KnowledgeDocument, pk=pk))
+        document.refresh_from_db()
+        return api_success(data=KnowledgeDocumentSerializer(document, context={"request": request}).data, message="Reading it again.")
 
 
 class _CrudList(AdminMixin, APIView):
