@@ -147,6 +147,12 @@ class SeedDemoIdeasTests(TrackingBase):
         self.client.force_authenticate(self.innovator)
         page = data(self.client.get("/api/me/ideas/?page=6"))
         self.assertEqual((page["count"], page["pages"], len(page["results"])), (60, 6, 10))
+        first = data(self.client.get("/api/me/ideas/"))
+        self.assertEqual(first["counts"], {"all": 60, "needs_action": 0, "drafts": 0, "in_review": 40, "finished": 20})
+        self.assertGreater(len(first["results"][0]["stages"]), 1)  # real stages on the card
+        from apps.workflow.models import TaskExecution
+
+        self.assertFalse(TaskExecution.objects.filter(workflow_instance__submission__innovator=self.innovator).exists())  # no work for officers
         real = self.submit()
         call_command("seed_demo_ideas", email=self.innovator.email, clear=True, verbosity=0)
         self.assertEqual(list(Submission.objects.filter(innovator=self.innovator)), [real])

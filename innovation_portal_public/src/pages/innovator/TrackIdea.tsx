@@ -87,7 +87,7 @@ export default function TrackIdea() {
       <section className="border-b border-border">
         <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
           <div className="flex flex-wrap gap-2">
-            <Tag tone={word.tone}>{t(word.key)}</Tag>
+            {tracking?.returned ? <Tag tone="blue">{t('trk.returnedTitle')}</Tag> : <Tag tone={word.tone}>{t(word.key)}</Tag>}
             {program && <Tag tone="neutral">{program}</Tag>}
           </div>
           <h1 className="mt-3 font-heading text-d-mh1 sm:text-d-h2 text-text break-words">{idea.title}</h1>
