@@ -1,6 +1,7 @@
-from apps.content.all_content_views import AllContentView
 from django.urls import path
 from rest_framework.routers import DefaultRouter
+
+from apps.content.all_content_views import AllContentView
 
 from .b6_views import (
     ApprovalDecisionView,
