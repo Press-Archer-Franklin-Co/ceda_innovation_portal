@@ -33,7 +33,8 @@ const SERVICES = [
   { kind: 'email', icon: Megaphone },
   { kind: 'whatsapp', icon: MessageCircle, elsewhere: '/channels/connections/whatsapp' },
   { kind: 'ussd', icon: Smartphone, elsewhere: '/channels/connections/ussd' },
-  { kind: 'ai', icon: Bot },
+  // AI services have their own tab in Platform settings (several services, test and live keys, settings).
+  { kind: 'ai', icon: Bot, elsewhere: '/admin/platform?tab=ai', note: 'integ.inAiTab' },
   { kind: 'sso', icon: ShieldCheck },
 ]
 const GUIDE = { sms: 'integrations.sms', sso: 'integrations.sso' }
@@ -54,7 +55,7 @@ function errorText(err) {
 }
 
 
-function SetUpPanel({ kind, connection, onClose, triggerRef }) {
+export function SetUpPanel({ kind, connection, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
@@ -144,7 +145,7 @@ function SetUpPanel({ kind, connection, onClose, triggerRef }) {
           <span>{current?.is_active && <Button variant="ghost" onClick={turnOff} loading={deactivate.isPending}>{t('integ.turnOff')}</Button>}</span>
           <span className="flex flex-wrap gap-2">
             <Button variant="ghost" onClick={saveDraft} disabled={!chosen || !dirty || busy} loading={save.isPending && !test.isPending}>{t('integ.saveDraft')}</Button>
-            <Button onClick={turnOn} disabled={!chosen || busy || (current?.is_active && !dirty)} loading={activate.isPending}>{t('integ.activate')}</Button>
+            <Button data-guide="integrations.activate" onClick={turnOn} disabled={!chosen || busy || (current?.is_active && !dirty)} loading={activate.isPending}>{t('integ.activate')}</Button>
           </span>
         </div>
       )}>
@@ -171,7 +172,7 @@ function SetUpPanel({ kind, connection, onClose, triggerRef }) {
               {kind === 'sms' && (
                 <Input fieldClassName="min-w-0 flex-1" label={t('integ.testPhone')} type="tel" placeholder="+267 71 234 567" value={phone} onChange={(e) => setPhone(e.target.value)} />
               )}
-              <Button variant="secondary" onClick={runTest} disabled={!chosen || busy} loading={test.isPending || trial.isPending}>
+              <Button variant="secondary" data-guide="integrations.test" onClick={runTest} disabled={!chosen || busy} loading={test.isPending || trial.isPending}>
                 {kind === 'sms' ? t('integ.sendTestBtn') : kind === 'sso' ? t('integ.tryTrial') : t('integ.runTest')}
               </Button>
             </div>
@@ -209,7 +210,7 @@ function ServiceCard({ service, info, connections, hasProviders, onOpen }) {
         <Tag tone={STATE_TONE[state]}>{t(`integ.state.${state}`)}</Tag>
       </div>
       <p className="hidden text-[12px] text-muted sm:block">{t(`integ.svc.${service.kind}.body`)}</p>
-      {service.elsewhere && <p className="hidden text-[12px] text-muted sm:block">{t('integ.inChannels')}</p>}
+      {service.elsewhere && <p className="hidden text-[12px] text-muted sm:block">{t(service.note ?? 'integ.inChannels')}</p>}
       {active?.activated_at && <p className="hidden text-[12px] text-muted sm:block">{t('integ.active', { when: when(active.activated_at) })}</p>}
       <div className="mt-auto sm:pt-1">{action}</div>
     </li>

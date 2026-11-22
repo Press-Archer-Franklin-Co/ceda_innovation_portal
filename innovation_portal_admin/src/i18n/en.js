@@ -1,4 +1,5 @@
 // English strings for staff console chrome. Every key must also exist in tn.js (checked in the styleguide).
+import { aiServicesEn } from './aiServices'
 import { challengesEn } from './challenges'
 import { rolesEn } from './roles'
 import { contentEn } from './content'
@@ -165,6 +166,7 @@ const en = {
   ...contentEn,
   ...dashboardEn,
   ...u7En,
+  ...aiServicesEn,
 }
 
 export default en
