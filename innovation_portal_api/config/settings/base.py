@@ -141,6 +141,7 @@ INSTALLED_APPS = [
     "apps.media_library",
     "apps.platform_config",
     "apps.channels",
+    "apps.conversations",
 ]
 
 MIDDLEWARE = [
@@ -256,6 +257,8 @@ REST_FRAMEWORK = {
         "subscribe": "10/hour",
         "subscription_link": "60/hour",
         "challenges_public": "120/minute",
+        "chat_typing": "30/minute",
+        "help_chat": "20/hour",
     },
 }
 
@@ -351,6 +354,11 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.content.tasks.publish_due_content",
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
+    },
+    "escalate-unanswered-chats": {
+        "task": "apps.conversations.tasks.escalate_unanswered_chats",
+        "schedule": crontab(minute="*"),
+        "options": {"expires": 50},
     },
     "daily-summaries": {
         "task": "apps.notifications.tasks.send_daily_summaries",

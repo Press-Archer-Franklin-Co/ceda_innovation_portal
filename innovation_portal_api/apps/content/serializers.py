@@ -250,6 +250,11 @@ class SiteSettingsSerializer(serializers.ModelSerializer):
         for key in ("whatsapp_number", "ussd_code", "call_centre_number", "office_finder_url", "help_centre_url", "accessibility_url"):
             data[key] = data.get(key) or None
         data["languages_enabled"] = data.get("languages_enabled") or ["en", "tn"]
+        # R-39 (C1): the help bubble shows when live chat is on; it starts at /api/help-chat/.
+        from apps.platform_config.flags import is_enabled
+
+        data["live_chat_enabled"] = is_enabled("live_chat")
+        data["live_chat_url"] = "/api/help-chat/" if data["live_chat_enabled"] else None
         return data
 
     def validate_footer_links(self, value):
