@@ -81,6 +81,7 @@ class FeatureFlagService:
             target_id=flag.key,
             before_state={"enabled": before},
             after_state={"enabled": enabled},
+            label=flag.label,
         )
         return flag
 
@@ -102,12 +103,13 @@ def _provider_class_or_error(provider_key: str, kind: str | None = None):
 class IntegrationService:
     @staticmethod
     def secret_summary(provider_class, secret_values: dict) -> dict:
-        """``{"client_secret": {"is_set": true, "last4": "9xQa"}}``. Never the value."""
+        """``{"client_secret": {"is_set": true, "last4": ""}}``. Never the value, nor any part of it."""
         summary = {}
         for name in sorted(provider_class.secret_field_names()):
             value = secret_values.get(name)
             is_set = value not in (None, "", {}, [])
-            summary[name] = {"is_set": is_set, "last4": value[-4:] if is_set and isinstance(value, str) and len(value) >= 8 else ""}
+            # U9: keys are write-only. Only whether one is set; last4 stays for older screens but is always empty.
+            summary[name] = {"is_set": is_set, "last4": ""}
         return summary
 
     @staticmethod
@@ -171,13 +173,30 @@ class IntegrationService:
         return warnings
 
     @staticmethod
-    def _audit(actor, action: str, connection: IntegrationConnection, **metadata) -> None:
+    def snapshot(connection: IntegrationConnection, secret_values: dict | None = None) -> dict:
+        """What the audit log keeps as before and after: settings, status, and for keys only "set" or "not set"."""
+        secrets = decrypt_secrets(connection.secrets_encrypted) if secret_values is None else secret_values
+        provider_class = get_provider_class(connection.provider)
+        names = sorted(provider_class.secret_field_names()) if provider_class else sorted(secrets)
+        return {
+            "name": connection.name,
+            "status": connection.status,
+            "active": connection.is_active,
+            "settings": dict(connection.config or {}),
+            "keys": {name: ("set" if secrets.get(name) not in (None, "", {}, []) else "not set") for name in names},
+        }
+
+    @staticmethod
+    def _audit(actor, action: str, connection: IntegrationConnection, *, before=None, after=None, **metadata) -> None:
         AuditService.log_raw_action(
             actor=actor,
             action_type=action,
             target_model="IntegrationConnection",
             target_id=str(connection.id),
+            before_state=before,
+            after_state=after,
             metadata={"kind": connection.kind, "provider": connection.provider, "name": connection.name, **metadata},
+            label=f"{connection.get_kind_display()} · {connection.name}",
         )
 
     @staticmethod
@@ -197,13 +216,16 @@ class IntegrationService:
             created_by=actor,
             updated_by=actor,
         )
-        IntegrationService._audit(actor, "integration_created", connection, settings_set=sorted(new_config), secrets_set=sorted(new_secrets))
+        IntegrationService._audit(
+            actor, "integration_created", connection, after=IntegrationService.snapshot(connection, new_secrets), settings_set=sorted(new_config), secrets_set=sorted(new_secrets)
+        )
         return connection, warnings
 
     @staticmethod
     @transaction.atomic
     def update(*, connection: IntegrationConnection, actor, data: dict):
         connection = IntegrationConnection.objects.select_for_update().get(pk=connection.pk)
+        before = IntegrationService.snapshot(connection)
         provider_class = _provider_class_or_error(connection.provider)
         if data.get("provider") and data["provider"] != connection.provider:
             raise ValidationError({"provider": ["To use another provider, add a new connection."]})
@@ -236,6 +258,8 @@ class IntegrationService:
             actor,
             "integration_updated",
             connection,
+            before=before,
+            after=IntegrationService.snapshot(connection, new_secrets),
             settings_changed=sorted(changed_settings),
             secrets_changed=sorted(changed_secrets),
             deactivated=bool(settings_changed and was_active),
@@ -247,7 +271,7 @@ class IntegrationService:
     def delete(*, connection: IntegrationConnection, actor) -> None:
         if connection.is_active and connection.kind == IntegrationConnection.Kind.SSO:
             StaffAccessGuard.assert_kept(sso_working=False)
-        IntegrationService._audit(actor, "integration_deleted", connection, was_active=connection.is_active)
+        IntegrationService._audit(actor, "integration_deleted", connection, before=IntegrationService.snapshot(connection), was_active=connection.is_active)
         kind = connection.kind
         connection.delete()
         IntegrationRuntimeSelector.clear_cache(kind)
@@ -310,6 +334,7 @@ class IntegrationService:
     @transaction.atomic
     def activate(*, connection: IntegrationConnection, actor) -> IntegrationConnection:
         connection = IntegrationConnection.objects.select_for_update().get(pk=connection.pk)
+        before_status = connection.status
         blocker = IntegrationService.activation_blocker(connection)
         if blocker:
             raise ValidationError({"code": "activation_blocked", "detail": blocker})
@@ -323,7 +348,9 @@ class IntegrationService:
             item.status = IntegrationConnection.Status.DISABLED
             item.updated_by = actor
             item.save(update_fields=["is_active", "status", "updated_by", "updated_at"])
-            IntegrationService._audit(actor, "integration_deactivated", item, replaced_by=str(connection.id))
+            IntegrationService._audit(
+                actor, "integration_deactivated", item, before={"status": "active", "active": True}, after={"status": item.status, "active": False}, replaced_by=str(connection.id)
+            )
         connection.is_active = True
         connection.status = IntegrationConnection.Status.ACTIVE
         connection.activated_by = actor
@@ -331,7 +358,14 @@ class IntegrationService:
         connection.updated_by = actor
         connection.save(update_fields=["is_active", "status", "activated_by", "activated_at", "updated_by", "updated_at"])
         IntegrationRuntimeSelector.clear_cache(connection.kind)
-        IntegrationService._audit(actor, "integration_activated", connection, replaced=[str(item.id) for item in previous])
+        IntegrationService._audit(
+            actor,
+            "integration_activated",
+            connection,
+            before={"status": before_status, "active": False},
+            after={"status": connection.status, "active": True},
+            replaced=[str(item.id) for item in previous],
+        )
         return connection
 
     @staticmethod
@@ -342,12 +376,23 @@ class IntegrationService:
             return connection
         if connection.kind == IntegrationConnection.Kind.SSO:
             StaffAccessGuard.assert_kept(sso_working=False)
+        from apps.platform_config.service_status import would_hide
+
+        hidden = would_hide(connection)
         connection.is_active = False
         connection.status = IntegrationConnection.Status.DISABLED
         connection.updated_by = actor
         connection.save(update_fields=["is_active", "status", "updated_by", "updated_at"])
         IntegrationRuntimeSelector.clear_cache(connection.kind)
-        IntegrationService._audit(actor, "integration_deactivated", connection)
+        IntegrationService._audit(
+            actor,
+            "integration_deactivated",
+            connection,
+            before={"status": "active", "active": True},
+            after={"status": connection.status, "active": False},
+            features_hidden=[item["key"] for item in hidden],
+        )
+        connection.hidden_features = hidden
         return connection
 
 

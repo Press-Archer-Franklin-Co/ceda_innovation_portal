@@ -119,9 +119,13 @@ class FeatureFlagSelector:
         public_keys = set(FeatureFlag.objects.filter(is_public=True).values_list("key", flat=True)) or {
             definition.key for definition in FLAG_DEFINITIONS if definition.is_public
         }
+        from apps.platform_config import service_status
+
+        states = service_status.states()
         sso_active = bool(flags.get("staff_sso")) and IntegrationRuntimeSelector.source(IntegrationConnection.Kind.SSO) != "none"
         return {
-            "features": {key: bool(flags.get(key)) for key in sorted(public_keys)},
+            # U9: a feature whose service is not active stays hidden on the site, even when switched on.
+            "features": {key: bool(flags.get(key)) and not service_status.needs_setup(key, states) for key in sorted(public_keys)},
             "sign_in": {
                 "password": bool(flags.get("password_sign_in")),
                 "code": bool(flags.get("code_sign_in")),

@@ -180,9 +180,20 @@ class SiteSettingsView(generics.RetrieveUpdateAPIView):
             return Response(self.get_serializer(instance).data)
         if "hero_video" in request.FILES and instance.hero_video:
             instance.hero_video.delete(save=False)
+        before = dict(self.get_serializer(instance).data)
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        after = dict(serializer.data)
+        # U9: every settings change is in the audit log with before and after (changed fields only).
+        changed = [name for name in after if before.get(name) != after.get(name)]
+        if changed:
+            from apps.audit.services import AuditService
+
+            AuditService.log_raw_action(
+                actor=request.user, action_type="platform_site_settings_updated", target_model="SiteSettings", target_id=str(instance.pk),
+                before_state={name: before.get(name) for name in changed}, after_state={name: after.get(name) for name in changed}, label="Site settings",
+            )
         return Response(serializer.data)
 
 

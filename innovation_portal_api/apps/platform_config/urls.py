@@ -6,6 +6,7 @@ urlpatterns = [
     path("features/", views.FeatureFlagListView.as_view(), name="platform-features"),
     path("features/<slug:key>/", views.FeatureFlagDetailView.as_view(), name="platform-feature-detail"),
     path("public-config/", views.PublicConfigView.as_view(), name="platform-public-config"),
+    path("services/", views.ServiceListView.as_view(), name="platform-services"),
     path("providers/", views.ProviderListView.as_view(), name="platform-providers"),
     path("integrations/", views.IntegrationListCreateView.as_view(), name="platform-integrations"),
     path("integrations/runtime/", views.IntegrationRuntimeView.as_view(), name="platform-integrations-runtime"),

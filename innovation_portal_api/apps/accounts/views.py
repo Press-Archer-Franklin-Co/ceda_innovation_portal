@@ -379,6 +379,14 @@ class UserListView(generics.ListAPIView):
             queryset = queryset.filter(roles__code__in=role_codes, user_roles__is_active=True)
         if active in {"true", "false"}:
             queryset = queryset.filter(is_active=(active == "true"))
+        # U9 (3.23): status=active|invited|deactivated
+        user_status = self.request.query_params.get("status")
+        if user_status == "deactivated":
+            queryset = queryset.filter(is_active=False)
+        elif user_status == "invited":
+            queryset = queryset.filter(is_active=True, invited_at__isnull=False, last_login__isnull=True)
+        elif user_status == "active":
+            queryset = queryset.filter(is_active=True).exclude(invited_at__isnull=False, last_login__isnull=True)
         if verified in {"true", "false"}:
             queryset = queryset.filter(email_verified=(verified == "true"))
         if search:

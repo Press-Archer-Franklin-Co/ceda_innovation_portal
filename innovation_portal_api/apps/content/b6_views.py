@@ -186,6 +186,27 @@ class ApprovalListView(APIView):
         return api_success(data=items)
 
 
+class ApprovalDetailView(APIView):
+    permission_classes = [CanSeeApprovals]
+
+    @extend_schema(
+        tags=STAFF_TAGS,
+        summary="One approval request with Live now and Proposed (3.25)",
+        description="The list item plus compare: {change_type: new|edit, changed_groups: [section names], changed: [field keys], "
+        "fields: [{key, group, label, live, proposed, changed}]}. Texts are {en, tn}. live is null when nothing is live yet. "
+        "The live version stays until the change is approved. Send back needs a comment; nobody approves their own change.",
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request, approval_id):
+        from apps.content.approval_compare import compare
+
+        approval = get_object_or_404(ApprovalRequest.objects.select_related("requested_by", "decided_by", "content_type"), id=approval_id)
+        data = ApprovalService.payload(approval, user=request.user)
+        data["can_decide"] = data["can_send_back"] or data["can_approve"]
+        data["compare"] = compare(approval) if approval.target is not None else {"change_type": "new", "changed_groups": [], "fields": [], "changed": []}
+        return api_success(data=data)
+
+
 class ApprovalDecisionView(APIView):
     # Who may approve depends on the flow's steps (a capability or a role per step), so the service decides.
     permission_classes = [CanSeeApprovals]

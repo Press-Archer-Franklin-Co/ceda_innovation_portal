@@ -12,6 +12,7 @@ from apps.content.hackathon_views import (
 
 from .b6_views import (
     ApprovalDecisionView,
+    ApprovalDetailView,
     ApprovalListView,
     ApprovalRejectView,
     HeroPhotoDetailView,
@@ -90,6 +91,7 @@ urlpatterns = (
         path("policies/<slug:key>/submit/", PolicySubmitView.as_view(), name="content-policy-submit"),
         path("public/policies/<slug:key>/", PublicPolicyView.as_view(), name="content-public-policy"),
         path("approvals/", ApprovalListView.as_view(), name="content-approvals"),
+        path("approvals/<uuid:approval_id>/", ApprovalDetailView.as_view(), name="content-approval-detail"),
         path("approvals/<uuid:approval_id>/approve/", ApprovalDecisionView.as_view(), name="content-approval-approve"),
         path("approvals/<uuid:approval_id>/reject/", ApprovalRejectView.as_view(), name="content-approval-reject"),
         path("public/home/", PublicHomeView.as_view(), name="content-public-home"),
