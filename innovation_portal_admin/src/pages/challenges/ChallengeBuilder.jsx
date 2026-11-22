@@ -20,6 +20,8 @@ import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import JudgingEditor from '../../components/challenges/JudgingEditor'
 import CoverPicker from '../../components/challenges/CoverPicker'
+import EligibilityRules, { useEligibilityDraft } from '../../components/challenges/EligibilityRules'
+import StageList from '../../components/challenges/StageList'
 import { useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
 import { client } from '../../lib/api/client'
@@ -107,6 +109,7 @@ function ChallengeWizard() {
   const step = STEPS.includes(params.get('step')) ? params.get('step') : 'details'
   const program = useProgram(id)
   const setup = useProgramSetupStatus(id)
+  const eligibility = useEligibilityDraft(id)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -304,6 +307,7 @@ function EditChallenge({ id }) {
   const section = SECTIONS.includes(params.get('section')) ? params.get('section') : 'basics'
   const program = useProgram(id)
   const setup = useProgramSetupStatus(id)
+  const eligibility = useEligibilityDraft(id)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -324,6 +328,7 @@ function EditChallenge({ id }) {
     setSaving(true)
     try {
       await programsApi.update(id, sectionPayload(section, form))
+      if (section === 'eligibility') await eligibility.save()
       qc.invalidateQueries({ queryKey: ['programs', id] })
       qc.invalidateQueries({ queryKey: formKeys.setupStatus(id) })
       toast.show({ tone: 'success', title: t('cb.saved'), duration: 2500 })
@@ -411,7 +416,7 @@ function EditChallenge({ id }) {
               <Panel title={t('cb.step.support')}><SupportStep form={form} set={set} /></Panel>
             </>
           )}
-          {section === 'eligibility' && <EligibilitySection form={form} set={set} />}
+          {section === 'eligibility' && <EligibilitySection form={form} set={set} eligibility={eligibility} />}
           {section === 'stages' && <StagesSection program={p} onGoWorkflow={() => goTo('workflow')} />}
           {section === 'judging' && (
             <>
@@ -436,14 +441,15 @@ function Panel({ title, children, className }) {
   )
 }
 
-/** 3.6b: who may enter today (audience, entries, teams, terms). The rule blocks and documents follow R-48. */
-function EligibilitySection({ form, set }) {
+/** 3.6b: rule blocks, documents and the plain-words sentence (R-48), then audience, entries, teams and terms. */
+function EligibilitySection({ form, set, eligibility }) {
   const t = useT()
   const terms = useTermsAndConditionsList()
   const termsList = list(terms.data)
   return (
     <>
-      <Panel title={t('cbs.whoCanEnter')}>
+      <EligibilityRules draft={eligibility} />
+      <Panel title={t('cbs.entriesPanel')}>
         <div className="flex flex-col gap-4">
           <RadioGroup
             name="audience"
@@ -458,8 +464,6 @@ function EligibilitySection({ form, set }) {
             <Checkbox label={t('cbs.teams')} checked={form.allow_team_submission} onChange={(e) => set({ allow_team_submission: e.target.checked })} />
           </div>
           {form.allow_team_submission && <Input label={t('cbs.teamSize')} type="number" min="2" value={form.max_team_size} onChange={(e) => set({ max_team_size: e.target.value })} />}
-          {/* TODO(R-48): rule blocks (age, citizenship, district, sector, business stage, registered company) and the plain-words preview. */}
-          <p className="rounded-control bg-surface2 px-3 py-2 text-[13px] text-muted">{t('cbs.rulesSoon')}</p>
         </div>
       </Panel>
       <Panel title={t('cbs.terms')}>
@@ -478,8 +482,12 @@ function EligibilitySection({ form, set }) {
   )
 }
 
-/** 3.6c: the stages follow the linked workflow (pin 4). Forms, dates and "what moves an idea on" per stage follow R-48. */
+/** 3.6c: each stage's form, dates and rules (StageList, R-48). Until the API has R-48, the workflow's steps alone. */
 function StagesSection({ program, onGoWorkflow }) {
+  return <StageList program={program} onGoWorkflow={onGoWorkflow} fallback={<StepsOnly program={program} onGoWorkflow={onGoWorkflow} />} />
+}
+
+function StepsOnly({ program, onGoWorkflow }) {
   const t = useT()
   const workflow = program.active_workflow_definition
   const steps = useWorkflowSteps(workflow?.id)
@@ -507,7 +515,6 @@ function StagesSection({ program, onGoWorkflow }) {
           ))}
         </ol>
       )}
-      {/* TODO(R-48): a form, dates, who takes part, what moves an idea on and the "tell applicants" switch per stage. */}
       <p className="rounded-control bg-surface2 px-3 py-2 text-[13px] text-muted">{t('cbs.stagesSoon')}</p>
     </>
   )

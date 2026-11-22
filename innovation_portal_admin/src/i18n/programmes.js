@@ -228,7 +228,7 @@ export const programmesEn = {
   'cbs.individuals': 'People can enter on their own',
   'cbs.teams': 'Teams can enter',
   'cbs.teamSize': 'Largest team',
-  'cbs.rulesSoon': 'Rules such as age, citizenship, district and business stage, and the documents applicants must bring, come next.',
+  'cbs.rulesSoon': 'Rules such as age, citizenship and business stage, and the documents applicants must bring, are not available yet.',
   'cbs.terms': 'Terms',
   'cbs.termsPick': 'Terms applicants agree to',
   'cbs.noTerms': 'The standard terms',
@@ -241,7 +241,7 @@ export const programmesEn = {
   'cbs.noForm': 'No form',
   'cbs.movesAuto': 'Moves on by itself when enough reviewers are done',
   'cbs.movesOfficer': 'An officer moves it on',
-  'cbs.stagesSoon': 'A form, dates and who takes part for each stage come next. Change the steps themselves in the workflow.',
+  'cbs.stagesSoon': 'A form, dates and who takes part for each stage are not available yet. Change the steps themselves in the workflow.',
   'cbs.currentWorkflow': 'Workflow in use',
   'cbs.otherWorkflows': 'Other workflows for this challenge',
   'cbs.noOtherWorkflows': 'There are no other workflows for this challenge.',
@@ -377,6 +377,85 @@ export const programmesEn = {
   'fa.col.answers': 'Answers',
   'fa.col.question': 'Question',
   'fa.col.skipRate': 'Skipped',
+  'cbs.entriesPanel': 'Entries and teams',
+  'elg.rulesTitle': 'Who can enter',
+  'elg.allTrue': 'All rules must be true.',
+  'elg.noRules': 'No rules yet, so anyone can enter.',
+  'elg.field': 'Rule about',
+  'elg.operator': 'How it is checked',
+  'elg.value': 'Value',
+  'elg.pick': 'Choose…',
+  'elg.and': 'and',
+  'elg.ageFrom': 'Youngest age',
+  'elg.ageTo': 'Oldest age',
+  'elg.field.citizenship': 'Citizenship',
+  'elg.field.age': 'Age',
+  'elg.field.district': 'District',
+  'elg.field.sector': 'Sector',
+  'elg.field.business_stage': 'Business stage',
+  'elg.field.registered_company': 'Registered company',
+  'elg.op.is': 'is',
+  'elg.op.is_not': 'is not',
+  'elg.op.is_between': 'is between',
+  'elg.op.is_one_of': 'is one of',
+  'elg.op.is_at_least': 'is at least',
+  'elg.citizenship.citizen': 'Motswana citizen',
+  'elg.citizenship.resident': 'Resident of Botswana',
+  'elg.registered.yes': 'Yes, registered',
+  'elg.registered.no': 'No, not registered',
+  'elg.stage.idea': 'Idea',
+  'elg.stage.testing': 'Tested with customers',
+  'elg.stage.selling': 'Selling',
+  'elg.stage.growing': 'Growing',
+  'elg.question': 'Yes or no question',
+  'elg.questionHint': 'Applicants answer yes or no.',
+  'elg.moveUp': 'Move rule up',
+  'elg.moveDown': 'Move rule down',
+  'elg.removeRule': 'Remove rule',
+  'elg.addRule': 'Add a rule',
+  'elg.docsTitle': 'What applicants must bring',
+  'elg.noDocs': 'No documents asked for yet.',
+  'elg.docName': 'Document name',
+  'elg.docHint': 'Note for applicants',
+  'elg.docHintPlaceholder': 'For example: PDF or photo, up to 5 MB',
+  'elg.docNeeded': 'Is {name} needed?',
+  'elg.required': 'Required',
+  'elg.optional': 'Optional',
+  'elg.removeDoc': 'Remove document',
+  'elg.addDoc': 'Add a document',
+  'elg.plainWords': 'In plain words',
+  'elg.plainWordsLang': 'Language of the sentence',
+  'elg.anyone': 'Anyone can enter.',
+  'elg.saveToUpdate': 'Save to update this sentence.',
+  'elg.loadError': 'We could not load the rules',
+  'stg.range': '{from} to {to}',
+  'stg.by': 'By {date}',
+  'stg.datesError': 'The stage must close after it opens.',
+  'stg.passMarkError': 'The pass mark is a number from 0 to 100.',
+  'stg.saved': '{name} saved',
+  'stg.form': 'Form for this stage',
+  'stg.entryFormHere': 'This is the entry form. Choose it in the Judging section.',
+  'stg.opens': 'Opens',
+  'stg.closes': 'Closes',
+  'stg.takesPart': 'Who takes part',
+  'stg.takes.all': 'Everyone still in',
+  'stg.takes.shortlisted': 'Shortlisted ideas only',
+  'stg.everyone': 'Everyone eligible',
+  'stg.movesOn': 'What moves an idea on',
+  'stg.movesPick.automatic': 'Automatic when sent in',
+  'stg.movesPick.officer': 'An officer moves it on',
+  'stg.movesPick.manager': 'A manager approves',
+  'stg.movesPick.panel_score': 'Panel average score',
+  'stg.moves.automatic': 'Automatic when sent in',
+  'stg.moves.officer': 'Officer moves it on',
+  'stg.moves.manager': 'Manager approves',
+  'stg.moves.panel_score': 'Panel average {mark} or more',
+  'stg.passMark': 'Pass mark',
+  'stg.notify': 'Tell applicants when this stage opens (WhatsApp, SMS or email)',
+  'stg.save': 'Save stage',
+  'stg.loadError': 'We could not load the stages',
+  'stg.addInWorkflow': 'Add or reorder stages in the workflow',
+  'stg.notEnforced': 'Who takes part and what moves an idea on are saved now. The portal starts using them in a later update.',
 }
 
 export const programmesTn = {
@@ -603,7 +682,7 @@ export const programmesTn = {
   'cbs.individuals': 'Batho ba ka tsena ba le bosi', // TODO tn-review
   'cbs.teams': 'Ditlhopha di ka tsena', // TODO tn-review
   'cbs.teamSize': 'Setlhopha se segolo', // TODO tn-review
-  'cbs.rulesSoon': 'Melawana e e jaaka dingwaga, boagi, kgaolo le kgato ya kgwebo, le dikwalo tse bakopi ba tshwanetseng go di tlisa, di tla latela.', // TODO tn-review
+  'cbs.rulesSoon': 'Melawana e e jaaka dingwaga, boagi le kgato ya kgwebo, le dikwalo tse bakopi ba tshwanetseng go di tlisa, ga di ise di nne teng.', // TODO tn-review
   'cbs.terms': 'Melawana', // TODO tn-review
   'cbs.termsPick': 'Melawana e bakopi ba dumelang mo go yone', // TODO tn-review
   'cbs.noTerms': 'Melawana e e tlwaelegileng', // TODO tn-review
@@ -616,7 +695,7 @@ export const programmesTn = {
   'cbs.noForm': 'Ga go na foromo', // TODO tn-review
   'cbs.movesAuto': 'E tswelela ka bo yone fa batshekatsheki ba ba lekaneng ba fetsa', // TODO tn-review
   'cbs.movesOfficer': 'Motlhankedi o a e tswelela', // TODO tn-review
-  'cbs.stagesSoon': 'Foromo, matlha le ba ba tsayang karolo mo kgatong nngwe le nngwe di tla latela. Fetola dikgato ka bo tsone mo tsamaisong.', // TODO tn-review
+  'cbs.stagesSoon': 'Foromo, matlha le ba ba tsayang karolo mo kgatong nngwe le nngwe ga di ise di nne teng. Fetola dikgato ka bo tsone mo tsamaisong.', // TODO tn-review
   'cbs.currentWorkflow': 'Tsamaiso e e dirisiwang', // TODO tn-review
   'cbs.otherWorkflows': 'Ditsamaiso tse dingwe tsa kgwetlho e', // TODO tn-review
   'cbs.noOtherWorkflows': 'Ga go na ditsamaiso tse dingwe tsa kgwetlho e.', // TODO tn-review
@@ -752,4 +831,83 @@ export const programmesTn = {
   'fa.col.answers': 'Dikarabo', // TODO tn-review
   'fa.col.question': 'Potso', // TODO tn-review
   'fa.col.skipRate': 'Di tlogetswe', // TODO tn-review
+  'cbs.entriesPanel': 'Ditsenelo le ditlhopha', // TODO tn-review
+  'elg.rulesTitle': 'Ke mang yo o ka tsenang', // TODO tn-review
+  'elg.allTrue': 'Melawana yotlhe e tshwanetse go nna boammaaruri.', // TODO tn-review
+  'elg.noRules': 'Ga go ise go nne le melawana, ka jalo mongwe le mongwe a ka tsena.', // TODO tn-review
+  'elg.field': 'Molawana ka ga', // TODO tn-review
+  'elg.operator': 'Kafa o tlhatlhobiwang ka teng', // TODO tn-review
+  'elg.value': 'Boleng', // TODO tn-review
+  'elg.pick': 'Tlhopha…', // TODO tn-review
+  'elg.and': 'le', // TODO tn-review
+  'elg.ageFrom': 'Dingwaga tse di kwa tlase', // TODO tn-review
+  'elg.ageTo': 'Dingwaga tse di kwa godimo', // TODO tn-review
+  'elg.field.citizenship': 'Boagi', // TODO tn-review
+  'elg.field.age': 'Dingwaga', // TODO tn-review
+  'elg.field.district': 'Kgaolo', // TODO tn-review
+  'elg.field.sector': 'Lephata', // TODO tn-review
+  'elg.field.business_stage': 'Kgato ya kgwebo', // TODO tn-review
+  'elg.field.registered_company': 'Khampani e e kwadisitsweng', // TODO tn-review
+  'elg.op.is': 'ke', // TODO tn-review
+  'elg.op.is_not': 'ga se', // TODO tn-review
+  'elg.op.is_between': 'magareng ga', // TODO tn-review
+  'elg.op.is_one_of': 'ke nngwe ya', // TODO tn-review
+  'elg.op.is_at_least': 'bonnye ke', // TODO tn-review
+  'elg.citizenship.citizen': 'Moagi wa Botswana', // TODO tn-review
+  'elg.citizenship.resident': 'Monni wa Botswana', // TODO tn-review
+  'elg.registered.yes': 'Ee, e kwadisitswe', // TODO tn-review
+  'elg.registered.no': 'Nnyaa, ga e a kwadisiwa', // TODO tn-review
+  'elg.stage.idea': 'Kakanyo', // TODO tn-review
+  'elg.stage.testing': 'E lekilwe le badirisi', // TODO tn-review
+  'elg.stage.selling': 'Go rekisa', // TODO tn-review
+  'elg.stage.growing': 'Go gola', // TODO tn-review
+  'elg.question': 'Potso ya ee kgotsa nnyaa', // TODO tn-review
+  'elg.questionHint': 'Bakopi ba araba ee kgotsa nnyaa.', // TODO tn-review
+  'elg.moveUp': 'Tsholetsa molawana', // TODO tn-review
+  'elg.moveDown': 'Fologisa molawana', // TODO tn-review
+  'elg.removeRule': 'Ntsha molawana', // TODO tn-review
+  'elg.addRule': 'Tsenya molawana', // TODO tn-review
+  'elg.docsTitle': 'Se bakopi ba tshwanetseng go se tlisa', // TODO tn-review
+  'elg.noDocs': 'Ga go ise go kopiwe dikwalo.', // TODO tn-review
+  'elg.docName': 'Leina la sekwalo', // TODO tn-review
+  'elg.docHint': 'Tlhaloso go bakopi', // TODO tn-review
+  'elg.docHintPlaceholder': 'Sekai: PDF kgotsa setshwantsho, go fitlha 5 MB', // TODO tn-review
+  'elg.docNeeded': 'A {name} e a tlhokega?', // TODO tn-review
+  'elg.required': 'E a tlhokega', // TODO tn-review
+  'elg.optional': 'Ga e patelediwe', // TODO tn-review
+  'elg.removeDoc': 'Ntsha sekwalo', // TODO tn-review
+  'elg.addDoc': 'Tsenya sekwalo', // TODO tn-review
+  'elg.plainWords': 'Ka mafoko a a motlhofo', // TODO tn-review
+  'elg.plainWordsLang': 'Puo ya polelo', // TODO tn-review
+  'elg.anyone': 'Mongwe le mongwe a ka tsenela.', // TODO tn-review
+  'elg.saveToUpdate': 'Boloka go fetola polelo e.', // TODO tn-review
+  'elg.loadError': 'Ga re a kgona go tsenya melawana', // TODO tn-review
+  'stg.range': '{from} go fitlha {to}', // TODO tn-review
+  'stg.by': 'Pele ga {date}', // TODO tn-review
+  'stg.datesError': 'Kgato e tshwanetse go tswala morago ga go bulwa.', // TODO tn-review
+  'stg.passMarkError': 'Maduo a go feta ke nomoro go tswa go 0 go ya go 100.', // TODO tn-review
+  'stg.saved': '{name} e bolokilwe', // TODO tn-review
+  'stg.form': 'Foromo ya kgato e', // TODO tn-review
+  'stg.entryFormHere': 'E ke foromo ya go tsenela. E tlhophe mo karolong ya Katlholo.', // TODO tn-review
+  'stg.opens': 'E bula', // TODO tn-review
+  'stg.closes': 'E tswala', // TODO tn-review
+  'stg.takesPart': 'Ke mang yo o tsayang karolo', // TODO tn-review
+  'stg.takes.all': 'Botlhe ba ba santseng ba le teng', // TODO tn-review
+  'stg.takes.shortlisted': 'Dikakanyo tse di tlhophilweng fela', // TODO tn-review
+  'stg.everyone': 'Botlhe ba ba tshwanelang', // TODO tn-review
+  'stg.movesOn': 'Se se tsamaisang kakanyo', // TODO tn-review
+  'stg.movesPick.automatic': 'Ka bosone fa e rometswe', // TODO tn-review
+  'stg.movesPick.officer': 'Motlhankedi o a e tsamaisa', // TODO tn-review
+  'stg.movesPick.manager': 'Motsamaisi o a dumela', // TODO tn-review
+  'stg.movesPick.panel_score': 'Palogare ya maduo a phanele', // TODO tn-review
+  'stg.moves.automatic': 'Ka bosone fa e rometswe', // TODO tn-review
+  'stg.moves.officer': 'Motlhankedi o a e tsamaisa', // TODO tn-review
+  'stg.moves.manager': 'Motsamaisi o a dumela', // TODO tn-review
+  'stg.moves.panel_score': 'Palogare ya phanele {mark} kgotsa go feta', // TODO tn-review
+  'stg.passMark': 'Maduo a go feta', // TODO tn-review
+  'stg.notify': 'Itsise bakopi fa kgato e bulwa (WhatsApp, SMS kgotsa imeile)', // TODO tn-review
+  'stg.save': 'Boloka kgato', // TODO tn-review
+  'stg.loadError': 'Ga re a kgona go tsenya dikgato', // TODO tn-review
+  'stg.addInWorkflow': 'Tsenya kgotsa rulaganya dikgato mo tsamaisong', // TODO tn-review
+  'stg.notEnforced': 'Ke mang yo o tsayang karolo le se se tsamaisang kakanyo di bolokilwe jaanong. Potale e tla simolola go di dirisa mo phetogong e e tlang.', // TODO tn-review
 }
