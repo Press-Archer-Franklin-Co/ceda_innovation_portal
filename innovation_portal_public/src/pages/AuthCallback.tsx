@@ -7,7 +7,7 @@ import { securityService } from '../services/security.service'
 import { tokenStorage } from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { parseApiError } from '../utils/apiError'
-import logoSrc from '../assets/logo.png'
+import { BrandLockup } from '../components/ui/Logo'
 
 export default function AuthCallback() {
   const [searchParams]     = useSearchParams()
@@ -86,7 +86,7 @@ export default function AuthCallback() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white px-6">
         <div className="max-w-md w-full">
-          <img src={logoSrc} alt="CEDA" className="h-10 w-auto mx-auto mb-8" />
+          <BrandLockup width={150} className="mx-auto mb-8" />
           {!trial && !error && (
             <div className="text-center">
               <Loader2 size={32} className="animate-spin mx-auto mb-4 text-[#A01E0A]" />
@@ -140,7 +140,7 @@ export default function AuthCallback() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white px-6">
       <div className="text-center max-w-sm w-full">
-        <img src={logoSrc} alt="CEDA" className="h-10 w-auto mx-auto mb-8" />
+        <BrandLockup width={150} className="mx-auto mb-8" />
 
         {!error ? (
           <>

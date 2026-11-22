@@ -10,6 +10,7 @@ import { programmesTn } from './programmes'
 import { conversationsTn } from './conversations'
 import { reviewTn } from './review'
 import { contentBTn } from './contentB'
+import { brandTn } from './brand'
 import { guideTn } from './guide'
 import { channelsTn } from './channels'
 
@@ -134,8 +135,8 @@ const tn = {
   'staff.nav.label': 'Lenaane la badiri',
   'staff.search': 'Batla dikakanyo, dikgwetlho le batho',
   'staff.viewSite': 'Bona webosaete ya setšhaba',
-  'staff.collapse': 'Fitlha lenaane',
-  'staff.expand': 'Bontsha lenaane',
+  'staff.collapse': 'Fokotsa lenaane', // TODO tn-review
+  'staff.expand': 'Godisa lenaane', // TODO tn-review
   'staff.console': 'Kgolo ya badiri',
   // Crop dialog (components/ui/ImageCropModal)
   'crop.title': 'Baya le go sega setshwantsho', // TODO tn-review
@@ -152,6 +153,7 @@ const tn = {
   ...conversationsTn,
   ...reviewTn,
   ...contentBTn,
+  ...brandTn,
   ...guideTn,
   ...channelsTn,
   ...challengesTn,

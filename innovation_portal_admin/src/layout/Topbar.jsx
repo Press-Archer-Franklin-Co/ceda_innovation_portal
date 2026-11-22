@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Menu, Search, Bell, ChevronDown, LogOut, User, BriefcaseBusiness, ExternalLink } from 'lucide-react'
+import { Menu, PanelLeft, Search, Bell, ChevronDown, LogOut, User, BriefcaseBusiness, ExternalLink } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
 import { useAuth } from '../lib/auth/AuthContext'
@@ -11,6 +11,7 @@ import Avatar from '../components/ui/Avatar'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
 import { buttonClasses } from '../components/ui/buttonClasses'
 import { pollEvery } from '../lib/api/refusals'
+import { CedaMark, CedaWord } from '../components/ui/Logo'
 
 // Staff top bar: menu toggle, search, "View public site", bell with the real unread count, the user.
 // Compact: 52px tall (64px from 2xl).
@@ -139,21 +140,32 @@ function BellButton() {
 
 export default function Topbar() {
   const t = useT()
-  const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen } = useLayout()
+  const { sidebarOpen, mobileSidebarOpen, setSidebarOpen, setMobileSidebarOpen, phone } = useLayout()
   const { can } = useAuth()
   const canSearch = can('entries.search') // GET /api/staff-search/
 
   const toggleSidebar = () => {
-    if (window.innerWidth < 1024) setMobileSidebarOpen((o) => !o)
+    if (phone) setMobileSidebarOpen((o) => !o)
     else setSidebarOpen((o) => !o)
   }
-  const open = typeof window !== 'undefined' && window.innerWidth < 1024 ? mobileSidebarOpen : sidebarOpen
+  const open = phone ? mobileSidebarOpen : sidebarOpen
+  const label = phone ? (open ? t('staff.menu.closeMenu') : t('staff.menu.openMenu')) : open ? t('staff.collapse') : t('staff.expand')
 
   return (
     <header className="h-[52px] 2xl:h-16 bg-bg border-b border-border flex items-center px-3 2xl:px-5 gap-3 z-20 flex-shrink-0">
-      <button type="button" onClick={toggleSidebar} className="btn-icon flex-shrink-0" aria-label={open ? t('staff.collapse') : t('staff.expand')} aria-expanded={open}>
-        <Menu size={18} aria-hidden />
+      <button type="button" onClick={toggleSidebar} className="btn-icon flex-shrink-0" aria-label={label} aria-expanded={open}>
+        {phone ? <Menu size={18} aria-hidden /> : <PanelLeft size={18} aria-hidden />}
       </button>
+
+      {/* Phone: the small mark rises on page open (U12); the menu itself is a drawer. */}
+      {phone && (
+        <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0 text-brand-text" aria-label="CEDA">
+          <span className="relative block w-10 h-[21px] overflow-hidden">
+            <span data-top-sun className="absolute inset-0 block"><CedaMark height={20.5} /></span>
+          </span>
+          <CedaWord width={56} />
+        </Link>
+      )}
 
       <div className="flex-1 min-w-0 flex items-center">{canSearch && <SearchBox />}</div>
 
