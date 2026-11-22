@@ -649,3 +649,120 @@ class NodeTypeTests(ChannelsTestCase):
         self.assertEqual(sessions["count"], 1)
         detail = data(self.client.get(f"{BASE}/sessions/{sessions['results'][0]['id']}/"))
         self.assertTrue(detail["steps"])
+
+
+class BuilderSupportTests(ChannelsTestCase):
+    """What the staff builders (3.31, 3.31b), simulator (3.32) and overview (3.33) read."""
+
+    KINDS = {"text", "number", "boolean", "select", "multi", "bilingual", "node", "variable", "variable_ref", "options", "choices", "mapping", "program"}
+
+    def test_every_node_type_describes_its_settings(self):
+        from apps.channels.node_schema import defaults_for
+
+        types = data(self.client.get(f"{BASE}/node-types/"))
+        self.assertEqual({t["type"] for t in types}, {"menu", "message", "question", "save_draft", "lookup", "condition", "subscribe", "language", "handoff", "end"})
+        for item in types:
+            self.assertIn("next", item, item["type"])
+            self.assertIn("text", item, item["type"])
+            self.assertTrue(item["label_tn"] and item["description_tn"], item["type"])
+            names = {f["name"] for f in item["fields"]}
+            for field in item["fields"]:
+                self.assertIn(field["kind"], self.KINDS, (item["type"], field["name"]))
+                self.assertTrue(field["label"] and field["label_tn"], (item["type"], field["name"]))
+                if field["kind"] in ("select", "multi"):
+                    self.assertTrue(field["choices"])
+                if "show_if" in field:
+                    self.assertIn(field["show_if"]["field"], names)
+            if item.get("ends_when"):
+                self.assertIn(item["ends_when"], names)
+        self.assertEqual(defaults_for("question")["answer_type"], "text")
+        self.assertEqual(len(defaults_for("menu")["options"]), 1)
+
+    def test_status_includes_live_chat(self):
+        status = data(self.client.get(f"{BASE}/status/"))
+        self.assertIn("live_chat", status)
+        self.assertEqual(status["live_chat"]["switch_on"], False)
+        self.assertIn("officers_online", status["live_chat"])
+
+    def test_report_splits_sessions_by_channel_and_gives_a_funnel(self):
+        journey = str(self.ussd_journey.id)
+        first = data(self.client.post(f"{BASE}/simulate/", {"journey": journey, "channel": "ussd", "version": "published"}, format="json"))
+        self.client.post(f"{BASE}/simulate/", {"journey": journey, "channel": "ussd", "session_id": first["session_id"], "input": "1"}, format="json")
+        self.client.post(f"{BASE}/simulate/", {"journey": journey, "channel": "ussd", "version": "published"}, format="json")
+        report = data(self.client.get(f"{BASE}/report/", {"include_simulations": "true", "journey": journey}))
+        today = report["per_day"][-1]
+        self.assertEqual(today["by_channel"], {"ussd": 2, "whatsapp": 0})
+        steps = report["funnel"]["steps"]
+        self.assertEqual(steps[0], {"node_key": "", "title": "", "is_start": True, "sessions": 2})
+        self.assertEqual(steps[1]["node_key"], "idea_title")
+        self.assertEqual(steps[1]["sessions"], 1)
+        self.assertIsNone(data(self.client.get(f"{BASE}/report/"))["funnel"])
+
+    def test_sessions_name_the_screen_they_stopped_on(self):
+        first = data(self.client.post(f"{BASE}/simulate/", {"journey": str(self.ussd_journey.id), "channel": "ussd", "version": "published"}, format="json"))
+        self.client.post(f"{BASE}/simulate/", {"journey": str(self.ussd_journey.id), "channel": "ussd", "session_id": first["session_id"], "input": "1"}, format="json")
+        row = data(self.client.get(f"{BASE}/sessions/", {"include_simulations": "true"}))["results"][0]
+        self.assertEqual(row["current_node_title"], "Idea name")
+
+
+class ConnectionKeyTests(ChannelsTestCase):
+    """Staff change keys and switch connections in the console, with no developer."""
+
+    def add_twilio(self, name):
+        response = self.client.post(
+            f"{BASE}/connections/",
+            {
+                "kind": "whatsapp",
+                "provider": "whatsapp_twilio",
+                "name": name,
+                "address": "+14155238886",
+                "journey": str(self.whatsapp_journey.id),
+                "config": {"account_sid": "AC-sandbox", "from_number": "+14155238886"},
+                "secrets": {"auth_token": "sandbox-token-1111"},
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 201, response.content)
+        return data(response)
+
+    def test_changing_keys_keeps_the_webhook_address_and_the_journey(self):
+        connection = self.add_twilio("Twilio Sandbox")
+        response = self.client.patch(
+            f"{BASE}/connections/{connection['id']}/",
+            {"config": {"account_sid": "AC-production", "from_number": "+26775000000"}, "secrets": {"auth_token": "production-token-2222"}},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        changed = data(response)
+        self.assertEqual(changed["webhook_url"], connection["webhook_url"])
+        self.assertEqual(changed["journey"]["id"], str(self.whatsapp_journey.id))
+        self.assertEqual(changed["config"]["account_sid"], "AC-production")
+        self.assertTrue(changed["secrets"]["auth_token"]["is_set"])
+        self.assertNotIn("production-token-2222", response.content.decode())
+        self.assertNotIn("sandbox-token-1111", self.client.get(f"{BASE}/connections/{connection['id']}/").content.decode())
+        from apps.platform_config.crypto import decrypt_secrets
+
+        saved = ChannelConnection.objects.get(id=connection["id"]).connection
+        self.assertEqual(decrypt_secrets(saved.secrets_encrypted)["auth_token"], "production-token-2222")
+
+    def test_an_empty_secret_keeps_the_saved_one(self):
+        connection = self.add_twilio("Twilio Sandbox")
+        self.client.patch(f"{BASE}/connections/{connection['id']}/", {"name": "Twilio test number", "secrets": {"auth_token": ""}}, format="json")
+        from apps.platform_config.crypto import decrypt_secrets
+
+        saved = ChannelConnection.objects.get(id=connection["id"]).connection
+        self.assertEqual(saved.name, "Twilio test number")
+        self.assertEqual(decrypt_secrets(saved.secrets_encrypted)["auth_token"], "sandbox-token-1111")
+
+    def test_two_connections_and_switching_which_is_active(self):
+        from apps.platform_config.http import HttpResult
+
+        sandbox = self.add_twilio("Twilio Sandbox")
+        production = self.add_twilio("Twilio production")
+        with patch("apps.platform_config.http.request", return_value=HttpResult(200, {"status": "active"})):
+            for item in (sandbox, production):
+                self.check_and_activate(item["id"])
+        self.assertEqual(IntegrationConnection.objects.filter(kind="whatsapp", is_active=True).count(), 2)
+        self.assertEqual(self.client.post(f"{BASE}/connections/{sandbox['id']}/deactivate/").status_code, 200)
+        states = {c["name"]: c["status"] for c in data(self.client.get(f"{BASE}/connections/", {"kind": "whatsapp"}))}
+        self.assertEqual(states, {"Twilio Sandbox": "off", "Twilio production": "active"})

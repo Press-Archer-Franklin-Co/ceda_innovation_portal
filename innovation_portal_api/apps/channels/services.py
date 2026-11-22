@@ -78,7 +78,20 @@ class ChannelStatus:
             else:
                 state = "switched_off"
             result[str(channel)] = {"switch_on": switch_on, "has_active_connection": active, "live": switch_on and active, "state": state}
+        result["live_chat"] = ChannelStatus.live_chat()
         return result
+
+    @staticmethod
+    def live_chat() -> dict:
+        """The website live chat (C1), for the Channels overview. Officers online is None when unknown."""
+        switch_on = is_enabled("live_chat")
+        try:
+            from apps.conversations.live import online_user_ids
+
+            online = len(online_user_ids())
+        except Exception:  # C1 not installed, or its cache is unavailable
+            online = None
+        return {"switch_on": switch_on, "live": switch_on, "state": "live" if switch_on else "switched_off", "officers_online": online}
 
 
 # --------------------------------------------------------------------------------------
