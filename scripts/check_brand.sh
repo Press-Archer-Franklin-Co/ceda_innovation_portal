@@ -9,8 +9,10 @@ set -u
 cd "$(git rev-parse --show-toplevel)"
 fail=0
 
-typed=$(git grep -n ">CEDA<" -- innovation_portal_admin/src innovation_portal_public/src \
-  ':!*.test.*' ':!**/i18n/**' || true)
+# Code only: the official logo files (src/assets/brand/*.svg) carry <title>CEDA</title> on purpose.
+typed=$(git grep -n ">CEDA<" -- 'innovation_portal_admin/src/*.js' 'innovation_portal_admin/src/*.jsx' \
+  'innovation_portal_public/src/*.ts' 'innovation_portal_public/src/*.tsx' 'innovation_portal_admin/src/*.css' \
+  'innovation_portal_public/src/*.css' ':!*.test.*' ':!**/i18n/**' || true)
 if [ -n "$typed" ]; then
   echo "CEDA typed as text. Use Logo, BrandLockup or CedaWord (the official drawing):"
   echo "$typed"
