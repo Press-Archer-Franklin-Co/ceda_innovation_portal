@@ -16,11 +16,6 @@ admin/src/pages/programs/Programs.jsx
 admin/src/pages/programs/ProgramDetail.jsx
 admin/src/pages/programs/ProgramEditor.jsx
 admin/src/pages/admin/MarkingCriteriaLibrary.jsx
-admin/src/pages/admin/TermsManager.jsx
-admin/src/pages/content/ContentIndex.jsx
-admin/src/pages/content/ContentList.jsx
-admin/src/pages/content/HackathonContentEditor.jsx
-admin/src/pages/content/WinnersManager.jsx
 admin/src/pages/reports/FormAnswers.jsx
 admin/src/pages/settings/Settings.jsx
 public/src/pages/About.tsx

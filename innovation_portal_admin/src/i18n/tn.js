@@ -7,6 +7,7 @@ import { u7Tn } from './u7'
 import { formsTn } from './forms'
 import { ideasTn } from './ideas'
 import { reviewTn } from './review'
+import { contentBTn } from './contentB'
 
 const tn = {
   'lang.en': 'English',
@@ -144,6 +145,7 @@ const tn = {
   ...formsTn,
   ...ideasTn,
   ...reviewTn,
+  ...contentBTn,
   ...challengesTn,
   ...rolesTn,
   ...contentTn,

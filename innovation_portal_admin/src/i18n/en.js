@@ -7,6 +7,7 @@ import { u7En } from './u7'
 import { formsEn } from './forms'
 import { ideasEn } from './ideas'
 import { reviewEn } from './review'
+import { contentBEn } from './contentB'
 
 const en = {
   'lang.en': 'English',
@@ -144,6 +145,7 @@ const en = {
   ...formsEn,
   ...ideasEn,
   ...reviewEn,
+  ...contentBEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,
