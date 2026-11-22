@@ -9,6 +9,7 @@ import { ideasTn } from './ideas'
 import { programmesTn } from './programmes'
 import { conversationsTn } from './conversations'
 import { reviewTn } from './review'
+import { contentBTn } from './contentB'
 
 const tn = {
   'lang.en': 'English',
@@ -148,6 +149,7 @@ const tn = {
   ...programmesTn,
   ...conversationsTn,
   ...reviewTn,
+  ...contentBTn,
   ...challengesTn,
   ...rolesTn,
   ...contentTn,

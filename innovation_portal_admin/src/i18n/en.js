@@ -9,6 +9,7 @@ import { ideasEn } from './ideas'
 import { programmesEn } from './programmes'
 import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
+import { contentBEn } from './contentB'
 
 const en = {
   'lang.en': 'English',
@@ -148,6 +149,7 @@ const en = {
   ...programmesEn,
   ...conversationsEn,
   ...reviewEn,
+  ...contentBEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,

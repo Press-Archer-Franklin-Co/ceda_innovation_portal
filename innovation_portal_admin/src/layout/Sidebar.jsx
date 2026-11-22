@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  ClipboardCheck, Handshake, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Eye, MessageCircle, MessagesSquare,
+  ClipboardCheck, Handshake, LayoutGrid, Sparkles, Award, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Eye, MessageCircle, MessagesSquare,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -9,6 +9,7 @@ import { useAuth } from '../lib/auth/AuthContext'
 import { useT } from '../i18n/context'
 import Logo from '../components/ui/Logo'
 import { useQuery } from '@tanstack/react-query'
+import { useActiveHackathon } from '../lib/queries/hackathon'
 import { inboxApi } from '../lib/api/inbox'
 import { usePublicConfig } from '../lib/queries/platform'
 
@@ -55,12 +56,18 @@ const GROUPS = [
     // The approvals entry (U6) takes `anyOf: ['content.edit', 'content.approve']`, so someone who only approves
     // still sees this group; editor items keep content.edit.
     items: [
+      { label: 'staff.nav.allContent', href: '/content', icon: LayoutGrid, capability: 'content.edit', exact: true },
       { label: 'staff.nav.homePage', href: '/content/home', icon: LayoutTemplate, capability: 'content.edit' },
       { label: 'staff.nav.news', href: '/content/news', icon: Newspaper, capability: 'content.edit' },
       { label: 'staff.nav.stories', href: '/content/stories', icon: Trophy, capability: 'content.edit' },
       { label: 'staff.nav.quotes', href: '/content/quotes', icon: Quote, capability: 'content.edit', match: ['/content/quotes', '/content/leadership'] },
       { label: 'staff.nav.partners', href: '/content/partners', icon: Handshake, capability: 'content.edit' },
       { label: 'staff.nav.faqs', href: '/content/faqs', icon: HelpCircle, capability: 'content.edit' },
+      // 3.35: site policy pages (content.edit) and the challenges' own terms (challenges.manage) in one place.
+      { label: 'staff.nav.policies', href: '/content/policies', icon: FileText, anyOf: ['content.edit', 'challenges.manage'] },
+      // 3.36: only while a hackathon is on.
+      { label: 'staff.nav.hackathon', href: '/content/hackathon', icon: Sparkles, capability: 'content.edit', when: 'hackathon', match: ['/content/hackathon'] },
+      { label: 'staff.nav.winners', href: '/content/winners', icon: Award, anyOf: ['content.edit', 'challenges.manage'] },
       { label: 'staff.nav.approvals', href: '/content/approvals', icon: ClipboardCheck, anyOf: ['content.edit', 'content.approve'] },
     ],
   },
@@ -72,6 +79,7 @@ const GROUPS = [
       { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
       { label: 'staff.nav.liveChat', href: '/admin/live-chat', icon: MessagesSquare, capability: 'settings.manage' },
+      { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
       { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, capability: 'challenges.manage' },
       { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
     ],
@@ -98,6 +106,7 @@ function useIsActive(item) {
     return tab === item.tab || (!tab && item.defaultTab)
   }
   if (item.external) return false
+  if (item.exact) return pathname === item.href
   const prefixes = item.match ?? [item.href]
   return prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }
@@ -156,13 +165,17 @@ export default function Sidebar({ previewUser } = {}) {
   // Items with `feature` show only while that public switch is on (C1: live chat).
   const publicConfig = usePublicConfig()
 
+  // 3.36: the hackathon page item shows only while a hackathon is on (not in the styleguide preview).
+  const activeHackathon = useActiveHackathon(!previewUser && can('content.edit'))
+  const flags = { hackathon: !!activeHackathon.data }
+
   // Same rule as lib/auth/useJudgeOnly (kept inline for the styleguide's previewUser).
   const judgeOnly = can('entries.score') && !can('entries.assign') && !can('entries.search')
   const groups = judgeOnly
     ? [JUDGE_GROUP]
     : GROUPS.map((g) => ({
         ...g,
-        items: g.items.filter((item) => (!item.feature || publicConfig.data?.features?.[item.feature]) && (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability))),
+        items: g.items.filter((item) => (!item.feature || publicConfig.data?.features?.[item.feature]) && (item.anyOf ? item.anyOf.some(can) : !item.capability || can(item.capability)) && (!item.when || flags[item.when])),
       })).filter((g) => g.items.length > 0)
 
   const roleLabel = can('settings.manage')
