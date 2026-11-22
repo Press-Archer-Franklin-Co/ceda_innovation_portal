@@ -19,6 +19,12 @@ export function pickActive(pages, now = Date.now()) {
   return live.sort((a, b) => String(a.program_info?.closes_at ?? '9').localeCompare(String(b.program_info?.closes_at ?? '9')))[0] ?? null
 }
 
+/** The active endpoint answers {hackathon: {...} | null}; the page and the menu need the hackathon itself. */
+export function unwrapActive(data) {
+  if (data && typeof data === 'object' && 'hackathon' in data) return data.hackathon ?? null
+  return data ?? null
+}
+
 export function useActiveHackathon(enabled = true) {
   return useQuery({
     queryKey: ['content', 'hackathons', 'active'],
@@ -26,8 +32,7 @@ export function useActiveHackathon(enabled = true) {
     staleTime: 5 * 60_000,
     queryFn: async () => {
       try {
-        const data = await client.get('/api/content/hackathons/active/')
-        return data ?? null
+        return unwrapActive(await client.get('/api/content/hackathons/active/'))
       } catch (err) {
         if (err?.status !== 404 && err?.status !== 405) throw err
         return pickActive(asList(await client.get('/api/content/hackathons/')))

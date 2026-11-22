@@ -100,6 +100,17 @@ export interface MyResult {
   feedback: string
   /** The challenge's event (pitch day or awards), for winners and the shortlist, while it is ahead. */
   next_step: { at: string } | null
+  /** R-54: the panel's short points, for shortlisted and winning entries once results are out. */
+  feedback_points?: { liked: string[]; work_on: string[] } | null
+  /** R-54: "Confirm I will attend", before the event. */
+  attendance?: Attendance | null
+}
+
+export interface Attendance {
+  confirmed: boolean
+  answer: boolean | null
+  can_confirm: boolean
+  event_date: string | null
 }
 
 const base = (slug: string) => `/programs/public/${encodeURIComponent(slug)}`
@@ -120,5 +131,9 @@ export const challengeEntryService = {
   async myResult(slug: string): Promise<MyResult> {
     const { data } = await api.get(`${base(slug)}/my-result/`)
     return unwrapData<MyResult>(data)
+  },
+  async attend(slug: string, attending: boolean): Promise<Attendance> {
+    const { data } = await api.post(`${base(slug)}/my-result/attend/`, { attending })
+    return unwrapData<Attendance>(data)
   },
 }

@@ -123,6 +123,31 @@ class PublicChallengeTests(B5TestCase):
         self.assertEqual(self.client.get(f"/api/programs/public/{hidden.slug}/").status_code, 404)
 
 
+
+    def test_hackathon_schedule_and_updates_on_the_challenge_page(self):
+        from apps.content.models import HackathonDetail, HackathonUpdate
+
+        program = self.challenge("Hack week")
+        self.assertIsNone(data(self.client.get(f"/api/programs/public/{program.slug}/"))["hackathon"])
+        starts = (timezone.now() + timedelta(days=3)).isoformat()
+        detail = HackathonDetail.objects.create(
+            program=program, is_published=True,
+            schedule_items=[{"id": "open", "starts_at": starts, "title": {"en": "Welcome", "tn": "Kamogelo"}}],
+            draft={"schedule_items": [{"id": "x", "starts_at": starts, "title": {"en": "Draft only"}}]},
+        )
+        HackathonUpdate.objects.create(hackathon=detail, body={"en": "Doors open at 07:00", "tn": ""})
+        block = data(self.client.get(f"/api/programs/public/{program.slug}/?lang=tn"))["hackathon"]
+        self.assertEqual([(i["title"], i["now"]) for i in block["schedule"]], [("Kamogelo", False)])
+        self.assertEqual([u["body"] for u in block["updates"]], ["Doors open at 07:00"])  # English when Setswana is empty
+
+        detail.page_sections = [{"key": "schedule", "enabled": False, "order": 1}, {"key": "updates", "enabled": True, "order": 2}]
+        detail.save()
+        block = data(self.client.get(f"/api/programs/public/{program.slug}/"))["hackathon"]
+        self.assertEqual(block["schedule"], [])
+        detail.is_published = False
+        detail.save()
+        self.assertIsNone(data(self.client.get(f"/api/programs/public/{program.slug}/"))["hackathon"])
+
 class BuilderTests(B5TestCase):
     def test_setup_status_reports_each_step(self):
         program = self.challenge("Builder")
