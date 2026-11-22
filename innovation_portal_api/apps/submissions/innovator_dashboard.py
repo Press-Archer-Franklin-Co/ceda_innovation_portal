@@ -86,6 +86,7 @@ def draft_item(draft, lang: str) -> dict:
     return {
         "id": str(draft.id),
         "kind": "draft",
+        "channel": draft.channel,
         "state": "drafts",
         "reference": draft.reference_number,
         "title": draft.title,
@@ -111,6 +112,7 @@ def submission_item(submission, lang: str) -> dict:
     return {
         "id": str(submission.id),
         "kind": "submission",
+        "channel": submission.channel,
         "state": state,
         "reference": submission.reference_number,
         "title": submission.title,

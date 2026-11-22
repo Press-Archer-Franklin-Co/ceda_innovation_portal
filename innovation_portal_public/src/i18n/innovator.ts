@@ -141,6 +141,14 @@ export const innovatorEn = {
 
   // 2.2 My ideas
   'ideas.title': 'My ideas',
+  'ideas.channelWeb': 'Webosaete',
+  'ideas.channelWhatsapp': 'WhatsApp',
+  'ideas.channelUssd': 'USSD',
+  'ideas.channelOffice': 'Ofisi ya CEDA',
+  'ideas.channelWeb': 'Website',
+  'ideas.channelWhatsapp': 'WhatsApp',
+  'ideas.channelUssd': 'USSD',
+  'ideas.channelOffice': 'CEDA office',
   'ideas.count': '{count} ideas',
   'ideas.countOne': '1 idea',
   'ideas.needReply': '{count} need your reply',

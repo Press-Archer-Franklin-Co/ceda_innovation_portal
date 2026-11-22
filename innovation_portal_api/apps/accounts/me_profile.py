@@ -23,6 +23,17 @@ class MeUpdateSerializer(serializers.Serializer):
     phone_number = serializers.RegexField(r"^\+?[0-9 ]{7,20}$", max_length=30, required=False, allow_blank=True, help_text="For WhatsApp alerts.")
     preferred_language = serializers.ChoiceField(choices=("en", "tn"), required=False)
 
+    def validate_phone_number(self, value):
+        """One normal form everywhere (+26773000280)."""
+        if not value:
+            return ""
+        from apps.core.phone import try_normalize_phone
+
+        phone = try_normalize_phone(value)
+        if not phone:
+            raise serializers.ValidationError("Enter a Botswana phone number.")
+        return phone
+
     def validate_first_name(self, value):
         if not value.strip():
             raise serializers.ValidationError("Write your first name.")
@@ -37,6 +48,10 @@ def update_me(user, data: dict) -> None:
     before = _state(user)
     changed = [name for name in FIELDS if name in data and getattr(user, name) != data[name]]
     if "phone_number" in changed:
+        from apps.accounts.phone_accounts import OTHER_ACCOUNT, accounts_with_phone, phone_only_refusal
+
+        if data["phone_number"] and any(phone_only_refusal(other) for other in accounts_with_phone(data["phone_number"], exclude=user)):
+            raise ValidationError({"phone_number": OTHER_ACCOUNT})
         user.phone_verified = False
         changed.append("phone_verified")
     for name in changed:

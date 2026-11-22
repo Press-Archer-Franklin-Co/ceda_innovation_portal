@@ -187,10 +187,20 @@ def signup(*, identifier_raw: str, full_name: str, phone: str = "", email: str =
     policy = AuthPolicy.current().second_step
     if policy == AuthPolicy.SecondStep.PASSWORD and len(password or "") < 8:
         errors["password"] = {"code": "password_too_short", "detail": "Choose a password of at least 8 characters."}
-    if phone_value and User.objects.filter(phone_number=phone_value).exists():
-        errors["phone"] = {"code": "phone_taken", "detail": "This phone number already has an account. Sign in instead."}
-    if email_value and User.objects.filter(email__iexact=email_value).exists():
-        errors["email"] = {"code": "email_taken", "detail": "This email address already has an account. Sign in instead."}
+    # One person, one account: an existing phone or email gets a code to sign in, never a second account.
+    from apps.accounts.otp_services import OTPService
+
+    existing = None
+    if phone_value and OTPService.find_user(target_type=LoginCode.TargetType.PHONE, target=phone_value):
+        existing = Identifier(LoginCode.TargetType.PHONE, phone_value)
+    elif email_value and User.objects.filter(email__iexact=email_value).exists():
+        existing = Identifier(LoginCode.TargetType.EMAIL, email_value)
+    if existing is not None:
+        account = find_user(existing)
+        if not account.is_active:
+            raise ValidationError({"code": "account_disabled", "detail": "This account is switched off. Contact CEDA."})
+        demo_logins.assert_can_sign_in(account)
+        return account, {**send_code(existing, ip=ip), "identifier": existing.value, "found_account": True, "message": "Welcome back, we found your account. Enter the code we sent."}
     if errors:
         raise ValidationError(errors)
 
