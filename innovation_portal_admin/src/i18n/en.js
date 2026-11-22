@@ -11,6 +11,7 @@ import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 import { contentBEn } from './contentB'
 import { brandEn } from './brand'
+import { channelsEn } from './channels'
 
 const en = {
   'lang.en': 'English',
@@ -152,6 +153,7 @@ const en = {
   ...reviewEn,
   ...contentBEn,
   ...brandEn,
+  ...channelsEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,

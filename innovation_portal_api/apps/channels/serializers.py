@@ -270,6 +270,7 @@ class ScreenSerializer(serializers.Serializer):
     end = serializers.BooleanField()
     node_key = serializers.CharField()
     node_type = serializers.CharField()
+    node_title = serializers.CharField(required=False)
     choices = serializers.ListField(child=serializers.DictField())
     expects = serializers.CharField()
     ussd_text = serializers.CharField(required=False)
@@ -304,13 +305,14 @@ class JourneySessionSerializer(serializers.ModelSerializer):
     phone = serializers.SerializerMethodField()
     status = serializers.SerializerMethodField()
     draft_reference = serializers.SerializerMethodField()
+    current_node_title = serializers.SerializerMethodField()
 
     class Meta:
         model = JourneySession
         fields = (
             "id", "channel", "journey", "journey_name", "connection", "connection_name", "version_number", "is_simulation",
             "phone", "language", "status", "current_node", "step_count", "started_at", "last_activity_at", "ended_at",
-            "draft_reference", "conversation_id",
+            "draft_reference", "conversation_id", "current_node_title",
         )
 
     def get_connection_name(self, obj) -> str:
@@ -323,6 +325,17 @@ class JourneySessionSerializer(serializers.ModelSerializer):
 
     def get_status(self, obj) -> str:
         return SessionSelector.effective_status(obj)
+
+    def get_current_node_title(self, obj) -> str:
+        """The name staff gave the screen the session is on or stopped at."""
+        if not obj.current_node:
+            return ""
+        graph = (obj.version.graph if obj.version_id and obj.version else None) or {}
+        node = (graph.get("nodes") or {}).get(obj.current_node)
+        if node is None and obj.journey_id:
+            found = obj.journey.nodes.filter(key=obj.current_node).values_list("title", flat=True).first()
+            return found or obj.current_node
+        return (node or {}).get("title") or obj.current_node
 
     def get_draft_reference(self, obj) -> str:
         return obj.draft.reference_number if obj.draft_id and obj.draft else ""

@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
   ClipboardCheck, Handshake, LayoutGrid, Sparkles, Award, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Eye, MessageCircle, MessagesSquare,
+  Smartphone,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -83,6 +84,8 @@ const GROUPS = [
     items: [
       { label: 'staff.nav.users', href: '/users', icon: Users, capability: 'users.manage' },
       { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
+      // C2 (Figma 3.31 to 3.33): one entry; the overview leads to the builders, simulator and connections.
+      { label: 'ch.nav.channels', href: '/channels', icon: Smartphone, capability: 'channels.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
       { label: 'staff.nav.liveChat', href: '/admin/live-chat', icon: MessagesSquare, capability: 'settings.manage' },
       { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
