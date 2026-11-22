@@ -6,6 +6,8 @@ from apps.programs.stage_views import ProgramStageDetailView, ProgramStagesView
 from apps.programs.entry_views import (
     EntryPanelFeedbackView,
     MyChallengeAttendView,
+    ChallengeStatusNumbersView,
+    ChallengeUpdatesView,
     ChallengeEligibilityRulesView,
     ChallengeEligibilityView,
     ChallengeEntryStateView,
@@ -21,6 +23,7 @@ from apps.programs.views import (
     FormFieldRuleListCreateView,
     FormSectionDetailView,
     FormSectionFieldListCreateView,
+    ChallengeJudgeInviteDeclineView,
     ChallengeJudgeInviteView,
     ProgramTypeListView,
     ProgramViewSet,
@@ -35,6 +38,7 @@ router.register("", ProgramViewSet, basename="programs")
 urlpatterns = [
     path("types/", ProgramTypeListView.as_view(), name="program-type-list"),
     path("judge-invite/<uuid:token>/", ChallengeJudgeInviteView.as_view(), name="challenge-judge-invite"),
+    path("judge-invite/<uuid:token>/decline/", ChallengeJudgeInviteDeclineView.as_view(), name="challenge-judge-invite-decline"),
     path("public/challenges/", PublicChallengeListView.as_view(), name="public-challenges"),
     path("public/<slug:slug>/", PublicChallengeDetailView.as_view(), name="public-challenge-detail"),
     path("public/<slug:slug>/entry/", ChallengeEntryStateView.as_view(), name="public-challenge-entry"),
@@ -47,6 +51,8 @@ urlpatterns = [
     path("<uuid:program_id>/results/publish/", PublishChallengeResultsView.as_view(), name="program-results-publish"),
     path("<uuid:program_id>/setup-status/", SetupStatusView.as_view(), name="program-setup-status"),
     path("<uuid:program_id>/judging/", JudgingSettingsView.as_view(), name="program-judging"),
+    path("<uuid:program_id>/status-numbers/", ChallengeStatusNumbersView.as_view(), name="program-status-numbers"),
+    path("<uuid:program_id>/updates/", ChallengeUpdatesView.as_view(), name="program-updates"),
     path("<uuid:program_id>/stages/", ProgramStagesView.as_view(), name="program-stages"),
     path("<uuid:program_id>/stages/<uuid:step_id>/", ProgramStageDetailView.as_view(), name="program-stage-detail"),
 ] + router.urls + [

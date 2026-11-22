@@ -206,6 +206,9 @@ class RefreshView(generics.GenericAPIView):
             raise InvalidToken(exc.args[0]) from exc
 
         refresh_token = RefreshToken(serializer.validated_data["refresh"])
+        from apps.accounts.sessions import check_refresh
+
+        check_refresh(refresh_token)
         user = User.objects.filter(id=refresh_token.get("user_id")).first()
         if not user:
             return Response({"detail": "User not found for refresh token."}, status=status.HTTP_401_UNAUTHORIZED)
@@ -915,3 +918,51 @@ class LoginCodeVerifyView(generics.GenericAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+
+# R-51 (2.9): where I am signed in, and deleting my account ---------------------------------------------------------
+
+
+class AccountSessionsView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Authentication"], summary="Where I am signed in (2.9)", description="[{id, device, place, last_seen, signed_in_at, current}]. place is null: we do not look up locations.")
+    def get(self, request, *args, **kwargs):
+        from apps.accounts.sessions import listing
+
+        return api_success(data=listing(request.user, request))
+
+
+class AccountSessionSignOutView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Authentication"], summary="Sign out one place (2.9)", description="Ends that sign-in: its next refresh is refused, so it is signed out within a few minutes.", request=None)
+    def post(self, request, session_id=None, *args, **kwargs):
+        from apps.accounts.sessions import end
+
+        end(request.user, session_id, actor=request.user)
+        return api_success(data={"signed_out": True})
+
+
+class DeleteMyAccountSerializer(serializers.Serializer):
+    confirm = serializers.CharField()
+
+    def validate_confirm(self, value):
+        if value != "DELETE":
+            raise serializers.ValidationError('Type DELETE to confirm.')
+        return value
+
+
+class DeleteMyAccountView(generics.GenericAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DeleteMyAccountSerializer
+
+    @extend_schema(tags=["Authentication"], summary="Delete my account (2.9)", description='{confirm: "DELETE"}. Removes your contact details and signs you out everywhere. Ideas already sent stay with CEDA.', request=DeleteMyAccountSerializer)
+    def post(self, request, *args, **kwargs):
+        from apps.accounts.sessions import delete_account
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        delete_account(request.user)
+        return api_success(data={"deleted": True}, message="Your account is deleted.")

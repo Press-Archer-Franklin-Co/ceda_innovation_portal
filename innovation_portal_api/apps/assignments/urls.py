@@ -8,6 +8,7 @@ from apps.assignments.views import (
     ReviewerQueueStatsView,
     ReviewerSuggestionView,
     SpecialistInvitationClaimView,
+    SpecialistInvitationDeclineView,
     SpecialistInvitationDetailView,
     SpecialistInvitationResendView,
     SpecialistInvitationTokenView,
@@ -25,4 +26,5 @@ urlpatterns = [
     path("specialist-invitations/<uuid:pk>/resend/", SpecialistInvitationResendView.as_view(), name="specialist-invitation-resend"),
     path("specialist-invite/<uuid:token>/", SpecialistInvitationTokenView.as_view(), name="specialist-invite-token"),
     path("specialist-invite/<uuid:token>/claim/", SpecialistInvitationClaimView.as_view(), name="specialist-invite-claim"),
+    path("specialist-invite/<uuid:token>/decline/", SpecialistInvitationDeclineView.as_view(), name="specialist-invite-decline"),
 ] + router.urls
