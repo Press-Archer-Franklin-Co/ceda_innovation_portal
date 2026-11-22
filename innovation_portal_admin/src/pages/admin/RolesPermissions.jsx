@@ -1,13 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Lock, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Info, Lock, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import Modal from '../../components/ui/Modal'
 import Tabs from '../../components/ui/Tabs'
-import Tag from '../../components/ui/Tag'
 import DropdownMenu from '../../components/ui/DropdownMenu'
 import ErrorState from '../../components/ui/ErrorState'
 import ForbiddenState from '../../components/ui/ForbiddenState'
@@ -17,7 +16,8 @@ import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
-import { describeChanges, groupCapabilities, locksFrom, matrixChanges, matrixFrom, pickText, toggleCell } from '../../lib/admin/roles'
+import { PERMISSION_COLUMNS, copyableCapabilities, describeChanges, locksFrom, matrixChanges, permissionGroups, pickText, toggleCell } from '../../lib/admin/roles'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 import { LANGUAGES, approverFrom, approverValue, flowProblems, flowSentence, fromFlow, moveStep, newStep, toFlowPayload } from '../../lib/admin/approvals'
 import { useAdminRoles, useApprovalFlow, useCapabilityCatalogue, useRoleAction, useRoleLocks, useSaveApprovalFlow } from '../../lib/queries/adminRoles'
 
@@ -63,144 +63,193 @@ function RoleDialog({ role, onClose }) {
   )
 }
 
-/** S2 section 1: roles down the side, capabilities across the top, grouped. */
-function RolesTab() {
+/** 3.24 ① roles down the side with their people; ② what the chosen role can do, in plain words. */
+function RolesView() {
   const t = useT()
   const { lang } = useI18n()
   const toast = useToast()
   const confirm = useConfirm()
+  const wide = useMediaQuery('(min-width: 768px)')
+  const [params, setParams] = useSearchParams()
   const catalogue = useCapabilityCatalogue()
   const roles = useAdminRoles()
   const act = useRoleAction()
-  const lockQueries = useRoleLocks(roles.data)
+  const list = useMemo(() => roles.data ?? [], [roles.data])
+  const selectedId = params.get('role') ?? ''
+  const selected = list.find((r) => String(r.id) === selectedId) ?? (wide ? list[0] : null)
+  const lockQueries = useRoleLocks(selected ? [selected] : [])
   const locks = useMemo(() => locksFrom(lockQueries.map((q) => q.data)), [lockQueries])
-  const saved = useMemo(() => matrixFrom(roles.data ?? []), [roles.data])
   const [draft, setDraft] = useState(null)
   const [dialog, setDialog] = useState(null)
-  useEffect(() => { setDraft(null) }, [roles.data])
-
-  const matrix = draft ?? saved
-  const changes = matrixChanges(saved, matrix)
-  const groups = groupCapabilities(catalogue.data)
-  const capLabel = (key) => pickText(catalogue.data?.capabilities?.find((c) => c.key === key)?.label, lang) || key
-  const roleName = (id) => pickText((roles.data ?? []).find((r) => String(r.id) === String(id))?.name, lang)
+  useEffect(() => { setDraft(null) }, [roles.data, selected?.id])
 
   if (roles.error?.status === 403 || catalogue.error?.status === 403) return <ForbiddenState title={t('roles.forbidden')} />
   if (roles.isError || catalogue.isError) return <ErrorState title={t('roles.loadError')} onRetry={() => { roles.refetch(); catalogue.refetch() }} />
-  if (roles.isLoading || catalogue.isLoading) return <Skeleton className="h-96 rounded-card" />
+  if (roles.isLoading || catalogue.isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
+        <Skeleton className="h-72 rounded-card" /><Skeleton className="hidden h-[480px] rounded-card md:block" />
+      </div>
+    )
+  }
+
+  const choose = (r) => setParams((p) => { const n = new URLSearchParams(p); if (r) n.set('role', String(r.id)); else n.delete('role'); return n }, { replace: true })
+  const groups = permissionGroups(catalogue.data)
+  const capLabel = (key) => pickText(catalogue.data?.capabilities?.find((c) => c.key === key)?.label, lang) || key
+  const id = selected ? String(selected.id) : ''
+  const saved = selected ? [...(selected.capabilities ?? [])].sort() : []
+  const held = draft ?? saved
+  const builtIn = !!selected?.is_system
+  const editable = wide && selected && !builtIn && selected.is_active
+  const changes = matrixChanges({ [id]: saved }, { [id]: held })
+  const peopleText = (r) => (r.people_count === 1 ? t('roles.person') : t('roles.people', { count: r.people_count ?? 0 }))
 
   async function save() {
-    const lines = describeChanges(changes, roleName, capLabel, t)
-    // The dialog shows the body inside a paragraph, so each line is a block span.
+    const name = pickText(selected.name, lang)
+    const lines = describeChanges(changes, () => name, capLabel, t)
     const body = <>{lines.map((line) => <span key={line} className="mt-1 block text-text">{line}</span>)}<span className="mt-2 block">{t('roles.saveBody')}</span></>
-    const ok = await confirm({ title: t('roles.saveTitle'), body, confirmLabel: t('roles.save'), tone: 'primary' })
-    if (!ok) return
+    if (!(await confirm({ title: t('roles.saveTitle'), body, confirmLabel: t('roles.save'), tone: 'primary' }))) return
     try {
-      for (const c of changes) await act.mutateAsync({ action: 'capabilities', id: c.roleId, value: matrix[c.roleId] })
+      await act.mutateAsync({ action: 'capabilities', id: selected.id, value: held })
       toast.show({ tone: 'success', title: t('roles.saved') })
     } catch (e) {
       toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
     }
   }
 
-  async function remove(role) {
-    const ok = await confirm({ title: t('roles.deleteTitle', { name: pickText(role.name, lang) }), body: t('roles.deleteBody'), confirmLabel: t('roles.delete') })
-    if (!ok) return
+  async function copy() {
+    const name = t('roles.u9.copyName', { name: pickText(selected.name, lang) })
     try {
-      const result = await act.mutateAsync({ action: 'remove', id: role.id })
-      toast.show({ tone: 'success', title: result?.result === 'retired' ? t('roles.retiredDone') : t('roles.deleted') })
+      const made = await act.mutateAsync({ action: 'create', value: { name: { en: name, tn: '' }, description: selected.description } })
+      const newId = made?.id ?? made?.role?.id
+      if (newId) {
+        await act.mutateAsync({ action: 'capabilities', id: newId, value: copyableCapabilities(selected, catalogue.data) })
+        choose({ id: newId })
+      }
+      toast.show({ tone: 'success', title: t('roles.u9.copied', { name }) })
     } catch (e) {
       toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
     }
   }
 
-  const list = roles.data ?? []
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h2 className="font-heading text-[15px] font-bold text-text">{t('roles.matrix')}</h2>
-          <p className="text-[12px] text-muted">{t('roles.matrixHint')}</p>
-        </div>
-        <Button variant="secondary" icon={<Plus size={15} aria-hidden />} onClick={() => setDialog('new')}>{t('roles.newRole')}</Button>
-      </div>
+  async function remove(role) {
+    if (!(await confirm({ title: t('roles.deleteTitle', { name: pickText(role.name, lang) }), body: t('roles.deleteBody'), confirmLabel: t('roles.delete') }))) return
+    try {
+      const result = await act.mutateAsync({ action: 'remove', id: role.id })
+      toast.show({ tone: 'success', title: result?.result === 'retired' ? t('roles.retiredDone') : t('roles.deleted') })
+      choose(null)
+    } catch (e) {
+      toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
+    }
+  }
 
-      <div className="max-w-full overflow-x-auto rounded-card border border-border bg-surface">
-        <table className="w-max min-w-full border-collapse text-[13px]">
-          <thead>
-            <tr className="bg-surface2">
-              <th rowSpan={2} scope="col" className="sticky left-0 z-10 min-w-[140px] bg-surface2 px-3 py-2 sm:min-w-[200px] text-left align-bottom font-semibold text-text">{t('roles.role')}</th>
-              {groups.map((g) => (
-                <th key={g.key} colSpan={g.items.length} scope="colgroup" className="border-l border-border px-2 pt-2 text-left text-[11px] font-bold uppercase tracking-wide text-muted">{t(`roles.group.${g.key}`)}</th>
-              ))}
-            </tr>
-            <tr className="bg-surface2">
-              {groups.map((g) => g.items.map((c, i) => (
-                <th key={c.key} scope="col" className={cn('w-[92px] px-2 pb-2 pt-1 text-left align-bottom text-[12px] font-semibold leading-4 text-text', i === 0 && 'border-l border-border')}>
-                  {pickText(c.label, lang)}
-                </th>
-              )))}
-            </tr>
-          </thead>
-          <tbody>
-            {list.map((r) => {
-              const id = String(r.id)
-              const name = pickText(r.name, lang)
-              return (
-                <tr key={id} className={cn('border-t border-border', !r.is_active && 'opacity-60')}>
-                  <th scope="row" className="sticky left-0 z-10 bg-surface px-3 py-2 text-left align-top font-normal">
-                    <span className="flex items-start justify-between gap-2">
-                      <span className="min-w-0">
-                        <span className="block font-semibold text-text">{name}</span>
-                        <span className="block text-[12px] text-muted">{r.people_count === 1 ? t('roles.person') : t('roles.people', { count: r.people_count ?? 0 })}</span>
-                        <span className="mt-1 flex gap-1">
-                          {r.is_system && <Tag tone="neutral">{t('roles.builtIn')}</Tag>}
-                          {!r.is_active && <Tag tone="neutral">{t('roles.retired')}</Tag>}
-                        </span>
-                      </span>
-                      <DropdownMenu label={t('roles.actions', { name })} items={[
-                        { key: 'edit', label: t('roles.rename'), onSelect: () => setDialog(r) },
-                        { key: 'retire', label: r.is_active ? t('roles.retire') : t('roles.restore'), hidden: r.is_system, onSelect: () => act.mutateAsync({ action: 'update', id: r.id, value: { is_active: !r.is_active } }).catch((e) => toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })) },
-                        { key: 'delete', label: t('roles.delete'), danger: true, hidden: r.is_system, onSelect: () => remove(r) },
-                      ]} trigger={(props) => <button type="button" {...props} className="flex h-7 w-7 items-center justify-center rounded text-muted hover:bg-surface2 hover:text-text"><MoreHorizontal size={15} aria-hidden /><span className="sr-only">{t('roles.actions', { name })}</span></button>} />
+  const roleList = (
+    <ul className="flex flex-col gap-2" aria-label={t('roles.tabRoles')}>
+      {list.map((r) => {
+        const on = selected && String(r.id) === id
+        return (
+          <li key={r.id}>
+            <button type="button" onClick={() => choose(r)} aria-current={on ? 'true' : undefined}
+              className={cn(
+                'flex w-full items-center justify-between gap-2 rounded-card border bg-surface px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                on ? 'border-primary bg-primary-soft' : 'border-border hover:bg-surface2',
+                !r.is_active && 'opacity-60',
+              )}>
+              <span className="min-w-0">
+                <span className="block truncate text-[14px] font-semibold text-text">{pickText(r.name, lang)}</span>
+                <span className="block text-[12px] text-muted">
+                  {r.is_system ? t('roles.u9.peopleBuiltIn', { people: peopleText(r) }) : peopleText(r)}
+                  {!r.is_active && ` · ${t('roles.retired')}`}
+                </span>
+              </span>
+              <ChevronRight size={16} aria-hidden className="shrink-0 text-muted" />
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+
+  const panel = selected && (
+    <section className="overflow-hidden rounded-card border border-border bg-surface" aria-labelledby="role-panel-title">
+      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,52px)] items-center gap-x-1 bg-surface2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_repeat(3,64px)] sm:px-4">
+        <span className="flex min-w-0 items-center gap-1">
+          <h2 id="role-panel-title" className="truncate text-[13px] font-bold text-text">{t('roles.u9.whatTheyCanDo', { name: pickText(selected.name, lang) })}</h2>
+          {wide && (
+            <DropdownMenu label={t('roles.actions', { name: pickText(selected.name, lang) })} align="start" items={[
+              { key: 'edit', label: builtIn ? t('roles.u9.describe') : t('roles.rename'), onSelect: () => setDialog(selected) },
+              { key: 'retire', label: selected.is_active ? t('roles.retire') : t('roles.restore'), hidden: builtIn, onSelect: () => act.mutateAsync({ action: 'update', id: selected.id, value: { is_active: !selected.is_active } }).catch((e) => toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })) },
+              { key: 'delete', label: t('roles.delete'), danger: true, hidden: builtIn, onSelect: () => remove(selected) },
+            ]} trigger={(props) => <button type="button" {...props} className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted hover:bg-surface hover:text-text"><MoreHorizontal size={15} aria-hidden /><span className="sr-only">{t('roles.actions', { name: pickText(selected.name, lang) })}</span></button>} />
+          )}
+        </span>
+        {PERMISSION_COLUMNS.map((col) => <span key={col} className="text-center text-[12px] font-semibold text-muted">{t(`roles.u9.${col}`)}</span>)}
+      </div>
+      {groups.map((g) => (
+        <div key={g.key} role="group" aria-labelledby={`grp-${g.key}`}>
+          <p id={`grp-${g.key}`} className="border-t border-border px-3 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted sm:px-4">{t(`roles.group.${g.key}`)}</p>
+          {g.rows.map((row) => {
+            const rowLabel = row.label ? pickText(row.label, lang) : t(`roles.row.${row.key}`)
+            return (
+              <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_repeat(3,52px)] items-center gap-x-1 border-t border-border px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_repeat(3,64px)] sm:px-4">
+                <span className="text-[13px] text-text">{rowLabel}</span>
+                {PERMISSION_COLUMNS.map((col) => {
+                  const key = row[col]
+                  if (!key) return <span key={col} aria-hidden />
+                  const on = held.includes(key)
+                  const reason = locks[id]?.[key]
+                  const changed = on !== saved.includes(key)
+                  return (
+                    <span key={col} className={cn('flex justify-center rounded py-0.5', changed && 'bg-warning-soft')} title={reason ? t('roles.locked', { reason }) : undefined}>
+                      <input type="checkbox" className="h-4 w-4 accent-primary disabled:cursor-not-allowed" checked={on}
+                        disabled={!editable || reason != null}
+                        aria-label={t('roles.cell', { role: pickText(selected.name, lang), capability: `${rowLabel}: ${t(`roles.u9.${col}`)}` })}
+                        onChange={(e) => setDraft(toggleCell({ [id]: held }, id, key, e.target.checked)[id])} />
+                      {reason != null && editable && <Lock size={10} aria-hidden className="-ml-0.5 -mt-1 text-muted" />}
                     </span>
-                  </th>
-                  {groups.map((g) => g.items.map((c, i) => {
-                    const held = (matrix[id] ?? []).includes(c.key)
-                    const reason = locks[id]?.[c.key]
-                    const changed = held !== (saved[id] ?? []).includes(c.key)
-                    return (
-                      <td key={c.key} className={cn('px-2 py-2 text-center align-middle', i === 0 && 'border-l border-border', changed && 'bg-warning-soft')}>
-                        <span className="relative inline-flex items-center" title={reason ? t('roles.locked', { reason }) : undefined}>
-                          <input type="checkbox" className="h-4 w-4 accent-primary disabled:opacity-60" checked={held} disabled={reason != null}
-                            aria-label={t('roles.cell', { role: name, capability: pickText(c.label, lang) })}
-                            aria-describedby={reason ? `lock-${id}-${c.key}` : undefined}
-                            onChange={(e) => setDraft(toggleCell(matrix, id, c.key, e.target.checked))} />
-                          {reason != null && <Lock size={10} aria-hidden className="absolute -right-3 -top-1 text-muted" />}
-                          {reason != null && <span id={`lock-${id}-${c.key}`} className="sr-only">{t('roles.locked', { reason })}</span>}
-                        </span>
-                      </td>
-                    )
-                  }))}
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      ))}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-3 sm:px-4">
+        <span className="text-[12px] text-muted">{!wide ? t('roles.u9.phoneNote') : builtIn ? t('roles.u9.builtInFooter') : t('roles.u9.customFooter')}</span>
+        {wide && (changes.length > 0 ? (
+          <span className="flex gap-2" role="status">
+            <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>{t('roles.discard')}</Button>
+            <Button size="sm" onClick={save} loading={act.isPending}>{t('roles.save')}</Button>
+          </span>
+        ) : (
+          <Button variant="secondary" size="sm" onClick={copy} loading={act.isPending}>{t('roles.u9.copy')}</Button>
+        ))}
       </div>
+    </section>
+  )
 
-      {changes.length > 0 && (
-        <div className="sticky bottom-3 z-20 flex flex-wrap items-center justify-between gap-2 rounded-card border border-border bg-surface px-4 py-3 shadow-lg">
-          <span className="text-[13px] font-semibold text-text" role="status">{t('roles.unsaved', { count: changes.reduce((n, c) => n + c.added.length + c.removed.length, 0) })}</span>
-          <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => setDraft(null)}>{t('roles.discard')}</Button>
-            <Button onClick={save} loading={act.isPending}>{t('roles.save')}</Button>
-          </div>
+  return (
+    <>
+      {wide ? (
+        <div className="grid items-start gap-4 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)]">
+          {roleList}
+          {panel}
+        </div>
+      ) : selected ? (
+        <div className="flex flex-col gap-3">
+          <button type="button" onClick={() => choose(null)} className="inline-flex items-center gap-1 self-start text-[13px] font-semibold text-primary">
+            <ChevronLeft size={16} aria-hidden />{t('roles.u9.back')}
+          </button>
+          {panel}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {roleList}
+          <p className="flex items-center gap-2 rounded-control bg-surface2 px-3 py-2.5 text-[12px] text-text"><Info size={14} aria-hidden className="shrink-0 text-muted" />{t('roles.u9.phoneNote')}</p>
         </div>
       )}
-
       {dialog && <RoleDialog key={dialog === 'new' ? 'new' : dialog.id} role={dialog === 'new' ? null : dialog} onClose={() => setDialog(null)} />}
-    </div>
+    </>
   )
 }
 
@@ -295,17 +344,27 @@ function ApprovalsTab() {
   )
 }
 
-/** S2 Roles & permissions (Administration). Needs settings.manage; the API refuses everyone else. */
+/** 3.24 Roles and permissions (Figma 111:1585, 111:2052). Needs settings.manage; the API refuses everyone else. */
 export default function RolesPermissions() {
   const t = useT()
+  const wide = useMediaQuery('(min-width: 768px)')
   const [params, setParams] = useSearchParams()
+  const [dialog, setDialog] = useState(false)
   const tab = params.get('tab') === 'approvals' ? 'approvals' : 'roles'
   return (
     <div>
-      <PageHeader title={t('roles.title')} subtitle={t('roles.subtitle')} />
-      <Tabs tabs={[{ key: 'roles', label: t('roles.tabRoles') }, { key: 'approvals', label: t('roles.tabApprovals') }]} active={tab}
-        onChange={(key) => setParams(key === 'roles' ? {} : { tab: key }, { replace: true })} label={t('roles.title')} className="mb-4" />
-      <Fragment key={tab}>{tab === 'roles' ? <RolesTab /> : <ApprovalsTab />}</Fragment>
+      <PageHeader
+        back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('roles.title')}</span>}
+        title={t('roles.title')}
+        subtitle={t('roles.u9.subtitle')}
+        actions={wide && tab === 'roles' ? <Button onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
+      />
+      {wide && (
+        <Tabs tabs={[{ key: 'roles', label: t('roles.tabRoles') }, { key: 'approvals', label: t('roles.u9.tabSteps') }]} active={tab}
+          onChange={(key) => setParams(key === 'roles' ? {} : { tab: key }, { replace: true })} label={t('roles.title')} className="mb-4" />
+      )}
+      <Fragment key={tab}>{tab === 'roles' || !wide ? <RolesView /> : <ApprovalsTab />}</Fragment>
+      {dialog && <RoleDialog role={null} onClose={() => setDialog(false)} />}
     </div>
   )
 }

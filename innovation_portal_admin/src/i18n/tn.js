@@ -9,6 +9,8 @@ import { ideasTn } from './ideas'
 import { programmesTn } from './programmes'
 import { conversationsTn } from './conversations'
 import { reviewTn } from './review'
+import { usersTn } from './users'
+import { platformSettingsTn } from './platformSettings'
 import { contentBTn } from './contentB'
 import { channelsTn } from './channels'
 
@@ -150,6 +152,8 @@ const tn = {
   ...programmesTn,
   ...conversationsTn,
   ...reviewTn,
+  ...usersTn,
+  ...platformSettingsTn,
   ...contentBTn,
   ...channelsTn,
   ...challengesTn,

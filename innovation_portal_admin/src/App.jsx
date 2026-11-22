@@ -38,6 +38,7 @@ const ChallengeBuilder = lazy(() => import('./pages/challenges/ChallengeBuilder'
 const Forms = lazy(() => import('./pages/forms/Forms'))
 const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
+const Integrations = lazy(() => import('./pages/admin/platform/Integrations'))
 // C2: WhatsApp and USSD journeys (channels.manage)
 const ChannelsOverview = lazy(() => import('./pages/channels/ChannelsOverview'))
 const ChannelConnections = lazy(() => import('./pages/channels/ChannelConnections'))
@@ -166,6 +167,7 @@ export default function App() {
                 </Route>
                 <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
+                  <Route path="/admin/integrations"            element={<ErrorBoundary><Integrations /></ErrorBoundary>} />
                   <Route path="/admin/live-chat"               element={<ErrorBoundary><LiveChatSettings /></ErrorBoundary>} />
                   <Route path="/admin/roles"                   element={<ErrorBoundary><RolesPermissions /></ErrorBoundary>} />
                 </Route>

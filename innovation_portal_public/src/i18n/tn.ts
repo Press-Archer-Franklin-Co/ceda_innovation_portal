@@ -11,6 +11,7 @@ import { inviteTn } from './invite'
 import { accountTn } from './account'
 import { challengeEntryTn } from './challengeEntry'
 import { liveChatTn } from './livechat'
+import { authStatesTn } from './authStates'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -442,6 +443,7 @@ const tn: Record<StringKey, string> = {
   ...accountTn,
   ...challengeEntryTn,
   ...liveChatTn,
+  ...authStatesTn,
 }
 
 export default tn
