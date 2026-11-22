@@ -20,7 +20,7 @@ class _StaffRedocView(SpectacularRedocView):
     permission_classes = [IsAdministrator]
 
 from apps.audit.views import SubmissionAuditLogListView
-from apps.assignments.views import OverdueAssignmentListView, ReviewerQueueStatsView, ReviewerQueueView, ReviewerSuggestionView
+from apps.assignments.views import OverdueAssignmentListView, ReviewerQueueCountsView, ReviewerQueueStatsView, ReviewerQueueView, ReviewerSuggestionView
 from apps.communications.message_views import SubmissionMessagesView
 from apps.assignments.saved_views import SavedViewDetailView, SavedViewListCreateView
 from apps.programs.challenge_views import CriteriaLibraryView
@@ -63,6 +63,7 @@ urlpatterns = [
     path("api/saved-views/<uuid:view_id>/", SavedViewDetailView.as_view(), name="saved-view-detail"),
     path("api/staff-search/", StaffSearchView.as_view(), name="staff-search"),
     path("api/reviewer-queue/stats/", ReviewerQueueStatsView.as_view(), name="reviewer-queue-stats-direct"),
+    path("api/reviewer-queue/counts/", ReviewerQueueCountsView.as_view(), name="reviewer-queue-counts"),
     path("api/assignments/overdue/", OverdueAssignmentListView.as_view(), name="assignments-overdue-direct"),
     path("api/reviewer-suggestions/", ReviewerSuggestionView.as_view(), name="reviewer-suggestions-direct"),
     path("api/events/", include("apps.events.urls")),
