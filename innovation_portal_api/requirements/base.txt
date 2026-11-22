@@ -17,3 +17,4 @@ pyotp>=2.9,<3
 qrcode>=7.4,<8
 fpdf2==2.7.9
 anthropic>=2.11,<3
+openai>=3.57,<4

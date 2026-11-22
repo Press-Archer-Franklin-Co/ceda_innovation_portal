@@ -2,10 +2,13 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from apps.assistant.models import Audience, Feature, Introduction, KnowledgeEntry, Language, ManualPage, ManualScreenshot
+from apps.assistant.models import FEATURE_DEFAULTS, AssistantSettings, Audience, Feature, Introduction, KnowledgeDocument, KnowledgeEntry, Language, ManualPage, ManualScreenshot
 
-def _lang_field():
-    return serializers.ChoiceField(choices=(("en", "English"), ("tn", "Setswana")), default="en")
+def _lang_field(default=None):
+    """Answer language. Left out, the answer is in the person's language (A2)."""
+    if default:
+        return serializers.ChoiceField(choices=(("en", "English"), ("tn", "Setswana")), default=default)
+    return serializers.ChoiceField(choices=(("en", "English"), ("tn", "Setswana")), required=False)
 
 
 class DraftCheckSerializer(serializers.Serializer):
@@ -108,30 +111,73 @@ class ReorderSerializer(serializers.Serializer):
     ids = serializers.ListField(child=serializers.UUIDField(), allow_empty=False, max_length=500)
 
 
+class RouteSerializer(serializers.Serializer):
+    provider = serializers.ChoiceField(choices=(("anthropic", "Claude"), ("openai", "OpenAI"), ("openai_compatible", "Other service")), required=False)
+    connection = serializers.UUIDField(required=False, allow_null=True)
+    model = serializers.CharField(max_length=80, required=False, allow_blank=True)
+
+
 class SettingsSerializer(serializers.Serializer):
     helper_on = serializers.BooleanField(required=False, help_text="The ai_helper feature switch.")
-    feature_draft_check = serializers.BooleanField(required=False)
-    feature_hints = serializers.BooleanField(required=False)
-    feature_related = serializers.BooleanField(required=False)
-    feature_help = serializers.BooleanField(required=False)
-    feature_web_chat = serializers.BooleanField(required=False)
-    allow_guests_help = serializers.BooleanField(required=False)
-    monthly_limit_usd = serializers.DecimalField(max_digits=8, decimal_places=2, min_value=Decimal("0"), required=False, coerce_to_string=False)
-    timeout_seconds = serializers.IntegerField(min_value=5, max_value=120, required=False)
+    keys_in_use = serializers.ChoiceField(choices=AssistantSettings.Keys.choices, required=False)
+    routes = serializers.DictField(child=RouteSerializer(allow_null=True), required=False, help_text="Feature key to {provider, connection, model}; null clears it.")
+    features = serializers.DictField(child=serializers.BooleanField(), required=False, help_text="Feature key to on or off.")
+    monthly_limit_usd = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0"), required=False)
+    send_names = serializers.BooleanField(required=False)
+    guests_can_use_guide = serializers.BooleanField(required=False)
+
+    def validate_routes(self, value):
+        unknown = sorted(set(value) - set(FEATURE_DEFAULTS))
+        if unknown:
+            raise serializers.ValidationError(f"Unknown features: {', '.join(unknown)}.")
+        return {key: (dict(route) if route else None) for key, route in value.items()}
+
+    def validate_features(self, value):
+        unknown = sorted(set(value) - set(FEATURE_DEFAULTS))
+        if unknown:
+            raise serializers.ValidationError(f"Unknown features: {', '.join(unknown)}.")
+        return value
 
     def validate(self, attrs):
         if not attrs:
             raise serializers.ValidationError("Send at least one setting.")
-        if "monthly_limit_usd" in attrs:
-            attrs["monthly_limit_usd"] = float(attrs["monthly_limit_usd"])
         return attrs
+
+
+class DocumentReviewSerializer(serializers.Serializer):
+    lang = _lang_field()
+
+
+class KnowledgeDocumentSerializer(serializers.ModelSerializer):
+    kind = serializers.ChoiceField(choices=KnowledgeDocument.Kind.choices, required=False)
+    audience = serializers.ChoiceField(choices=Audience.choices, required=False)
+    language = serializers.ChoiceField(choices=KnowledgeDocument.Language.choices, required=False)
+    file_name = serializers.CharField(source="asset.original_filename", read_only=True)
+    size_bytes = serializers.IntegerField(source="asset.size_bytes", read_only=True)
+    chunk_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = KnowledgeDocument
+        fields = ("id", "title", "kind", "audience", "language", "is_active", "status", "error", "file_name", "size_bytes", "chunk_count", "created_at", "updated_at")
+        read_only_fields = ("id", "status", "error", "file_name", "size_bytes", "chunk_count", "created_at", "updated_at")
+
+    def get_chunk_count(self, obj) -> int:
+        return obj.chunks.count()
+
+
+class KnowledgeDocumentUploadSerializer(serializers.Serializer):
+    file = serializers.FileField()
+    title = serializers.CharField(max_length=200, required=False, allow_blank=True, default="")
+    kind = serializers.ChoiceField(choices=KnowledgeDocument.Kind.choices, default=KnowledgeDocument.Kind.GUIDELINE)
+    audience = serializers.ChoiceField(choices=Audience.choices, default=Audience.EVERYONE)
+    language = serializers.ChoiceField(choices=KnowledgeDocument.Language.choices, default=KnowledgeDocument.Language.EN)
 
 
 class TryItSerializer(serializers.Serializer):
     feature = serializers.ChoiceField(choices=((Feature.DRAFT_CHECK.value, "Innovator guidance"), (Feature.HINTS.value, "Officer hints"), (Feature.HELP.value, "Help with the portal")))
     text = serializers.CharField(max_length=8000)
     guidance = serializers.CharField(max_length=4000, required=False, allow_blank=True, default="", help_text="Unsaved guidance to try. It is not stored.")
-    lang = _lang_field()
+    lang = _lang_field('en')
 
 
 class UsageQuerySerializer(serializers.Serializer):

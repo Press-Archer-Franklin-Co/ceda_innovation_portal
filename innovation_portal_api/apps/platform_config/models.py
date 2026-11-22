@@ -88,14 +88,14 @@ class IntegrationConnection(UUIDModel, TimeStampedModel):
         constraints = [
             models.UniqueConstraint(
                 fields=["kind"],
-                condition=models.Q(is_active=True) & ~models.Q(kind__in=["ussd", "whatsapp"]),
+                condition=models.Q(is_active=True) & ~models.Q(kind__in=["ussd", "whatsapp", "ai"]),
                 name="uq_one_active_integration_per_kind",
             )
         ]
 
     # Kinds that may have several active connections at once. Keep in step with the
     # constraint above.
-    MULTI_ACTIVE_KINDS = ("ussd", "whatsapp")
+    MULTI_ACTIVE_KINDS = ("ussd", "whatsapp", "ai")
 
     def __str__(self) -> str:
         return f"{self.kind}:{self.provider}:{self.name}"

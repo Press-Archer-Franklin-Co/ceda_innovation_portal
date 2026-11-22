@@ -15,7 +15,9 @@ from rest_framework.test import APIClient
 from apps.accounts.models import Role, RoleCapability, User
 from apps.accounts.services import RoleService
 from apps.assignments.models import Assignment
-from apps.assistant.client import AssistantClient, cost_usd
+from apps.assistant import gateway
+from apps.assistant.gateway import cost_usd
+from apps.assistant.models import AssistantSettings
 from apps.assistant.models import CachedAnswer, Introduction, KnowledgeEntry, ManualPage, ManualScreenshot, UsageRecord
 from apps.audit.models import AuditLog
 from apps.communications.models import Notification
@@ -34,13 +36,28 @@ BASE = "/api/assistant"
 GUIDANCE = "Always ask how the idea creates jobs in Botswana"
 
 DRAFT_ANSWER = {
-    "clear": ["The problem is easy to follow."],
+    "language": "en",
+    "overall": "almost",
+    "items": [
+        {"topic": "Problem", "status": "clear", "suggestion": "Clear: who has it and what it costs.", "field_key": "problem", "document_id": "", "page": 0},
+        {"topic": "Customers", "status": "missing", "suggestion": "Name your first shops.", "field_key": "who_benefits", "document_id": "", "page": 0},
+        {"topic": "Jobs", "status": "add_more", "suggestion": "Say how many jobs.", "field_key": "made_up_key", "document_id": "not-a-file", "page": 3},
+    ],
     "unclear": [{"field_key": "solution", "quote": "We will do things.", "suggestion": "Say what you will make and for whom."}],
-    "missing": [{"field_key": "who_benefits", "what": "Who will use it."}, {"field_key": "made_up_key", "what": "Jobs created."}],
     "officer_questions": ["How many jobs?", "Who pays?", "Where?", "A fourth question is cut."],
+    "files": [],
 }
-HINTS_ANSWER = {"summary": ["Line 1", "Line 2"], "strengths": ["Clear market"], "points_to_check": ["Check costs"], "next_step": "Ask for a budget."}
-HELP_ANSWER = {"answer": "Open My ideas and press Edit.", "page_ids": [], "screenshot_ids": [], "confident": True, "wants_person": False}
+HINTS_ANSWER = {
+    "language": "en",
+    "source_language": "en",
+    "summary": "A solar fridge for dairy farmers.",
+    "from_files": [{"file": "Business plan.pdf", "page": 3, "fact": "Each pack costs P4.20 to make."}],
+    "not_in_files": ["No proof of a place to work."],
+    "criteria_points": [{"criterion": "Value to Botswana", "point": "Uses local milk and solar power."}],
+    "points_to_check": ["Check costs"],
+    "next_step": "Ask for a budget.",
+}
+HELP_ANSWER = {"language": "en", "answer": "Open My ideas and press Edit.", "page_ids": [], "screenshot_ids": [], "confident": True, "wants_person": False}
 
 
 def data(response):
@@ -122,17 +139,24 @@ class AssistantTestCase(TestCase):
             RoleService.assign_roles(user, list(roles))
         return user
 
-    def connect(self, *, limit=50, **config):
+    def connect(self, *, limit=50, guests=False, provider="anthropic", model="claude-opus-5-5", environment="test", name="Claude", **switches):
+        """An active AI connection plus the 3.34b settings. feature_x=False switches feature x off."""
         connection = IntegrationConnection.objects.create(
             kind="ai",
-            provider="anthropic",
-            name="Claude",
-            config={"model": "claude-opus-5-5", "monthly_limit_usd": limit, "timeout_seconds": 30, **config},
+            provider=provider,
+            name=name,
+            config={"model": model, "environment": environment, "timeout_seconds": 30},
             secrets_encrypted=encrypt_secrets({"api_key": API_KEY}),
             status=IntegrationConnection.Status.ACTIVE,
             is_active=True,
         )
+        row = AssistantSettings.load()
+        row.monthly_limit_usd = Decimal(str(limit))
+        row.guests_can_use_guide = guests
+        row.features = {key.removeprefix("feature_"): bool(value) for key, value in switches.items() if key.startswith("feature_")}
+        row.save()
         reset_platform_caches(self)
+        cache.clear()
         return connection
 
     def switch_on(self, **config):
@@ -141,7 +165,7 @@ class AssistantTestCase(TestCase):
 
     def fake(self, *answers):
         fake = FakeClaude(*answers)
-        patcher = patch("apps.assistant.client.make_sdk_client", fake)
+        patcher = patch("apps.assistant.providers.anthropic.make_sdk_client", fake)
         patcher.start()
         self.addCleanup(patcher.stop)
         return fake
@@ -188,7 +212,9 @@ class HiddenWhenOffTests(AssistantTestCase):
     def assert_everything_hidden(self, fake):
         submission = self.idea("Hidden idea", owner=self.innovator)
         self.as_user(self.innovator)
-        self.assertEqual(data(self.client.get(f"{BASE}/status/")), {"available": False, "features": {"draft_check": False, "hints": False, "related": False, "help": False, "web_chat": False}, "guests_can_ask": False})
+        status = data(self.client.get(f"{BASE}/status/"))
+        self.assertFalse(status["available"])
+        self.assertFalse(any(status["features"].values()))
         self.assertEqual(data(self.draft_check(self.draft(self.innovator))), {"available": False})
         self.assertEqual(data(self.client.post(f"{BASE}/help/", {"question": "How do I edit?"}, format="json")), {"available": False})
         self.as_user(self.officer)
@@ -217,10 +243,11 @@ class HiddenWhenOffTests(AssistantTestCase):
     def test_one_feature_switched_off_hides_only_that_feature(self):
         self.fake(message(HINTS_ANSWER))
         self.switch_on(feature_hints=False)
+        self.as_user(self.officer)
         status = data(self.client.get(f"{BASE}/status/"))
         self.assertFalse(status["features"]["hints"])
         self.assertTrue(status["features"]["draft_check"])
-        self.as_user(self.officer)
+        self.assertTrue(status["features"]["related"])
         self.assertEqual(data(self.client.get(f"{BASE}/submissions/{self.idea('X').pk}/hints/")), {"available": False})
 
     def test_timeout_and_refused_key_hide_quietly(self):
@@ -241,7 +268,7 @@ class HiddenWhenOffTests(AssistantTestCase):
         fake = self.fake(http_error(anthropic.OverloadedError, 529), message(DRAFT_ANSWER))
         self.switch_on()
         self.as_user(self.innovator)
-        with patch("apps.assistant.client.time.sleep"):
+        with patch("apps.assistant.providers.anthropic.time.sleep"):
             response = self.draft_check(self.draft(self.innovator))
         self.assertTrue(data(response)["available"])
         self.assertEqual(len(fake.calls), 2)
@@ -274,7 +301,10 @@ class DraftCheckTests(AssistantTestCase):
         self.assertTrue(result["available"])
         self.assertEqual(result["unclear"][0]["quote"], "We will do things.")
         self.assertEqual(len(result["officer_questions"]), 3)
-        self.assertEqual([item["field_key"] for item in result["missing"]], ["who_benefits", ""])
+        self.assertEqual([item["field_key"] for item in result["items"]], ["problem", "who_benefits", ""])
+        self.assertEqual([item["status"] for item in result["items"]], ["clear", "missing", "add_more"])
+        self.assertEqual(result["items"][2]["document_id"], "")  # a file id the draft does not have is dropped
+        self.assertEqual((result["overall"], result["ready_count"], result["language"]), ("almost", 1, "en"))
         self.assertIn("You decide", result["note"])
 
         request = fake.last
@@ -382,7 +412,7 @@ class HintsTests(AssistantTestCase):
         self.fake(message(HINTS_ANSWER))
         self.switch_on()
         judge = self.person("c3-judge2@example.com", RoleType.JUDGE)
-        RoleCapability.objects.create(role=Role.objects.get(code=RoleType.JUDGE), capability="assistant.hints")
+        RoleCapability.objects.get_or_create(role=Role.objects.get(code=RoleType.JUDGE), capability="assistant.hints")
         capabilities.clear_cache()
         submission = self.idea("Not assigned", owner=self.innovator)
         self.as_user(judge)
@@ -391,8 +421,10 @@ class HintsTests(AssistantTestCase):
 
 class RelatedTests(AssistantTestCase):
     def test_related_ideas_never_include_submissions_the_officer_cannot_see(self):
-        judge = self.person("c3-judge3@example.com", RoleType.JUDGE)
-        RoleCapability.objects.create(role=Role.objects.get(code=RoleType.JUDGE), capability="assistant.hints")
+        # An analyst given both capabilities still only opens the ideas assigned to them.
+        judge = self.person("c3-analyst3@example.com", RoleType.INNOVATION_ANALYST)
+        for capability in ("assistant.hints", "entries.search"):
+            RoleCapability.objects.get_or_create(role=Role.objects.get(code=RoleType.INNOVATION_ANALYST), capability=capability)
         capabilities.clear_cache()
         main = self.idea("Sorghum flour mill", owner=self.innovator, sector=self.sector, answer="We mill sorghum into flour.")
         seen = self.idea("Sorghum farming cooperative", owner=self.other_innovator, sector=self.sector, answer="We grow sorghum for mills.")
@@ -519,7 +551,7 @@ class HelpTests(AssistantTestCase):
         self.fake(message({**HELP_ANSWER, "confident": False}))
         self.switch_on()
         self.as_user(self.innovator)
-        with patch("apps.assistant.services.open_handoff", return_value=SimpleNamespace(pk="conv-1")) as handoff:
+        with patch("apps.assistant.features.open_handoff", return_value=SimpleNamespace(pk="conv-1")) as handoff:
             unsure = data(self.client.post(f"{BASE}/help/", {"question": "Why was my idea turned down?"}, format="json"))
             direct = data(self.client.post(f"{BASE}/help/", {"question": "I want a person", "handoff": True}, format="json"))
         self.assertTrue(unsure["handed_over"])
@@ -544,11 +576,11 @@ class HelpTests(AssistantTestCase):
         fake = self.fake(message(HELP_ANSWER))
         self.switch_on()
         self.assertEqual(data(self.client.post(f"{BASE}/help/", {"question": "How do I start?"}, format="json")), {"available": False})
-        self.assertFalse(data(self.client.get(f"{BASE}/status/"))["guests_can_ask"])
-        IntegrationConnection.objects.filter(kind="ai").update(config={"model": "claude-opus-5-5", "monthly_limit_usd": 50, "allow_guests_help": True})
+        self.assertFalse(data(self.client.get(f"{BASE}/status/"))["features"]["guide"])
+        AssistantSettings.objects.update(guests_can_use_guide=True)
         reset_platform_caches(self)
         self.assertTrue(data(self.client.post(f"{BASE}/help/", {"question": "How do I start?"}, format="json"))["available"])
-        self.assertTrue(data(self.client.get(f"{BASE}/status/"))["guests_can_ask"])
+        self.assertTrue(data(self.client.get(f"{BASE}/status/"))["features"]["guide"])
         self.assertIsNone(fake.last.get("thinking", {}).get("budget_tokens"))
 
     def test_empty_question_is_a_validation_error(self):
@@ -591,11 +623,13 @@ class UsageTests(AssistantTestCase):
         self.draft_check(self.draft(self.innovator))
         self.as_user(self.admin)
         report = data(self.client.get(f"{BASE}/admin/usage/"))
-        self.assertEqual(report["month"]["limit_usd"], "10")
+        self.assertEqual(report["month"]["limit_usd"], "10.00")
         self.assertEqual(report["month"]["spend_usd"], "0.01")
-        self.assertEqual(report["by_feature"][0]["feature"], "draft_check")
-        self.assertEqual(report["by_feature"][0]["calls"], 1)
-        self.assertEqual(self.client.get(f"{BASE}/admin/usage/?days=0").status_code, 400)
+        row = report["rows"][0]
+        self.assertEqual((row["feature"], row["provider"], row["calls"], row["tokens_in"], row["tokens_out"]), ("draft_check", "anthropic", 1, 3100, 500))
+        csv_response = self.client.get(f"{BASE}/admin/usage/?download=csv")
+        self.assertEqual(csv_response["Content-Type"], "text/csv; charset=utf-8")
+        self.assertIn("Idea coach (innovators),anthropic,1,0,3100,500,0.01", csv_response.content.decode())
 
 
 # -- admin ----------------------------------------------------------------------------------------
@@ -610,24 +644,29 @@ class AdminTests(AssistantTestCase):
         self.client.force_authenticate(None)
         self.assertIn(self.client.get(f"{BASE}/admin/overview/").status_code, (401, 403))
 
-    def test_overview_says_waiting_for_a_key(self):
+    def test_overview_says_needs_setup(self):
         self.as_user(self.admin)
         overview = data(self.client.get(f"{BASE}/admin/overview/"))
-        self.assertEqual(overview["state"], "waiting_for_key")
-        self.assertIn("Never sent", overview["privacy_note"])
-        self.assertIn("Ga go ke go romelwa", data(self.client.get(f"{BASE}/admin/overview/?lang=tn"))["privacy_note"])
+        self.assertEqual(overview["state"], "needs_setup")
+        self.assertEqual(overview["integrations_path"], "/staff/admin/platform?tab=ai")
+        self.assertTrue(any("bank details" in line for line in overview["privacy_note"]))
+        self.assertTrue(any("banka" in line for line in data(self.client.get(f"{BASE}/admin/overview/?lang=tn"))["privacy_note"]))
+        status = data(self.client.get(f"{BASE}/status/"))
+        self.assertEqual(status["setup"]["state"], "needs_setup")
 
     def test_settings_keep_the_connection_active_and_are_audited(self):
         connection = self.switch_on()
         self.as_user(self.admin)
-        response = self.client.patch(f"{BASE}/admin/settings/", {"feature_related": False, "monthly_limit_usd": "25.50", "helper_on": True}, format="json")
+        response = self.client.patch(f"{BASE}/admin/settings/", {"features": {"related": False}, "monthly_limit_usd": "25.50", "helper_on": True, "send_names": True}, format="json")
         self.assertEqual(response.status_code, 200, response.content)
         connection.refresh_from_db()
         self.assertTrue(connection.is_active)
-        self.assertEqual(connection.config["monthly_limit_usd"], 25.5)
-        self.assertFalse(data(response)["status"]["features"]["related"])
+        row = AssistantSettings.load()
+        self.assertEqual((row.monthly_limit_usd, row.send_names, row.feature_on("related"), row.feature_on("hints")), (Decimal("25.50"), True, False, True))
+        self.assertFalse(next(item for item in data(response)["features"] if item["key"] == "related")["on"])
         self.assertTrue(AuditLog.objects.filter(action_type="assistant_settings_updated").exists())
-        self.assertEqual(self.client.patch(f"{BASE}/admin/settings/", {"timeout_seconds": 1}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"{BASE}/admin/settings/", {"features": {"nonsense": True}}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"{BASE}/admin/settings/", {"keys_in_use": "staging"}, format="json").status_code, 400)
         self.assertEqual(self.client.patch(f"{BASE}/admin/settings/", {}, format="json").status_code, 400)
 
     def test_knowledge_and_manual_crud_is_audited(self):
@@ -677,7 +716,7 @@ class AdminTests(AssistantTestCase):
     def test_try_it_tells_the_admin_why_it_cannot_answer(self):
         set_features(self, ai_helper=True)
         self.as_user(self.admin)
-        self.assertEqual(data(self.client.post(f"{BASE}/admin/try/", {"feature": "help", "text": "x"}, format="json")), {"available": False, "reason": "no_connection"})
+        self.assertEqual(data(self.client.post(f"{BASE}/admin/try/", {"feature": "help", "text": "x"}, format="json")), {"available": False, "reason": "no_connection", "detail": ""})
 
 
 # -- the connection in Platform settings ----------------------------------------------------------
@@ -688,10 +727,10 @@ class ConnectionTests(AssistantTestCase):
         fake = self.fake(message({}, model="claude-opus-5-5"))
         self.as_user(self.admin)
         providers = data(self.client.get("/api/platform/providers/?kind=ai"))
-        self.assertEqual([p["key"] for p in providers], ["anthropic"])
+        self.assertEqual(sorted(p["key"] for p in providers), ["anthropic", "openai", "openai_compatible"])
         response = self.client.post(
             "/api/platform/integrations/",
-            {"kind": "ai", "provider": "anthropic", "name": "Claude", "config": {"model": "claude-haiku-5-5", "monthly_limit_usd": 20}, "secrets": {"api_key": API_KEY}},
+            {"kind": "ai", "provider": "anthropic", "name": "Claude", "config": {"model": "claude-haiku-5-5", "environment": "test"}, "secrets": {"api_key": API_KEY}},
             format="json",
         )
         self.assertEqual(response.status_code, 201, response.content)
@@ -727,7 +766,7 @@ class ConnectionTests(AssistantTestCase):
         set_features(self, ai_helper=True)
         IntegrationConnection.objects.create(kind="ai", provider="anthropic", name="Broken", config={}, secrets_encrypted="not-a-token", status="active", is_active=True)
         reset_platform_caches(self)
-        self.assertIsNone(AssistantClient.runtime())
+        self.assertIsNone(gateway.resolve_route("help"))
         response = self.client.get(f"{BASE}/status/")
         self.assertEqual(response.status_code, 200)
         self.assertFalse(data(response)["available"])

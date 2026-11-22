@@ -51,7 +51,8 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     "users.manage": (R.ADMINISTRATOR,),
     "settings.manage": (R.ADMINISTRATOR,),
     # C3 AI helper: officer hints and related ideas on submissions they can open; tune the helper.
-    "assistant.hints": (R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
+    # Judges see hints only for entries assigned to them (SubmissionSelector.for_user decides).
+    "assistant.hints": (R.JUDGE, R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     "assistant.manage": (R.ADMINISTRATOR,),
     # C2: WhatsApp and USSD journeys, channel connections and their activity.
     "channels.manage": OFFICER_ADMIN,
@@ -80,7 +81,7 @@ CATALOGUE: dict[str, dict] = {
     # TODO tn-review: the two assistant label_tn values are first drafts by the ai lane.
     "assistant.hints": {
         "group": "ideas",
-        "label": "See AI helper hints and related ideas",
+        "label": "See AI helper summaries and related ideas",
         "label_tn": "Bona dikakantsho tsa mothusi wa AI le dikakanyo tse di amanang",
         "description": "Summary, points to check and similar or complementary ideas on submissions the person can already open.",
     },
