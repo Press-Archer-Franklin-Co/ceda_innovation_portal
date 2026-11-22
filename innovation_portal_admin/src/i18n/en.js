@@ -10,6 +10,7 @@ import { programmesEn } from './programmes'
 import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 import { contentBEn } from './contentB'
+import { brandEn } from './brand'
 
 const en = {
   'lang.en': 'English',
@@ -132,8 +133,8 @@ const en = {
   'staff.nav.label': 'Staff menu',
   'staff.search': 'Search ideas, challenges and people',
   'staff.viewSite': 'View public site',
-  'staff.collapse': 'Hide menu',
-  'staff.expand': 'Show menu',
+  'staff.collapse': 'Collapse menu',
+  'staff.expand': 'Expand menu',
   'staff.console': 'Staff console',
   // Crop dialog (components/ui/ImageCropModal)
   'crop.title': 'Position and crop the picture',
@@ -150,6 +151,7 @@ const en = {
   ...conversationsEn,
   ...reviewEn,
   ...contentBEn,
+  ...brandEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,

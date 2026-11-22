@@ -7,6 +7,8 @@ import HelpBubble from '../livechat/HelpBubble'
 import { useT } from '../../i18n'
 import PageSkeleton from '../ui/PageSkeleton'
 import PageErrorBoundary from '../ui/PageErrorBoundary'
+import { BootStep } from '../ui/BrandLoader'
+import { boot } from '../../lib/boot'
 
 /** Public shell: utility bar + nav, page, footer; on phone a sticky tab bar. Page background is always bg (white). */
 export default function Layout() {
@@ -30,6 +32,7 @@ export default function Layout() {
         {/* A page that fails shows an error with Retry inside the shell; header and footer stay. */}
         <PageErrorBoundary resetKey={pathname}>
           <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>}>
+            <BootStep boot={boot} />
             <Outlet />
           </Suspense>
         </PageErrorBoundary>

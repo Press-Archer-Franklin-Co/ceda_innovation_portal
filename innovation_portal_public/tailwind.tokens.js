@@ -33,6 +33,7 @@ export const optionDColors = {
   'on-accent': c('on-accent'),
   amber: { DEFAULT: c('amber') },
   yellow: { DEFAULT: c('yellow') },
+  'brand-text': { DEFAULT: c('brand-text') }, // the words of the CEDA logo (U12)
   success: { DEFAULT: c('success'), soft: c('success-soft') },
   warning: { DEFAULT: c('warning'), soft: c('warning-soft') },
   danger: { DEFAULT: c('danger'), soft: c('danger-soft') },

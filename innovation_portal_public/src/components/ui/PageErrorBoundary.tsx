@@ -2,6 +2,7 @@ import { Component, ErrorInfo, ReactNode } from 'react'
 import { ErrorState } from './EmptyState'
 import Button from './Button'
 import { useT } from '../../i18n'
+import { boot } from '../../lib/boot'
 
 // After a deploy the old page files are gone, so a lazy import can fail. Offer a reload for that.
 const isChunkError = (error: unknown) =>
@@ -54,6 +55,8 @@ export default class PageErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
+    // The page's own error (with Retry) is what to show, so start-up is over (U12 loader).
+    boot.done('page')
     if (import.meta.env.DEV) console.error('Page failed to draw', error, info.componentStack)
   }
 
