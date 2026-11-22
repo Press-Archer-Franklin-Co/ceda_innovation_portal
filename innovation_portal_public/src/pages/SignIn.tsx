@@ -51,6 +51,7 @@ export default function SignIn() {
   // A two-step check still waiting (for example after staff single sign-on) opens on that step.
   const [step, setStep] = useState<Step>(() => (pendingMfa ? { kind: 'mfa' } : { kind: 'identify' }))
   const [identifier, setIdentifier] = useState('')
+  const [foundAccount, setFoundAccount] = useState(false)
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [wait, setWait] = useState(0)
@@ -184,7 +185,10 @@ export default function SignIn() {
       if (isSignedIn(result)) await signedIn(result)
       else {
         // This phone or email already has an account: finish with a code for that account, never a second one.
-        if (result.found_account && result.identifier) setIdentifier(result.identifier)
+        if (result.found_account && result.identifier) {
+          setIdentifier(result.identifier)
+          setFoundAccount(true)
+        }
         showStart(result)
       }
     } catch (err) {
@@ -213,6 +217,7 @@ export default function SignIn() {
   }
 
   function backToStart() {
+    setFoundAccount(false)
     setStep({ kind: 'identify' })
     setError('')
     setCode('')
@@ -295,6 +300,7 @@ export default function SignIn() {
                 finish({ code })
               }}
             >
+              {foundAccount && <p role="status" className="rounded-control bg-accent-soft px-3 py-2.5 text-d-body-s text-text">{t('auth.foundAccount')}</p>}
               <div>
                 <h2 className="font-heading text-d-h3 text-text">{t('auth.codeTitle')}</h2>
                 <p className="mt-2 text-d-body-s text-muted">
