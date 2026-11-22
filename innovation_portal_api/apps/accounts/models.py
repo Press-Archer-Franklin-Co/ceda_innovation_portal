@@ -63,6 +63,8 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     # U7: test accounts for demos. They can sign in only while the server allows demo
     # logins (INNOVATION_PORTAL_DEMO_LOGINS); see apps.accounts.demo_logins.
     is_demo_account = models.BooleanField(default=False, db_index=True)
+    # R-48 (3.39) and R-51 (2.9): the person's photo.
+    photo = models.ImageField(upload_to="profile-photos/", null=True, blank=True)
 
     objects = UserManager()
 
