@@ -194,7 +194,7 @@ class ApprovalDetailView(APIView):
         summary="One approval request with Live now and Proposed (3.25)",
         description="The list item plus compare: {change_type: new|edit, changed_groups: [section names], changed: [field keys], "
         "fields: [{key, group, label, live, proposed, changed}]}. Texts are {en, tn}. live is null when nothing is live yet. "
-        "The live version stays until the change is approved. Send back needs a comment; nobody approves their own change.",
+        "The live version stays until the change is approved. Send back needs a comment. Whether you can approve your own change is set in Approval steps.",
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, approval_id):

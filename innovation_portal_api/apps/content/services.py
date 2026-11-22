@@ -82,7 +82,7 @@ class ApprovalService:
     def flow(cls):
         from apps.content.models import ApprovalFlow, ApprovalStep
 
-        flow, created = ApprovalFlow.objects.get_or_create(key=cls.FLOW_KEY, defaults={"approvers_can_approve_own_work": False})
+        flow, created = ApprovalFlow.objects.get_or_create(key=cls.FLOW_KEY, defaults={"approvers_can_approve_own_work": True})
         if created or not flow.steps.exists():
             ApprovalStep.objects.get_or_create(flow=flow, order=1, defaults={"name": "Approval", "capability": "content.approve", "approvals_needed": 1, "language": "all"})
         return flow

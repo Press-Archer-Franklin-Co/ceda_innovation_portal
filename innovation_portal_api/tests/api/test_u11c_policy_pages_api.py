@@ -197,7 +197,12 @@ class ApprovalTests(PolicyTestCase):
         self.assertEqual(english_only["languages"], ["en", "tn"])  # the title already has Setswana
         self.assertEqual(ApprovalRequest.objects.get(pk=approval["id"]).status, "withdrawn")
 
-    def test_author_cannot_approve_own_change(self):
+    def test_author_cannot_approve_own_change_when_the_switch_is_off(self):
+        from apps.content.models import ApprovalFlow
+        from apps.content.services import ApprovalService
+
+        ApprovalService.flow()
+        ApprovalFlow.objects.update(approvers_can_approve_own_work=False)
         approval = self.submit()
         response = self.approve(approval["id"], user=self.officer)
         self.assertEqual(response.status_code, 403)

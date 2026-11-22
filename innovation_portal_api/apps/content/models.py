@@ -606,7 +606,7 @@ class ApprovalFlow(UUIDModel, TimeStampedModel):
     """S2: how website content gets approved: ordered steps, per language."""
 
     key = models.SlugField(max_length=40, unique=True, help_text='"content" for website content.')
-    approvers_can_approve_own_work = models.BooleanField(default=False, help_text="People who can approve a step may approve their own change. Off by default (U9: nobody approves their own change).")
+    approvers_can_approve_own_work = models.BooleanField(default=True, help_text="People who can approve a step may approve their own change. On by default; switch it off to need a second approver.")
 
     def __str__(self):
         return self.key

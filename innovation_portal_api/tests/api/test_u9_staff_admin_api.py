@@ -244,7 +244,32 @@ class ApprovalCompareTests(U9Base):
         listed = {row["id"]: row for row in data(self.client.get("/api/content/approvals/"))}
         self.assertEqual(listed[str(self.approval.id)]["change_type"], "edit")
 
-    def test_nobody_approves_their_own_change_and_send_back_needs_a_comment(self):
+    def set_own_work(self, allowed):
+        from apps.content.models import ApprovalFlow
+        from apps.content.services import ApprovalService
+
+        ApprovalService.flow()
+        ApprovalFlow.objects.update(approvers_can_approve_own_work=allowed)
+
+    def test_a_fresh_database_lets_people_approve_their_own_change(self):
+        from apps.content.models import ApprovalFlow
+        from apps.content.services import ApprovalService
+
+        self.assertTrue(ApprovalService.flow().approvers_can_approve_own_work)
+        self.assertTrue(ApprovalFlow._meta.get_field("approvers_can_approve_own_work").default)
+
+    def test_with_the_switch_on_the_author_approves_their_own_change_and_send_back_needs_a_comment(self):
+        self.set_own_work(True)
+        self.client.force_authenticate(self.officer)
+        self.assertEqual(self.client.post(f"/api/content/approvals/{self.approval.id}/reject/", {"comment": ""}, format="json").status_code, 400)
+        detail = data(self.client.get(f"/api/content/approvals/{self.approval.id}/"))
+        self.assertEqual((detail["own_change"], detail["can_approve"]), (True, True))
+        approved = self.client.post(f"/api/content/approvals/{self.approval.id}/approve/", {}, format="json")
+        self.assertEqual(approved.status_code, 200, approved.content)
+        self.assertEqual(data(approved)["status"], "approved")
+
+    def test_with_the_switch_off_the_author_cannot_approve_and_send_back_needs_a_comment(self):
+        self.set_own_work(False)
         self.client.force_authenticate(self.officer)
         detail = data(self.client.get(f"/api/content/approvals/{self.approval.id}/"))
         self.assertEqual((detail["own_change"], detail["can_approve"]), (True, False))
