@@ -129,7 +129,7 @@ function AppRoutes() {
         <Route key={path} path={path} element={<ToSignIn />} />
       ))}
 
-      <Route path="/verify-email"    element={<VerifyEmail />} />
+      <Route path="/verify-email"    element={<><BootStep boot={boot} /><VerifyEmail /></>} />
 
       <Route path="/auth/callback"   element={<><BootStep boot={boot} /><AuthCallback /></>} />
 
