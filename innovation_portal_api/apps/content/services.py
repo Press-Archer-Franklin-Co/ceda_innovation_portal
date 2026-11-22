@@ -11,7 +11,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.audit.services import AuditService
 from apps.content.models import ApprovalRequest, ContentItem, LeadershipCard, Page, PageSection, PageVersion, Partner, PolicyPage, SiteSettings, WinnerSpotlight
-from apps.content.sections import DEFAULT_ORDER, SECTION_TYPES, SettingsError, default_settings, localize, normalize_settings
+from apps.content.sections import DEFAULT_ORDER, SECTION_TYPES, SettingsError, default_settings, localize, localize_marks, normalize_settings
 from apps.core.constants import ProgramStatus, RoleType
 from apps.core.i18n import get_text
 
@@ -468,7 +468,7 @@ class PageService:
                 {
                     "id": section.get("id"),
                     "type": section["type"],
-                    "settings": localize(settings, lang),
+                    "settings": localize_marks(settings, localize(settings, lang), lang),
                     "data": resolver(settings, lang, request) if resolver else None,
                 }
             )

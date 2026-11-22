@@ -1,4 +1,5 @@
 import api from './api'
+import type { HeadlineMark } from '../components/home/HeroHeadline'
 
 // Public website content (B6 part 1, on main). Every call sends the current language (Accept-Language,
 // set in api.ts), so text arrives already translated. Responses use the {success, message, data} wrapper.
@@ -141,7 +142,7 @@ export interface HeroPhoto {
 
 /** Sections the home page can return. Unknown types are skipped by the page, not treated as errors. */
 export type HomeSection =
-  | { id: string | null; type: 'hero_banner'; settings: { headline: string; highlighted_words: string; text: string; primary_button: ButtonLink | null; secondary_button: ButtonLink | null; show_watermark: boolean; show_quick_start: boolean }; data: { photo: HeroPhoto | null } | null }
+  | { id: string | null; type: 'hero_banner'; settings: { headline: string; headline_marks?: HeadlineMark[] | null; text: string; primary_button: ButtonLink | null; secondary_button: ButtonLink | null; show_watermark: boolean; show_quick_start: boolean }; data: { photo: HeroPhoto | null } | null }
   | { id: string | null; type: 'partners_strip'; settings: { title: string; max_items: number }; data: { items: PartnerCard[] } }
   | { id: string | null; type: 'challenges'; settings: { title: string; max_items: number; only_open: boolean }; data: { items: ChallengeCard[] } }
   | { id: string | null; type: 'leadership_quotes'; settings: { title: string; max_items: number }; data: { rotation_seconds: number; items: QuoteCard[] } }
