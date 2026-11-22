@@ -44,7 +44,7 @@ describe('3.23 users helpers', () => {
     expect(userStatus({ is_active: true })).toBe('active')
     expect(userStatus({ status: 'invited', is_active: true })).toBe('invited')
     expect(listParams({ search: 'kago', role: '', status: 'deactivated', page: 2, pageSize: 25 }))
-      .toEqual({ page: 2, page_size: 25, search: 'kago', status: 'deactivated', active: 'false' })
+      .toEqual({ page: 2, page_size: 25, search: 'kago', status: 'deactivated' })
   })
 })
 

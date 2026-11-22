@@ -8,7 +8,6 @@ import DropdownMenu from '../../components/ui/DropdownMenu'
 import Modal from '../../components/ui/Modal'
 import Input, { InputControl } from '../../components/ui/Input'
 import { SelectControl } from '../../components/ui/Select'
-import MultiSelect from '../../components/ui/MultiSelect'
 import Tag from '../../components/ui/Tag'
 import Avatar from '../../components/ui/Avatar'
 import Field from '../../components/ui/Field'
@@ -21,7 +20,6 @@ import { pickText } from '../../lib/admin/roles'
 import { listParams, userStatus, usersApi } from '../../lib/api/users'
 import { lastSignIn, whatTheyCanDo } from '../../lib/admin/users'
 import { useAdminRoles, useCapabilityCatalogue } from '../../lib/queries/adminRoles'
-import { usePrograms } from '../../lib/queries/programs'
 
 // 3.23 Users (Figma 111:995 website, 111:1497 phone). ① Filter by role or status, search by name or email.
 // ② The shared data table with role chips and last sign-in. ③ "Invite someone" opens the genie modal: name, email,
@@ -33,7 +31,6 @@ const STATUS_TONE = { active: 'green', invited: 'blue', deactivated: 'neutral' }
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const rowsOf = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 const nameOf = (u) => u?.full_name?.trim() || [u?.first_name, u?.last_name].filter(Boolean).join(' ') || u?.email || ''
-const notYet = (e) => e?.status === 404 || e?.status === 405
 
 function RoleChips({ roles, value, onChange, label }) {
   const { lang } = useI18n()
@@ -62,10 +59,6 @@ function useStaffRoles() {
   return useMemo(() => rowsOf(roles.data).filter((r) => r.is_active && r.code !== 'innovator'), [roles.data])
 }
 
-function needsChallenges(codes) {
-  return codes.some((c) => c === 'judge' || c.includes('partner'))
-}
-
 function PersonDialog({ person, mode, onClose, triggerRef }) {
   const t = useT()
   const { lang } = useI18n()
@@ -73,16 +66,13 @@ function PersonDialog({ person, mode, onClose, triggerRef }) {
   const qc = useQueryClient()
   const roles = useStaffRoles()
   const catalogue = useCapabilityCatalogue()
-  const programs = usePrograms()
   const inviting = mode === 'invite'
   const [name, setName] = useState(person ? nameOf(person) : '')
   const [email, setEmail] = useState(person?.email ?? '')
   const [codes, setCodes] = useState(person?.roles ?? [])
-  const [challenges, setChallenges] = useState((person?.challenges ?? []).map((c) => String(c.id)))
   const [show, setShow] = useState(false)
-  const showRoles = mode !== 'edit'
-  const showName = mode !== 'roles'
-  const showChallenges = mode !== 'roles' && needsChallenges(codes)
+  const showRoles = true
+  const showName = inviting
 
   const errors = {
     name: showName && !name.trim() ? t('users.needName') : null,
@@ -91,20 +81,17 @@ function PersonDialog({ person, mode, onClose, triggerRef }) {
   }
   const save = useMutation({
     mutationFn: () => {
-      const program_ids = showChallenges ? challenges : []
-      if (inviting) return usersApi.invite({ full_name: name.trim(), email: email.trim().toLowerCase(), roles: codes, program_ids })
-      if (mode === 'roles') return usersApi.setRoles(person.id, codes)
-      return usersApi.update(person.id, { full_name: name.trim(), program_ids })
+      if (inviting) return usersApi.invite({ full_name: name.trim(), email: email.trim().toLowerCase(), roles: codes })
+      return usersApi.setRoles(person.id, codes)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] })
       qc.invalidateQueries({ queryKey: ['admin', 'roles'] })
       if (inviting) toast.show({ tone: 'success', title: t('users.invited', { email: email.trim() }) })
-      else if (mode === 'roles') toast.show({ tone: 'success', title: t('users.rolesSaved', { name: nameOf(person) }) })
-      else toast.show({ tone: 'success', title: t('users.saved') })
+      else toast.show({ tone: 'success', title: t('users.rolesSaved', { name: nameOf(person) }) })
       onClose()
     },
-    onError: (e) => toast.show({ tone: 'error', title: notYet(e) ? t('users.notYet') : t('users.failed', { message: e.message }) }),
+    onError: (e) => toast.show({ tone: 'error', title: t('users.failed', { message: e.message }) }),
   })
   const submit = () => {
     setShow(true)
@@ -112,8 +99,7 @@ function PersonDialog({ person, mode, onClose, triggerRef }) {
     save.mutate()
   }
   const sentence = showRoles ? whatTheyCanDo(codes, roles, catalogue.data, lang, t) : ''
-  const programOptions = rowsOf(programs.data).map((p) => ({ value: String(p.id), label: p.title }))
-  const title = inviting ? t('users.inviteTitle') : mode === 'roles' ? t('users.rolesTitle', { name: nameOf(person) }) : t('users.editTitle', { name: nameOf(person) })
+  const title = inviting ? t('users.inviteTitle') : t('users.rolesTitle', { name: nameOf(person) })
 
   return (
     <Modal open onClose={onClose} title={title} size="md" triggerRef={triggerRef}
@@ -129,9 +115,6 @@ function PersonDialog({ person, mode, onClose, triggerRef }) {
           <Field label={t('users.roles')} required error={show ? errors.roles : undefined}>
             <RoleChips roles={roles} value={codes} onChange={setCodes} label={t('users.roles')} />
           </Field>
-        )}
-        {showChallenges && (
-          <MultiSelect label={t('users.challenges')} hint={t('users.challengesHint')} optional options={programOptions} value={challenges} onChange={setChallenges} placeholder={t('users.challengesPick')} />
         )}
         {sentence && (
           <p className="flex items-start gap-2 rounded-control bg-surface2 px-3 py-2.5 text-[12px] text-text" aria-live="polite">
@@ -165,18 +148,13 @@ export default function Users() {
   const act = useMutation({
     mutationFn: ({ fn }) => fn(),
     onSuccess: (_, { done }) => { qc.invalidateQueries({ queryKey: ['users'] }); toast.show({ tone: 'success', title: done }) },
-    onError: (e) => toast.show({ tone: 'error', title: notYet(e) ? t('users.notYet') : t('users.failed', { message: e.message }) }),
+    onError: (e) => toast.show({ tone: 'error', title: t('users.failed', { message: e.message }) }),
   })
 
   async function deactivate(u) {
     const name = nameOf(u)
     if (!(await confirm({ title: t('users.deactivateTitle', { name }), body: t('users.deactivateBody'), confirmLabel: t('users.deactivate') }))) return
     act.mutate({ fn: () => usersApi.deactivate(u.id), done: t('users.deactivated', { name }) })
-  }
-  async function resetTwoStep(u) {
-    const name = nameOf(u)
-    if (!(await confirm({ title: t('users.resetTitle', { name }), body: t('users.resetBody'), confirmLabel: t('users.resetTwoStep') }))) return
-    act.mutate({ fn: () => usersApi.resetTwoStep(u.id), done: t('users.resetDone', { name }) })
   }
 
   const menu = (u) => {
@@ -191,11 +169,8 @@ export default function Users() {
           </button>
         )}
         items={[
-          { key: 'edit', label: t('users.edit'), onSelect: () => setDialog({ mode: 'edit', person: u }) },
           { key: 'roles', label: t('users.changeRoles'), onSelect: () => setDialog({ mode: 'roles', person: u }) },
-          { key: 'invite', label: t('users.resendInvite'), hidden: s !== 'invited', onSelect: () => act.mutate({ fn: () => usersApi.resendInvite(u.id), done: t('users.resent', { email: u.email }) }) },
           { key: 'verify', label: t('users.resendVerification'), hidden: s !== 'active' || u.email_verified !== false, onSelect: () => act.mutate({ fn: () => usersApi.resendVerification(u.id), done: t('users.resent', { email: u.email }) }) },
-          { key: 'reset', label: t('users.resetTwoStep'), hidden: s !== 'active', onSelect: () => resetTwoStep(u) },
           { key: 'reactivate', label: t('users.reactivate'), hidden: s !== 'deactivated', onSelect: () => act.mutate({ fn: () => usersApi.reactivate(u.id), done: t('users.reactivated', { name }) }) },
           { key: 'deactivate', label: t('users.deactivate'), danger: true, hidden: s === 'deactivated', onSelect: () => deactivate(u) },
         ]}
@@ -221,10 +196,6 @@ export default function Users() {
       render: (codes) => (codes?.length
         ? <span className="flex flex-wrap gap-1">{codes.map((c) => <Tag key={c}>{roleName(c)}</Tag>)}</span>
         : EMPTY_CELL),
-    },
-    {
-      key: 'challenges', label: t('users.col.challenges'), hideOnPhone: true,
-      render: (list) => (list?.length ? <span className="line-clamp-2 text-[13px] text-text">{list.map((c) => c.title).join(', ')}</span> : EMPTY_CELL),
     },
     { key: 'last_login', label: t('users.col.lastSignIn'), hideOnPhone: true, render: (v) => <span className="whitespace-nowrap text-[13px] text-muted">{lastSignIn(v, t)}</span> },
     {

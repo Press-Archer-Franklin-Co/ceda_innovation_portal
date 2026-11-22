@@ -19,6 +19,7 @@ import { useT } from '../../../i18n/context'
 import { cn } from '../../../lib/cn'
 import { siteSettings } from '../../../lib/api/websiteContent'
 import { useFeatureFlags, useSetFeatureFlag, useSetSignInSettings, useSignInSettings } from '../../../lib/queries/platform'
+import { CODE_SERVICES, usePlatformServices } from '../../../lib/api/platformServices'
 
 // 3.26 Platform settings (Figma 122:1475 website, 122:1833 phone). ① Tabs keep settings short. ② Sign-in: one page
 // for everyone; the owner picks the second step. A one-time code needs SMS, WhatsApp or email active in Integrations.
@@ -81,6 +82,7 @@ function SignInTab() {
   const setFlag = useSetFeatureFlag()
   const signIn = useSignInSettings({ retry: false })
   const setSignIn = useSetSignInSettings()
+  const services = usePlatformServices({ retry: false })
 
   if (flags.error?.status === 403 || signIn.error?.status === 403) return <ForbiddenState title={t('ps.forbidden')} />
   if (flags.isError) return <ErrorState title={t('ps.loadError')} onRetry={() => flags.refetch()} />
@@ -93,8 +95,9 @@ function SignInTab() {
   const featureFlags = list.filter((f) => f.group !== SIGN_IN_GROUP)
   const demo = list.find((f) => f.key === DEMO_FLAG)
   const second = signIn.data?.second_step ?? 'code'
-  // U9 API (R-65): code_available. Until it is sent, nothing is blocked here; the API still checks.
-  const codeBlocked = signIn.data?.code_available === false
+  // A one-time code needs SMS, WhatsApp or email active. Unknown (services not loaded) blocks nothing.
+  const serviceList = Array.isArray(services.data) ? services.data : []
+  const codeBlocked = serviceList.length > 0 && !serviceList.some((x) => CODE_SERVICES.includes(x.kind) && x.state === 'active')
 
   const failed = (e) => toast.show({ tone: 'error', title: t('ps.failed', { message: e?.message ?? '' }) })
   const done = () => toast.show({ tone: 'success', title: t('ps.saved') })

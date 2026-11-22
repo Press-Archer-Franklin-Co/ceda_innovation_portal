@@ -17,13 +17,14 @@ import { useConfirm } from '../../../components/ui/confirm'
 import { useToast } from '../../../components/ui/toast'
 import { useT } from '../../../i18n/context'
 import {
-  useActivateIntegration, useDeactivateIntegration, useFeatureFlags, useIntegrations, useProviders, useSaveIntegration, useStartSsoTrial, useTestIntegration,
+  useActivateIntegration, useDeactivateIntegration, useIntegrations, useProviders, useSaveIntegration, useStartSsoTrial, useTestIntegration,
 } from '../../../lib/queries/platform'
+import { platformServices, usePlatformServices } from '../../../lib/api/platformServices'
 
 // 3.27 Integrations (Figma 123:1073 website, 123:1471 phone). ① One card per service with its state: Not set up,
 // Testing, Active. ② Set up: provider, key, test, then Activate. Keys are write-only: the API sends back only
 // "saved, ends in 1234". ③ Turning a service off asks first and names the features that will hide.
-// WhatsApp and USSD keys live in Channels (one place per key) until Nshathisi decides otherwise.
+// WhatsApp and USSD keys are entered only under Channels (Nshathisi, 22 Nov): their cards link there.
 // TODO(R-37): the set-up opens in the shared Modal until the shared side panel (Sheet) exists.
 
 const SERVICES = [
@@ -34,18 +35,12 @@ const SERVICES = [
   { kind: 'ai', icon: Bot },
   { kind: 'sso', icon: ShieldCheck },
 ]
-// Until the U9 API sends `needs` on each feature switch (R-65), these are the switches each service unlocks.
-const FALLBACK_FEATURES = { sms: ['sms_messages', 'code_sign_in'], email: [], whatsapp: ['whatsapp_messages'], ussd: ['ussd'], ai: [], sso: ['staff_sso'] }
 const GUIDE = { sms: 'integrations.sms', sso: 'integrations.sso' }
 const STATE_TONE = { not_set_up: 'neutral', testing: 'amber', active: 'green' }
 const STEP_KEYS = ['provider', 'key', 'test', 'activate']
 const rowsOf = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 const when = (v) => (v ? new Date(v).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
 
-function serviceState(connections) {
-  if (connections.some((c) => c.is_active || c.status === 'active')) return 'active'
-  return connections.length ? 'testing' : 'not_set_up'
-}
 
 function errorText(err) {
   const errors = err?.data?.errors
@@ -55,19 +50,12 @@ function errorText(err) {
   return err?.message ?? ''
 }
 
-function featuresFor(kind, flags) {
-  const list = flags ?? []
-  const fromApi = list.filter((f) => Array.isArray(f.needs) && f.needs.includes(kind))
-  const picked = fromApi.length || list.some((f) => Array.isArray(f.needs)) ? fromApi : list.filter((f) => FALLBACK_FEATURES[kind]?.includes(f.key))
-  return picked.map((f) => f.label)
-}
 
 function SetUpPanel({ kind, connection, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
   const providers = useProviders(kind)
-  const flags = useFeatureFlags()
   const save = useSaveIntegration()
   const test = useTestIntegration()
   const activate = useActivateIntegration()
@@ -131,7 +119,11 @@ function SetUpPanel({ kind, connection, onClose, triggerRef }) {
     }
   }
   async function turnOff() {
-    const features = featuresFor(kind, flags.data)
+    let features = []
+    try {
+      const preview = await platformServices.hidesIfOff(current.id)
+      features = (preview?.hidden_features ?? []).map((f) => (typeof f === 'string' ? f : f.label))
+    } catch (e) { failed(e); return }
     const ok = await confirm({
       title: t('integ.turnOffTitle', { name: serviceName }),
       body: features.length ? t('integ.turnOffBody', { features: features.join(', ') }) : t('integ.turnOffBodyNone'),
@@ -192,10 +184,10 @@ function SetUpPanel({ kind, connection, onClose, triggerRef }) {
   )
 }
 
-function ServiceCard({ service, connections, hasProviders, onOpen }) {
+function ServiceCard({ service, info, connections, hasProviders, onOpen }) {
   const t = useT()
   const ref = useRef(null)
-  const state = serviceState(connections)
+  const state = info?.state ?? 'not_set_up'
   const Icon = service.icon
   const name = t(`integ.svc.${service.kind}`)
   const active = connections.find((c) => c.is_active)
@@ -224,6 +216,7 @@ function ServiceCard({ service, connections, hasProviders, onOpen }) {
 export default function Integrations() {
   const t = useT()
   const all = useIntegrations()
+  const services = usePlatformServices()
   const providers = useProviders()
   const [panel, setPanel] = useState(null)
   const byKind = useMemo(() => {
@@ -236,13 +229,14 @@ export default function Integrations() {
   let body
   if (all.error?.status === 403) body = <ForbiddenState title={t('ps.forbidden')} />
   else if (all.isError) body = <ErrorState title={t('integ.loadError')} onRetry={() => all.refetch()} />
-  else if (all.isLoading || providers.isLoading) {
+  else if (services.isError) body = <ErrorState title={t('integ.loadError')} onRetry={() => services.refetch()} />
+  else if (all.isLoading || providers.isLoading || services.isLoading) {
     body = <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{SERVICES.map((s) => <Skeleton key={s.kind} className="h-32 rounded-card" />)}</div>
   } else {
     body = (
       <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 sm:gap-4">
         {SERVICES.map((s) => (
-          <ServiceCard key={s.kind} service={s} connections={byKind[s.kind] ?? []} hasProviders={providerKinds.has(s.kind)}
+          <ServiceCard key={s.kind} service={s} info={(Array.isArray(services.data) ? services.data : []).find((x) => x.kind === s.kind)} connections={byKind[s.kind] ?? []} hasProviders={providerKinds.has(s.kind)}
             onOpen={(kind, connection, ref) => setPanel({ kind, connection, ref })} />
         ))}
       </ul>
