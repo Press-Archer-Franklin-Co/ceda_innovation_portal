@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
+from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
@@ -196,6 +197,56 @@ class PublishChallengeResultsView(APIView):
         body = PublishResultsSerializer(data=request.data or {})
         body.is_valid(raise_exception=True)
         return api_success(data=entry.publish_results(program, actor=request.user, show_names=body.validated_data.get("show_names")))
+
+
+# R-59 (3.37 winners manager) ---------------------------------------------------------------------------------------
+
+
+class ResultEntryUpdateSerializer(serializers.Serializer):
+    show_on_results = serializers.BooleanField(required=False)
+    order = serializers.IntegerField(min_value=0, max_value=999, required=False)
+    story = serializers.DictField(child=serializers.CharField(max_length=1000, allow_blank=True), required=False)
+
+
+class ResultsManageView(APIView):
+    permission_classes = [HasCapability.of("challenges.manage")]
+
+    @extend_schema(
+        tags=["Programs"],
+        summary="Winners manager (3.37)",
+        description="{results_published, published_at, show_names, entries: [{submission_id, title, applicant, district, place: 1st|2nd|3rd|runner_up|special|winner|shortlisted, "
+        "order, show_on_results, photo_url, story {en, tn}}]}. show_names is Program.show_names_on_results (change it with PATCH /api/programs/{id}/).",
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request, program_id):
+        from apps.programs.results_manage import manage
+
+        return api_success(data=manage(get_object_or_404(Program, id=program_id), request))
+
+
+class ResultEntryManageView(APIView):
+    permission_classes = [HasCapability.of("challenges.manage")]
+
+    @extend_schema(tags=["Programs"], summary="Change how one entry shows on the results (3.37)", request=ResultEntryUpdateSerializer, responses=OpenApiTypes.OBJECT)
+    def patch(self, request, program_id, submission_id):
+        from apps.programs.results_manage import update_entry
+
+        program = get_object_or_404(Program, id=program_id)
+        serializer = ResultEntryUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        return api_success(data=update_entry(program, submission_id, serializer.validated_data, actor=request.user))
+
+
+class ResultEntryPhotoView(APIView):
+    permission_classes = [HasCapability.of("challenges.manage")]
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(tags=["Programs"], summary="Photo for one entry on the results (3.37)", description="multipart file: a JPG or PNG up to 5 MB.", responses=OpenApiTypes.OBJECT)
+    def post(self, request, program_id, submission_id):
+        from apps.programs.results_manage import set_photo
+
+        program = get_object_or_404(Program, id=program_id)
+        return api_success(data=set_photo(program, submission_id, request.FILES.get("file"), actor=request.user, request=request))
 
 
 # R-54 (2.11 and 3.37) ----------------------------------------------------------------------------------------------

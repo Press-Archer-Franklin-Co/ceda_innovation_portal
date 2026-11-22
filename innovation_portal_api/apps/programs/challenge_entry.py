@@ -245,29 +245,51 @@ def public_results(program, lang: str) -> dict:
     }
     if not published:
         return data
+    from apps.programs.results_manage import public_view
+
+    # R-59 (3.37): staff can hide entries, set their order, add a photo and a story, and names follow Program.show_names_on_results.
+    entries, hidden = public_view(program)
+
+    def order(submission_id, fallback):
+        entry = entries.get(submission_id)
+        return (entry.order if entry and entry.order else 999, fallback)
+
+    def story(submission_id):
+        entry = entries.get(submission_id)
+        text = (entry.story or {}) if entry else {}
+        return (text.get(lang) or text.get("en") or "") if text else ""
+
+    def photo(submission_id, fallback):
+        entry = entries.get(submission_id)
+        return entry.photo.url if entry and entry.photo else fallback
+
     names = program.show_names_on_results
-    spotlights = sorted(program.winner_spotlights.all(), key=lambda w: (PLACE_ORDER.get(w.position, 9), w.team_name))
-    winner_ids = {w.submission_id for w in spotlights if w.submission_id}
+    spotlights = [w for w in program.winner_spotlights.all() if w.submission_id not in hidden]
+    spotlights.sort(key=lambda w: order(w.submission_id, (PLACE_ORDER.get(w.position, 9), w.team_name)))
+    winner_ids = {w.submission_id for w in program.winner_spotlights.all() if w.submission_id}
     data["winners"] = [
         {
             "position": w.position,
             "name": w.team_name if names else "",
             "title": w.project_name,
             "description": w.description,
+            "story": story(w.submission_id),
             "prize_label": w.prize_label,
             "prize_amount": w.prize_amount,
             "members_count": w.members_count if names else 0,
-            "photo_url": w.photo.url if w.photo else None,
+            "photo_url": photo(w.submission_id, w.photo.url if w.photo else None),
             "district": _district(w.submission, lang) if names else "",
         }
         for w in spotlights
     ]
-    shortlisted = (
-        program.submissions.filter(submitted_at__isnull=False, current_status__in=SHORTLIST_STATUSES)
+    shortlisted = [
+        s
+        for s in program.submissions.filter(submitted_at__isnull=False, current_status__in=SHORTLIST_STATUSES)
         .exclude(id__in=winner_ids)
         .select_related("team", "innovator", "district")
-        .order_by("title")
-    )
+        if s.id not in hidden
+    ]
+    shortlisted.sort(key=lambda s: order(s.id, s.title))
     data["shortlisted"] = [
         {"title": s.title, "name": _display_name(s) if names else "", "district": _district(s, lang) if names else ""} for s in shortlisted
     ]
