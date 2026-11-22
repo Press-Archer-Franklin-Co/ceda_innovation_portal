@@ -79,8 +79,6 @@ const GROUPS = [
       { label: 'staff.nav.roles', href: '/admin/roles', icon: ShieldCheck, capability: 'settings.manage' },
       { label: 'staff.nav.settings', href: '/admin/platform', icon: SlidersHorizontal, capability: 'settings.manage' },
       { label: 'staff.nav.liveChat', href: '/admin/live-chat', icon: MessagesSquare, capability: 'settings.manage' },
-      { label: 'staff.nav.workflows', href: '/admin/workflows', icon: GitBranch, capability: 'entries.assign' },
-      { label: 'staff.nav.terms', href: '/admin/terms', icon: FileText, capability: 'challenges.manage' },
       { label: 'staff.nav.audit', href: '/audit', icon: ScrollText, capability: 'audit.view' },
     ],
   },
