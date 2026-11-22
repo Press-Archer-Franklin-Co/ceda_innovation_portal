@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import random
 import re
 
@@ -20,11 +21,17 @@ from apps.platform_config.models import IntegrationConnection
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.webhook")
+# One line per WhatsApp message and per failed send (prompt 10). Never message bodies or full numbers.
+whatsapp_logger = logging.getLogger("apps.channels.whatsapp")
 
 FEATURE_FOR_CHANNEL = {Channel.USSD: "ussd", Channel.WHATSAPP: "whatsapp_messages"}
 WHATSAPP_TIMEOUT_SECONDS = 24 * 3600
 DEFAULT_USSD_TIMEOUT_SECONDS = 60
 SIMULATOR_TIMEOUT_SECONDS = 30 * 60
+NOT_A_FILE_STEP = {
+    "en": "This step does not take files; the file was ignored.",
+    "tn": "Kgato e ga e amogele difaele; faele e tlogetswe.",  # TODO tn-review
+}
 NOT_AVAILABLE = {
     "en": "This service is not available yet. Please try again later.",
     "tn": "Tirelo e ga e ise e nne teng. Tsweetswee leka gape moragonyana.",  # TODO tn-review
@@ -414,7 +421,7 @@ class SessionService:
         return build_graph_from_nodes(session.journey)
 
     @staticmethod
-    def start(*, channel: str, journey: Journey, external_id: str, phone: str, channel_connection=None, simulation=False, use_draft=False, user=None):
+    def start(*, channel: str, journey: Journey, external_id: str, phone: str, channel_connection=None, simulation=False, use_draft=False, user=None, initial_vars: dict | None = None, message_id: str = ""):
         from apps.channels.actions import find_user_by_phone
 
         version = None if use_draft else journey.latest_version
@@ -435,15 +442,16 @@ class SessionService:
             language=journey.default_language or "en",
             last_activity_at=now,
             last_inbound_at=now if channel == Channel.WHATSAPP else None,
+            state={"vars": {k: v for k, v in (initial_vars or {}).items() if v}},
         )
         graph = SessionService.graph_for(session)
-        runner = SessionService._runner(session, graph)
+        runner = SessionService._runner(session, graph, message_id=message_id)
         screen = runner.start()
         SessionService._save(session, runner, screen)
         return session, screen
 
     @staticmethod
-    def _runner(session: JourneySession, graph: dict) -> JourneyRunner:
+    def _runner(session: JourneySession, graph: dict, **extra) -> JourneyRunner:
         return JourneyRunner(
             graph,
             session.state,
@@ -452,13 +460,21 @@ class SessionService:
             user=session.user,
             session_id=str(session.id),
             simulation=session.is_simulation,
+            **extra,
         )
 
     @staticmethod
-    def answer(*, session: JourneySession, text: str) -> Screen:
+    def answer(*, session: JourneySession, text: str, media: list | None = None, message_id: str = "", file_note: str = "") -> Screen:
+        """Run one answer. ``media`` are the files sent with it; at a step that does not ask for a
+        file they are ignored and ``file_note`` goes before the screen (the text is still used)."""
         graph = SessionService.graph_for(session)
-        runner = SessionService._runner(session, graph)
-        screen = runner.answer(text)
+        runner = SessionService._runner(session, graph, message_id=message_id)
+        if media and runner.current_type() != "file":
+            screen = runner.answer(text) if (text or "").strip() else runner.repeat()
+            if file_note:
+                screen.text = f"{file_note}\n{screen.text}" if screen.text else file_note
+        else:
+            screen = runner.answer(text, media=media)
         if session.channel == Channel.WHATSAPP:
             session.last_inbound_at = timezone.now()
         SessionService._save(session, runner, screen)
@@ -483,7 +499,13 @@ class SessionService:
         session.step_count += len(runner.logged_steps)
         session.save()
         JourneySessionStep.objects.bulk_create(
-            [JourneySessionStep(session=session, node_key=key[:40], node_type=kind[:20], input=value[:300]) for key, kind, value in runner.logged_steps]
+            [
+                JourneySessionStep(
+                    session=session, node_key=step[0][:40], node_type=step[1][:20], input=step[2][:300],
+                    attachment_count=step[3] if len(step) > 3 else 0, provider_message_id=(runner.message_id or "")[:80],
+                )
+                for step in runner.logged_steps
+            ]
         )
 
     @staticmethod
@@ -582,10 +604,25 @@ class WhatsAppWebhookService:
             reject_webhook(channel="whatsapp", token=token, reason="bad_verify_token", request=request)
         return challenge
 
+    DUPLICATE_SECONDS = 24 * 3600
+
     @staticmethod
-    def handle(*, token: str, request, raw_body: bytes) -> int:
+    def _seen(channel_connection, message_id: str) -> bool:
+        """True when this provider message was already handled (Twilio resends slow answers)."""
+        from django.core.cache import cache
+
+        if not message_id:
+            return False
+        if not cache.add(f"channels:wa-msg:{channel_connection.id}:{message_id}", 1, WhatsAppWebhookService.DUPLICATE_SECONDS):
+            return True
+        return JourneySessionStep.objects.filter(provider_message_id=message_id, session__connection=channel_connection).exists()
+
+    @staticmethod
+    def handle(*, token: str, request, raw_body: bytes):
         """Check the signature, run each message through the journey and send the reply.
-        Returns how many messages were handled."""
+        Returns (messages handled, the provider), so the view answers in the provider's format.
+        Only an unknown token or a bad signature is refused; anything else gets a friendly reply."""
+        from apps.channels.serializers import webhook_url
         from apps.platform_config.providers.whatsapp import WebhookRejected
 
         channel_connection = _connection_for_token(token, Channel.WHATSAPP)
@@ -594,33 +631,64 @@ class WhatsAppWebhookService:
         provider = _provider(channel_connection)
         if provider is None:
             raise NotFound()
-        data = request.data if isinstance(request.data, dict) else {key: request.data.get(key) for key in request.data.keys()}
+        params = request.data
+        urls = [request.build_absolute_uri(), webhook_url(channel_connection)]
         try:
-            provider.authenticate(raw_body=raw_body, headers=request.headers, url=request.build_absolute_uri(), data=data)
+            provider.authenticate(raw_body=raw_body, headers=request.headers, urls=urls, data=params)
         except WebhookRejected as exc:
             reject_webhook(channel="whatsapp", token=token, reason=str(exc), request=request)
-        messages = provider.parse_inbound(data)
+        messages = provider.parse_inbound(params)
         live = channel_connection.connection.is_active and is_enabled("whatsapp_messages")
         journey = channel_connection.journey
         handled = 0
         for message in messages:
+            started = time.monotonic()
             phone = _phone(message.phone)
-            if not live or journey is None or journey.version == 0:
-                WhatsAppOutbound.send_screen(provider, phone, Screen(text=NOT_AVAILABLE["en"], end=True))
+            lang = (journey.default_language if journey else "en") or "en"
+            node_type, outcome = "", "answered"
+            if WhatsAppWebhookService._seen(channel_connection, message.message_id):
+                whatsapp_logger.info("whatsapp inbound connection=%s phone=%s sid=%s node= outcome=duplicate ms=%d", channel_connection.id, mask_phone(phone), message.message_id, int((time.monotonic() - started) * 1000))
                 continue
+            if not live or journey is None or journey.version == 0:
+                WhatsAppOutbound.send_screen(provider, phone, Screen(text=provider.reply_text("not_available", lang), end=True))
+                whatsapp_logger.info("whatsapp inbound connection=%s phone=%s sid=%s node= outcome=not_live ms=%d", channel_connection.id, mask_phone(phone), message.message_id, int((time.monotonic() - started) * 1000))
+                continue
+            media = [
+                {"content_type": item.content_type, "fetch": (lambda max_bytes, item=item: provider.fetch_media(item, max_bytes=max_bytes))}
+                for item in message.media
+            ]
             try:
                 with transaction.atomic():
                     session = SessionService.find_active(channel=Channel.WHATSAPP, external_id=phone, channel_connection=channel_connection)
+                    restart = (message.text or "").strip().lower() in provider.restart_words()
+                    if session is not None and restart:
+                        SessionService.cancel(session)
+                        session, outcome = None, "restarted"
                     if session is None:
-                        session, screen = SessionService.start(channel=Channel.WHATSAPP, journey=journey, external_id=phone, phone=phone, channel_connection=channel_connection)
+                        session, screen = SessionService.start(
+                            channel=Channel.WHATSAPP, journey=journey, external_id=phone, phone=phone, channel_connection=channel_connection,
+                            initial_vars={"profile_name": message.name}, message_id=message.message_id,
+                        )
+                        outcome = outcome if outcome == "restarted" else "started"
+                        if media:
+                            screen.text = f"{provider.reply_text('file_not_expected', session.language)}\n{screen.text}"
                     else:
-                        screen = SessionService.answer(session=session, text=message.text)
+                        lang = session.language or lang
+                        screen = SessionService.answer(
+                            session=session, text=message.text, media=media, message_id=message.message_id,
+                            file_note=provider.reply_text("file_not_expected", lang),
+                        )
+                    node_type = screen.node_type
             except Exception:
                 logger.exception("WhatsApp session failed on connection %s", channel_connection.id)
-                screen = Screen(text="Sorry, something went wrong. Please try again later.", end=True)
+                screen, outcome = Screen(text=provider.reply_text("error", lang), end=True), "error"
             WhatsAppOutbound.send_screen(provider, phone, screen)
             handled += 1
-        return handled
+            whatsapp_logger.info(
+                "whatsapp inbound connection=%s phone=%s sid=%s node=%s outcome=%s files=%d ms=%d",
+                channel_connection.id, mask_phone(phone), message.message_id, node_type, outcome, len(media), int((time.monotonic() - started) * 1000),
+            )
+        return handled, provider
 
 
 class WhatsAppOutbound:
@@ -632,9 +700,9 @@ class WhatsAppOutbound:
         try:
             result = provider.send_reply(phone, reply)
             if not result.ok:
-                logger.warning("WhatsApp reply to %s was not accepted: %s", mask_phone(phone), (result.error or "")[:200])
+                whatsapp_logger.warning("whatsapp send failed phone=%s error=%s", mask_phone(phone), (result.error or "")[:200])
         except Exception:
-            logger.exception("WhatsApp reply to %s failed", mask_phone(phone))
+            whatsapp_logger.exception("whatsapp send failed phone=%s", mask_phone(phone))
 
     @staticmethod
     def last_inbound_at(phone: str):
@@ -685,7 +753,7 @@ class SimulatorService:
         return "+2677" + "".join(random.choice("0123456789") for _ in range(7))
 
     @staticmethod
-    def run(*, actor, journey: Journey, channel: str, session_id=None, text: str | None = None, restart: bool = False, as_registered: bool = False, use_draft: bool = True) -> tuple[JourneySession, Screen]:
+    def run(*, actor, journey: Journey, channel: str, session_id=None, text: str | None = None, restart: bool = False, as_registered: bool = False, use_draft: bool = True, attachment: dict | None = None) -> tuple[JourneySession, Screen]:
         if not journey.runs_on(channel):
             raise ValidationError({"channel": [f"This journey is not set up for {channel}."]})
         with transaction.atomic():
@@ -716,5 +784,6 @@ class SimulatorService:
                     user=user,
                 )
                 return session, screen
-            screen = SessionService.answer(session=session, text=text or "")
+            media = [{"pretend": True, "content_type": attachment.get("content_type", ""), "size": attachment.get("size", 0)}] if attachment else None
+            screen = SessionService.answer(session=session, text=text or "", media=media, file_note=NOT_A_FILE_STEP.get(session.language) or NOT_A_FILE_STEP["en"])
             return session, screen

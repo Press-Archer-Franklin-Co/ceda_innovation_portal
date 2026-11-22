@@ -13,12 +13,14 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import hmac
 import logging
 import secrets as token_tools
 import time
 import uuid
 from dataclasses import dataclass, field
+from urllib.parse import urlencode
 
 from apps.core.phone import mask_phone
 from apps.platform_config import http
@@ -50,11 +52,19 @@ class Choice:
 
 
 @dataclass
+class MediaItem:
+    url: str
+    content_type: str = ""
+
+
+@dataclass
 class InboundMessage:
     phone: str
     text: str  # the typed text, or the id of the button or list row chosen
     message_id: str = ""
-    name: str = ""
+    name: str = ""  # the sender's WhatsApp profile name
+    wa_id: str = ""
+    media: list[MediaItem] = field(default_factory=list)
 
 
 @dataclass
@@ -78,9 +88,49 @@ TEMPLATE_FIELD = FieldSpec(
 )
 
 
+# Settings every WhatsApp connection has (prompt 10). Staff change them on the connection.
+# TODO tn-review: the Setswana defaults below.
+DEFAULT_RESTART_WORDS = ["menu", "start", "restart", "simolola", "lenane"]
+DEFAULT_REPLIES = {
+    "error.en": "Sorry, something went wrong. Please try again later.",
+    "error.tn": "Maitshwarelo, sengwe se senyegile. Tsweetswee leka gape moragonyana.",
+    "not_available.en": "This service is not available yet. Please try again later.",
+    "not_available.tn": "Tirelo e ga e ise e nne teng. Tsweetswee leka gape moragonyana.",
+    "file_not_expected.en": "Thank you. We can only take files when we ask for one.",
+    "file_not_expected.tn": "Re a leboga. Re amogela difaele fela fa re di kopa.",
+}
+SHARED_WHATSAPP_FIELDS = (
+    FieldSpec(
+        "restart_words",
+        "Words that start again",
+        FieldType.LIST,
+        default=DEFAULT_RESTART_WORDS,
+        help_text="When someone sends only one of these words, the journey starts again from the top. One per line.",
+    ),
+    FieldSpec(
+        "replies",
+        "Standard replies",
+        FieldType.MAPPING,
+        default=DEFAULT_REPLIES,
+        help_text="Replies the system sends, in English (.en) and Setswana (.tn): error, not_available, file_not_expected.",
+    ),
+)
+
+
+@dataclass
+class MediaResult:
+    ok: bool
+    content: bytes = b""
+    content_type: str = ""
+    error: str = ""
+    too_big: bool = False
+    unsupported: bool = False
+
+
 class BaseWhatsAppProvider(BaseProvider):
     kind = "whatsapp"
     supports_interactive = False
+    shared_fields = SHARED_WHATSAPP_FIELDS
 
     @classmethod
     def as_dict(cls) -> dict:
@@ -101,11 +151,30 @@ class BaseWhatsAppProvider(BaseProvider):
         """GET verification. Return the challenge to echo, or None to refuse."""
         return None
 
-    def authenticate(self, *, raw_body: bytes, headers, url: str, data) -> None:
+    def authenticate(self, *, raw_body: bytes, headers, urls: list[str], data) -> None:
+        """Raise WebhookRejected unless the request is from the provider. ``urls`` are the
+        addresses the provider may have signed: the request URL and the configured one."""
         raise NotImplementedError
 
     def parse_inbound(self, data) -> list[InboundMessage]:
         raise NotImplementedError
+
+    def webhook_response(self) -> tuple[str, str] | None:
+        """(body, content type) to answer the webhook with, or None for the standard JSON."""
+        return None
+
+    def fetch_media(self, item: MediaItem, *, max_bytes: int) -> MediaResult:
+        return MediaResult(False, unsupported=True, error="This provider cannot receive files yet.")
+
+    def restart_words(self) -> set[str]:
+        words = self.config.get("restart_words")
+        if words is None:
+            words = DEFAULT_RESTART_WORDS
+        return {str(w).strip().lower() for w in words if str(w).strip()}
+
+    def reply_text(self, key: str, lang: str = "en") -> str:
+        saved = self.config.get("replies") or {}
+        return saved.get(f"{key}.{lang}") or saved.get(f"{key}.en") or DEFAULT_REPLIES.get(f"{key}.{lang}") or DEFAULT_REPLIES.get(f"{key}.en", "")
 
     # outbound ------------------------------------------------------------------
 
@@ -121,6 +190,10 @@ class BaseWhatsAppProvider(BaseProvider):
     def check_credentials(self) -> tuple[bool, str, bool]:
         return True, "Checked when a test message is sent.", True
 
+    def check_sender(self) -> tuple[bool, str] | None:
+        """Whether the sender number belongs to this account, or None when not checked."""
+        return None
+
     def test(self, phone: str | None = None, **inputs) -> TestReport:
         report = TestReport()
         missing = self.missing_required(self.config, self.secrets)
@@ -132,6 +205,12 @@ class BaseWhatsAppProvider(BaseProvider):
         report.add("Credentials accepted", ok, detail, int((time.monotonic() - started) * 1000), skipped=skipped)
         if not ok:
             return report
+        sender = self.check_sender()
+        if sender is not None:
+            started = time.monotonic()
+            report.add("Sender number", sender[0], sender[1], int((time.monotonic() - started) * 1000))
+            if not sender[0]:
+                return report
         absent = self.templates_missing()
         report.add(
             "Message templates",
@@ -198,7 +277,7 @@ class WhatsAppCloudProvider(BaseWhatsAppProvider):
             return str(params.get("hub.challenge") or "")
         return None
 
-    def authenticate(self, *, raw_body: bytes, headers, url: str, data) -> None:
+    def authenticate(self, *, raw_body: bytes, headers, urls: list[str], data) -> None:
         secret = self.secrets.get("app_secret", "")
         given = headers.get("X-Hub-Signature-256", "")
         expected = "sha256=" + hmac.new(secret.encode(), raw_body or b"", hashlib.sha256).hexdigest()
@@ -273,20 +352,71 @@ class WhatsAppCloudProvider(BaseWhatsAppProvider):
         return False, error or result.error or f"Meta answered with HTTP {result.status}.", False
 
 
+TWILIO_SANDBOX_NUMBER = "+14155238886"
+TWILIO_CONTENT_URL = "https://content.twilio.com/v1/Content"
+# Twilio limits for in-session interactive messages (Content API, WhatsApp).
+TWILIO_BUTTON_TITLE = 20
+TWILIO_LIST_BUTTON = 20
+TWILIO_LIST_ITEM = 24
+CONTENT_CACHE_SECONDS = 30 * 24 * 3600
+
+
+def _twilio_params(data) -> list[tuple[str, list[str]]]:
+    """Every POST name with all its values, as Twilio's own validator reads them."""
+    if hasattr(data, "getlist"):
+        return [(key, [str(v) for v in data.getlist(key)]) for key in data.keys()]
+    return [(key, [str(v) for v in (value if isinstance(value, (list, tuple)) else [value])]) for key, value in (data or {}).items()]
+
+
+def twilio_signature(url: str, data, auth_token: str) -> str:
+    """X-Twilio-Signature: HMAC-SHA1 (auth token) of the URL followed by each POST name and
+    value, names sorted, repeated names with their values sorted and de-duplicated, Base64."""
+    payload = url
+    for key, values in sorted(_twilio_params(data)):
+        for value in sorted(set(values)):
+            payload += f"{key}{value}"
+    return base64.b64encode(hmac.new(auth_token.encode(), payload.encode(), hashlib.sha1).digest()).decode()
+
+
+def _with_and_without_port(url: str) -> list[str]:
+    """Twilio keeps an explicit port in what it signs; behind a proxy the port may differ."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if not parts.hostname:
+        return [url]
+    host = parts.hostname
+    default = {"https": 443, "http": 80}.get(parts.scheme)
+    without = urlunsplit((parts.scheme, host, parts.path, parts.query, parts.fragment))
+    port = parts.port or default
+    with_port = urlunsplit((parts.scheme, f"{host}:{port}", parts.path, parts.query, parts.fragment)) if port else without
+    return list(dict.fromkeys([url, without, with_port]))
+
+
 @register
 class WhatsAppTwilioProvider(BaseWhatsAppProvider):
     key = "whatsapp_twilio"
     label = "Twilio WhatsApp"
-    description = "WhatsApp through Twilio. Choices are sent as numbered text."
+    description = "WhatsApp through Twilio, including the Twilio Sandbox. Choices go as numbered text, or as WhatsApp buttons and lists."
+    supports_interactive = True
     setup_steps = (
         "In the Twilio console, copy the Account SID and Auth token.",
-        "Enter your WhatsApp sender number in E.164 form, for example +14155238886.",
-        "Paste the webhook address shown on this connection into 'When a message comes in' (HTTP POST).",
+        "Enter your WhatsApp sender number in E.164 form. For the Sandbox it is +14155238886.",
+        "In Messaging, Try it out, Send a WhatsApp message, Sandbox settings (or your sender's settings), paste the webhook address shown on this connection into 'When a message comes in', method POST, and save.",
+        "Press Test, then Activate. To change keys later, enter the new ones here: the webhook address and the journey stay the same.",
     )
     fields = (
         FieldSpec("account_sid", "Account SID", required=True, placeholder="AC..."),
         FieldSpec("auth_token", "Auth token", required=True, secret=True),
-        FieldSpec("from_number", "WhatsApp sender number", required=True, placeholder="+14155238886"),
+        FieldSpec("from_number", "WhatsApp sender number", required=True, placeholder=TWILIO_SANDBOX_NUMBER),
+        FieldSpec(
+            "interactive_mode",
+            "How choices are sent",
+            FieldType.SELECT,
+            default="numbered",
+            choices=(("numbered", "Numbered text (works everywhere)"), ("buttons", "WhatsApp buttons and lists (Twilio Content API)")),
+            help_text="Buttons for up to 3 choices, a list for up to 10. If Twilio refuses, numbered text is sent instead.",
+        ),
         TEMPLATE_FIELD,
     )
 
@@ -296,37 +426,123 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
     def _auth(self) -> dict:
         return {"Authorization": http.basic_auth(self.config.get("account_sid", ""), self.secrets.get("auth_token", ""))}
 
-    def authenticate(self, *, raw_body: bytes, headers, url: str, data) -> None:
+    def _from(self) -> str:
+        return f"whatsapp:{self.config.get('from_number', '')}"
+
+    # inbound -------------------------------------------------------------------
+
+    def authenticate(self, *, raw_body: bytes, headers, urls: list[str], data) -> None:
         signature = headers.get("X-Twilio-Signature", "")
-        params = data or {}
-        payload = url + "".join(f"{key}{params.get(key)}" for key in sorted(params.keys()))
-        expected = base64.b64encode(hmac.new(self.secrets.get("auth_token", "").encode(), payload.encode(), hashlib.sha1).digest()).decode()
-        if not signature or not hmac.compare_digest(signature, expected):
-            raise WebhookRejected("Twilio signature did not match.")
+        token = self.secrets.get("auth_token", "")
+        if not signature or not token:
+            raise WebhookRejected("twilio_signature_missing")
+        candidates = [u for url in urls if url for u in _with_and_without_port(url)]
+        if not any(hmac.compare_digest(signature, twilio_signature(url, data, token)) for url in dict.fromkeys(candidates)):
+            raise WebhookRejected("twilio_signature_mismatch")
 
     def parse_inbound(self, data) -> list[InboundMessage]:
-        sender = str((data or {}).get("From") or "").replace("whatsapp:", "")
+        get = data.get if hasattr(data, "get") else (lambda k, d=None: d)
+        sender = str(get("From") or "").replace("whatsapp:", "").strip()
         if not sender:
             return []
-        text = str(data.get("ButtonPayload") or data.get("Body") or "")
-        return [InboundMessage(phone=sender, text=text, message_id=str(data.get("MessageSid") or ""), name=str(data.get("ProfileName") or ""))]
+        own = str(self.config.get("from_number") or "").replace(" ", "")
+        if own and sender.replace(" ", "") == own:
+            return []
+        # A tapped button or list row sends its id; the typed text or the title is the fallback.
+        chosen = get("ButtonPayload") or get("ListId") or ""
+        text = str(chosen or get("Body") or "")
+        media = []
+        try:
+            count = int(get("NumMedia") or 0)
+        except (TypeError, ValueError):
+            count = 0
+        for index in range(min(count, 10)):
+            url = get(f"MediaUrl{index}")
+            if url:
+                media.append(MediaItem(url=str(url), content_type=str(get(f"MediaContentType{index}") or "")))
+        return [
+            InboundMessage(
+                phone=sender, text=text, message_id=str(get("MessageSid") or ""), name=str(get("ProfileName") or ""),
+                wa_id=str(get("WaId") or ""), media=media,
+            )
+        ]
 
-    def send_text(self, to: str, text: str) -> SendResult:
-        form = {"To": f"whatsapp:{to}", "From": f"whatsapp:{self.config.get('from_number', '')}", "Body": text[:1600]}
+    def webhook_response(self) -> tuple[str, str]:
+        # Twilio reads the answer as TwiML. Replies go out through the REST API instead.
+        return "<Response></Response>", "text/xml"
+
+    def fetch_media(self, item: MediaItem, *, max_bytes: int) -> MediaResult:
+        result = http.download(item.url, headers=self._auth(), max_bytes=max_bytes, timeout=8)
+        if not result.ok:
+            return MediaResult(False, too_big=result.too_big, error=result.error)
+        return MediaResult(True, content=result.content, content_type=result.content_type or item.content_type)
+
+    # outbound ------------------------------------------------------------------
+
+    def _post_message(self, form: dict) -> SendResult:
         result = http.request(f"{self._base()}/Messages.json", method="POST", headers=self._auth(), form=form)
         data = result.body if isinstance(result.body, dict) else {}
         if result.ok and data.get("sid"):
             return SendResult(True, data["sid"], data.get("status", ""))
-        return SendResult(False, error=data.get("message") or result.error or f"Twilio answered with HTTP {result.status}.")
+        code = data.get("code")
+        message = (data.get("message") or result.error or f"Twilio answered with HTTP {result.status}.")[:200]
+        return SendResult(False, error=f"Twilio error {code}: {message}" if code else message, provider_status=str(code or ""))
+
+    def send_text(self, to: str, text: str) -> SendResult:
+        return self._post_message({"To": f"whatsapp:{to}", "From": self._from(), "Body": text[:1600]})
 
     def send_template(self, to: str, template: str, language: str = "en", params: list[str] | None = None) -> SendResult:
         # Twilio content templates are sent by Content SID.
-        form = {"To": f"whatsapp:{to}", "From": f"whatsapp:{self.config.get('from_number', '')}", "ContentSid": template}
-        result = http.request(f"{self._base()}/Messages.json", method="POST", headers=self._auth(), form=form)
+        form = {"To": f"whatsapp:{to}", "From": self._from(), "ContentSid": template}
+        if params:
+            form["ContentVariables"] = json.dumps({str(i + 1): p for i, p in enumerate(params)})
+        return self._post_message(form)
+
+    def _content_sid(self, reply: OutboundReply) -> str | None:
+        """Create (once, then cached) a quick reply or list picker for this text and these choices."""
+        from django.core.cache import cache
+
+        kind = "twilio/quick-reply" if len(reply.choices) <= MAX_BUTTONS else "twilio/list-picker"
+        body = reply.text[:1024] or "."
+        if kind == "twilio/quick-reply":
+            spec = {"body": body, "actions": [{"title": c.title[:TWILIO_BUTTON_TITLE], "id": c.id} for c in reply.choices]}
+        else:
+            spec = {
+                "body": body,
+                "button": reply.list_button[:TWILIO_LIST_BUTTON],
+                "items": [{"item": c.title[:TWILIO_LIST_ITEM], "id": c.id, "description": ""} for c in reply.choices],
+            }
+        fingerprint = hashlib.sha256(json.dumps([self.config.get("account_sid", ""), kind, spec], sort_keys=True).encode()).hexdigest()[:32]
+        cache_key = f"channels:twilio-content:{fingerprint}"
+        sid = cache.get(cache_key)
+        if sid:
+            return sid
+        payload = {"friendly_name": f"ceda_{fingerprint[:20]}", "language": "en", "types": {kind: spec}}
+        result = http.request(TWILIO_CONTENT_URL, method="POST", headers=self._auth(), json_body=payload)
         data = result.body if isinstance(result.body, dict) else {}
-        if result.ok and data.get("sid"):
-            return SendResult(True, data["sid"], data.get("status", ""))
-        return SendResult(False, error=data.get("message") or result.error or f"Twilio answered with HTTP {result.status}.")
+        sid = data.get("sid") if result.ok else None
+        if not sid:
+            logger.warning("Twilio Content API refused a %s: HTTP %s %s", kind, result.status, str(data.get("message") or result.error)[:200])
+            return None
+        cache.set(cache_key, sid, CONTENT_CACHE_SECONDS)
+        return sid
+
+    def send_reply(self, to: str, reply: OutboundReply) -> SendResult:
+        interactive = self.config.get("interactive_mode") == "buttons" and 0 < len(reply.choices) <= MAX_LIST_ROWS
+        if interactive:
+            try:
+                sid = self._content_sid(reply)
+            except Exception:  # any failure falls back to numbered text
+                logger.warning("Twilio interactive message could not be built", exc_info=True)
+                sid = None
+            if sid:
+                result = self._post_message({"To": f"whatsapp:{to}", "From": self._from(), "ContentSid": sid, "ContentVariables": "{}"})
+                if result.ok:
+                    return result
+                logger.warning("Twilio refused an interactive message (%s); sending numbered text", result.error[:200])
+        return self.send_text(to, numbered(reply.text, reply.choices))
+
+    # checks --------------------------------------------------------------------
 
     def check_credentials(self):
         result = http.request(f"{self._base()}.json", headers=self._auth())
@@ -335,6 +551,19 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
         if result.status in (401, 403):
             return False, "Twilio refused the Account SID or Auth token.", False
         return False, result.error or f"Twilio answered with HTTP {result.status}.", False
+
+    def check_sender(self) -> tuple[bool, str]:
+        number = str(self.config.get("from_number") or "").replace(" ", "")
+        if number == TWILIO_SANDBOX_NUMBER:
+            return True, "Sandbox number: people join the Sandbox first by sending 'join <your code>' to it."
+        result = http.request(f"{self._base()}/IncomingPhoneNumbers.json?{urlencode({'PhoneNumber': number})}", headers=self._auth())
+        numbers = ((result.body or {}) if isinstance(result.body, dict) else {}).get("incoming_phone_numbers") or []
+        if result.ok and numbers:
+            return True, f"{number} belongs to this Twilio account."
+        if result.ok:
+            # WhatsApp senders set up in Twilio's WhatsApp senders do not always appear here, so this does not block.
+            return True, f"{number} is not among this account's phone numbers. That is normal for some WhatsApp senders; check the number is right."
+        return False, result.error or f"Twilio answered with HTTP {result.status}."
 
 
 @register
@@ -363,7 +592,7 @@ class WhatsAppInfobipProvider(BaseWhatsAppProvider):
     def _auth(self) -> dict:
         return {"Authorization": f"App {self.secrets.get('api_key', '')}"}
 
-    def authenticate(self, *, raw_body: bytes, headers, url: str, data) -> None:
+    def authenticate(self, *, raw_body: bytes, headers, urls: list[str], data) -> None:
         expected = self.secrets.get("webhook_secret", "")
         given = headers.get("X-Webhook-Secret", "")
         if not expected or not hmac.compare_digest(str(given), str(expected)):
@@ -434,7 +663,7 @@ class WhatsAppLogOnlyProvider(BaseWhatsAppProvider):
     def check_credentials(self):
         return True, "Nothing to check: replies are written to the log.", False
 
-    def authenticate(self, *, raw_body: bytes, headers, url: str, data) -> None:
+    def authenticate(self, *, raw_body: bytes, headers, urls: list[str], data) -> None:
         expected = self.secrets.get("webhook_secret", "")
         given = headers.get("X-Webhook-Secret", "")
         if not expected or not hmac.compare_digest(str(given), str(expected)):

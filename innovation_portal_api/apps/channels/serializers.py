@@ -255,6 +255,12 @@ class ConnectionTestSerializer(serializers.Serializer):
 # --- Simulator -----------------------------------------------------------------------
 
 
+class SimulatedAttachmentSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=120, required=False, allow_blank=True)
+    content_type = serializers.CharField(max_length=120)
+    size = serializers.IntegerField(min_value=0, max_value=200 * 1024 * 1024)
+
+
 class SimulateRequestSerializer(serializers.Serializer):
     journey = serializers.PrimaryKeyRelatedField(queryset=Journey.objects.all())
     channel = serializers.ChoiceField(choices=(("ussd", "USSD"), ("whatsapp", "WhatsApp")))
@@ -263,6 +269,7 @@ class SimulateRequestSerializer(serializers.Serializer):
     restart = serializers.BooleanField(required=False, default=False)
     as_registered = serializers.BooleanField(required=False, default=False)
     version = serializers.ChoiceField(choices=(("draft", "Draft"), ("published", "Published")), required=False, default="draft")
+    attachment = SimulatedAttachmentSerializer(required=False, allow_null=True, help_text="A pretend file for an Ask for a file step. Nothing is uploaded.")
 
 
 class ScreenSerializer(serializers.Serializer):
@@ -295,7 +302,7 @@ class SimulateResponseSerializer(serializers.Serializer):
 class JourneySessionStepSerializer(serializers.ModelSerializer):
     class Meta:
         model = JourneySessionStep
-        fields = ("node_key", "node_type", "input", "created_at")
+        fields = ("node_key", "node_type", "input", "provider_message_id", "attachment_count", "created_at")
 
 
 class JourneySessionSerializer(serializers.ModelSerializer):
