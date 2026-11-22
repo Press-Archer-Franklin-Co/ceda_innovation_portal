@@ -11,7 +11,8 @@ from rest_framework.exceptions import ValidationError
 from apps.audit.services import AuditService
 from apps.core.constants import SubmissionStatus
 from apps.programs.access import ProgramAccessService
-from apps.programs.challenge_public import _iso, challenge_status, has_results
+from apps.core.i18n import get_text
+from apps.programs.challenge_public import _iso, challenge_status, has_results, text_in
 from apps.programs.models import EligibilityRule, Program
 
 GENERAL_IDEA_URL = "/submit"
@@ -81,6 +82,8 @@ def entry_state(program, user, lang: str) -> dict:
             "closes_at": _iso(program.submission_closes_at),
             "opens_at": _iso(program.submission_opens_at),
             "has_results": status == "closed" and has_results(program),
+            "support_headline": text_in(program, "support_headline", lang),
+            "results_publish_at": _iso(program.results_publish_at),
         },
         "state": "",
         "message": "",
@@ -191,6 +194,8 @@ def public_results(program, lang: str) -> dict:
         "winners": [],
         "shortlisted": [],
         "entries_count": 0,
+        "districts_count": 0,
+        "criteria": [],
     }
     if not published:
         return data
@@ -206,6 +211,7 @@ def public_results(program, lang: str) -> dict:
             "prize_amount": w.prize_amount,
             "members_count": w.members_count,
             "photo_url": w.photo.url if w.photo else None,
+            "district": _district(w.submission, lang),
         }
         for w in spotlights
     ]
@@ -216,8 +222,35 @@ def public_results(program, lang: str) -> dict:
     )
     # Nshathisi (22 Nov): shortlisted entries show the idea title only; winners keep their names.
     data["shortlisted"] = [{"title": s.title} for s in shortlisted]
-    data["entries_count"] = program.submissions.filter(submitted_at__isnull=False).count()
+    sent = program.submissions.filter(submitted_at__isnull=False)
+    data["entries_count"] = sent.count()
+    data["districts_count"] = sent.exclude(district__isnull=True).values("district").distinct().count()
+    data["criteria"] = _criteria_weights(program)
     return data
+
+
+def _district(submission, lang: str) -> str:
+    district = getattr(submission, "district", None) if submission else None
+    return get_text(district.name, lang) if district else ""
+
+
+def _criteria_weights(program) -> list[dict]:
+    """1.10 "How we judged": each criterion's share of the total weight, in percent."""
+    if not program.marking_criteria_id:
+        return []
+    items = list(program.marking_criteria.items.order_by("ordering"))
+    total = sum(float(item.weight) for item in items)
+    if not total:
+        return []
+    return [{"name": item.name, "weight": round(float(item.weight) * 100 / total)} for item in items]
+
+
+def _panel_feedback(submission) -> str:
+    """The latest feedback the team released to this person (the comment only: never judges or raw scores)."""
+    snapshot = submission.feedback_snapshots.order_by("-released_at", "-created_at").first()
+    if not snapshot:
+        return ""
+    return (((snapshot.payload_json or {}).get("release") or {}).get("comment") or "").strip()
 
 
 def _score_summary(submission) -> dict | None:
@@ -259,9 +292,19 @@ def my_result(program, user, lang: str) -> dict:
         "prize_amount": "",
         "scores": None,
         "scores_shared": program.share_scores_with_entrants,
+        "first_name": (user.first_name or "").strip(),
+        "entries_count": 0,
+        "shortlisted_count": 0,
+        "feedback": "",
+        "next_step": None,
     }
     if entry is None or not published:
         return data
+    sent = program.submissions.filter(submitted_at__isnull=False)
+    data["entries_count"] = sent.count()
+    winner_ids = set(program.winner_spotlights.exclude(submission__isnull=True).values_list("submission_id", flat=True))
+    data["shortlisted_count"] = len(winner_ids | set(sent.filter(current_status__in=SHORTLIST_STATUSES).values_list("id", flat=True)))
+    data["feedback"] = _panel_feedback(entry)
     spotlight = program.winner_spotlights.filter(submission=entry).first()
     if spotlight:
         data.update(outcome="winner", position=spotlight.position, prize_label=spotlight.prize_label, prize_amount=spotlight.prize_amount)
@@ -269,6 +312,9 @@ def my_result(program, user, lang: str) -> dict:
         data["outcome"] = "shortlisted"
     else:
         data["outcome"] = "not_selected"
+    # 2.11 "Next step": the challenge's event (pitch day or awards), for winners and the shortlist, while it is ahead.
+    if data["outcome"] in ("winner", "shortlisted") and program.event_date and program.event_date > timezone.now():
+        data["next_step"] = {"at": _iso(program.event_date)}
     if program.share_scores_with_entrants:
         data["scores"] = _score_summary(entry)
     return data

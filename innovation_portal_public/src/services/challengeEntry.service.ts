@@ -14,6 +14,9 @@ export interface EntryChallenge {
   closes_at: string | null
   opens_at: string | null
   has_results?: boolean
+  /** Entry state only (1.9 "Up for grabs", 1.9b closed). */
+  support_headline?: string
+  results_publish_at?: string | null
 }
 
 export interface EntryLink {
@@ -58,6 +61,7 @@ export interface Winner {
   prize_amount: string
   members_count: number
   photo_url: string | null
+  district: string
 }
 
 export interface ChallengeResults {
@@ -69,6 +73,9 @@ export interface ChallengeResults {
   /** Titles only: shortlisted people are not named in public. */
   shortlisted: { title: string }[]
   entries_count: number
+  districts_count: number
+  /** "How we judged": each criterion's share of the total, in percent. */
+  criteria: { name: string; weight: number }[]
 }
 
 export type Outcome = 'no_entry' | 'waiting' | 'winner' | 'shortlisted' | 'not_selected'
@@ -85,6 +92,13 @@ export interface MyResult {
   prize_amount: string
   scores: { total: number | null; criteria: { name: string; score: number }[] } | null
   scores_shared: boolean
+  first_name: string
+  entries_count: number
+  shortlisted_count: number
+  /** The feedback the team released to this person; never judges' names or raw scores. */
+  feedback: string
+  /** The challenge's event (pitch day or awards), for winners and the shortlist, while it is ahead. */
+  next_step: { at: string } | null
 }
 
 const base = (slug: string) => `/programs/public/${encodeURIComponent(slug)}`

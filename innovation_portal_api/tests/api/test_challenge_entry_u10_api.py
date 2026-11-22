@@ -177,6 +177,44 @@ class ResultsTests(EntryTestCase):
         theirs = data(self.client.get("/api/programs/public/done/my-result/"))
         self.assertEqual((theirs["outcome"], theirs["position"]), ("winner", "1st"))
 
+    def test_results_say_how_it_was_judged_and_my_result_gives_feedback_and_next_step(self):
+        from datetime import timedelta
+        from decimal import Decimal
+
+        from apps.evaluation.models import MarkingCriteria, MarkingCriteriaItem
+        from apps.reference.models import District
+        from apps.submissions.models import SubmissionFeedbackSnapshot
+
+        criteria = MarkingCriteria.objects.create(title="Green rubric", created_by=self.officer)
+        MarkingCriteriaItem.objects.create(criteria=criteria, name="Problem", max_score=Decimal("5"), weight=Decimal("3"), ordering=1)
+        MarkingCriteriaItem.objects.create(criteria=criteria, name="Team", max_score=Decimal("5"), weight=Decimal("1"), ordering=2)
+        kweneng, _ = District.objects.get_or_create(slug="kweneng", defaults={"name": {"en": "Kweneng", "tn": "Kweneng"}})
+        self.winning.district = kweneng
+        self.winning.save()
+        WinnerSpotlight.objects.create(program=self.done, team_name="Mpho Dube", project_name="Cool boxes", position="1st", year=2026, submission=self.winning)
+        SubmissionFeedbackSnapshot.objects.create(
+            submission=self.mine, stage_code="committee_review", stage_name="Committee", release_action="approve", released_at=timezone.now(),
+            payload_json={"release": {"comment": "Real demand. Show your running costs."}, "reviews": [{"reviewer_label": "Reviewer 1", "total_score": 4}]},
+        )
+        self.done.marking_criteria = criteria
+        self.done.event_date = timezone.now() + timedelta(days=10)
+        self.done.results_announced_at = timezone.now()
+        self.done.save()
+
+        results = data(self.client.get("/api/programs/public/done/results/"))
+        self.assertEqual(results["criteria"], [{"name": "Problem", "weight": 75}, {"name": "Team", "weight": 25}])
+        self.assertEqual((results["winners"][0]["district"], results["districts_count"]), ("Kweneng", 1))
+
+        self.client.force_authenticate(self.innovator)
+        mine = data(self.client.get("/api/programs/public/done/my-result/"))
+        self.assertEqual(mine["feedback"], "Real demand. Show your running costs.")
+        self.assertNotIn("Reviewer", str(mine))
+        self.assertEqual((mine["entries_count"], mine["shortlisted_count"]), (2, 2))
+        self.assertIsNotNone(mine["next_step"]["at"])
+        self.done.event_date = timezone.now() - timedelta(days=1)
+        self.done.save()
+        self.assertIsNone(data(self.client.get("/api/programs/public/done/my-result/"))["next_step"])
+
     def test_not_selected_and_no_entry(self):
         self.mine.current_status = SubmissionStatus.SUBMITTED
         self.mine.save()
