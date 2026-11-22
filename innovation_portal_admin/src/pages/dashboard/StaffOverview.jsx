@@ -108,7 +108,7 @@ function QueueCard({ className }) {
           <h2 id="queue-title" className="font-heading text-[14px] font-bold text-text">{t('dash.queue.title')}</h2>
           <p className="text-[12px] text-muted">{t('dash.queue.subtitle')}</p>
         </div>
-        <Link to="/assignments" className={buttonClasses({ variant: 'ghost', size: 'sm' })}>{t('dash.queue.open')} <ArrowRight size={14} aria-hidden /></Link>
+        <Link to={can('entries.review') ? '/review' : '/assignments'} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>{t('dash.queue.open')} <ArrowRight size={14} aria-hidden /></Link>
       </header>
       {query.isLoading ? (
         <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-control" />)}</div>
@@ -134,7 +134,7 @@ function QueueCard({ className }) {
               return (
                 <li key={item.id}>
                   {open
-                    ? <Link to={`/submissions/${item.id}`} className="flex items-center gap-2 px-1 py-2 hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{body}</Link>
+                    ? <Link to={can('entries.review') ? `/review?mine=false&id=${item.id}` : `/submissions/${item.id}`} className="flex items-center gap-2 px-1 py-2 hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{body}</Link>
                     : <div className="flex items-center gap-2 px-1 py-2">{body}</div>}
                 </li>
               )
