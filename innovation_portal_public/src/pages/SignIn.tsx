@@ -184,8 +184,7 @@ export default function SignIn() {
       if (isSignedIn(result)) await signedIn(result)
       else {
         // This phone or email already has an account: finish with a code for that account, never a second one.
-        const found = result as { found_account?: boolean; identifier?: string }
-        if (found.found_account && found.identifier) setIdentifier(found.identifier)
+        if (result.found_account && result.identifier) setIdentifier(result.identifier)
         showStart(result)
       }
     } catch (err) {

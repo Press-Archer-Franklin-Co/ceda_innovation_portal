@@ -221,9 +221,12 @@ def join_accounts(phone_user, into, *, actor, dry_run: bool = False, source: str
     phone_user.phone_number = ""
     phone_user.save(update_fields=["is_active", "phone_number", "updated_at"])
     sessions.end_all(phone_user)
-    if phone and not into.phone_number:
-        into.phone_number = try_normalize_phone(phone) or phone
-    into.phone_verified = True
+    e164 = try_normalize_phone(phone) or phone
+    if e164 and not into.phone_number:
+        into.phone_number = e164
+    # Only the number that was joined is proved; a different number on the main account stays as it was.
+    if e164 and (try_normalize_phone(into.phone_number) or into.phone_number) == e164:
+        into.phone_verified = True
     into.save(update_fields=["phone_number", "phone_verified", "updated_at"])
     metadata = {"phone": mask_phone(try_normalize_phone(phone) or phone), "source": source, "joined_into": str(into.id), "joined_from": str(phone_user.id)}
     AuditService.log_action(actor=actor, action_type="accounts_joined", target=into, after_state=plan.moves, metadata=metadata)

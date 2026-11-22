@@ -236,7 +236,7 @@ class SignInFlowTests(TestCase):
         self.assertEqual(response.status_code, 400)
         errors = response.json()["errors"]
         self.assertEqual(errors["consent"]["code"], "consent_required")
-        self.assertEqual(errors["phone"]["code"], "phone_taken")
+        self.assertNotIn("phone", errors)  # with consent, a phone that has an account gets a sign-in code instead
 
 
 class SecondStepSettingTests(TestCase):

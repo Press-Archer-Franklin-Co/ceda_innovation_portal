@@ -12,10 +12,10 @@ import { formatDate, formatShortDate, relativeTime } from './format'
 import { ideaLink } from './links'
 
 const CHANNEL_WORDS: Record<string, StringKey> = {
-  web: 'ideas.channelWeb',
-  whatsapp: 'ideas.channelWhatsapp',
-  ussd: 'ideas.channelUssd',
-  office: 'ideas.channelOffice',
+  web: 'channel.web',
+  whatsapp: 'channel.whatsapp',
+  ussd: 'channel.ussd',
+  office: 'channel.office',
 }
 
 /** One idea on My ideas (2.2). Cards that need action get the orange outline. */

@@ -16,6 +16,8 @@ export const innovatorEn = {
   'channel.whatsapp': 'WhatsApp',
   'channel.sms': 'SMS',
   'channel.email': 'Email',
+  'channel.ussd': 'USSD',
+  'channel.office': 'CEDA office',
 
   // FormRenderer
   'form.challengeQuestion': 'Challenge question',
@@ -141,14 +143,6 @@ export const innovatorEn = {
 
   // 2.2 My ideas
   'ideas.title': 'My ideas',
-  'ideas.channelWeb': 'Webosaete',
-  'ideas.channelWhatsapp': 'WhatsApp',
-  'ideas.channelUssd': 'USSD',
-  'ideas.channelOffice': 'Ofisi ya CEDA',
-  'ideas.channelWeb': 'Website',
-  'ideas.channelWhatsapp': 'WhatsApp',
-  'ideas.channelUssd': 'USSD',
-  'ideas.channelOffice': 'CEDA office',
   'ideas.count': '{count} ideas',
   'ideas.countOne': '1 idea',
   'ideas.needReply': '{count} need your reply',
@@ -254,6 +248,8 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'channel.whatsapp': 'WhatsApp',
   'channel.sms': 'SMS',
   'channel.email': 'Imeile',
+  'channel.ussd': 'USSD',
+  'channel.office': 'Ofisi ya CEDA',
 
   'form.challengeQuestion': 'Potso ya kgwetlho',
   'form.err.required': 'Tsweetswee araba potso e.',

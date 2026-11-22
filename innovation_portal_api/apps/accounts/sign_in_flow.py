@@ -187,6 +187,9 @@ def signup(*, identifier_raw: str, full_name: str, phone: str = "", email: str =
     policy = AuthPolicy.current().second_step
     if policy == AuthPolicy.SecondStep.PASSWORD and len(password or "") < 8:
         errors["password"] = {"code": "password_too_short", "detail": "Choose a password of at least 8 characters."}
+    if errors:
+        raise ValidationError(errors)  # a form with mistakes never sends a code to anyone
+
     # One person, one account: an existing phone or email gets a code to sign in, never a second account.
     from apps.accounts.otp_services import OTPService
 
@@ -201,8 +204,6 @@ def signup(*, identifier_raw: str, full_name: str, phone: str = "", email: str =
             raise ValidationError({"code": "account_disabled", "detail": "This account is switched off. Contact CEDA."})
         demo_logins.assert_can_sign_in(account)
         return account, {**send_code(existing, ip=ip), "identifier": existing.value, "found_account": True, "message": "Welcome back, we found your account. Enter the code we sent."}
-    if errors:
-        raise ValidationError(errors)
 
     first, _, last = name.partition(" ")
     with transaction.atomic():

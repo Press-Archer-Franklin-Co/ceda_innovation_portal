@@ -50,7 +50,7 @@ def update_me(user, data: dict) -> None:
     if "phone_number" in changed:
         from apps.accounts.phone_accounts import OTHER_ACCOUNT, accounts_with_phone, phone_only_refusal
 
-        if data["phone_number"] and any(phone_only_refusal(other) for other in accounts_with_phone(data["phone_number"], exclude=user)):
+        if data["phone_number"] and any(other.phone_verified and phone_only_refusal(other) for other in accounts_with_phone(data["phone_number"], exclude=user)):
             raise ValidationError({"phone_number": OTHER_ACCOUNT})
         user.phone_verified = False
         changed.append("phone_verified")

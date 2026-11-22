@@ -169,6 +169,19 @@ class JoinTests(Base):
         self.assertEqual(AuditLog.objects.filter(action_type="accounts_joined").count(), 2)
         self.assertEqual(find_user_by_phone(PHONE), main)
 
+    def test_join_does_not_verify_a_different_number_on_the_main_account(self):
+        phone_user = self.whatsapp_account()
+        main = self.web_account(phone="+26771112222", verified=False)
+        self.assertTrue(join_accounts(phone_user, main, actor=main).allowed)
+        main.refresh_from_db()
+        self.assertEqual((main.phone_number, main.phone_verified), ("+26771112222", False))
+
+    def test_a_number_only_typed_elsewhere_does_not_block_its_owner(self):
+        self.web_account(email="typed@example.com", phone=PHONE, verified=False)
+        owner = self.web_account(email="owner@example.com")
+        self.client.force_authenticate(owner)
+        self.assertEqual(self.client.patch("/api/auth/me/", {"phone_number": "73000280"}, format="json").status_code, 200)
+
     def test_dry_run_changes_nothing(self):
         phone_user, main = self.whatsapp_account(), self.web_account()
         idea = self.draft(innovator=phone_user)
