@@ -194,3 +194,14 @@ class ReferenceSequence(models.Model):
     prefix = models.CharField(max_length=40, unique=True)
     last_value = models.PositiveIntegerField(default=0)
 
+
+
+class EntryPanelFeedback(UUIDModel, TimeStampedModel):
+    """R-54 (2.11, 3.37): what the panel liked and what to work on, and whether the entrant will attend the event."""
+
+    submission = models.OneToOneField(Submission, on_delete=models.CASCADE, related_name="panel_feedback")
+    liked = models.JSONField(default=list, blank=True, help_text="Short points, shown as written.")
+    work_on = models.JSONField(default=list, blank=True)
+    written_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    attending = models.BooleanField(null=True, blank=True, help_text="The entrant's answer to Confirm I will attend.")
+    attendance_answered_at = models.DateTimeField(null=True, blank=True)

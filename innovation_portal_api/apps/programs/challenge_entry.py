@@ -348,6 +348,9 @@ def my_result(program, user, lang: str) -> dict:
         "next_step": None,
     }
     if entry is None or not published:
+        data.update({"feedback_points": None, "attendance": {"confirmed": False, "answer": None, "can_confirm": False, "event_date": _iso(program.event_date)}})
+        if entry is not None:
+            data.update(panel_feedback(entry, program, "waiting"))
         return data
     sent = program.submissions.filter(submitted_at__isnull=False)
     data["entries_count"] = sent.count()
@@ -366,7 +369,62 @@ def my_result(program, user, lang: str) -> dict:
         data["next_step"] = {"at": _iso(program.event_date)}
     if program.share_scores_with_entrants:
         data["scores"] = _score_summary(entry)
+    data.update(panel_feedback(entry, program, data["outcome"]))
     return data
+
+
+def panel_feedback(entry, program, outcome: str) -> dict:
+    """R-54: feedback points and the attendance answer, for shortlisted and winning entries once results are out."""
+    from apps.submissions.models import EntryPanelFeedback
+
+    row = EntryPanelFeedback.objects.filter(submission=entry).first()
+    eligible = outcome in ("winner", "shortlisted")
+    event_over = bool(program.event_date and program.event_date < timezone.now())
+    return {
+        "feedback_points": {"liked": row.liked, "work_on": row.work_on} if row and eligible and (row.liked or row.work_on) else None,
+        "attendance": {
+            "confirmed": bool(row and row.attending),
+            "answer": row.attending if row else None,
+            "can_confirm": eligible and not event_over,
+            "event_date": _iso(program.event_date),
+        },
+    }
+
+
+def answer_attendance(program, user, attending: bool) -> dict:
+    from apps.submissions.models import EntryPanelFeedback
+
+    result = my_result(program, user, "en")
+    if not result["attendance"]["can_confirm"]:
+        raise ValidationError({"detail": {"code": "cannot_confirm", "detail": "Only shortlisted and winning entries are asked to attend, before the event."}})
+    entry = program.submissions.filter(innovator=user, submitted_at__isnull=False).order_by("-submitted_at").first()
+    row, _ = EntryPanelFeedback.objects.get_or_create(submission=entry)
+    row.attending = bool(attending)
+    row.attendance_answered_at = timezone.now()
+    row.save(update_fields=["attending", "attendance_answered_at", "updated_at"])
+    AuditService.log_action(actor=user, action_type="challenge_attendance_answered", target=entry, metadata={"attending": row.attending})
+    return my_result(program, user, "en")["attendance"]
+
+
+def save_panel_feedback(program, submission_id, *, liked, work_on, actor) -> dict:
+    from apps.submissions.models import EntryPanelFeedback
+
+    entry = program.submissions.filter(id=submission_id, submitted_at__isnull=False).first()
+    if entry is None:
+        raise ValidationError({"submission": "This entry is not in the challenge."})
+    clean = lambda items: [str(item).strip()[:300] for item in items if str(item).strip()][:6]  # noqa: E731
+    row, _ = EntryPanelFeedback.objects.get_or_create(submission=entry)
+    before = {"liked": row.liked, "work_on": row.work_on}
+    row.liked, row.work_on, row.written_by = clean(liked), clean(work_on), actor
+    row.save(update_fields=["liked", "work_on", "written_by", "updated_at"])
+    AuditService.log_action(actor=actor, action_type="challenge_panel_feedback_saved", target=entry, before_state=before, after_state={"liked": row.liked, "work_on": row.work_on})
+    return {
+        "submission_id": str(entry.id),
+        "liked": row.liked,
+        "work_on": row.work_on,
+        "attending": row.attending,
+        "attendance_answered_at": _iso(row.attendance_answered_at),
+    }
 
 
 # Staff -----------------------------------------------------------------------------------------------------------
