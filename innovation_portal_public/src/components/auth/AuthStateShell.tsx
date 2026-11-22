@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { CircleAlert, CircleCheck } from 'lucide-react'
 import clsx from 'clsx'
 import Card from '../ui/Card'
-import Logo from '../ui/Logo'
+import { BrandLockup } from '../ui/Logo'
 import { Spinner } from '../ui/Button'
 import watermarkUrl from '../../assets/brand/ceda-watermark.png'
 import { useI18n } from '../../i18n'
@@ -19,7 +19,7 @@ export function AuthStateShell({ start, highlight, children }: { start: string; 
       <div className="relative mx-auto grid max-w-[1200px] gap-8 px-4 py-8 sm:px-6 lg:min-h-screen lg:grid-cols-[minmax(0,1fr)_440px] lg:items-center lg:gap-10 lg:py-20">
         <div>
           <Link to="/" className="inline-flex rounded-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
-            <Logo theme="dark" />
+            <BrandLockup theme="dark" width={150} />
           </Link>
           <p className="mt-8 text-d-over uppercase text-amber">{t('authState.eyebrow')}</p>
           <h1 className="mt-3 font-heading text-d-mh1 text-on-banner sm:text-d-h1">

@@ -1,4 +1,4 @@
-import { ReactNode, useRef, useState } from 'react'
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Inbox, Pencil, Plus, Share2, Trash2 } from 'lucide-react'
 import Button from '../components/ui/Button'
 import Tag, { NewCue, TagTone } from '../components/ui/Tag'
@@ -16,7 +16,9 @@ import Skeleton, { SkeletonBlock, SkeletonText } from '../components/ui/Skeleton
 import Pagination from '../components/ui/Pagination'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
 import StepProgress from '../components/ui/StepProgress'
-import Logo, { CedaMark } from '../components/ui/Logo'
+import Logo, { BrandLockup, CedaMark } from '../components/ui/Logo'
+import BrandLoader from '../components/ui/BrandLoader'
+import { createBoot } from '../lib/boot'
 import { useI18n } from '../i18n'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Popover from '../components/ui/Popover'
@@ -123,12 +125,20 @@ export default function Styleguide() {
         </div>
       </Section>
 
-      <Section figma="Components › Brand" title="CEDA mark and Logo">
+      <Section figma="Components › Brand (U12)" title="CEDA mark, Logo and BrandLockup">
         <div className="flex flex-wrap items-center gap-6">
           <CedaMark height={80} label="CEDA" />
           <Logo />
           <Logo theme="dark" />
         </div>
+        <div className="flex flex-wrap items-center gap-6 mt-4">
+          <div className="p-6 rounded-card border border-border bg-bg"><BrandLockup width={240} /></div>
+          <div className="p-6 rounded-card bg-banner"><BrandLockup width={240} theme="dark" /></div>
+        </div>
+      </Section>
+
+      <Section figma="Components › Brand loader (U12)" title="BrandLoader: the idea bulb">
+        <LoaderPreview />
       </Section>
 
       <Section figma="Components › Buttons" title="Button">
@@ -333,6 +343,24 @@ export default function Styleguide() {
           <span className="bg-banner px-3 py-2 rounded-control"><LanguageSwitch tone="dark" /></span>
         </div>
       </Section>
+    </div>
+  )
+}
+
+/** The loader with a pretend start-up of four steps, so it can be watched again. */
+function LoaderPreview() {
+  const [run, setRun] = useState(0)
+  const boot = useMemo(() => createBoot(['i18n', 'config', 'me', 'page'], { timeoutMs: 0 }), [run]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const ids = [300, 900, 1600, 2300].map((ms, i) => setTimeout(() => boot.done(boot.steps[i]), ms))
+    return () => ids.forEach(clearTimeout)
+  }, [boot])
+  return (
+    <div>
+      <Button size="sm" onClick={() => setRun((n) => n + 1)}>Replay</Button>
+      <div className="relative mt-3 h-[480px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)' }}>
+        <BrandLoader key={run} boot={boot} intro contained />
+      </div>
     </div>
   )
 }

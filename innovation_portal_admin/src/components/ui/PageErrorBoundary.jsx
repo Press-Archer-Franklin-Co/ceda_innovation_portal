@@ -1,5 +1,6 @@
 import { Component } from 'react'
 import PageErrorFallback from './PageErrorFallback'
+import { boot } from '../../lib/boot'
 
 /**
  * Catches a page that fails to draw (ceda-routing section 1). Shows the shared ErrorState with Retry,
@@ -21,6 +22,8 @@ export default class PageErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
+    // The page's own error (with Retry) is what to show, so start-up is over (U12 loader).
+    boot.done('page')
     if (import.meta.env.DEV) console.error('Page failed to draw', error, info?.componentStack)
   }
 

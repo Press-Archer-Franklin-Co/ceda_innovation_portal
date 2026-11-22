@@ -35,7 +35,13 @@ export function useSimulatorRun({ journeyId, channel, asRegistered, onEvent }) {
     send({ session_id: run.session_id, input: value }, label ?? value)
   }, [run, send, simulate.isPending])
 
-  return { run, chat, start, answer, reset, pending: simulate.isPending, failed: simulate.isError }
+  // A pretend file for an "Ask for a file" step: nothing is uploaded (POST /simulate/ attachment).
+  const sendFile = useCallback((label) => {
+    if (!run || run.screen.end || simulate.isPending) return
+    send({ session_id: run.session_id, attachment: { name: 'idea.pdf', content_type: 'application/pdf', size: 120000 } }, label)
+  }, [run, send, simulate.isPending])
+
+  return { run, chat, start, answer, sendFile, reset, pending: simulate.isPending, failed: simulate.isError }
 }
 
 export function overLimit(screen) {

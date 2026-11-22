@@ -33,11 +33,27 @@ function useIsPhone() {
   return phone
 }
 
-export default function HelpBubble() {
+/**
+ * Need help guide (2.14): while the guide is on it is the one button, and "Talk to a person" opens this chat
+ * window from there (fromGuide: no bubble of its own, opened and closed by the guide). With the guide off the
+ * bubble works exactly as before. onStatus tells the guide whether live chat is on.
+ */
+export default function HelpBubble({ fromGuide = false, open: openProp, onOpenChange, onStatus }: {
+  fromGuide?: boolean
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  onStatus?: (enabled: boolean) => void
+} = {}) {
   const { t, lang } = useI18n()
   const { pathname } = useLocation()
   const [status, setStatus] = useState<HelpChatStatus | null>(null)
-  const [open, setOpen] = useState(false)
+  const [openState, setOpenState] = useState(false)
+  const open = fromGuide ? Boolean(openProp) : openState
+  const setOpen = (v: boolean | ((o: boolean) => boolean)) => {
+    const next = typeof v === 'function' ? v(open) : v
+    if (fromGuide) onOpenChange?.(next)
+    else setOpenState(next)
+  }
   const phone = useIsPhone()
   const chat = useChat(open)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -47,6 +63,7 @@ export default function HelpBubble() {
     helpChatService.status(lang).then((s) => alive && setStatus(s), () => alive && setStatus(null))
     return () => { alive = false }
   }, [lang])
+  useEffect(() => { onStatus?.(Boolean(status?.enabled)) }, [status, onStatus])
 
   // Not on the staff hand-off pages or the sign-in flow, and never while live chat is off.
   if (!status?.enabled || pathname.startsWith('/sign-in')) return null
@@ -63,7 +80,7 @@ export default function HelpBubble() {
         className={clsx(
           'fixed right-4 sm:right-8 bottom-[84px] lg:bottom-8 z-40 inline-flex items-center gap-2 rounded-full bg-primary pl-4 pr-3 h-12 text-white font-heading font-semibold text-d-btn shadow-pop',
           'transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-          open && phone && 'hidden',
+          (fromGuide || (open && phone)) && 'hidden',
         )}
       >
         <MessageCircle size={20} aria-hidden />

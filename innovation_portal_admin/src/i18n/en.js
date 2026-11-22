@@ -12,6 +12,8 @@ import { reviewEn } from './review'
 import { usersEn } from './users'
 import { platformSettingsEn } from './platformSettings'
 import { contentBEn } from './contentB'
+import { brandEn } from './brand'
+import { guideEn } from './guide'
 import { channelsEn } from './channels'
 
 const en = {
@@ -135,8 +137,8 @@ const en = {
   'staff.nav.label': 'Staff menu',
   'staff.search': 'Search ideas, challenges and people',
   'staff.viewSite': 'View public site',
-  'staff.collapse': 'Hide menu',
-  'staff.expand': 'Show menu',
+  'staff.collapse': 'Collapse menu',
+  'staff.expand': 'Expand menu',
   'staff.console': 'Staff console',
   // Crop dialog (components/ui/ImageCropModal)
   'crop.title': 'Position and crop the picture',
@@ -155,6 +157,8 @@ const en = {
   ...usersEn,
   ...platformSettingsEn,
   ...contentBEn,
+  ...brandEn,
+  ...guideEn,
   ...channelsEn,
   ...challengesEn,
   ...rolesEn,

@@ -242,6 +242,8 @@ class ApprovalService:
             return cls._finish(approval, actor=actor, approve=False, comment=comment)
         steps = cls.steps_user_can_approve(actor, approval)
         if not steps:
+            if approval.requested_by_id == actor.id and not cls.flow().approvers_can_approve_own_work:
+                raise PermissionDenied("You cannot approve your own change. Ask another approver.")
             raise PermissionDenied("You cannot approve this change.")
         from apps.content.models import ApprovalDecision
 
@@ -336,6 +338,14 @@ class ApprovalService:
         if user is not None:
             data["can_approve"] = cls.can_approve(user, approval)
             data["can_send_back"] = cls.can_decide(user, approval)
+            # U9 (3.25): this person made the change. Whether they may still approve it is the approval steps switch.
+            data["own_change"] = approval.requested_by_id == getattr(user, "id", None)
+        try:
+            from apps.content.approval_compare import change_type
+
+            data["change_type"] = change_type(approval) if approval.target is not None else "new"
+        except Exception:  # noqa: BLE001 - a missing target must not break the list
+            data["change_type"] = "new"
         return data
 
 

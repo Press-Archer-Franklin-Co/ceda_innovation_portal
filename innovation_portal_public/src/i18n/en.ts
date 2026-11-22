@@ -6,6 +6,8 @@ import { pagesEn } from './pages'
 import { policiesEn } from './policies'
 import { a11yEn } from './a11y'
 import { statusEn } from './status'
+import { brandEn } from './brand'
+import { guideEn } from './guide'
 import { inviteEn } from './invite'
 import { accountEn } from './account'
 import { challengeEntryEn } from './challengeEntry'
@@ -410,7 +412,6 @@ const en = {
   'utility.helpCentre': 'Help centre',
   'utility.accessibility': 'Accessibility',
 
-  'footer.tagline': 'Finance. Develop. Sustain.',
   'footer.explore': 'Portal',
   'footer.support': 'Help',
   'footer.legal': 'Legal',
@@ -438,6 +439,8 @@ const en = {
   ...policiesEn,
   ...a11yEn,
   ...statusEn,
+  ...brandEn,
+  ...guideEn,
   ...inviteEn,
   ...accountEn,
   ...challengeEntryEn,

@@ -241,7 +241,7 @@ export default function PlatformSettings() {
   const tab = TABS.includes(params.get('tab')) ? params.get('tab') : 'signin'
   const tabs = useMemo(() => [
     { key: 'general', label: t('ps.tab.general') },
-    { key: 'signin', label: t('ps.tab.signIn') },
+    { key: 'signin', label: t('ps.tab.signIn'), guide: 'integrations.features' },
     { key: 'languages', label: t('ps.tab.languages') },
   ], [t])
   return (

@@ -119,9 +119,13 @@ class FeatureFlagSelector:
         public_keys = set(FeatureFlag.objects.filter(is_public=True).values_list("key", flat=True)) or {
             definition.key for definition in FLAG_DEFINITIONS if definition.is_public
         }
+        from apps.platform_config import service_status
+
+        states = service_status.states()
         sso_active = bool(flags.get("staff_sso")) and IntegrationRuntimeSelector.source(IntegrationConnection.Kind.SSO) != "none"
         return {
-            "features": {key: bool(flags.get(key)) for key in sorted(public_keys)},
+            # U9: a feature whose service is not active stays hidden on the site, even when switched on.
+            "features": {key: bool(flags.get(key)) and not service_status.needs_setup(key, states) for key in sorted(public_keys)},
             "sign_in": {
                 "password": bool(flags.get("password_sign_in")),
                 "code": bool(flags.get("code_sign_in")),
@@ -130,9 +134,32 @@ class FeatureFlagSelector:
                 # U7: the one second step after phone or email ("code" or "password").
                 "second_step": _second_step(),
             },
+            # Copilot A7: which AI helper features are on at all (switch, feature, limit, a working
+            # service), so the screens hide them without another call. Per person: /api/assistant/status/.
+            "assistant": _assistant_features(),
             # U7: present only while both demo gates are on; never emails or passwords.
             **_demo_logins(),
         }
+
+
+def _assistant_features() -> dict:
+    """Cached like the feature switches (30 seconds): public-config is asked on every page."""
+    from django.core.cache import cache
+
+    cached = cache.get("assistant:public-features")
+    if cached is not None:
+        return cached
+    try:
+        from apps.assistant import gateway
+        from apps.assistant.models import FEATURE_DEFAULTS, AssistantSettings
+
+        settings_row = AssistantSettings.load()
+        features = {key: gateway.unavailable_reason(key, settings_row) == "" for key in FEATURE_DEFAULTS}
+        features["guide_for_guests"] = features["guide"] and settings_row.guests_can_use_guide
+        cache.set("assistant:public-features", features, 30)
+        return features
+    except Exception:  # the public config must never fail because of the AI helper
+        return {}
 
 
 class IntegrationHistorySelector:

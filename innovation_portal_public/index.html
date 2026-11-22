@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <meta name="theme-color" content="#5A3C32">
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="CEDA Innovation Portal - Driving digital transformation and innovation across Botswana" />
     <title>CEDA Innovation Portal</title>
@@ -11,9 +14,17 @@
     <style>
       body { font-family: Poppins, system-ui, -apple-system, sans-serif; }
     </style>
+    <style>
+      /* The static idea bulb (U12): same size and place as BrandLoader, before the script arrives. Kept in step with src/styles/brand.css. */
+      .ceda-loader{--mark-y:calc(50% - 51.3px);position:fixed;inset:0;z-index:100;overflow:hidden;background:rgb(var(--c-bg,255 255 255))}
+      .ceda-loader__bulb{position:absolute;left:calc(50% - 75px);top:calc(var(--mark-y) - 70px);width:150px;height:212px}
+      .ceda-loader__bulb svg{display:block;width:150px;height:212px;overflow:visible}
+      .ceda-loader__glass{stroke:rgba(90,60,50,.55)}
+      @media (max-width:639px){.ceda-loader{--mark-y:calc(50% - 37.6px)}}
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" aria-busy="true"><div class="ceda-loader" aria-hidden="true"><div class="ceda-loader__bulb"><svg viewBox="0 0 120 170"><defs><clipPath id="boot-clip"><path d="M60 10 A46 46 0 0 1 92.5 88.5 C86 96 80 103 79 118 L41 118 C40 103 34 96 27.5 88.5 A46 46 0 0 1 60 10 Z"/></clipPath><radialGradient id="boot-glow" cx="60" cy="56" r="52" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fffef4"/><stop offset=".28" stop-color="#fff2b0"/><stop offset=".6" stop-color="#fac800" stop-opacity=".85"/><stop offset="1" stop-color="#faa014" stop-opacity=".25"/></radialGradient></defs><path d="M60 10 A46 46 0 0 1 92.5 88.5 C86 96 80 103 79 118 L41 118 C40 103 34 96 27.5 88.5 A46 46 0 0 1 60 10 Z" fill="rgba(250,200,0,.06)"/><circle cx="60" cy="56" r="52" fill="url(#boot-glow)" opacity=".12" clip-path="url(#boot-clip)"/><path d="M50 112 L50 80 Q52 66 56 72 Q60 60 64 72 Q68 66 70 80 L70 112" fill="none" stroke="rgb(152,123,106)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path class="ceda-loader__glass" d="M60 10 A46 46 0 0 1 92.5 88.5 C86 96 80 103 79 118 L41 118 C40 103 34 96 27.5 88.5 A46 46 0 0 1 60 10 Z" fill="none" stroke-width="2.6"/><g fill="#5a3c32"><rect x="40" y="118" width="40" height="8" rx="3"/><rect x="42" y="128" width="36" height="7" rx="3"/><rect x="44" y="137" width="32" height="7" rx="3"/><path d="M50 146 h20 l-4 8 h-12 z"/></g></svg></div></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

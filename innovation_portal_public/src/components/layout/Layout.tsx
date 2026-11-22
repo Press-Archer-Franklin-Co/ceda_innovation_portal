@@ -3,10 +3,12 @@ import { Suspense, useEffect } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import MobileTabBar from './MobileTabBar'
-import HelpBubble from '../livechat/HelpBubble'
+import NeedHelp from '../guide/NeedHelp'
 import { useT } from '../../i18n'
 import PageSkeleton from '../ui/PageSkeleton'
 import PageErrorBoundary from '../ui/PageErrorBoundary'
+import { BootStep } from '../ui/BrandLoader'
+import { boot } from '../../lib/boot'
 
 /** Public shell: utility bar + nav, page, footer; on phone a sticky tab bar. Page background is always bg (white). */
 export default function Layout() {
@@ -30,14 +32,15 @@ export default function Layout() {
         {/* A page that fails shows an error with Retry inside the shell; header and footer stay. */}
         <PageErrorBoundary resetKey={pathname}>
           <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-10"><PageSkeleton /></div>}>
+            <BootStep boot={boot} />
             <Outlet />
           </Suspense>
         </PageErrorBoundary>
       </main>
       <Footer />
       <MobileTabBar />
-      {/* C1: the help bubble shows itself only while live chat is on. */}
-      <HelpBubble />
+      {/* 2.14: one Need help? button: the guide, or the live chat bubble (C1) when the guide is off. */}
+      <NeedHelp />
     </div>
   )
 }

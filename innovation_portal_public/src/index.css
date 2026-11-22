@@ -1,4 +1,5 @@
 @import './styles/tokens.css';
+@import './styles/brand.css';
 
 @tailwind base;
 @tailwind components;
@@ -133,3 +134,11 @@
 ::-webkit-scrollbar        { width: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }
 ::-webkit-scrollbar-thumb  { background: rgb(var(--c-border)); border-radius: 4px; }
+
+/* Need help guide (2.14): the yellow ring round the current step's control pulses gently. */
+@keyframes guide-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--c-yellow) / 0.55); }
+  50% { box-shadow: 0 0 0 8px rgb(var(--c-yellow) / 0); }
+}
+.guide-ring-pulse { animation: guide-ring-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .guide-ring-pulse { animation: none; } }

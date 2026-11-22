@@ -253,7 +253,7 @@ export default function Users() {
         caption={t('users.title')}
         toolbar={(
           <div className="flex flex-wrap items-center gap-2">
-            <InputControl type="search" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            <InputControl data-guide="users.search" type="search" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder={t('users.search')} aria-label={t('users.search')} leading={<Search size={15} aria-hidden />} className="w-full sm:w-[280px]" />
             <SelectControl options={[{ value: '', label: t('users.allRoles') }, ...roleOptions]} value={role} onChange={(v) => { setRole(v ?? ''); setPage(1) }} aria-label={t('users.col.roles')} className="w-[calc(50%-4px)] sm:w-[160px]" />
             <SelectControl options={[{ value: '', label: t('users.allStatus') }, ...statusOptions]} value={status} onChange={(v) => { setStatus(v ?? ''); setPage(1) }} aria-label={t('users.col.status')} className="w-[calc(50%-4px)] sm:w-[150px]" />

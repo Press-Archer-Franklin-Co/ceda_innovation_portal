@@ -89,10 +89,10 @@ export default function ReviewPanel({ id, onDone }) {
   const nextStep = s.steps?.[current + 1]?.title
   const who = [s.innovator?.name, s.innovator?.district].filter(Boolean).join(' · ')
   const tabs = [
-    { key: 'idea', label: t('review.tab.idea') },
-    { key: 'score', label: t('review.tab.score') },
+    { key: 'idea', label: t('review.tab.idea'), guide: 'review.tab.idea' },
+    { key: 'score', label: t('review.tab.score'), guide: 'review.tab.score' },
     { key: 'messages', label: t('ideas.tab.messages'), count: counts.messages ?? undefined },
-    { key: 'files', label: t('review.tab.files'), count: counts.documents ?? undefined },
+    { key: 'files', label: t('review.tab.files'), count: counts.documents ?? undefined, guide: 'review.tab.files' },
     { key: 'history', label: t('ideas.tab.history') },
   ]
 
@@ -140,13 +140,13 @@ export default function ReviewPanel({ id, onDone }) {
           <Button ref={rejectRef} variant="danger" className="hidden lg:inline-flex" onClick={() => setDecision('reject')}>{t('review.notForward')}</Button>
         )}
         <span className="hidden flex-1 lg:block" />
-        <Button ref={askButtonRef} variant="secondary" className="flex-1 lg:flex-none" onClick={() => {
+        <Button ref={askButtonRef} data-guide="review.askInfo" variant="secondary" className="flex-1 lg:flex-none" onClick={() => {
           if (window.matchMedia?.('(min-width: 1024px)').matches) { setTab('score'); setTimeout(() => askRef.current?.focus(), 50) } else setAskOpen(true)
         }}>
           <span className="lg:hidden">{t('review.ask')}</span><span className="hidden lg:inline">{t('review.askMore')}</span>
         </Button>
         {canApprove && (
-          <Button ref={approveRef} className="flex-1 lg:flex-none" onClick={() => setDecision('approve')}>
+          <Button ref={approveRef} data-guide="review.sendToPanel" className="flex-1 lg:flex-none" onClick={() => setDecision('approve')}>
             {nextStep ? t('review.sendTo', { step: nextStep }) : t('ideas.moveNext')}
             <ArrowRight size={16} aria-hidden />
           </Button>

@@ -313,7 +313,7 @@ export default function IdeaForm() {
           actions={
             <>
               <SaveStatus save={save} now={now} />
-              <Button variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>{t('form.saveExit')}</Button>
+              <Button data-guide="idea.saveExit" variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>{t('form.saveExit')}</Button>
             </>
           }
           below={<p className="text-d-label-s text-text">{t('ent.part', { n: stepIndex + 1, total: stepNames.length, name: stepNames[stepIndex] ?? '' })}</p>}
@@ -329,7 +329,7 @@ export default function IdeaForm() {
             <div className="flex flex-wrap items-center gap-3">
               <SaveStatus save={save} now={now} />
               <LanguageSwitch />
-              <Button variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>
+              <Button data-guide="idea.saveExit" variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>
                 {t('form.saveExit')}
               </Button>
             </div>
@@ -381,14 +381,14 @@ export default function IdeaForm() {
 
           <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
             {stepIndex > 0 ? (
-              <Button variant={slug ? 'secondary' : 'ghost'} onClick={onBack}>{t('form.back')}</Button>
+              <Button data-guide="idea.back" variant={slug ? 'secondary' : 'ghost'} onClick={onBack}>{t('form.back')}</Button>
             ) : (
               <span />
             )}
             {onReview ? (
-              <Button onClick={onSend} loading={sending} arrow>{t('form.send')}</Button>
+              <Button data-guide="idea.send" onClick={onSend} loading={sending} arrow>{t('form.send')}</Button>
             ) : (
-              <Button onClick={onContinue} loading={busy} arrow>
+              <Button data-guide="idea.next" onClick={onContinue} loading={busy} arrow>
                 {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
               </Button>
             )}

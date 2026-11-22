@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react'
+import React, { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { documents as documentsApi } from './lib/api/endpoints'
@@ -10,6 +10,9 @@ import { useJudgeOnly } from './lib/auth/useJudgeOnly'
 import { useAuth } from './lib/auth/AuthContext'
 import AppLayout           from './layout/AppLayout'
 import PageErrorBoundary   from './components/ui/PageErrorBoundary'
+import { BootStep } from './components/ui/BrandLoader'
+import { boot } from './lib/boot'
+import { usePublicConfig } from './lib/queries/platform'
 
 // Page-level errors are caught by PageErrorBoundary inside AppLayout (shared ErrorState, no stack trace).
 function ErrorBoundary({ children }) {
@@ -86,6 +89,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <BootSteps />
         <BrowserRouter basename="/staff">
           <Routes>
             <Route path="/" element={<Landing />} />
@@ -94,7 +98,7 @@ export default function App() {
             ))}
 
             {Styleguide && (
-              <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />
+              <Route path="/styleguide" element={<Suspense fallback={null}><BootStep boot={boot} /><Styleguide /></Suspense>} />
             )}
 
             <Route element={<ProtectedRoute />}>
@@ -237,6 +241,28 @@ export default function App() {
       </AuthProvider>
     </QueryClientProvider>
   )
+}
+
+/**
+ * Start-up steps for the idea bulb loader (U12): the signed-in check (me and capabilities) and public config.
+ * Someone who is not signed in is sent to the sign-in page, so nothing else loads here.
+ */
+function BootSteps() {
+  const { loading, user } = useAuth()
+  const config = usePublicConfig()
+  useEffect(() => {
+    if (loading) return
+    boot.done('me')
+    if (!user) {
+      boot.done('config')
+      boot.done('page')
+    }
+  }, [loading, user])
+  useEffect(() => {
+    if (config.isSuccess) boot.done('config')
+    else if (config.isError) boot.fail('config')
+  }, [config.isSuccess, config.isError])
+  return null
 }
 
 /** People who only judge start on their judging list (3.17); everyone else on the dashboard. */

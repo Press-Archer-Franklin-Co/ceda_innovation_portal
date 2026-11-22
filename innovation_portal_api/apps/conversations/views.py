@@ -462,7 +462,7 @@ def _own(request, pk) -> Conversation:
 class HelpChatStatusView(APIView):
     permission_classes = [AllowAny]
 
-    @extend_schema(tags=PUBLIC_TAGS, summary="Is live chat on and open? (help bubble)", description="{enabled, open_now, staff_online, allow_guests, welcome, away, ask_rating}", parameters=[OpenApiParameter("lang", OpenApiTypes.STR, enum=["en", "tn"])], responses=OpenApiTypes.OBJECT)
+    @extend_schema(tags=PUBLIC_TAGS, summary="Is live chat on and open? (help bubble)", description="{enabled, open_now, staff_online, allow_guests, welcome, away, ask_rating, hours: {mon..sun: [{opens, closes}]}, holidays: [upcoming dates], timezone}. Hours and messages only: never who answers or saved replies.", parameters=[OpenApiParameter("lang", OpenApiTypes.STR, enum=["en", "tn"])], responses=OpenApiTypes.OBJECT)
     def get(self, request):
         return api_success(data=services.public_status(_lang(request)))
 

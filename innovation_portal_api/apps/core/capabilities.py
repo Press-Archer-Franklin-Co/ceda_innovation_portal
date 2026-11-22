@@ -50,6 +50,12 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     # Administration (was IsAdministrator).
     "users.manage": (R.ADMINISTRATOR,),
     "settings.manage": (R.ADMINISTRATOR,),
+    # C3 AI helper: officer hints and related ideas on submissions they can open; tune the helper.
+    # Judges see hints only for entries assigned to them (SubmissionSelector.for_user decides).
+    "assistant.hints": (R.JUDGE, R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
+    "assistant.manage": (R.ADMINISTRATOR,),
+    # Copilot B2: describe a process and get a draft form and workflow (drafts only; publishing is unchanged).
+    "assistant.build": (R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     # C2: WhatsApp and USSD journeys, channel connections and their activity.
     "channels.manage": OFFICER_ADMIN,
     # C1: answer chats and hand-overs in the Inbox.
@@ -74,6 +80,25 @@ CATALOGUE: dict[str, dict] = {
     "content.approve": {"group": "website", "label": "Approve website content", "label_tn": "Dumelela diteng tsa webosaete"},
     "users.manage": {"group": "administration", "label": "Manage people and roles", "label_tn": "Laola batho le maemo", "locked_to": (R.ADMINISTRATOR,)},
     "settings.manage": {"group": "administration", "label": "Change platform settings", "label_tn": "Fetola ditlhophiso", "locked_to": (R.ADMINISTRATOR,)},
+    # TODO tn-review: the two assistant label_tn values are first drafts by the ai lane.
+    "assistant.hints": {
+        "group": "ideas",
+        "label": "See AI helper summaries and related ideas",
+        "label_tn": "Bona dikakantsho tsa mothusi wa AI le dikakanyo tse di amanang",
+        "description": "Summary, points to check and similar or complementary ideas on submissions the person can already open.",
+    },
+    "assistant.manage": {
+        "group": "administration",
+        "label": "Tune the AI helper",
+        "label_tn": "Baakanya mothusi wa AI",
+        "description": "Write guidance, upload the user manual, switch helper features on or off and see what it costs.",
+    },
+    "assistant.build": {
+        "group": "challenges",
+        "label": "Create forms and workflows with AI",
+        "label_tn": "Dira diforomo le ditsamaiso ka AI",  # TODO tn-review
+        "description": "Describe a process and get a draft form and workflow to preview, edit, test and send for approval. Needs form or workflow rights too.",
+    },
     "channels.manage": {
         "group": "administration",
         "label": "Run WhatsApp and USSD journeys",

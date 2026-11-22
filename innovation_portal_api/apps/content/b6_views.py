@@ -186,6 +186,35 @@ class ApprovalListView(APIView):
         return api_success(data=items)
 
 
+APPROVAL_NOTE = {
+    "en": "Send back needs a comment. Whether you can approve your own change is set in Approval steps.",
+    "tn": "Go busetsa go tlhoka tshwaelo. Gore o ka dumelela phetogo ya gago o e baakanya mo Dikgatong tsa tumelelo.",
+}
+
+
+class ApprovalDetailView(APIView):
+    permission_classes = [CanSeeApprovals]
+
+    @extend_schema(
+        tags=STAFF_TAGS,
+        summary="One approval request with Live now and Proposed (3.25)",
+        description="The list item plus compare: {change_type: new|edit, changed_groups: [section names], changed: [field keys], "
+        "fields: [{key, group, label, live, proposed, changed}]}. Texts are {en, tn}. live is null when nothing is live yet. "
+        "The live version stays until the change is approved. note {en, tn} is the helper line under the buttons. "
+        "Approving your own change works only while the approval steps switch approvers_can_approve_own_work is on (the default).",
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request, approval_id):
+        from apps.content.approval_compare import compare
+
+        approval = get_object_or_404(ApprovalRequest.objects.select_related("requested_by", "decided_by", "content_type"), id=approval_id)
+        data = ApprovalService.payload(approval, user=request.user)
+        data["can_decide"] = data["can_send_back"] or data["can_approve"]
+        data["note"] = APPROVAL_NOTE
+        data["compare"] = compare(approval) if approval.target is not None else {"change_type": "new", "changed_groups": [], "fields": [], "changed": []}
+        return api_success(data=data)
+
+
 class ApprovalDecisionView(APIView):
     # Who may approve depends on the flow's steps (a capability or a role per step), so the service decides.
     permission_classes = [CanSeeApprovals]

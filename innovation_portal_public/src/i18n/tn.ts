@@ -7,6 +7,8 @@ import { pagesTn } from './pages'
 import { policiesTn } from './policies'
 import { a11yTn } from './a11y'
 import { statusTn } from './status'
+import { brandTn } from './brand'
+import { guideTn } from './guide'
 import { inviteTn } from './invite'
 import { accountTn } from './account'
 import { challengeEntryTn } from './challengeEntry'
@@ -411,7 +413,6 @@ const tn: Record<StringKey, string> = {
   'utility.helpCentre': 'Lefelo la thuso',
   'utility.accessibility': 'Phitlhelelo',
 
-  'footer.tagline': 'Finance. Develop. Sustain.',
   'footer.explore': 'Polatefomo',
   'footer.support': 'Thuso',
   'footer.legal': 'Molao',
@@ -439,6 +440,8 @@ const tn: Record<StringKey, string> = {
   ...policiesTn,
   ...a11yTn,
   ...statusTn,
+  ...brandTn,
+  ...guideTn,
   ...inviteTn,
   ...accountTn,
   ...challengeEntryTn,

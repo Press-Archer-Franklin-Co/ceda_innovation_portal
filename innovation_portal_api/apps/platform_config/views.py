@@ -22,7 +22,7 @@ from apps.platform_config.serializers import (
 from apps.platform_config.services import FeatureFlagService, IntegrationService, SMSStatusService, SSOTrialService
 from apps.platform_config.throttles import PlatformAdminThrottle, PlatformTestThrottle
 
-KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms, ussd or whatsapp.", required=False, enum=["sso", "sms", "ussd", "whatsapp"])
+KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms, ussd, whatsapp or ai.", required=False, enum=["sso", "sms", "ussd", "whatsapp", "ai"])
 TAGS = ["Platform settings"]
 
 
@@ -92,7 +92,7 @@ class ProviderListView(_AdminView):
 )
 class IntegrationRuntimeView(_AdminView):
     def get(self, request):
-        return api_success(data={kind: IntegrationRuntimeSelector.status(kind) for kind in ("sso", "sms")})
+        return api_success(data={kind: IntegrationRuntimeSelector.status(kind) for kind in ("sso", "sms", "ai")})
 
 
 @extend_schema_view(
@@ -197,14 +197,36 @@ class IntegrationActivateView(_AdminView):
 @extend_schema(
     tags=TAGS,
     summary="Switch off an integration connection",
-    description="Refused with code `staff_lockout` if this is the last working way for staff to sign in.",
+    description="POST switches it off and answers the connection plus hidden_features: [{key, label}], the features that are now hidden "
+    "because nothing else provides the service. GET answers {hidden_features} without changing anything, for the confirmation. "
+    "Refused with code `staff_lockout` if this is the last working way for staff to sign in.",
     request=None,
     responses={200: IntegrationConnectionSerializer},
 )
 class IntegrationDeactivateView(_AdminView):
+    def get(self, request, pk):
+        """U9 (3.27): what switching off would hide, for the confirmation."""
+        from apps.platform_config.service_status import would_hide
+
+        return api_success(data={"hidden_features": would_hide(get_object_or_404(IntegrationConnection, pk=pk))})
+
     def post(self, request, pk):
         connection = IntegrationService.deactivate(connection=get_object_or_404(IntegrationConnection, pk=pk), actor=request.user)
-        return api_success(data=IntegrationConnectionSerializer(connection).data, message="Connection switched off.")
+        data = {**IntegrationConnectionSerializer(connection).data, "hidden_features": getattr(connection, "hidden_features", [])}
+        return api_success(data=data, message="Connection switched off.")
+
+
+@extend_schema(
+    tags=TAGS,
+    summary="Services and their state (3.27)",
+    description="One card per service: {kind, label, description, state: not_set_up|testing|active, state_label, connection_id, provider, "
+    "connections_count, features: [{key, label, enabled}], hides_when_off: [{key, label}]}. Keys are never returned.",
+)
+class ServiceListView(_AdminView):
+    def get(self, request):
+        from apps.platform_config.service_status import services
+
+        return api_success(data=services())
 
 
 @extend_schema(tags=TAGS, summary="Recent changes and tests for a connection", responses={200: IntegrationHistorySerializer(many=True)})

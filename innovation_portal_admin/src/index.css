@@ -1,4 +1,5 @@
 @import './styles/tokens.css';
+@import './styles/brand.css';
 
 @tailwind base;
 @tailwind components;
@@ -7,6 +8,15 @@
 
 
 :root {
+  /* The lit staff menu (U12): dim is the resting look of the collapsed rail, lit of the open menu. */
+  --sidebar-dim-bg: #3A2620;
+  --sidebar-lit-bg: #5A3C32;
+  --sidebar-dim-text: rgba(234,219,210,.38);
+  --sidebar-lit-text: #EADBD2;
+  --sidebar-glow: rgba(250,190,60,.38);
+  --sidebar-active-bg: rgba(255,255,255,.12);
+  --sidebar-marker: #FAC800;
+  --sidebar-rail: 72px;
   --sidebar-width: 216px;
   --topbar-height: 52px;
   --ceda-green:     #F0641E;
@@ -226,3 +236,38 @@
 
 
 .sidebar-scroll::-webkit-scrollbar { width: 0; }
+
+/* The lit staff menu (U12). useMenuMotion sets colours, --lit and --rule while it moves. */
+.sidebar-lit {
+  position: absolute; left: 0; right: 0; top: 0; height: calc(100% + 220px); pointer-events: none; will-change: transform, opacity;
+  background: linear-gradient(to bottom, var(--sidebar-lit-bg) calc(100% - 220px), transparent 100%);
+}
+.sidebar-glow {
+  position: absolute; left: -120px; top: -150px; width: 420px; height: 360px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, var(--sidebar-glow), rgba(240,100,30,.14) 55%, rgba(240,100,30,0) 100%);
+}
+.sidebar-sun-halo {
+  position: absolute; left: 48px; top: 22px; width: 150px; height: 110px; margin: -55px 0 0 -75px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(250,200,0,.55), rgba(250,160,20,.2) 55%, rgba(250,160,20,0));
+}
+.sidebar-dim-mark { filter: saturate(.3) brightness(.78); }
+.sidebar-title { color: var(--sidebar-lit-text); }
+.sidebar-title::after {
+  content: ""; position: absolute; left: 14px; top: 50%; width: 28px; height: 1px; background: currentColor; opacity: var(--rule, 0);
+  /* The rule is the group title on the collapsed rail; it keeps a faint colour of its own. */
+  color: var(--sidebar-dim-text);
+}
+.sidebar-active { background-color: var(--sidebar-active-bg); }
+.sidebar-active::before {
+  content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px; background: var(--sidebar-marker); opacity: var(--lit, 1);
+}
+[data-menu-row="item"] { color: var(--sidebar-lit-text); }
+[data-menu-row="item"].sidebar-active { color: #fff; }
+
+/* Need help guide (3.40): the yellow ring round the current step's control pulses gently. */
+@keyframes guide-ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--c-yellow) / 0.55); }
+  50% { box-shadow: 0 0 0 8px rgb(var(--c-yellow) / 0); }
+}
+.guide-ring-pulse { animation: guide-ring-pulse 1.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .guide-ring-pulse { animation: none; } }

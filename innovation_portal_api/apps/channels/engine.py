@@ -141,8 +141,12 @@ class JourneyRunner:
         self.state.setdefault("lang", self.graph.get("default_language") or "en")
         self.state.setdefault("transcript", [])
         self.state.setdefault("visited", [])
-        self.logged_steps: list[tuple[str, str, str]] = []  # (node key, node type, input or hidden)
+        self.logged_steps: list[tuple] = []  # (node key, node type, input or hidden[, attachment count])
         self.effects: dict = {}
+        self.media: list = []  # this message's files: dicts with content_type, size and fetch (or a pretend file)
+        # fetch(item, max_bytes) -> MediaResult; None for a channel that cannot carry files.
+        self.fetch_media = context.get("fetch_media")
+        self.message_id = context.get("message_id", "")
 
     # -- helpers ----------------------------------------------------------------
 
@@ -169,7 +173,17 @@ class JourneyRunner:
         self.state["node"] = ""
         return self._advance(self.graph.get("start") or "", prefix=[])
 
-    def answer(self, text: str) -> Screen:
+    def current_type(self) -> str:
+        node = self._node(self.state.get("node") or "")
+        return node["type"] if node else ""
+
+    def repeat(self, prefix: list[str] | None = None) -> Screen:
+        """Show the current screen again (with a note before it)."""
+        node = self._node(self.state.get("node") or "")
+        return self._show(node, prefix or []) if node else self.start()
+
+    def answer(self, text: str, media: list | None = None) -> Screen:
+        self.media = list(media or [])
         key = self.state.get("node") or ""
         node = self._node(key)
         if node is None:
@@ -202,6 +216,13 @@ class JourneyRunner:
                 self.logged_steps.append((node["key"], kind, ""))
                 prefix = prefix + ([extra] if extra else [])
                 continue
+            if kind == "file" and self.channel == "ussd":
+                key = node.get("next") or ""  # USSD cannot carry files
+                continue
+            if kind == "submit":
+                if (node.get("settings") or {}).get("require_consent", True) and not self.state.get("consented", {}).get(key):
+                    return self._show(node, prefix)
+                return self._do_submit(node, prefix)
             if kind == "end":
                 return self._finish(prefix + [self.t(node.get("text")) or self.default("goodbye")], outcome="completed", node_key=key, node_type=kind)
             if kind == "handoff" and self.channel == "whatsapp":
@@ -231,6 +252,12 @@ class JourneyRunner:
             elif answer_type == "choice":
                 choices = [Choice(str(i), self.t(option.get("label"))) for i, option in enumerate(settings.get("choices") or [], start=1)]
                 expects = "choice"
+        elif kind == "file":
+            expects = "file"
+        elif kind == "submit":
+            body = self.t(settings.get("consent_text")) or body
+            choices = [Choice("1", self.default("yes")), Choice("2", self.default("no"))]
+            expects = "choice"
         elif kind == "handoff":
             body = body or self.default("handoff_note")
         text = "\n".join(part for part in [*prefix, error, body] if part)
@@ -345,6 +372,107 @@ class JourneyRunner:
             return self._show(node, [], error=self.default("invalid_text"))
         self._record_answer(node, text)
         return self._handoff(node, note=text, prefix=[])
+
+    # -- files and sending the idea (prompt 10) ---------------------------------
+
+    def _words(self, value) -> set[str]:
+        words = set()
+        for lang in ("en", "tn"):
+            words |= {w.strip().lower() for w in pick(value, lang).split(",") if w.strip()}
+        return words
+
+    def _answer_file(self, node: dict, text: str) -> Screen:
+        from apps.channels.actions import extension_for, save_file
+
+        settings = node.get("settings") or {}
+        counts = self.state.setdefault("file_counts", {})
+        count = counts.get(node["key"], 0)
+        max_files = int(settings.get("max_files") or 3)
+        max_mb = float(settings.get("max_mb") or 10)
+        allowed = {str(x).lower().lstrip(".") for x in (settings.get("allowed_types") or [])}
+        required = bool(settings.get("required"))
+        lowered = text.strip().lower()
+        if self.media:
+            notes = []
+            for item in self.media:
+                if count >= max_files:
+                    break
+                extension = extension_for(item.get("content_type", "")).lstrip(".")
+                if not extension or (allowed and extension not in allowed and not (extension == "jpg" and "jpeg" in allowed)):
+                    notes.append(self.t(settings.get("wrong_type_text")) or self.default("broken"))
+                    continue
+                max_bytes = int(max_mb * 1024 * 1024)
+                if item.get("pretend"):
+                    if int(item.get("size") or 0) > max_bytes:
+                        notes.append(self.t(settings.get("too_big_text")) or self.default("broken"))
+                        continue
+                else:
+                    fetched = item["fetch"](max_bytes) if item.get("fetch") else None
+                    if fetched is None or not fetched.ok:
+                        key = "too_big_text" if getattr(fetched, "too_big", False) else "failed_text"
+                        notes.append(self.t(settings.get(key)) or self.default("broken"))
+                        continue
+                    document, error = save_file(
+                        draft_id=self.state.get("draft_id") or "", field_key=settings.get("field_key") or "", content=fetched.content,
+                        content_type=fetched.content_type or item.get("content_type", ""), user=self.user, phone=self.phone, message_id=self.message_id,
+                    )
+                    if document is None:
+                        notes.append(self.t(settings.get("wrong_type_text" if error == "wrong_type" else "failed_text")) or self.default("broken"))
+                        continue
+                count += 1
+                notes.append(self.t(settings.get("received_text")))
+            counts[node["key"]] = count
+            self.logged_steps.append((node["key"], "file", lowered[:300], len(self.media)))
+            self._say("person", f"[{len(self.media)} file(s)]")
+            if count >= max_files:
+                return self._advance(node.get("next") or "", prefix=[n for n in notes[-1:] if n])
+            return self._show(node, [], error="\n".join(dict.fromkeys(n for n in notes if n)))
+        if lowered and (lowered in self._words(settings.get("skip_words")) or lowered in self._words(settings.get("done_words"))):
+            if required and count == 0:
+                return self._show(node, [], error=self.t(settings.get("needed_text")))
+            self._record_answer(node, text)
+            return self._advance(node.get("next") or "", prefix=[])
+        return self._show(node, [], error=self.t(settings.get("needed_text")))
+
+    def _answer_submit(self, node: dict, text: str) -> Screen:
+        settings = node.get("settings") or {}
+        lowered = text.strip().lower()
+        if lowered in YES_WORDS or lowered == self.default("yes").lower():
+            self._record_answer(node, text)
+            self.state.setdefault("consented", {})[node["key"]] = True
+            return self._do_submit(node, [])
+        if lowered in NO_WORDS or lowered == self.default("no").lower():
+            self._record_answer(node, text)
+            declined = self.t(settings.get("declined_text"))
+            if settings.get("error_next"):
+                return self._advance(settings["error_next"], prefix=[declined] if declined else [])
+            return self._finish([declined], outcome="completed", node_key=node["key"], node_type="submit")
+        return self._show(node, [], error=self.default("invalid_choice"))
+
+    def _do_submit(self, node: dict, prefix: list[str]) -> Screen:
+        from apps.channels import actions
+
+        settings = node.get("settings") or {}
+        name = str(self.state["vars"].get(settings.get("name_variable") or "name") or self.state["vars"].get("profile_name") or "")
+        if self.dry_run or not self.state.get("draft_id"):
+            reference, error = ("", "failed") if not self.dry_run else ("TEST", "")
+        else:
+            reference, error = actions.submit_draft(
+                draft_id=self.state["draft_id"], user=self.user, name=name, consent=bool(self.state.get("consented", {}).get(node["key"])),
+                phone=self.phone, channel=self.channel, simulation=self.simulation,
+            )
+        self.logged_steps.append((node["key"], "submit", ""))
+        if not error:
+            self.state["vars"]["reference"] = reference
+            self.effects["submitted"] = reference
+            text = self.t(settings.get("success_text"))
+            if settings.get("success_next"):
+                return self._advance(settings["success_next"], prefix=prefix + ([text] if text else []))
+            return self._finish(prefix + [text], outcome="completed", node_key=node["key"], node_type="submit")
+        text = self.t(settings.get("closed_text" if error == "closed" else "error_text")) or self.default("broken")
+        if settings.get("error_next"):
+            return self._advance(settings["error_next"], prefix=prefix + [text])
+        return self._finish(prefix + [text], outcome="completed", node_key=node["key"], node_type="submit")
 
     def _answer_end(self, node: dict, text: str) -> Screen:
         return self.start()

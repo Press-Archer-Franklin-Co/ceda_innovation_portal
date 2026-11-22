@@ -71,6 +71,14 @@ TOPICS = _choices(
     ]
 )
 
+def _file_types():
+    from apps.documents.serializers import _ALLOWED_EXTENSIONS
+
+    return _choices([(ext.lstrip("."), ext.lstrip(".").upper(), ext.lstrip(".").upper()) for ext in sorted(_ALLOWED_EXTENSIONS)])
+
+
+FILE_TYPES = _file_types()
+
 TEXT = {"label": "Text", "label_tn": "Mafoko"}
 
 NODE_SETTINGS: dict[str, dict] = {
@@ -150,9 +158,45 @@ NODE_SETTINGS: dict[str, dict] = {
         ],
     },
     "end": {"text": TEXT, "next": False, "fields": []},
+    # Prompt 10: files people send (WhatsApp) and sending the idea.
+    "file": {
+        "text": {"label": "What we ask for", "label_tn": "Se re se kopang"},
+        "next": True,
+        "fields": [
+            _f("field_key", "text", "Form field the file belongs to", "Lefelo la foromo le faele e leng ya lone", default="attachments"),
+            _f("allowed_types", "multi", "File types we accept", "Mefuta ya difaele e re e amogelang", choices=FILE_TYPES, default=[c["value"] for c in FILE_TYPES]),
+            _f("max_files", "number", "Most files", "Difaele tse dintsi", default=3),
+            _f("max_mb", "number", "Largest file (MB)", "Faele e kgolo go gaisa (MB)", default=10),
+            _f("required", "boolean", "A file is needed to go on", "Faele e a tlhokega go tswelela", default=False),
+            _f("skip_words", "bilingual", "Words that skip this step (comma between them)", "Mafoko a a tlolang kgato e", default={"en": "skip", "tn": "tlola"}),
+            _f("done_words", "bilingual", "Words that finish sending files", "Mafoko a a fetsang go romela difaele", default={"en": "done", "tn": "fedile"}),
+            _f("received_text", "bilingual", "Reply when a file arrives", "Karabo fa faele e goroga", default={"en": "Got it. Send another, or reply DONE.", "tn": "Re e amogetse. Romela e nngwe, kgotsa araba FEDILE."}),
+            _f("wrong_type_text", "bilingual", "Reply for a file type we do not accept", "Karabo ya mofuta wa faele o re sa o amogeleng", default={"en": "We cannot take that kind of file. Send a photo, PDF or Office document.", "tn": "Ga re kgone go amogela faele ya mofuta oo. Romela setshwantsho, PDF kgotsa tokomane ya Office."}),
+            _f("too_big_text", "bilingual", "Reply for a file that is too big", "Karabo ya faele e kgolo thata", default={"en": "That file is too big. Send a smaller one.", "tn": "Faele eo e kgolo thata. Romela e potlana."}),
+            _f("needed_text", "bilingual", "Reply when a file is needed", "Karabo fa faele e tlhokega", default={"en": "Please send a file to go on.", "tn": "Tsweetswee romela faele go tswelela."}),
+            _f("failed_text", "bilingual", "Reply when the file could not be saved", "Karabo fa faele e sa kgona go bolokwa", default={"en": "We could not save that file. Please try again.", "tn": "Ga re a kgona go boloka faele eo. Tsweetswee leka gape."}),
+        ],
+    },
+    "submit": {
+        "text": None,
+        "next": False,
+        "fields": [
+            _f("require_consent", "boolean", "Ask the person to agree first", "Kopa motho go dumela pele", default=True),
+            _f("consent_text", "bilingual", "Question asking them to agree", "Potso e e ba kopang go dumela", default={"en": "Reply YES to agree to the CEDA terms and send your idea.", "tn": "Araba EE go dumela melawana ya CEDA le go romela kakanyo ya gago."}),
+            _f("name_variable", "variable_ref", "Person's name comes from", "Leina la motho le tswa mo", optional=True, default="name"),
+            _f("success_text", "bilingual", "Message when it is sent", "Molaetsa fa e rometswe", default={"en": "Your idea is sent. Your idea number is {reference}.", "tn": "Kakanyo ya gago e rometswe. Nomoro ya kakanyo ya gago ke {reference}."}),
+            _f("declined_text", "bilingual", "Message when they do not agree", "Molaetsa fa ba sa dumele", default={"en": "Your idea is saved but not sent. You can send it later on the CEDA website.", "tn": "Kakanyo ya gago e bolokilwe mme ga e a romelwa. O ka e romela moragonyana mo webosaeteng ya CEDA."}),
+            _f("closed_text", "bilingual", "Message when the challenge is not taking ideas", "Molaetsa fa kgaisano e sa amogele dikakanyo", default={"en": "This challenge is not taking ideas right now. Your idea is saved.", "tn": "Kgaisano e ga e amogele dikakanyo jaanong. Kakanyo ya gago e bolokilwe."}),
+            _f("error_text", "bilingual", "Message when it cannot be sent", "Molaetsa fa e sa kgone go romelwa", default={"en": "We could not send your idea right now. It is saved; please try again later.", "tn": "Ga re a kgona go romela kakanyo ya gago jaanong. E bolokilwe; tsweetswee leka gape moragonyana."}),
+            _f("success_next", "node", "When it is sent, go to", "Fa e rometswe, ya kwa", optional=True),
+            _f("error_next", "node", "If it cannot be sent, go to", "Fa e sa kgone go romelwa, ya kwa", optional=True),
+        ],
+    },
 }
 
 DESCRIPTIONS_TN = {
+    "file": "E kopa setshwantsho kgotsa tokomane mme e e boloka mo kakanyong.",
+    "submit": "E romela kakanyo kwa CEDA mme e neela nomoro ya kakanyo.",
     "menu": "Dikgetho tse di nang le dinomoro mo USSD; dikonopo (go fitlha go 3) kgotsa lenane (go fitlha go 10) mo WhatsApp.",
     "message": "E bontsha mafoko, e bo e tswelela kgotsa e fetsa.",
     "question": "E botsa karabo, e e tlhole e bo e e boloke.",

@@ -327,7 +327,7 @@ function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
         <Toggle label={t('wfb.assignPeople')} description={t('wfb.assignPeopleHint')} checked={!!draft.requires_assignment} onChange={(on) => set({ requires_assignment: on })} />
         {draft.requires_assignment && (
           <div className="grid grid-cols-2 gap-3">
-            <Select label={t('wfb.assignTo')} options={ASSIGNMENT_ROLE_OPTIONS.map((r) => ({ value: r, label: t(`wfb.assignRole.${r}`) }))} value={draft.assignment_role} onChange={(v) => set({ assignment_role: v })} />
+            <Select data-guide="workflowBuilder.whoDoesIt" label={t('wfb.assignTo')} options={ASSIGNMENT_ROLE_OPTIONS.map((r) => ({ value: r, label: t(`wfb.assignRole.${r}`) }))} value={draft.assignment_role} onChange={(v) => set({ assignment_role: v })} />
             <Input label={t('wfb.howMany')} type="number" min="1" value={String(draft.minimum_assignments)} onChange={(e) => set({ minimum_assignments: e.target.value })} />
           </div>
         )}
@@ -631,8 +631,8 @@ export default function WorkflowBuilder() {
         actions={
           <div className="hidden flex-wrap items-center gap-2 md:flex">
             <StatusPill status={definition.status} />
-            <Button variant="link" onClick={() => runAction('validate')} loading={validateWorkflow.isPending}>{t('wfb.check')}</Button>
-            {definition.status === 'draft' && <Button onClick={() => runAction('publish')} loading={publishWorkflow.isPending}>{t('wfb.publish')}</Button>}
+            <Button data-guide="workflowBuilder.check" variant="link" onClick={() => runAction('validate')} loading={validateWorkflow.isPending}>{t('wfb.check')}</Button>
+            {definition.status === 'draft' && <Button data-guide="workflowBuilder.publish" onClick={() => runAction('publish')} loading={publishWorkflow.isPending}>{t('wfb.publish')}</Button>}
             {definition.status === 'published' && <Button onClick={() => runAction('activate')} loading={activateWorkflow.isPending}>{t('wfl.activate')}</Button>}
             <Link to={`/admin/workflows/${id}/instances`} className="text-[13px] font-bold text-primary hover:underline">{t('wfl.seeIdeas')}</Link>
           </div>
@@ -641,7 +641,7 @@ export default function WorkflowBuilder() {
       <p className="text-[13px] text-muted md:hidden">{t('wfb.phoneNote')}</p>
 
       <div className="grid grid-cols-1 gap-[14px] md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_360px] 2xl:gap-[22px]">
-        <nav aria-label={t('wfb.addStep')} className="hidden md:block">
+        <nav data-guide="workflowBuilder.addStage" aria-label={t('wfb.addStep')} className="hidden md:block">
           <p className="mb-2 text-[12px] font-bold text-muted">{t('wfb.addStep')}</p>
           <ul className="flex flex-col gap-2">
             {PALETTE.map(({ kind, icon: Icon }) => (

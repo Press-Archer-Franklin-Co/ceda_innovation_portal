@@ -140,6 +140,7 @@ INSTALLED_APPS = [
     "apps.reference",
     "apps.media_library",
     "apps.platform_config",
+    "apps.assistant",
     "apps.channels",
     "apps.conversations",
 ]
@@ -165,8 +166,12 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "loggers": {
         "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # C3: AI helper outcomes (no key, no text sent), so admins can see why it hid itself.
+        "apps.assistant": {"handlers": ["console"], "level": "INFO", "propagate": False},
         # C2: refused USSD and WhatsApp webhooks (security.webhook_rejected).
         "security.webhook": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # C2 prompt 10: one line per WhatsApp message and per failed send. No bodies, no full numbers.
+        "apps.channels.whatsapp": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -257,6 +262,8 @@ REST_FRAMEWORK = {
         "subscribe": "10/hour",
         "subscription_link": "60/hour",
         "challenges_public": "120/minute",
+        "assistant": "20/minute",
+        "assistant_guest": "10/minute",
         "chat_typing": "30/minute",
         "help_chat": "20/hour",
     },
@@ -278,6 +285,18 @@ ANALYTICS_DECISION_TARGET_DAYS = int(os.getenv("INNOVATION_PORTAL_ANALYTICS_DECI
 # Form builder (B4): dotted path to a class with translate(texts, source=, target=) for
 # Setswana suggestions. Empty means suggestions are off (the endpoint answers 501).
 FORM_TRANSLATION_PROVIDER = os.getenv("INNOVATION_PORTAL_FORM_TRANSLATION_PROVIDER", "")
+
+# AI helper (C3): US dollars per million tokens, used to work out the cost of each call and
+# the monthly limit. Cache writes (5 minute) cost 1.25 times input. Update when prices change.
+ASSISTANT_MODEL_PRICES = {
+    "claude-opus-5-5": {"input": 4.00, "output": 20.00, "cache_write": 5.00, "cache_read": 0.20},
+    "claude-sonnet-5-5": {"input": 2.00, "output": 10.00, "cache_write": 2.50, "cache_read": 0.10},
+    "claude-haiku-5-5": {"input": 0.10, "output": 0.50, "cache_write": 0.125, "cache_read": 0.01},
+    # OpenAI (cached input is cache_read; OpenAI has no cache write charge). Check before the live key.
+    "gpt-5": {"input": 1.25, "output": 10.00, "cache_write": 0, "cache_read": 0.125},
+    "gpt-5-mini": {"input": 0.25, "output": 2.00, "cache_write": 0, "cache_read": 0.025},
+    "gpt-5-nano": {"input": 0.05, "output": 0.40, "cache_write": 0, "cache_read": 0.005},
+}
 
 from datetime import timedelta
 

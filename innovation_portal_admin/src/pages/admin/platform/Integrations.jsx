@@ -36,6 +36,7 @@ const SERVICES = [
 ]
 // Until the U9 API sends `needs` on each feature switch (R-65), these are the switches each service unlocks.
 const FALLBACK_FEATURES = { sms: ['sms_messages', 'code_sign_in'], email: [], whatsapp: ['whatsapp_messages'], ussd: ['ussd'], ai: [], sso: ['staff_sso'] }
+const GUIDE = { sms: 'integrations.sms', sso: 'integrations.sso' }
 const STATE_TONE = { not_set_up: 'neutral', testing: 'amber', active: 'green' }
 const STEP_KEYS = ['provider', 'key', 'test', 'activate']
 const rowsOf = (data) => (Array.isArray(data) ? data : data?.results ?? [])
@@ -201,7 +202,7 @@ function ServiceCard({ service, connections, hasProviders, onOpen }) {
   const label = state === 'not_set_up' ? t('integ.setUp') : t('integ.manage')
   let action
   if (service.elsewhere) action = <Link to={service.elsewhere} className="text-[13px] font-bold text-primary hover:underline">{label}</Link>
-  else if (hasProviders) action = <button ref={ref} type="button" onClick={() => onOpen(service.kind, active ?? connections[0] ?? null, ref)} className="text-[13px] font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{label}</button>
+  else if (hasProviders) action = <button ref={ref} type="button" data-guide={GUIDE[service.kind]} onClick={() => onOpen(service.kind, active ?? connections[0] ?? null, ref)} className="text-[13px] font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{label}</button>
   else action = <span className="text-[12px] text-muted">{t('integ.notHere')}</span>
   return (
     <li className="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">

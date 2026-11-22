@@ -357,7 +357,7 @@ export default function RolesPermissions() {
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('roles.title')}</span>}
         title={t('roles.title')}
         subtitle={t('roles.u9.subtitle')}
-        actions={wide && tab === 'roles' ? <Button onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
+        actions={wide && tab === 'roles' ? <Button data-guide="roles.create" onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
       />
       {wide && (
         <Tabs tabs={[{ key: 'roles', label: t('roles.tabRoles') }, { key: 'approvals', label: t('roles.u9.tabSteps') }]} active={tab}

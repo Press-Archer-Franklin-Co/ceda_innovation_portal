@@ -42,6 +42,7 @@ export default function Canvas({
         </div>
         <button
           type="button"
+          data-guide="formBuilder.addStep"
           onClick={onAddStep}
           className="inline-flex h-9 items-center gap-1.5 rounded-control border border-dashed border-border px-3 text-[13px] text-text hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
