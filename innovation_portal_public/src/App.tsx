@@ -13,6 +13,7 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
 const FAQ = lazy(() => import('./pages/FAQ'))
+const Accessibility = lazy(() => import('./pages/Accessibility'))
 const Challenges = lazy(() => import('./pages/Challenges'))
 const Submit = lazy(() => import('./pages/Submit'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
@@ -129,9 +130,6 @@ function AppRoutes() {
 
       <Route path="/auth/callback"   element={<AuthCallback />} />
 
-      <Route path="/specialist-invite/:token" element={<SpecialistInvite />} />
-      <Route path="/judge-invite/:token" element={<JudgeInvite />} />
-
 
       {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
       <Route path="/preview/form" element={<PreviewForm />} />
@@ -145,6 +143,10 @@ function AppRoutes() {
         <Route path="/about"       element={<About />} />
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
+        <Route path="/accessibility" element={<Accessibility />} />
+        {/* 1.15: invitations sit in the normal header and footer. */}
+        <Route path="/specialist-invite/:token" element={<SpecialistInvite />} />
+        <Route path="/judge-invite/:token" element={<JudgeInvite />} />
         <Route path="/challenges"  element={<Challenges />} />
         <Route path="/challenges/:slug" element={<ChallengeDetail />} />
         <Route path="/challenges/:slug/enter" element={<ChallengeEnter />} />

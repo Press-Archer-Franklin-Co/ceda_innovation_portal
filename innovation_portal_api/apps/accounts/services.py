@@ -212,6 +212,9 @@ class AuthTokenService:
         refresh = RefreshToken.for_user(user)
         refresh["email"] = user.email
         refresh["roles"] = list(user.roles.filter(user_roles__is_active=True).values_list("code", flat=True))
+        from apps.accounts.sessions import start
+
+        refresh["sid"] = start(user)  # R-51: where this person is signed in
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),

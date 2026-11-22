@@ -11,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.core.api import api_success
-from apps.core.permissions import HasCapability, IPRateThrottle
+from apps.core.permissions import HasAnyCapability, HasCapability, IPRateThrottle
 from apps.programs import challenge_entry as entry
 from apps.programs.challenge_public import public_queryset
 from apps.programs.challenge_views import LANG, PublicChallengeThrottle, _lang
@@ -250,3 +250,48 @@ class ResultEntryPhotoView(APIView):
 
         program = get_object_or_404(Program, id=program_id)
         return api_success(data=set_photo(program, submission_id, request.FILES.get("file"), actor=request.user, request=request))
+
+
+# R-53 (3.6 Challenge status) ---------------------------------------------------------------------------------------
+
+
+class ChallengeUpdateSerializer(serializers.Serializer):
+    body = serializers.CharField(max_length=2000)
+    body_tn = serializers.CharField(max_length=2000, required=False, allow_blank=True, default="")
+    channels = serializers.ListField(child=serializers.CharField(max_length=20), required=False, allow_null=True, default=None, help_text="Left out: as each person prefers. The bell always gets it.")
+
+
+class ChallengeStatusNumbersView(APIView):
+    permission_classes = [HasAnyCapability.of("challenges.manage", "dashboard.view")]
+
+    @extend_schema(
+        tags=["Programs"],
+        summary="Challenge status numbers (3.6)",
+        description="{started (drafts and sent, like the public started_count), submitted, reviewed (past the first step, finished, or with a finished review task), "
+        "to_panel (at a judging step or shortlisted), closes_at, days_left}",
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request, program_id):
+        from apps.programs.challenge_status import status_numbers
+
+        return api_success(data=status_numbers(get_object_or_404(Program, id=program_id)))
+
+
+class ChallengeUpdatesView(APIView):
+    permission_classes = [HasCapability.of("challenges.manage")]
+
+    @extend_schema(
+        tags=["Programs"],
+        summary="Post an update to everyone who started an entry (3.6)",
+        description="{body, body_tn?, channels?: [web, email, sms, whatsapp]}. Setswana readers get body_tn when it is there. Answers {recipients, sent: {web, email, sms, whatsapp}}.",
+        request=ChallengeUpdateSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request, program_id):
+        from apps.programs.challenge_status import post_update
+
+        program = get_object_or_404(Program, id=program_id)
+        serializer = ChallengeUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        return api_success(data=post_update(program, body=data["body"], body_tn=data.get("body_tn", ""), channels=data.get("channels"), actor=request.user), message="Update sent.")
