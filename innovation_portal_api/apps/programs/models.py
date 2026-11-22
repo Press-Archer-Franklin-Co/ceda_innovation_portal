@@ -114,6 +114,7 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     cover = models.ForeignKey("media_assets.MediaAsset", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     pass_mark = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="0 to 100 on the weighted score. Copied to the judging stage.")
     reviewers_per_idea = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Judges who mark each entry. Default: every judge.")
+    share_scores_with_entrants = models.BooleanField(default=False, help_text="U10: after results are out, entrants see their own score summary (2.11).")
     disagreement_threshold = models.DecimalField(max_digits=3, decimal_places=1, default=Decimal("2"), help_text="R-42: a criterion is flagged when judges' scores differ by more than this (1 to 5 scale).")
 
     TRANSLATABLE = ("summary", "problem_statement", "support_headline", "who_can_enter", "where")
@@ -233,6 +234,18 @@ class ProgramStage(UUIDModel, TimeStampedModel):
     is_active = models.BooleanField(default=True)
     explanation = models.TextField(blank=True, help_text="Plain-language explanation shown on the idea timeline.")
     usual_duration = models.CharField(max_length=60, blank=True, help_text='For example "1 to 2 weeks".')
+    # R-48 (3.6c): what this stage asks for and how ideas move on. The entry form stays Program.form.
+    form = models.ForeignKey("programs.SubmissionForm", on_delete=models.SET_NULL, null=True, blank=True, related_name="program_stages", help_text="A form for this later stage.")
+    opens_at = models.DateTimeField(null=True, blank=True)
+    closes_at = models.DateTimeField(null=True, blank=True)
+    takes_part = models.CharField(max_length=20, choices=(("all", "Everyone"), ("shortlisted", "Shortlisted only")), default="all")
+    moves_on = models.CharField(
+        max_length=20,
+        choices=(("automatic", "Automatically"), ("officer", "An officer decides"), ("manager", "A manager decides"), ("panel_score", "Panel score")),
+        default="officer",
+    )
+    pass_mark = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="0 to 100, with moves_on panel_score.")
+    notify_applicants = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("program", "code")
@@ -247,10 +260,46 @@ class ProgramTimeline(UUIDModel, TimeStampedModel):
 
 
 class EligibilityRule(UUIDModel, TimeStampedModel):
+    """One "Can you enter?" question (1.9). The person answers yes or no; the other answer means not eligible."""
+
     program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="eligibility_rules")
     title = models.CharField(max_length=255)
-    description = models.TextField()
+    description = models.TextField(blank=True, default="")
     active = models.BooleanField(default=True)
+    # U10: the question as asked, the answer that lets someone enter, and what we say when they cannot.
+    question = models.CharField(max_length=300, blank=True, default="", help_text='For example "Do you live in Botswana?". Empty: the title is asked.')
+    required_answer = models.BooleanField(default=True, help_text="The answer that lets someone enter: yes (true) or no (false).")
+    reason = models.CharField(max_length=300, blank=True, default="", help_text='Shown when the answer stops someone, for example "This challenge is for people who live in Botswana."')
+    ordering = models.PositiveIntegerField(default=1)
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"question": "...", "reason": "...", "description": "..."}}')
+
+    # R-48 (3.6b): a rule block. Empty field means a plain yes/no question (U10).
+    FIELDS = ("age", "citizenship", "district", "sector", "business_stage", "registered_company")
+    OPERATORS = ("is", "is_not", "is_between", "is_one_of", "is_at_least")
+    field = models.CharField(max_length=30, blank=True, default="", choices=[(code, code) for code in FIELDS])
+    operator = models.CharField(max_length=20, blank=True, default="", choices=[(code, code) for code in OPERATORS])
+    value = models.JSONField(null=True, blank=True, help_text="A number, a [low, high] pair, a list of ids, a choice or true/false.")
+
+    TRANSLATABLE = ("question", "reason", "description")
+
+    class Meta:
+        ordering = ("ordering", "created_at")
+
+
+class ProgramDocument(UUIDModel, TimeStampedModel):
+    """R-48 (3.6b): a document applicants must bring to this challenge."""
+
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="required_documents")
+    name = models.CharField(max_length=200)
+    hint = models.CharField(max_length=300, blank=True, default="", help_text='For example "PDF or photo, up to 5 MB".')
+    required = models.BooleanField(default=True)
+    accept = models.JSONField(default=list, blank=True, help_text='Allowed types, for example ["application/pdf", "image/jpeg"].')
+    max_mb = models.PositiveIntegerField(default=5)
+    ordering = models.PositiveIntegerField(default=1)
+    translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"name": "...", "hint": "..."}}')
+
+    class Meta:
+        ordering = ("ordering", "created_at")
 
 
 class SubmissionForm(UUIDModel, TimeStampedModel):

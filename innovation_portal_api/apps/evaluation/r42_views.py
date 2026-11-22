@@ -58,8 +58,16 @@ def _criterion_key(score) -> str:
     return str(score.marking_criteria_item_id or score.stage_criterion_id or score.criterion_id)
 
 
+def latest_per_judge(sheets) -> list:
+    """Keep each judge's last sent scorecard, in the order they were sent."""
+    latest = {}
+    for sheet in sheets:
+        latest[sheet.judge_id] = sheet
+    return sorted(latest.values(), key=lambda sheet: (sheet.submitted_at or sheet.created_at, sheet.created_at))
+
+
 def scores_overview(submission) -> dict:
-    """Sent scorecards of the latest review round, judges numbered 1, 2, 3 by when they sent (never named)."""
+    """Each judge's last sent scorecard for the step of the latest review round, judges numbered 1, 2, 3 by when they sent (never named)."""
     from apps.assignments.models import Assignment
 
     program = submission.program
@@ -72,8 +80,17 @@ def scores_overview(submission) -> dict:
         .first()
     )
     sheets = ScoreSheet.objects.filter(submission=submission, is_final=True, status__in=SENT)
-    sheets = sheets.filter(review_cycle=cycle) if cycle else sheets
-    sheets = list(sheets.prefetch_related("criterion_scores").order_by("submitted_at", "created_at"))
+    if cycle:
+        # A submit can close a cycle with one reviewer, so judges of the same step may sit in different cycles.
+        cycles = ReviewCycle.objects.filter(submission=submission).exclude(status=ReviewCycle.STATUS_CANCELLED)
+        if cycle.workflow_step_id:
+            cycles = cycles.filter(workflow_step_id=cycle.workflow_step_id)
+        elif cycle.stage_config_id:
+            cycles = cycles.filter(stage_config_id=cycle.stage_config_id)
+        else:
+            cycles = cycles.filter(pk=cycle.pk)
+        sheets = sheets.filter(review_cycle__in=cycles)
+    sheets = latest_per_judge(sheets.prefetch_related("criterion_scores").order_by("submitted_at", "created_at"))
     criteria = StageConfigService.effective_criteria(cycle.stage_config if cycle else None, program=program)
     if not criteria and sheets:
         # Old scorecards with no criteria left to read: use the names kept on the scores.

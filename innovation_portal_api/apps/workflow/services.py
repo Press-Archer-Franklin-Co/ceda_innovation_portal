@@ -392,6 +392,7 @@ class WorkflowDefinitionService:
                 minimum_evaluations=step.minimum_evaluations,
                 evaluation_round=step.evaluation_round,
                 is_active=step.is_active,
+                settings_json=deepcopy(step.settings_json),
             )
         node_map = {}
         for node in definition.nodes.order_by("created_at"):

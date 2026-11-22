@@ -30,7 +30,7 @@ export default function Judging() {
 
   const list = useQuery({ queryKey: ['ideas', 'judging'], queryFn: judgingList })
   const rows = useMemo(() => list.data ?? [], [list.data])
-  const summary = useQuery({ queryKey: ['ideas', 'judging', 'summary', rows.length], queryFn: () => judgingSummary(rows), enabled: list.isSuccess })
+  const summary = useQuery({ queryKey: ['ideas', 'judging', 'summary'], queryFn: judgingSummary })
 
   useEffect(() => {
     document.title = `${t('judging.title')} · CEDA Innovation`

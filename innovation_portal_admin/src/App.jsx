@@ -24,6 +24,7 @@ const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail
 const MyWork = lazy(() => import('./pages/mywork/MyWork'))
 const Judging = lazy(() => import('./pages/judging/Judging'))
 const ScoreIdea = lazy(() => import('./pages/judging/ScoreIdea'))
+const ReviewQueue = lazy(() => import('./pages/review/ReviewQueue'))
 const AllScores = lazy(() => import('./pages/judging/AllScores'))
 const Reports = lazy(() => import('./pages/reports/Reports'))
 const NotificationsProfile = lazy(() => import('./pages/settings/NotificationsProfile'))
@@ -105,6 +106,11 @@ export default function App() {
                   <Route path="/submissions/:id/scores" element={<ErrorBoundary><AllScores /></ErrorBoundary>} />
                 </Route>
                 <Route path="/documents/:id"   element={<ErrorBoundary><DocumentRedirect /></ErrorBoundary>} />
+
+                {/* U4 3.3 Review queue and scoring. */}
+                <Route element={<CapabilityRoute need="entries.review" />}>
+                  <Route path="/review"        element={<ErrorBoundary><ReviewQueue /></ErrorBoundary>} />
+                </Route>
 
                 <Route path="/assignments"     element={<ErrorBoundary><MyWork /></ErrorBoundary>} />
                 <Route path="/assignments/:id" element={<WorkItemRedirect />} />

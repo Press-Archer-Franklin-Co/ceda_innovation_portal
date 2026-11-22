@@ -54,6 +54,9 @@ class NotificationPreference(UUIDModel, TimeStampedModel):
     email_enabled = models.BooleanField(default=True)
     sms_enabled = models.BooleanField(default=False)
     internal_enabled = models.BooleanField(default=True)
+    # R-48 (3.39): hold emails back and send one summary a day at 07:30 instead.
+    daily_summary = models.BooleanField(default=False)
+    daily_summary_sent_at = models.DateTimeField(null=True, blank=True)
 
 
 class NotificationTypePreference(UUIDModel, TimeStampedModel):
