@@ -36,7 +36,6 @@ export const contentBEn = {
   'all.type.policy': 'Policy',
   'all.status.draft': 'Draft',
   'all.status.pending_approval': 'Waiting for approval',
-  'all.status.scheduled': 'Scheduled',
   'all.status.published': 'Published',
   'all.status.archived': 'Archived',
   'all.yes': 'Yes',
@@ -51,7 +50,6 @@ export const contentBEn = {
   'all.emptyFilter': 'Nothing matches these filters',
   'all.emptyFilterBody': 'Try another type or status, or clear the search.',
   'all.loadError': 'We could not load the website content',
-  'all.partError': 'Some content types could not be loaded, so this list may be missing a few rows.',
   'pol.crumb': 'Website content / Terms & policies',
   'pol.title2': 'Terms and policies',
   'pol.subtitle': 'About, guidelines, terms of use and privacy, shown on the public reading page (1.13), and the terms each challenge uses.',
@@ -248,7 +246,6 @@ export const contentBTn = {
   'all.type.policy': 'Pholisi', // TODO tn-review
   'all.status.draft': 'Kakanyetso', // TODO tn-review
   'all.status.pending_approval': 'E emetse tetlelelo', // TODO tn-review
-  'all.status.scheduled': 'E rulagantswe', // TODO tn-review
   'all.status.published': 'E phasaladitswe', // TODO tn-review
   'all.status.archived': 'E bolokilwe', // TODO tn-review
   'all.yes': 'Ee', // TODO tn-review
@@ -263,7 +260,6 @@ export const contentBTn = {
   'all.emptyFilter': 'Ga go sepe se se tsamaisanang le ditlhotlhi tse', // TODO tn-review
   'all.emptyFilterBody': 'Leka mofuta kgotsa seemo se sengwe, kgotsa phimola patlo.', // TODO tn-review
   'all.loadError': 'Ga re a kgona go tsenya diteng tsa webosaete', // TODO tn-review
-  'all.partError': 'Mefuta mengwe ya diteng ga e a kgona go tsenngwa, ka jalo lenaneo le le ka tlhaela mela e mengwe.', // TODO tn-review
   'pol.crumb': 'Diteng tsa webosaete / Melawana le dipholisi', // TODO tn-review
   'pol.title2': 'Melawana le dipholisi', // TODO tn-review
   'pol.subtitle': 'Ka ga rona, dikaelo, melawana ya tiriso le sephiri, tse di bontshiwang mo tsebeng ya go bala (1.13), le melawana e kgwetlho nngwe le nngwe e e dirisang.', // TODO tn-review
