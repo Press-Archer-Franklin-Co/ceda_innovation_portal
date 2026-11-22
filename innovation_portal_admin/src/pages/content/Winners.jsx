@@ -15,6 +15,7 @@ import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useT } from '../../i18n/context'
 import { client } from '../../lib/api/client'
+import { defaultWinnersChallenge } from '../../lib/content/winners'
 import { usePrograms, useProgram } from '../../lib/queries/programs'
 
 // 3.37 Winners (Figma 141:2192 website, 141:2449 phone). ① Pick the challenge; winners come from final decisions,
@@ -126,7 +127,7 @@ export default function Winners() {
   const list = useMemo(() => asList(programs.data).filter((p) => p.status !== 'archived' && !p.is_general_intake), [programs.data])
   const [programId, setProgramId] = useState('')
   useEffect(() => {
-    if (!programId && list.length) setProgramId(String((list.find((p) => p.status === 'closed') ?? list[0]).id))
+    if (!programId && list.length) setProgramId(String(defaultWinnersChallenge(list).id))
   }, [list, programId])
   const program = useProgram(programId)
   const results = useQuery({ queryKey: ['results', programId], enabled: !!programId, queryFn: () => loadEntries(programId) })

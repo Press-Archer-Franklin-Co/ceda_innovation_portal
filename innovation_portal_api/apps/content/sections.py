@@ -7,6 +7,9 @@ Each type declares its settings. Field kinds:
 - ``list``: a list of objects whose fields are declared in ``item`` (``max`` items)
 - ``photo`` (U7): ``null`` or ``{"asset": "<HeroPhoto id>", "size": "small|medium|large", "alt": text}``;
   the alt text (photo description) is required in English when a photo is set
+- ``marks`` (3.8 headline): ``{"en": [mark], "tn": [mark]}``, each mark ``{"start", "end", "type"}`` over the
+  headline in that language, type ``highlight``, ``bold`` or ``italic``. Offsets count UTF-16 code units, as
+  JavaScript strings do. The headline stays plain text; the marks say which words are amber, bold or italic.
 """
 
 from __future__ import annotations
@@ -31,7 +34,7 @@ SECTION_TYPES: dict[str, dict] = {
         "can_disable": False,
         "settings": {
             "headline": _text("Turn your idea into a business", required=True, max_length=120),
-            "highlighted_words": {"kind": "string", "default": "", "max": 120},
+            "headline_marks": {"kind": "marks", "of": "headline"},
             "text": _text(max_length=300),
             # U7: after the supporting text, as in the Hero banner editor (Figma 3.8).
             "photo": {"kind": "photo"},
@@ -186,6 +189,8 @@ def _normalize(value, spec, path, errors):
         return {"label": label, "url": url}
     if kind == "photo":
         return _normalize_photo(value, path, errors)
+    if kind == "marks":
+        return _normalize_marks(value, path, errors)
     if kind == "list":
         value = value or []
         if not isinstance(value, list):
@@ -201,6 +206,116 @@ def _normalize(value, spec, path, errors):
             items.append({key: _normalize(item.get(key), sub, f"{path}[{index}].{key}", errors) for key, sub in spec["item"].items()})
         return items
     raise ValueError(kind)
+
+
+MARK_TYPES = ("highlight", "bold", "italic")
+MAX_MARKS = 30
+
+
+def text_length(text: str) -> int:
+    """Length in UTF-16 code units, the way the browser counts the headline."""
+    return len((text or "").encode("utf-16-le")) // 2
+
+
+def _normalize_marks(value, path, errors):
+    """{"en": [...], "tn": [...]}: sorted, same-type overlaps merged. Bounds against the text are checked later."""
+    if value in (None, ""):
+        value = {}
+    if not isinstance(value, dict) or set(value) - set(LANGS):
+        errors.append({"path": path, "message": 'Marks are {"en": [{start, end, type}], "tn": [...]}.'})
+        return {lang: [] for lang in LANGS}
+    result = {}
+    for lang in LANGS:
+        items = value.get(lang) or []
+        if not isinstance(items, list) or len(items) > MAX_MARKS:
+            errors.append({"path": f"{path}.{lang}", "message": f"At most {MAX_MARKS} marks."})
+            result[lang] = []
+            continue
+        clean = []
+        for index, mark in enumerate(items):
+            ok = (
+                isinstance(mark, dict)
+                and mark.get("type") in MARK_TYPES
+                and all(isinstance(mark.get(k), int) and not isinstance(mark.get(k), bool) for k in ("start", "end"))
+                and 0 <= mark["start"] < mark["end"]
+            )
+            if not ok:
+                errors.append({"path": f"{path}.{lang}[{index}]", "message": "Each mark is {start, end, type} with start before end and type highlight, bold or italic."})
+                continue
+            clean.append({"start": mark["start"], "end": mark["end"], "type": mark["type"]})
+        result[lang] = merge_marks(clean)
+    return result
+
+
+def merge_marks(marks: list[dict]) -> list[dict]:
+    """Sort marks and join touching or overlapping ones of the same type."""
+    out: list[dict] = []
+    for kind in MARK_TYPES:
+        spans = sorted((m["start"], m["end"]) for m in marks if m["type"] == kind)
+        merged: list[list[int]] = []
+        for start, end in spans:
+            if merged and start <= merged[-1][1]:
+                merged[-1][1] = max(merged[-1][1], end)
+            else:
+                merged.append([start, end])
+        out.extend({"start": a, "end": b, "type": kind} for a, b in merged)
+    return sorted(out, key=lambda m: (m["start"], m["end"], MARK_TYPES.index(m["type"])))
+
+
+def marks_from_words(text: str, words: str) -> list[dict]:
+    """The old comma-separated highlighted words, as highlight marks (case-insensitive, every match), as the public banner drew them."""
+    import re
+
+    phrases = [w.strip() for w in (words or "").split(",") if w.strip()]
+    if not text or not phrases:
+        return []
+    pattern = re.compile("|".join(re.escape(p) for p in sorted(phrases, key=len, reverse=True)), re.IGNORECASE)
+    marks = []
+    for match in pattern.finditer(text):
+        start = text_length(text[: match.start()])
+        marks.append({"start": start, "end": start + text_length(match.group(0)), "type": "highlight"})
+    return merge_marks(marks)
+
+
+def upgrade_hero_settings(settings: dict) -> dict:
+    """Saved banners before 3.8's rich headline kept `highlighted_words`; turn them into headline marks."""
+    if not isinstance(settings, dict) or "highlighted_words" not in settings:
+        return settings
+    settings = dict(settings)
+    words = settings.pop("highlighted_words") or ""
+    marks = settings.get("headline_marks")
+    if not (isinstance(marks, dict) and any(marks.get(lang) for lang in LANGS)):
+        headline = settings.get("headline")
+        headline = {"en": headline} if isinstance(headline, str) else (headline if isinstance(headline, dict) else {})
+        settings["headline_marks"] = {lang: marks_from_words(headline.get(lang) or "", words if isinstance(words, str) else "") for lang in LANGS}
+    return settings
+
+
+def _check_marks_fit(result: dict, spec: dict, path: str, errors: list[dict]) -> None:
+    """A mark must lie inside its own language's text (the field named by `of`)."""
+    for key, field_spec in spec.items():
+        if field_spec.get("kind") != "marks":
+            continue
+        text = result.get(field_spec["of"]) or {}
+        for lang in LANGS:
+            limit = text_length(text.get(lang) or "")
+            for index, mark in enumerate(result[key][lang]):
+                if mark["end"] > limit:
+                    errors.append({"path": f"{path}.{key}.{lang}[{index}]", "message": "This mark runs past the end of the headline. Select the words again."})
+
+
+def localize_marks(raw: dict, localized: dict, lang: str) -> dict:
+    """After localize(): each marks field becomes the list for the language whose text is shown. When the
+    Setswana headline is empty the English shows, so its English marks go with it."""
+    raw = upgrade_hero_settings(raw) if isinstance(raw, dict) else raw
+    for key, value in (raw or {}).items():
+        if not (key.endswith("_marks") and isinstance(value, dict)):
+            continue
+        text = raw.get(key[: -len("_marks")])
+        text = {"en": text} if isinstance(text, str) else (text or {})
+        shown = lang if (text.get(lang) or "").strip() else "en"
+        localized[key] = value.get(shown) or []
+    return localized
 
 
 def _normalize_photo(value, path, errors):
@@ -234,12 +349,16 @@ def normalize_settings(section_type: str, settings: Any, *, path: str = "setting
         settings = {}
     if not isinstance(settings, dict):
         raise SettingsError([{"path": path, "message": "Settings must be an object."}])
+    if section_type == "hero_banner":
+        settings = upgrade_hero_settings(settings)
     spec = SECTION_TYPES[section_type]["settings"]
     errors: list[dict] = []
     unknown = sorted(set(settings) - set(spec))
     if unknown:
         errors.append({"path": path, "message": f"Unknown settings: {', '.join(unknown)}."})
     result = {key: _normalize(settings.get(key), field_spec, f"{path}.{key}", errors) for key, field_spec in spec.items()}
+    if not errors:
+        _check_marks_fit(result, spec, path, errors)
     if errors:
         raise SettingsError(errors)
     return result

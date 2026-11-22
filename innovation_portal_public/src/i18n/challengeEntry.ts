@@ -119,6 +119,13 @@ export const challengeEntryEn = {
   'myr.nextStep': 'Next step',
   'myr.eventTitle': 'Challenge day',
   'myr.eventHelp': 'Need help preparing? Send your officer a message.',
+  'myr.liked': 'What the panel liked',
+  'myr.workOn': 'What to work on',
+  'myr.attend': 'Confirm I will attend',
+  'myr.attending': 'You will attend. See you there.',
+  'myr.notAttending': 'You told us you cannot attend.',
+  'myr.cannotAttend': 'I can no longer attend',
+  'myr.attendError': 'Your answer did not save. Try again.',
   'myr.messageOfficer': 'Message the team',
 }
 
@@ -242,5 +249,12 @@ export const challengeEntryTn: Record<ChallengeEntryKey, string> = {
   'myr.nextStep': 'Kgato e e latelang',
   'myr.eventTitle': 'Letsatsi la kgwetlho',
   'myr.eventHelp': 'O tlhoka thuso go ipaakanya? Romelela motlhankedi wa gago molaetsa.',
+  'myr.liked': 'Se phanele e se ratileng', // TODO tn-review
+  'myr.workOn': 'Se o tshwanetseng go se tokafatsa', // TODO tn-review
+  'myr.attend': 'Netefatsa gore ke tla tla', // TODO tn-review
+  'myr.attending': 'O tla tla. Re tla go bona koo.', // TODO tn-review
+  'myr.notAttending': 'O re boleletse gore ga o kitla o kgona go tla.', // TODO tn-review
+  'myr.cannotAttend': 'Ga ke tlhole ke kgona go tla', // TODO tn-review
+  'myr.attendError': 'Karabo ya gago ga e a bolokwa. Leka gape.', // TODO tn-review
   'myr.messageOfficer': 'Romelela setlhopha molaetsa',
 }

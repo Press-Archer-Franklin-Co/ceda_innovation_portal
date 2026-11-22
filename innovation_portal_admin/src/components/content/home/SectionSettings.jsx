@@ -1,6 +1,5 @@
-import { useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Highlighter, Plus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, Plus, Trash2 } from 'lucide-react'
 import Input from '../../ui/Input'
 import Textarea from '../../ui/Textarea'
 import Select from '../../ui/Select'
@@ -8,7 +7,9 @@ import Button from '../../ui/Button'
 import { Toggle } from '../../ui/Choice'
 import { useT } from '../../../i18n/context'
 import { client } from '../../../lib/api/client'
-import { addHighlight, highlightList, missingSetswana, removeHighlight } from '../../../lib/content/home'
+import { missingSetswana } from '../../../lib/content/home'
+import { withLangMarks } from '../../../lib/content/headlineMarks'
+import HeadlineEditor from './HeadlineEditor'
 import { useSectionName } from './useSectionName'
 import HeroPhotoField from './HeroPhotoField'
 
@@ -39,50 +40,27 @@ function TextField({ label, spec, value, lang, onChange, error, multiline, input
   return <Input ref={inputRef} label={label} value={text} onChange={(e) => set(e.target.value)} onSelect={onSelect} maxLength={spec.max || undefined} hint={hint} error={error} required={required} />
 }
 
-/** Headline with "select words and press Highlight" (Figma 3.8 callout 3). */
-function HeadlineField({ label, spec, value, lang, words, onChange, onWords, error }) {
+/** Headline: one rich text field with B, I and Highlight (Figma 3.8 pin 3). Text and marks per language. */
+function HeadlineField({ label, spec, value, lang, marks, onChange, onMarks, error }) {
   const t = useT()
-  const input = useRef(null)
-  const selection = useRef('')
-  const [note, setNote] = useState('')
-  const remember = (e) => {
-    const el = e.target
-    selection.current = el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0)
+  const english = value?.en ?? ''
+  const hint = lang === 'tn' && english ? `${t('home.highlightHint')} ${t('home.englishWas', { text: english })}` : t('home.highlightHint')
+  const change = (text, next) => {
+    onChange({ en: value?.en ?? '', tn: value?.tn ?? '', [lang]: text })
+    onMarks(withLangMarks(marks, lang, next))
   }
-  const highlight = () => {
-    const el = input.current
-    const picked = el ? el.value.slice(el.selectionStart ?? 0, el.selectionEnd ?? 0) : ''
-    const phrase = (picked || selection.current).trim()
-    if (!phrase) {
-      setNote(t('home.highlightNone'))
-      return
-    }
-    setNote('')
-    onWords(addHighlight(words, phrase))
-    selection.current = ''
-  }
-  const chips = highlightList(words)
   return (
-    <div className="flex flex-col gap-2">
-      <TextField label={label} spec={spec} value={value} lang={lang} onChange={onChange} error={error} inputRef={input} onSelect={remember} />
-      <div className="flex flex-wrap items-center gap-2">
-        {/* onMouseDown keeps the text selected in the headline while the button is pressed. */}
-        <Button variant="soft" size="sm" icon={<Highlighter size={14} aria-hidden className="text-amber" />} onMouseDown={(e) => e.preventDefault()} onClick={highlight}>
-          {t('home.highlight')}
-        </Button>
-        {chips.length > 0 && <span className="text-[12px] text-muted">{t('home.highlighted')}:</span>}
-        {chips.map((word) => (
-          <span key={word} className="inline-flex items-center gap-1 rounded-full bg-amber/20 py-0.5 pl-2.5 pr-1 text-[12px] font-semibold text-text">
-            {word}
-            <button type="button" onClick={() => onWords(removeHighlight(words, word))} aria-label={t('home.unhighlight', { word })}
-              className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-amber/30">
-              <X size={12} aria-hidden />
-            </button>
-          </span>
-        ))}
-      </div>
-      <p className={note ? 'text-d-cap text-danger' : 'text-d-cap text-muted'} role={note ? 'alert' : undefined}>{note || t('home.highlightHint')}</p>
-    </div>
+    <HeadlineEditor
+      key={lang}
+      label={label}
+      value={value?.[lang] ?? ''}
+      marks={marks?.[lang] ?? []}
+      max={spec.max || undefined}
+      required={spec.required && lang === 'en'}
+      hint={hint}
+      error={error}
+      onChange={change}
+    />
   )
 }
 
@@ -160,7 +138,7 @@ export default function SectionSettings({ section, types, lang, onChange, errors
   const errorOf = (name) => errors.find((e) => e.name === name)?.message
   const nested = (name) => errors.filter((e) => e.name === name).map((e) => ({ ...e, path: e.path?.replace(/^sections\[\d+\]\.settings\./, '') }))
 
-  const fields = Object.entries(schema).filter(([name]) => !(section.type === 'hero_banner' && name === 'highlighted_words'))
+  const fields = Object.entries(schema).filter(([name]) => !(section.type === 'hero_banner' && name === 'headline_marks'))
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
@@ -181,7 +159,7 @@ export default function SectionSettings({ section, types, lang, onChange, errors
         const value = settings[name]
         const set = (v) => onChange(name, v)
         if (section.type === 'hero_banner' && name === 'headline') {
-          return <HeadlineField key={name} label={label(name)} spec={field} value={value} lang={lang} words={settings.highlighted_words ?? ''} onChange={set} onWords={(w) => onChange('highlighted_words', w)} error={errorOf(name) ?? errorOf('highlighted_words')} />
+          return <HeadlineField key={name} label={label(name)} spec={field} value={value} lang={lang} marks={settings.headline_marks} onChange={set} onMarks={(m) => onChange('headline_marks', m)} error={errorOf(name) ?? errorOf('headline_marks')} />
         }
         if (field.kind === 'text') return <TextField key={name} label={label(name)} spec={field} value={value} lang={lang} onChange={set} error={errorOf(name)} multiline={MULTILINE.has(name)} />
         if (field.kind === 'bool') return <Toggle key={name} label={label(name)} checked={!!value} onChange={set} />

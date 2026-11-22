@@ -10,7 +10,7 @@ import Skeleton, { SkeletonText } from '../components/ui/Skeleton'
 import EmptyState, { ErrorState } from '../components/ui/EmptyState'
 import { DaysLeft } from '../components/challenges/ChallengeCard'
 import { useShellSettings } from '../components/layout/shellData'
-import { useI18n, StringKey } from '../i18n'
+import { useI18n, StringKey, type Lang } from '../i18n'
 import { useAsync } from '../lib/useAsync'
 import { formatDate } from '../lib/dates'
 import watermarkUrl from '../assets/brand/ceda-watermark.png'
@@ -21,7 +21,7 @@ import { publicContent, ChallengeDetail as Detail } from '../services/publicCont
 // weights), dates and FAQs. ① The apply card stays in view while scrolling (phone: a sticky bar). ② Tabs jump to
 // sections. ③ FAQs open in place. Never shows judges or scores.
 
-type SectionKey = 'overview' | 'who' | 'support' | 'judge' | 'dates' | 'faqs'
+type SectionKey = 'overview' | 'who' | 'support' | 'judge' | 'dates' | 'schedule' | 'updates' | 'faqs'
 
 const longDate = (iso: string | null | undefined, lang: string) =>
   iso ? new Date(iso).toLocaleString(lang === 'tn' ? 'en-BW' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
@@ -110,6 +110,14 @@ function Faq({ q, a }: { q: string; a: string }) {
   )
 }
 
+/** "9 Jan, 07:30" for the hackathon schedule and updates. */
+function scheduleWhen(iso: string, lang: Lang): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const time = d.toLocaleTimeString(lang === 'tn' ? 'en-BW' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+  return `${formatDate(iso, lang).replace(/ \d{4}$/, '')}, ${time}`
+}
+
 export default function ChallengeDetail() {
   const { slug = '' } = useParams<{ slug: string }>()
   const { t, lang } = useI18n()
@@ -124,6 +132,8 @@ export default function ChallengeDetail() {
     if (c.support_package.length) list.push('support')
     if (c.judging_criteria.length) list.push('judge')
     if (c.key_dates.length) list.push('dates')
+    if (c.hackathon?.schedule.length) list.push('schedule')
+    if (c.hackathon?.updates.length) list.push('updates')
     if (c.faqs.length) list.push('faqs')
     return list
   }, [c])
@@ -322,6 +332,45 @@ export default function ChallengeDetail() {
                     )
                   })}
                 </ol>
+              </section>
+            )}
+
+            {/* Hackathon challenges: the live hackathon page's schedule and updates (3.36), in the Dates layout. */}
+            {sections.includes('schedule') && c.hackathon && (
+              <section id="sec-schedule" aria-labelledby="h-schedule">
+                <h2 id="h-schedule" className="text-d-h3 font-heading text-text mb-4">{t('chd.scheduleTitle')}</h2>
+                <ol className="flex flex-col gap-3">
+                  {c.hackathon.schedule.map((item) => {
+                    const passed = new Date(item.starts_at).getTime() <= now
+                    return (
+                      <li key={item.id} className="grid grid-cols-[16px_96px_1fr] items-center gap-3">
+                        <span aria-hidden className={clsx('w-2.5 h-2.5 rounded-full', item.now ? 'bg-primary' : passed ? 'bg-success' : 'bg-border')} />
+                        <span className="text-d-label text-text">{scheduleWhen(item.starts_at, lang)}</span>
+                        <span className={clsx('text-d-body-s', item.now ? 'text-text font-bold' : 'text-muted')}>
+                          {item.title}
+                          {item.now && <Tag tone="red" className="ml-2 align-middle">{t('chd.now')}</Tag>}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ol>
+              </section>
+            )}
+
+            {sections.includes('updates') && c.hackathon && (
+              <section id="sec-updates" aria-labelledby="h-updates">
+                <h2 id="h-updates" className="text-d-h3 font-heading text-text mb-4">{t('chd.updatesTitle')}</h2>
+                <ul className="flex flex-col gap-3">
+                  {c.hackathon.updates.map((u) => (
+                    <li key={u.id} className="rounded-card border border-border bg-surface p-4 flex gap-3">
+                      {u.photo_url && <img src={u.photo_url} alt="" className="w-20 h-20 rounded-control object-cover shrink-0" loading="lazy" />}
+                      <div className="min-w-0">
+                        <p className="text-d-cap text-muted">{scheduleWhen(u.created_at, lang)}</p>
+                        <p className="text-d-body-s text-text whitespace-pre-line break-words">{u.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               </section>
             )}
 

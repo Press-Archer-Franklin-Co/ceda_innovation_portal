@@ -1,16 +1,16 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import axios from 'axios'
-import { CalendarDays, CircleCheck, MessageSquareText } from 'lucide-react'
+import { CalendarDays, Check, CircleAlert, CircleCheck, MessageSquareText } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
-import { buttonClasses } from '../../components/ui/Button'
+import Button, { buttonClasses } from '../../components/ui/Button'
 import EmptyState, { ErrorState } from '../../components/ui/EmptyState'
 import Skeleton from '../../components/ui/Skeleton'
 import Tag from '../../components/ui/Tag'
 import { useI18n, type StringKey } from '../../i18n'
 import { useAsync } from '../../lib/useAsync'
 import { formatDate, formatDayMonth } from '../../lib/dates'
-import { challengeEntryService, type MyResult as Result, type Outcome } from '../../services/challengeEntry.service'
+import { challengeEntryService, type Attendance, type MyResult as Result, type Outcome } from '../../services/challengeEntry.service'
 
 // U10 screen 2.11 My result (Figma 108:714 website, 108:880 phone). GET /api/programs/public/{slug}/my-result/.
 // Opened from My ideas or the notification. ① The result in one word (the shared status words) and the date.
@@ -81,6 +81,7 @@ export default function MyResult() {
               <p className="text-d-body-s text-text whitespace-pre-line">{r.feedback}</p>
             </section>
           )}
+          {done && r.feedback_points && <FeedbackPoints points={r.feedback_points} />}
           {done && <Scores r={r} />}
         </div>
         <NextStep r={r} />
@@ -146,7 +147,14 @@ function NextStep({ r }: { r: Result }) {
             <CalendarDays size={18} aria-hidden className="shrink-0 text-primary" />
             {formatEvent(r.next_step.at, lang)}
           </p>
-          <Link to={message} className={buttonClasses({ block: true })}><MessageSquareText size={18} aria-hidden />{t('myr.messageOfficer')}</Link>
+          {r.attendance?.can_confirm ? (
+            <>
+              <Attend slug={r.challenge.slug} initial={r.attendance} />
+              <Link to={message} className={buttonClasses({ block: true, variant: 'secondary' })}><MessageSquareText size={18} aria-hidden />{t('myr.messageOfficer')}</Link>
+            </>
+          ) : (
+            <Link to={message} className={buttonClasses({ block: true })}><MessageSquareText size={18} aria-hidden />{t('myr.messageOfficer')}</Link>
+          )}
           <p className="text-d-cap text-muted">{t('myr.eventHelp')}</p>
         </>
       ) : (
@@ -171,6 +179,72 @@ function NextStep({ r }: { r: Result }) {
       )}
       {done && <Link to={`/challenges/${r.challenge.slug}/results`} className="text-d-label-s text-primary hover:underline self-start">{t('myr.allResults')}</Link>}
     </aside>
+  )
+}
+
+/** ② (Figma 108:786): two cards, what the panel liked (green dots) and what to work on (amber dots). */
+export function FeedbackPoints({ points }: { points: { liked: string[]; work_on: string[] } }) {
+  const { t } = useI18n()
+  const cards = [
+    { key: 'liked', title: t('myr.liked'), items: points.liked, Icon: Check, icon: 'text-success', dot: 'bg-success' },
+    { key: 'work_on', title: t('myr.workOn'), items: points.work_on, Icon: CircleAlert, icon: 'text-warning', dot: 'bg-warning' },
+  ].filter((card) => card.items.length > 0)
+  if (!cards.length) return null
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {cards.map(({ key, title, items, Icon, icon, dot }) => (
+        <section key={key} aria-labelledby={`fb-${key}`} className="rounded-xl border border-border bg-surface p-5 flex flex-col gap-2.5">
+          <h2 id={`fb-${key}`} className="flex items-center gap-2 font-heading text-d-h5 text-text">
+            <Icon size={18} aria-hidden className={icon} />{title}
+          </h2>
+          <ul className="flex flex-col gap-2.5">
+            {items.map((item, i) => (
+              <li key={i} className="flex items-start gap-2 text-d-body-s text-text">
+                <span aria-hidden className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />{item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
+
+/** ③ (Figma 108:813): "Confirm I will attend", then the answer, which can be changed until the event. */
+export function Attend({ slug, initial }: { slug: string; initial: Attendance }) {
+  const { t } = useI18n()
+  const [answer, setAnswer] = useState<boolean | null>(initial.answer)
+  const [saving, setSaving] = useState<boolean | null>(null)
+  const [error, setError] = useState(false)
+  const save = async (attending: boolean) => {
+    setSaving(attending)
+    setError(false)
+    try {
+      const next = await challengeEntryService.attend(slug, attending)
+      setAnswer(next.answer)
+    } catch {
+      setError(true)
+    } finally {
+      setSaving(null)
+    }
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      {answer === true ? (
+        <>
+          <p role="status" className="flex items-center gap-2 rounded-control bg-success-soft px-3 py-2.5 text-d-label-s text-success">
+            <CircleCheck size={18} aria-hidden className="shrink-0" />{t('myr.attending')}
+          </p>
+          <Button variant="ghost" size="sm" className="self-start" loading={saving === false} onClick={() => save(false)}>{t('myr.cannotAttend')}</Button>
+        </>
+      ) : (
+        <>
+          {answer === false && <p role="status" className="text-d-body-s text-muted">{t('myr.notAttending')}</p>}
+          <Button block loading={saving === true} onClick={() => save(true)}>{t('myr.attend')}</Button>
+        </>
+      )}
+      {error && <p role="alert" className="text-d-cap text-danger">{t('myr.attendError')}</p>}
+    </div>
   )
 }
 

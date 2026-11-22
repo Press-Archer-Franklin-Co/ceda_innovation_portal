@@ -281,7 +281,7 @@ function ChatWindow({ status, chat }: { status: HelpChatStatus; chat: Chat }) {
   }
 
   const wa = whatsapp_number ? `https://wa.me/${whatsapp_number.replace(/[^\d]/g, '')}` : null
-  const intro = status.open_now ? status.welcome : status.away
+  const intro = introNotice(status.open_now ? status.welcome : status.away, chat.messages)
   const signInOnly = guest && !status.allow_guests && !chat.started
   const closed = chat.status === 'closed'
 
@@ -353,6 +353,13 @@ function ChatWindow({ status, chat }: { status: HelpChatStatus; chat: Chat }) {
       )}
     </>
   )
+}
+
+/** The welcome or away line at the top, unless the chat already has it as a system message (it showed twice). */
+export function introNotice(text: string | null | undefined, messages: Pick<ChatMessage, 'author_role' | 'body'>[]): string {
+  const intro = (text ?? '').trim()
+  if (!intro) return ''
+  return messages.some((m) => m.author_role === 'system' && (m.body ?? '').trim() === intro) ? '' : intro
 }
 
 function Bubble({ m, seen }: { m: ChatMessage; seen: boolean }) {

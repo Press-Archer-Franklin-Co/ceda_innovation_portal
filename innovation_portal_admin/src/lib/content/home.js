@@ -88,21 +88,6 @@ export function missingSetswana(settings, schema) {
   return [...new Set(missing)]
 }
 
-// Highlighted words: the API keeps them as one comma-separated string (the public banner splits it).
-export const highlightList = (words = '') => words.split(',').map((w) => w.trim()).filter(Boolean)
-
-export function addHighlight(words, phrase) {
-  const clean = phrase.replace(/,/g, ' ').replace(/\s+/g, ' ').trim()
-  if (!clean) return words
-  const list = highlightList(words)
-  if (list.some((w) => w.toLowerCase() === clean.toLowerCase())) return list.join(', ')
-  return [...list, clean].join(', ')
-}
-
-export function removeHighlight(words, phrase) {
-  return highlightList(words).filter((w) => w.toLowerCase() !== phrase.toLowerCase()).join(', ')
-}
-
 /** Split the API's [{path, message}] errors by section index: { 2: [{name, path, message}], ..., page: [...] }. */
 export function errorsBySection(errors = []) {
   const out = {}
