@@ -7,6 +7,21 @@ from apps.core.constants import CommunicationChannel
 from apps.notifications.selectors import CHANNEL_FIELDS, NotificationPreferenceSelector
 
 
+def wants_daily_summary(user) -> bool:
+    """R-48: the person gets one summary email a day instead of an email each time."""
+    from apps.communications.models import NotificationPreference
+
+    return NotificationPreference.objects.filter(user=user, daily_summary=True).exists()
+
+
+def email_wanted(user, notification_type: str) -> bool:
+    """R-57: a type the person can switch (innovator or staff group types) follows their email switch."""
+    from apps.core.constants import NotificationDeliveryChannel
+
+    preferences = NotificationPreferenceSelector.for_user(user)
+    return preferences.get(notification_type, {}).get(NotificationDeliveryChannel.EMAIL.value, True)
+
+
 class NotificationService:
     @staticmethod
     def notify(*, user, notification_type: str, message: str, title: str = "", send_email: bool = False):
@@ -27,7 +42,7 @@ class NotificationService:
                 title=title or notification_type.replace("_", " ").title(),
                 body=message,
             )
-        if send_email and user.email:
+        if send_email and user.email and not wants_daily_summary(user) and email_wanted(user, notification_type):
             log = CommunicationService.log_communication(
                 recipient=user,
                 notification=notification,
@@ -41,6 +56,16 @@ class NotificationService:
 
 
 class NotificationPreferenceService:
+    @staticmethod
+    def set_daily_summary(*, user, on: bool) -> None:
+        from apps.communications.models import NotificationPreference
+
+        preference, _ = NotificationPreference.objects.get_or_create(user=user)
+        if preference.daily_summary != on:
+            preference.daily_summary = on
+            preference.save(update_fields=["daily_summary", "updated_at"])
+            AuditService.log_action(actor=user, action_type="notification_daily_summary_set", target=user, after_state={"daily_summary": on})
+
     @staticmethod
     @transaction.atomic
     def update_preferences(*, user, preferences: dict[str, dict[str, bool]]) -> dict[str, dict[str, bool]]:

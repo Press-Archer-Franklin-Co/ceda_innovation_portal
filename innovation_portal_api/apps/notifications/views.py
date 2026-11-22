@@ -1,5 +1,6 @@
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -121,17 +122,26 @@ class NotificationPreferencesView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = NotificationPreferencesSerializer
 
-    def _payload(self, preferences):
-        return NotificationPreferencesSerializer({"preferences": preferences}).data
+    def _payload(self, user, preferences):
+        from apps.communications.models import NotificationPreference
+
+        daily = NotificationPreference.objects.filter(user=user, daily_summary=True).exists()
+        return NotificationPreferencesSerializer({"preferences": preferences, "daily_summary": daily}, context={"user": user}).data
 
     def get(self, request, *args, **kwargs):
-        return api_success(data=self._payload(NotificationPreferenceSelector.for_user(request.user)))
+        return api_success(data=self._payload(request.user, NotificationPreferenceSelector.for_user(request.user)))
 
     def put(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        serializer = NotificationPreferencesSerializer(data=request.data, context={"user": request.user})
         serializer.is_valid(raise_exception=True)
-        preferences = NotificationPreferenceService.update_preferences(
-            user=request.user,
-            preferences=serializer.validated_data["preferences"],
+        data = serializer.validated_data
+        if "preferences" not in data and "daily_summary" not in data:
+            raise ValidationError({"preferences": "Send preferences or daily_summary."})
+        if "daily_summary" in data:
+            NotificationPreferenceService.set_daily_summary(user=request.user, on=data["daily_summary"])
+        preferences = (
+            NotificationPreferenceService.update_preferences(user=request.user, preferences=data["preferences"])
+            if "preferences" in data
+            else NotificationPreferenceSelector.for_user(request.user)
         )
-        return api_success(data=self._payload(preferences), message="Notification preferences saved.")
+        return api_success(data=self._payload(request.user, preferences), message="Notification preferences saved.")

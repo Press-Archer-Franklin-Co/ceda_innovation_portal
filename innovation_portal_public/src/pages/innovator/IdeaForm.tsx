@@ -1,6 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { CalendarClock, Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
+import { Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
+import clsx from 'clsx'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { Checkbox } from '../../components/ui/Choice'
@@ -11,6 +12,7 @@ import StepProgress from '../../components/ui/StepProgress'
 import Tag from '../../components/ui/Tag'
 import { useToast } from '../../components/ui/Toast'
 import { useShellSettings } from '../../components/layout/shellData'
+import EntryBand from '../../components/challenges/EntryBand'
 import FormRenderer from '../../components/innovator/form/FormRenderer'
 import { showAnswer } from '../../components/innovator/form/showAnswer'
 import {
@@ -22,7 +24,6 @@ import { formsService } from '../../services/forms.service'
 import { intakeService } from '../../services/intake.service'
 import { challengeEntryService } from '../../services/challengeEntry.service'
 import { useAsync } from '../../lib/useAsync'
-import { formatDate } from '../../lib/dates'
 import type { FormStep, IntakeDraft, Lang, PublishedForm, SimilarIdea } from '../../types/innovator'
 import { parseApiError } from '../../utils/apiError'
 
@@ -190,7 +191,7 @@ export default function IdeaForm() {
   }, [answers, step])
 
   useEffect(() => {
-    if (slug || similarText.length < SIMILAR_MIN_CHARS) return // a challenge entry is not checked against other ideas
+    if (similarText.length < SIMILAR_MIN_CHARS) return // 2.10 shows the note on challenge entries too
     let alive = true
     const timer = window.setTimeout(() => {
       intakeService
@@ -202,7 +203,7 @@ export default function IdeaForm() {
       alive = false
       window.clearTimeout(timer)
     }
-  }, [similarText, draft?.sector, slug])
+  }, [similarText, draft?.sector])
 
   // ── Moving between steps ─────────────────────────────────────────────────
   function goTo(index: number) {
@@ -302,34 +303,34 @@ export default function IdeaForm() {
 
   return (
     <div className="bg-bg">
-      {/* Form head */}
+      {/* Form head. 2.10: the entry band continues the four steps from 1.9; the form's own parts show underneath. */}
+      {slug && challengeTitle ? (
+        <EntryBand
+          titleId="entry-title"
+          title={t('ent.yourEntry', { challenge: challengeTitle })}
+          closesAt={challenge?.closes_at ?? null}
+          current={2}
+          actions={
+            <>
+              <SaveStatus save={save} now={now} />
+              <Button variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>{t('form.saveExit')}</Button>
+            </>
+          }
+          below={<p className="text-d-label-s text-text">{t('ent.part', { n: stepIndex + 1, total: stepNames.length, name: stepNames[stepIndex] ?? '' })}</p>}
+        />
+      ) : (
       <div className="border-b border-border">
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            {slug && challengeTitle ? (
-              <div className="min-w-0">
-                <p className="text-d-over uppercase font-heading text-muted">{t('ent.formHeader')}</p>
-                <h1 className="font-heading text-d-h3 text-text break-words">
-                  <Link to={`/challenges/${challenge?.slug ?? slug}`} className="hover:underline">{challengeTitle}</Link>
-                </h1>
-                {challenge?.closes_at && (
-                  <p className="mt-1 flex items-center gap-1.5 text-d-label-s text-muted">
-                    <CalendarClock size={14} aria-hidden />
-                    {t('ent.closes', { when: formatDate(challenge.closes_at, lang) })}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <div className="min-w-0">
-                <h1 className="font-heading text-d-h3 text-text break-words">{draft.title}</h1>
-                {programLabel && <Tag tone="neutral" className="mt-2">{programLabel}</Tag>}
-              </div>
-            )}
+            <div className="min-w-0">
+              <h1 className="font-heading text-d-h3 text-text break-words">{draft.title}</h1>
+              {programLabel && <Tag tone="neutral" className="mt-2">{programLabel}</Tag>}
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <SaveStatus save={save} now={now} />
               <LanguageSwitch />
               <Button variant="secondary" size="sm" onClick={onSaveExit} loading={busy && !onReview}>
-                {slug ? t('ent.saveExit') : t('form.saveExit')}
+                {t('form.saveExit')}
               </Button>
             </div>
           </div>
@@ -341,11 +342,12 @@ export default function IdeaForm() {
           />
         </div>
       </div>
+      )}
 
       {/* Form body */}
       <div className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
         <section aria-labelledby="step-heading" className="min-w-0">
-          <h2 id="step-heading" ref={headingRef} tabIndex={-1} className="font-heading text-d-h3 text-text mb-2 focus:outline-none">
+          <h2 id="step-heading" ref={headingRef} tabIndex={-1} className={clsx('font-heading text-text mb-2 focus:outline-none', slug ? 'text-d-h3 lg:text-d-h2' : 'text-d-h3')}>
             {onReview ? t('form.reviewStep') : step?.title}
           </h2>
           {!onReview && step?.description && <p className="text-d-body text-muted mb-6">{step.description}</p>}
@@ -379,7 +381,7 @@ export default function IdeaForm() {
 
           <div className="mt-10 flex flex-wrap items-center justify-between gap-3">
             {stepIndex > 0 ? (
-              <Button variant="ghost" onClick={onBack}>{t('form.back')}</Button>
+              <Button variant={slug ? 'secondary' : 'ghost'} onClick={onBack}>{t('form.back')}</Button>
             ) : (
               <span />
             )}
@@ -387,7 +389,7 @@ export default function IdeaForm() {
               <Button onClick={onSend} loading={sending} arrow>{t('form.send')}</Button>
             ) : (
               <Button onClick={onContinue} loading={busy} arrow>
-                {stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
+                {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
               </Button>
             )}
           </div>
@@ -395,9 +397,9 @@ export default function IdeaForm() {
 
         <aside className="flex flex-col gap-4">
           {!onReview && similar.length > 0 && (
-            <Card tone="soft" padding="md">
-              <p className="flex items-center gap-2 font-heading text-d-h5 text-text">
-                <Sparkles size={18} aria-hidden className="text-accent" />
+            <section className={clsx('rounded-card p-6', slug ? 'bg-info-soft' : 'bg-surface2')}>
+              <p className={clsx('flex items-center gap-2 font-heading text-d-h5', slug ? 'text-info' : 'text-text')}>
+                <Sparkles size={18} aria-hidden className={slug ? 'text-info' : 'text-accent'} />
                 {similar.length === 1 ? t('form.similarOne') : t('form.similarMany', { count: similar.length })}
               </p>
               <p className="mt-2 text-d-body-s text-muted">{t('form.similarBody')}</p>
@@ -409,7 +411,7 @@ export default function IdeaForm() {
                   </li>
                 ))}
               </ul>
-            </Card>
+            </section>
           )}
 
           {!onReview && step && step.tips.length > 0 && (
