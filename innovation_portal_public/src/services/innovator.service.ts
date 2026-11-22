@@ -47,8 +47,15 @@ export const innovatorService = {
 
   /** Screen 2.4: the idea, its answers and its timeline in one call. */
   async trackedIdea(submissionId: string): Promise<TrackedIdea> {
-    const { data } = await api.get(`/submissions/${submissionId}/tracking-detail/`)
-    return unwrapData<TrackedIdea>(data)
+    // The idea and its answers come from the submission; the timeline from tracking-detail (which has no
+    // title or answers). U11C: before this the page read both from tracking-detail and failed to draw.
+    const [detail, tracking] = await Promise.all([
+      api.get(`/submissions/${submissionId}/`),
+      api.get(`/submissions/${submissionId}/tracking-detail/`),
+    ])
+    const idea = unwrapData<Omit<TrackedIdea, 'timeline'>>(detail.data)
+    const { timeline } = unwrapData<{ timeline: TrackedIdea['timeline'] }>(tracking.data)
+    return { ...idea, responses: idea.responses ?? [], timeline }
   },
 
   /** Screen 2.4: the signed-in owner's view, with the officer on the current stage. */

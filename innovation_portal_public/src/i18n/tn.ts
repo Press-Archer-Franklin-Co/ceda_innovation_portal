@@ -4,6 +4,11 @@ import type { StringKey } from './en'
 import { innovatorTn } from './innovator'
 import { signInTn } from './signin'
 import { pagesTn } from './pages'
+import { policiesTn } from './policies'
+import { a11yTn } from './a11y'
+import { statusTn } from './status'
+import { inviteTn } from './invite'
+import { accountTn } from './account'
 import { challengeEntryTn } from './challengeEntry'
 import { liveChatTn } from './livechat'
 
@@ -430,6 +435,11 @@ const tn: Record<StringKey, string> = {
   ...innovatorTn,
   ...signInTn,
   ...pagesTn,
+  ...policiesTn,
+  ...a11yTn,
+  ...statusTn,
+  ...inviteTn,
+  ...accountTn,
   ...challengeEntryTn,
   ...liveChatTn,
 }

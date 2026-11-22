@@ -3,6 +3,11 @@
 import { innovatorEn } from './innovator'
 import { signInEn } from './signin'
 import { pagesEn } from './pages'
+import { policiesEn } from './policies'
+import { a11yEn } from './a11y'
+import { statusEn } from './status'
+import { inviteEn } from './invite'
+import { accountEn } from './account'
 import { challengeEntryEn } from './challengeEntry'
 import { liveChatEn } from './livechat'
 
@@ -429,6 +434,11 @@ const en = {
   ...innovatorEn,
   ...signInEn,
   ...pagesEn,
+  ...policiesEn,
+  ...a11yEn,
+  ...statusEn,
+  ...inviteEn,
+  ...accountEn,
   ...challengeEntryEn,
   ...liveChatEn,
 } as const
