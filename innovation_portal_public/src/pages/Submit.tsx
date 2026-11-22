@@ -3,6 +3,7 @@ import { useAsync } from '../lib/useAsync'
 import { usePageTitle } from '../lib/usePageTitle'
 import { publicContent, HomeSection, ChallengeCard as Challenge } from '../services/publicContent.service'
 import HeroBanner, { HeroBannerSkeleton, HeroSettings } from '../components/home/HeroBanner'
+import { marksFromWords } from '../components/home/HeroHeadline'
 import { useQuickStartFlow } from '../components/home/QuickStartFlow'
 
 // "Submit an idea" (nav, header button, footer, challenge cards). The home banner with its quick start card
@@ -24,7 +25,7 @@ export default function Submit() {
   const hero = sections.find((s) => s.type === 'hero_banner')?.settings as HeroSettings | undefined
   const settings: HeroSettings = {
     headline: hero?.headline || t('submit.headline'),
-    highlighted_words: hero?.headline ? hero.highlighted_words : t('submit.highlight'),
+    headline_marks: hero?.headline ? hero.headline_marks : marksFromWords(t('submit.headline'), t('submit.highlight')),
     text: hero?.headline ? hero.text : t('submit.text'),
     primary_button: null,
     secondary_button: null,

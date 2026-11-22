@@ -44,10 +44,11 @@ export const contentEn = {
   'home.missingTnBody': 'Some texts have no Setswana yet. Visitors who chose Setswana see the English text.',
   'home.englishWas': 'English: {text}',
   'home.highlight': 'Highlight',
-  'home.highlightHint': 'Select words in the headline and press Highlight to colour them amber.',
-  'home.highlightNone': 'Select one or more words in the headline first.',
-  'home.highlighted': 'Coloured amber',
-  'home.unhighlight': 'Stop colouring "{word}"',
+  'home.highlightHint': 'Select words and press Highlight to colour them amber.',
+  'home.highlightLabel': 'Highlight: colour the selected words amber, or press again to remove the colour',
+  'home.bold': 'Bold',
+  'home.italic': 'Italic',
+  'home.headlineTools': 'Headline style',
   'home.buttonLabel': 'Button text',
   'home.buttonLink': 'Link',
   'home.addItem': 'Add',
@@ -549,10 +550,11 @@ export const contentTn = {
   'home.missingTnBody': 'Dikwalo dingwe ga di ise di nne le Setswana. Baeti ba ba tlhophileng Setswana ba bona Sekgoa.',
   'home.englishWas': 'Sekgoa: {text}',
   'home.highlight': 'Gatelela',
-  'home.highlightHint': 'Tlhopha mafoko mo setlhogong o bo o tobetsa Gatelela go a kgabisa ka mmala wa amber.',
-  'home.highlightNone': 'Tlhopha lefoko le le lengwe kgotsa a mantsi mo setlhogong pele.',
-  'home.highlighted': 'A kgabisitswe ka amber',
-  'home.unhighlight': 'Emisa go kgabisa "{word}"',
+  'home.highlightHint': 'Tlhopha mafoko o bo o tobetsa Gatelela go a kgabisa ka mmala wa amber.', // TODO tn-review
+  'home.highlightLabel': 'Gatelela: kgabisa mafoko a o a tlhophileng ka amber, kgotsa tobetsa gape go tlosa mmala', // TODO tn-review
+  'home.bold': 'Bontsho', // TODO tn-review
+  'home.italic': 'Tsekamisa', // TODO tn-review
+  'home.headlineTools': 'Sebopego sa setlhogo', // TODO tn-review
   'home.buttonLabel': 'Mafoko a konopo',
   'home.buttonLink': 'Kgokagano',
   'home.addItem': 'Tsenya',

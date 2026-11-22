@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addHighlight, addSection, adoptIds, errorsBySection, fromDraft, lastPublished, localize, missingSetswana, moveSection,
-  removeHighlight, removeSection, toPayload, toggleSection,
+  addSection, adoptIds, errorsBySection, fromDraft, lastPublished, localize, missingSetswana, moveSection,
+  removeSection, toPayload, toggleSection,
 } from './home'
 
 const types = [
@@ -56,15 +56,6 @@ describe('home sections', () => {
     const schema = { title: { kind: 'text' }, button: { kind: 'button' }, steps: { kind: 'list', item: { title: { kind: 'text' } } } }
     const settings = { title: { en: 'A', tn: 'B' }, button: { label: { en: 'Go', tn: '' }, url: '/' }, steps: [{ title: { en: 'X', tn: '' } }] }
     expect(missingSetswana(settings, schema)).toEqual(['button', 'steps'])
-  })
-
-  it('keeps highlighted words as one comma-separated string without duplicates', () => {
-    let words = addHighlight('', 'seed')
-    words = addHighlight(words, ' grow ')
-    words = addHighlight(words, 'Seed')
-    expect(words).toBe('seed, grow')
-    expect(addHighlight(words, 'a, b')).toBe('seed, grow, a b')
-    expect(removeHighlight(words, 'SEED')).toBe('grow')
   })
 
   it('groups API errors by section and setting', () => {
