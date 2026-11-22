@@ -54,6 +54,7 @@ class IntegrationConnection(UUIDModel, TimeStampedModel):
         USSD = "ussd", "USSD"
         TRANSLATION = "translation", "Translation"
         STORAGE = "storage", "Storage"
+        AI = "ai", "AI helper"
 
     class Status(models.TextChoices):
         DRAFT = "draft", "Draft"

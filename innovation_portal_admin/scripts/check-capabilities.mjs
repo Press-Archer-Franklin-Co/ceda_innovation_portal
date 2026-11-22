@@ -16,6 +16,9 @@ const FRONTENDS = ['innovation_portal_admin/src', 'innovation_portal_public/src'
 
 // Capabilities the API defines that no screen asks for yet, each with the reason. Keep this short.
 const NOT_IN_UI = {
+  // C3: no screen asks for these yet; the screens lane builds 3.34 and 3.3b (prompt 17) and removes these lines.
+  'assistant.hints': 'AI helper card and Related ideas on submission detail come with the screens lane (3.3b)',
+  'assistant.manage': 'Admin > AI helper page comes with the screens lane (3.34)',
 }
 
 // Role-name tests that are allowed: auth internals and display-only role pickers.
