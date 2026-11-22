@@ -57,13 +57,14 @@ class PublicChallengeDetailView(APIView):
         tags=["Challenges (public)"],
         summary="One challenge page (1.8) in one call",
         description="Card fields plus problem, who can enter, where, support package, judging criteria (names, weights, "
-        "descriptions only), key dates, FAQs, partners, started_count and estimated_minutes. Never judges or scores.",
+        "descriptions only), key dates, FAQs, partners, started_count and estimated_minutes. Never judges or scores. "
+        "hackathon: {schedule: [{id, starts_at, title, now}], updates: [{id, body, photo_url, created_at}]} from the live hackathon page (3.36), or null.",
         parameters=[LANG],
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, slug):
         program = get_object_or_404(challenges.public_queryset(), slug=slug)
-        return api_success(data=challenges.public_detail(program, _lang(request)))
+        return api_success(data=challenges.public_detail(program, _lang(request), request))
 
 
 class SetupStatusView(APIView):

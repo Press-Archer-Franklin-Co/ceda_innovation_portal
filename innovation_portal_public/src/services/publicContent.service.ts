@@ -72,6 +72,11 @@ export interface ChallengeDetail extends ChallengeCard {
   estimated_minutes: number | null
   form_id: string | null
   availability: Record<string, unknown>
+  /** The live hackathon page's schedule and updates (3.36), or null when the challenge has none. */
+  hackathon?: {
+    schedule: { id: string; starts_at: string; title: string; now: boolean }[]
+    updates: { id: string; body: string; photo_url: string | null; created_at: string }[]
+  } | null
 }
 
 export type PostType = 'news' | 'event' | 'opportunity' | 'result' | 'notice' | 'newsletter'
