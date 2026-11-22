@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, BarChart3, ClipboardList, BriefcaseBusiness, Layers, BookOpen,
-  ClipboardCheck, Handshake, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck,
+  ClipboardCheck, Handshake, Star, Info, LayoutTemplate, Newspaper, Trophy, Quote, HelpCircle, Users, SlidersHorizontal, ScrollText, GitBranch, FileText, ShieldCheck, Eye,
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
@@ -30,6 +30,7 @@ const GROUPS = [
     label: 'staff.group.ideas',
     items: [
       { label: 'staff.nav.submissions', href: '/submissions', icon: ClipboardList, capability: 'entries.search' },
+      { label: 'staff.nav.reviewQueue', href: '/review', icon: Eye, capability: 'entries.review' },
       { label: 'staff.nav.judging', href: '/judging', icon: Star, capability: 'entries.score' },
     ],
   },
