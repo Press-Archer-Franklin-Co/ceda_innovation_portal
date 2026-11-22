@@ -7,6 +7,13 @@ from apps.core.constants import CommunicationChannel
 from apps.notifications.selectors import CHANNEL_FIELDS, NotificationPreferenceSelector
 
 
+def wants_daily_summary(user) -> bool:
+    """R-48: the person gets one summary email a day instead of an email each time."""
+    from apps.communications.models import NotificationPreference
+
+    return NotificationPreference.objects.filter(user=user, daily_summary=True).exists()
+
+
 class NotificationService:
     @staticmethod
     def notify(*, user, notification_type: str, message: str, title: str = "", send_email: bool = False):
@@ -27,7 +34,7 @@ class NotificationService:
                 title=title or notification_type.replace("_", " ").title(),
                 body=message,
             )
-        if send_email and user.email:
+        if send_email and user.email and not wants_daily_summary(user):
             log = CommunicationService.log_communication(
                 recipient=user,
                 notification=notification,
@@ -41,6 +48,16 @@ class NotificationService:
 
 
 class NotificationPreferenceService:
+    @staticmethod
+    def set_daily_summary(*, user, on: bool) -> None:
+        from apps.communications.models import NotificationPreference
+
+        preference, _ = NotificationPreference.objects.get_or_create(user=user)
+        if preference.daily_summary != on:
+            preference.daily_summary = on
+            preference.save(update_fields=["daily_summary", "updated_at"])
+            AuditService.log_action(actor=user, action_type="notification_daily_summary_set", target=user, after_state={"daily_summary": on})
+
     @staticmethod
     @transaction.atomic
     def update_preferences(*, user, preferences: dict[str, dict[str, bool]]) -> dict[str, dict[str, bool]]:
