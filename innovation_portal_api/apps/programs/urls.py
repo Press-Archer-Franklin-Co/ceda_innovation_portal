@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 from apps.programs.challenge_views import JudgingSettingsView, PublicChallengeDetailView, PublicChallengeListView, SetupStatusView
 from apps.programs.stage_views import ProgramStageDetailView, ProgramStagesView
 from apps.programs.entry_views import (
+    ChallengeStatusNumbersView,
+    ChallengeUpdatesView,
     ChallengeEligibilityRulesView,
     ChallengeEligibilityView,
     ChallengeEntryStateView,
@@ -45,6 +47,8 @@ urlpatterns = [
     path("<uuid:program_id>/results/publish/", PublishChallengeResultsView.as_view(), name="program-results-publish"),
     path("<uuid:program_id>/setup-status/", SetupStatusView.as_view(), name="program-setup-status"),
     path("<uuid:program_id>/judging/", JudgingSettingsView.as_view(), name="program-judging"),
+    path("<uuid:program_id>/status-numbers/", ChallengeStatusNumbersView.as_view(), name="program-status-numbers"),
+    path("<uuid:program_id>/updates/", ChallengeUpdatesView.as_view(), name="program-updates"),
     path("<uuid:program_id>/stages/", ProgramStagesView.as_view(), name="program-stages"),
     path("<uuid:program_id>/stages/<uuid:step_id>/", ProgramStageDetailView.as_view(), name="program-stage-detail"),
 ] + router.urls + [
