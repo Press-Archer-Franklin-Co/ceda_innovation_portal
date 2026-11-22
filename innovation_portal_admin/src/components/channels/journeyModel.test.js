@@ -1,55 +1,67 @@
 import { describe, expect, it } from 'vitest'
-import { USSD_LIMIT, connect, newKey, newNode, nodeHeight, portsOf, toPayload, unlinkTarget, ussdScreenText } from './journeyModel'
+import { connect, defaultsFor, moveAfter, newKey, newNode, portsOf, runOrder, toPayload, typeMap, unlinkTarget, ussdScreenText, variablesOf } from './journeyModel'
 
-const t = (key) => key
+// A cut-down copy of GET /api/channels/node-types/: enough for the helpers.
+const types = typeMap([
+  { type: 'menu', next: false, text: { label: 'Text' }, fields: [{ name: 'options', kind: 'options', default: [{ label: { en: '', tn: '' }, next: '' }] }, { name: 'variable', kind: 'variable' }] },
+  { type: 'message', next: true, ends_when: 'end', text: { label: 'Text' }, fields: [{ name: 'end', kind: 'boolean', default: false }] },
+  { type: 'question', next: true, text: { label: 'Question' }, fields: [{ name: 'answer_type', kind: 'select', default: 'text' }, { name: 'variable', kind: 'variable' }] },
+  { type: 'condition', next: false, text: null, fields: [{ name: 'true_next', kind: 'node' }, { name: 'false_next', kind: 'node' }] },
+  { type: 'end', next: false, text: { label: 'Text' }, fields: [] },
+  { type: 'ask_file', next: true, text: { label: 'Text' }, fields: [{ name: 'if_skipped', kind: 'node' }] }, // a type added later
+])
 
 const menu = {
-  key: 'main',
-  type: 'menu',
-  text: { en: 'CEDA Innovation', tn: 'CEDA Innovation' },
-  settings: { options: [{ label: { en: 'Submit an idea', tn: 'Romela kakanyo' }, next: 'a' }, { label: { en: 'Talk to us', tn: 'Bua le rona' }, next: '' }] },
-  next: '',
-  position: { x: 0, y: 0 },
+  key: 'main', type: 'menu', text: { en: 'CEDA Innovation', tn: 'CEDA Innovation' }, next: '',
+  settings: { options: [{ label: { en: 'Submit an idea', tn: 'Romela kakanyo' }, next: 'q' }, { label: { en: 'Talk to us', tn: 'Bua le rona' }, next: '' }] },
 }
+const question = { key: 'q', type: 'question', text: { en: 'Idea name?' }, settings: { variable: 'title' }, next: 'bye' }
+const bye = { key: 'bye', type: 'end', text: { en: 'Thanks' }, settings: {}, next: '' }
 
-describe('journey model', () => {
-  it('gives a menu one port per option, and an end step none', () => {
-    expect(portsOf(menu, t).map((p) => [p.id, p.target])).toEqual([['option:0', 'a'], ['option:1', '']])
-    expect(portsOf({ type: 'end', settings: {} }, t)).toEqual([])
-    expect(portsOf({ type: 'message', settings: { end: true } }, t)).toEqual([])
+describe('journey model, driven by the API node types', () => {
+  it('gives ports from the type: options, node fields and next', () => {
+    expect(portsOf(menu, types).map((p) => [p.id, p.number, p.target])).toEqual([['options:0', 1, 'q'], ['options:1', 2, '']])
+    expect(portsOf(question, types).map((p) => p.id)).toEqual(['next'])
+    expect(portsOf({ type: 'condition', settings: { true_next: 'a' } }, types).map((p) => [p.id, p.target])).toEqual([['true_next', 'a'], ['false_next', '']])
+    expect(portsOf({ type: 'message', settings: { end: true } }, types)).toEqual([])
+    expect(portsOf({ type: 'ask_file', settings: {} }, types).map((p) => p.id)).toEqual(['if_skipped', 'next'])
   })
 
-  it('links a port to a step without touching the others', () => {
-    const linked = connect(menu, 'option:1', 'talk')
-    expect(linked.settings.options[1].next).toBe('talk')
-    expect(linked.settings.options[0].next).toBe('a')
+  it('links and unlinks ports without touching the others', () => {
+    const linked = connect(menu, 'options:1', 'bye')
+    expect(linked.settings.options[1].next).toBe('bye')
     expect(menu.settings.options[1].next).toBe('')
-    const condition = connect({ type: 'condition', settings: {} }, 'false', 'b')
-    expect(condition.settings.false_next).toBe('b')
-    expect(connect({ type: 'question', settings: {}, next: '' }, 'next', 'c').next).toBe('c')
+    expect(connect({ type: 'condition', settings: {} }, 'false_next', 'b').settings.false_next).toBe('b')
+    expect(connect(question, 'next', 'x').next).toBe('x')
+    expect(unlinkTarget(menu, 'q', types).settings.options[0].next).toBe('')
   })
 
-  it('removes every arrow to a deleted step', () => {
-    const cleaned = unlinkTarget(menu, 'a', t)
-    expect(cleaned.settings.options[0].next).toBe('')
+  it('starts a new step with the defaults the API gives', () => {
+    expect(defaultsFor('question', types)).toEqual({ answer_type: 'text' })
+    expect(newNode('menu', [], types).settings.options).toHaveLength(1)
+    expect(newKey('save_draft', [{ key: 'save-draft-1' }])).toBe('save-draft-2')
   })
 
-  it('makes unique keys and sensible new steps', () => {
-    expect(newKey('menu', [{ key: 'menu-1' }])).toBe('menu-2')
-    expect(newKey('save_draft', [])).toBe('save-draft-1')
-    expect(newNode('menu', [], { x: 1, y: 2 }).settings.options).toHaveLength(1)
-    expect(newNode('question', [], { x: 0, y: 0 }).settings.answer_type).toBe('text')
+  it('orders steps the way the journey runs, keeping loose steps at the end', () => {
+    const loose = { key: 'loose', type: 'end', text: {}, settings: {}, next: '' }
+    expect(runOrder([bye, loose, question, menu], 'main', types).map((n) => n.key)).toEqual(['main', 'q', 'bye', 'loose'])
   })
 
-  it('counts the USSD screen the way the API shows it, per language', () => {
-    expect(ussdScreenText(menu, 'en')).toBe('CEDA Innovation\n1. Submit an idea\n2. Talk to us')
-    expect(ussdScreenText(menu, 'tn')).toBe('CEDA Innovation\n1. Romela kakanyo\n2. Bua le rona')
-    expect(ussdScreenText({ type: 'question', text: { en: 'OK?' }, settings: { answer_type: 'yes_no' } }, 'tn')).toBe('OK?\n1. Ee\n2. Nnyaa')
-    expect(USSD_LIMIT).toBe(182)
+  it('moves a WhatsApp block and keeps the chain joined', () => {
+    const a = { key: 'a', type: 'message', settings: {}, next: 'b' }
+    const b = { key: 'b', type: 'message', settings: {}, next: 'c' }
+    const c = { key: 'c', type: 'message', settings: {}, next: '' }
+    const moved = moveAfter([a, b, c], 'a', 'b', 'a')
+    expect(moved.startKey).toBe('b')
+    expect(Object.fromEntries(moved.nodes.map((n) => [n.key, n.next]))).toEqual({ a: 'c', b: 'a', c: '' })
+    const first = moveAfter([a, b, c], 'c', '', 'a')
+    expect(first.startKey).toBe('c')
+    expect(Object.fromEntries(first.nodes.map((n) => [n.key, n.next]))).toEqual({ a: 'b', b: '', c: 'a' })
   })
 
-  it('grows a step with its ports and saves only the API fields', () => {
-    expect(nodeHeight(menu, t)).toBeGreaterThan(nodeHeight({ type: 'end', settings: {} }, t))
+  it('counts the USSD screen per language and lists saved answers', () => {
+    expect(ussdScreenText(menu, 'tn', types)).toBe('CEDA Innovation\n1. Romela kakanyo\n2. Bua le rona')
+    expect(variablesOf([menu, question], types)).toEqual(['draft_reference', 'title'])
     expect(Object.keys(toPayload([{ ...menu, extra: 1 }])[0]).sort()).toEqual(['key', 'next', 'position', 'settings', 'text', 'title', 'type'])
   })
 })

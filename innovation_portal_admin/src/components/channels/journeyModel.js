@@ -1,159 +1,142 @@
-// Pure helpers for the journey builder: node sizes, ports, edges and new-node defaults.
-// Kept apart from the components so they are easy to test.
-import {
-  ListOrdered, MessageSquare, HelpCircle, Save, Search, GitBranch, BellRing, Languages, Headset, CircleStop,
-} from 'lucide-react'
+// Pure helpers for the USSD and WhatsApp builders. Everything about a step type (its ports,
+// defaults and settings) comes from GET /api/channels/node-types/, so a type the API adds later
+// works here without code changes. `types` is that list turned into a map by typeMap().
 
-export const NODE_WIDTH = 208
-const HEADER = 30
-const BODY = 38
-const PORT_ROW = 22
+export const USSD_LIMIT = 160 // Figma 3.31; the API refuses longer screens when publishing
 
-export const NODE_ICONS = {
-  menu: ListOrdered,
-  message: MessageSquare,
-  question: HelpCircle,
-  save_draft: Save,
-  lookup: Search,
-  condition: GitBranch,
-  subscribe: BellRing,
-  language: Languages,
-  handoff: Headset,
-  end: CircleStop,
+export function typeMap(list) {
+  return Object.fromEntries((list ?? []).map((item) => [item.type, item]))
 }
 
-// Tone per step type, from the Tag tones (Option D tokens, no hand-typed colours).
-export const NODE_TONES = {
-  menu: 'blue',
-  message: 'neutral',
-  question: 'orange',
-  save_draft: 'green',
-  lookup: 'blue',
-  condition: 'amber',
-  subscribe: 'green',
-  language: 'neutral',
-  handoff: 'red',
-  end: 'dark',
+export function pick(value, lang) {
+  if (!value || typeof value !== 'object') return value ?? ''
+  return value[lang] || value.en || ''
 }
 
-export const TYPE_ORDER = ['menu', 'message', 'question', 'save_draft', 'lookup', 'condition', 'subscribe', 'language', 'handoff', 'end']
-
-/** Outgoing ports: [{ id, label, field }] where field says which setting the edge lives in. */
-export function portsOf(node, t) {
+/** Outgoing ports: [{ id, label: {en, tn}, target }]. Menu options give one port each. */
+export function portsOf(node, types) {
+  const spec = types?.[node.type]
   const settings = node.settings ?? {}
-  switch (node.type) {
-    case 'menu':
-      return (settings.options ?? []).map((option, index) => ({
-        id: `option:${index}`,
-        label: `${index + 1}. ${option.label?.en || t('ch.node.untitledOption')}`,
-        target: option.next || '',
-      }))
-    case 'condition':
-      return [
-        { id: 'true', label: t('ch.port.yes'), target: settings.true_next || '' },
-        { id: 'false', label: t('ch.port.no'), target: settings.false_next || '' },
-      ]
-    case 'save_draft':
-      return [
-        { id: 'next', label: t('ch.port.next'), target: node.next || '' },
-        { id: 'error', label: t('ch.port.ifFails'), target: settings.error_next || '' },
-      ]
-    case 'end':
-    case 'handoff':
-      return []
-    case 'message':
-      return settings.end ? [] : [{ id: 'next', label: t('ch.port.next'), target: node.next || '' }]
-    default:
-      return [{ id: 'next', label: t('ch.port.next'), target: node.next || '' }]
+  const ports = []
+  for (const field of spec?.fields ?? []) {
+    if (field.kind === 'options') {
+      ;(settings[field.name] ?? []).forEach((option, index) => {
+        ports.push({ id: `${field.name}:${index}`, label: option.label ?? {}, number: index + 1, target: option.next || '' })
+      })
+    } else if (field.kind === 'node') {
+      ports.push({ id: field.name, label: { en: field.label, tn: field.label_tn }, target: settings[field.name] || '' })
+    }
   }
+  const ends = spec?.ends_when && settings[spec.ends_when]
+  if (spec?.next && !ends) ports.push({ id: 'next', label: { en: 'Then', tn: 'Morago' }, target: node.next || '' })
+  return ports
 }
 
-export function nodeHeight(node, t) {
-  return HEADER + BODY + Math.max(1, portsOf(node, t).length) * PORT_ROW
-}
-
-/** Where a port sits, in canvas coordinates. */
-export function portPoint(node, portIndex) {
-  const x = (node.position?.x ?? 0) + NODE_WIDTH
-  const y = (node.position?.y ?? 0) + HEADER + BODY + portIndex * PORT_ROW + PORT_ROW / 2
-  return { x, y }
-}
-
-export function inPoint(node) {
-  return { x: node.position?.x ?? 0, y: (node.position?.y ?? 0) + HEADER / 2 }
-}
-
-/** Point a port at another node (or '' to unlink). Returns a new node. */
+/** Point a port at another step ('' unlinks). Returns a new node. */
 export function connect(node, portId, targetKey) {
+  if (portId === 'next') return { ...node, next: targetKey }
   const settings = { ...(node.settings ?? {}) }
-  if (portId.startsWith('option:')) {
-    const index = Number(portId.split(':')[1])
-    const options = [...(settings.options ?? [])]
-    options[index] = { ...options[index], next: targetKey }
-    return { ...node, settings: { ...settings, options } }
+  const [field, index] = portId.split(':')
+  if (index !== undefined) {
+    const options = [...(settings[field] ?? [])]
+    options[Number(index)] = { ...options[Number(index)], next: targetKey }
+    return { ...node, settings: { ...settings, [field]: options } }
   }
-  if (portId === 'true') return { ...node, settings: { ...settings, true_next: targetKey } }
-  if (portId === 'false') return { ...node, settings: { ...settings, false_next: targetKey } }
-  if (portId === 'error') return { ...node, settings: { ...settings, error_next: targetKey } }
-  return { ...node, next: targetKey }
+  return { ...node, settings: { ...settings, [field]: targetKey } }
 }
 
-/** Remove every edge pointing at `key` (used when a step is deleted). */
-export function unlinkTarget(node, key, t) {
+/** Remove every arrow to a deleted step. */
+export function unlinkTarget(node, key, types) {
   let result = node
-  portsOf(node, t).forEach((port) => {
-    if (port.target === key) result = connect(result, port.id, '')
-  })
+  for (const port of portsOf(node, types)) if (port.target === key) result = connect(result, port.id, '')
   return result
 }
 
 export function newKey(type, nodes) {
+  const base = type.replace(/_/g, '-')
   const used = new Set(nodes.map((n) => n.key))
   let i = 1
-  while (used.has(`${type.replace('_', '-')}-${i}`)) i += 1
-  return `${type.replace('_', '-')}-${i}`
+  while (used.has(`${base}-${i}`)) i += 1
+  return `${base}-${i}`
 }
 
-export function newNode(type, nodes, position) {
-  const base = { key: newKey(type, nodes), type, title: '', text: {}, settings: {}, next: '', position }
-  switch (type) {
-    case 'menu':
-      return { ...base, settings: { options: [{ label: { en: '', tn: '' }, next: '' }] } }
-    case 'question':
-      return { ...base, settings: { answer_type: 'text', variable: '', max_length: 160 } }
-    case 'condition':
-      return { ...base, settings: { check: 'registered', true_next: '', false_next: '' } }
-    case 'lookup':
-      return { ...base, settings: { lookup: 'open_challenges' } }
-    case 'save_draft':
-      return { ...base, settings: { program_id: null, title_variable: 'title', name_variable: 'name', fields: {}, create_account: true } }
-    case 'subscribe':
-      return { ...base, settings: { topics: ['challenges'] } }
-    default:
-      return base
+export function defaultsFor(type, types) {
+  const out = {}
+  for (const field of types?.[type]?.fields ?? []) {
+    if ('default' in field) out[field.name] = structuredClone(field.default)
   }
+  return out
 }
 
-/** The text a USSD screen of this node shows in one language (for the character counter). */
-export function ussdScreenText(node, lang) {
-  const pick = (value) => (value?.[lang] || value?.en || '')
+export function newNode(type, nodes, types) {
+  return { key: newKey(type, nodes), type, title: '', text: {}, settings: defaultsFor(type, types), next: '', position: {} }
+}
+
+/** Steps in the order the journey runs: from the start, following ports depth first. */
+export function runOrder(nodes, startKey, types) {
+  const byKey = Object.fromEntries(nodes.map((n) => [n.key, n]))
+  const order = []
+  const seen = new Set()
+  const visit = (key) => {
+    if (!key || seen.has(key) || !byKey[key]) return
+    seen.add(key)
+    order.push(byKey[key])
+    for (const port of portsOf(byKey[key], types)) visit(port.target)
+  }
+  visit(startKey)
+  for (const node of nodes) if (!seen.has(node.key)) order.push(node) // steps nobody reaches stay visible
+  return order
+}
+
+/** The text a USSD screen of this step shows in one language (for the character count). */
+export function ussdScreenText(node, lang, types) {
   const settings = node.settings ?? {}
-  const lines = [pick(node.text)]
-  let choices = []
-  if (node.type === 'menu') choices = (settings.options ?? []).map((o) => pick(o.label))
-  if (node.type === 'question' && settings.answer_type === 'choice') choices = (settings.choices ?? []).map((o) => pick(o.label))
-  if (node.type === 'question' && settings.answer_type === 'yes_no') choices = lang === 'tn' ? ['Ee', 'Nnyaa'] : ['Yes', 'No']  // same words the API engine shows
-  choices.forEach((c, i) => lines.push(`${i + 1}. ${c}`))
+  const lines = [pick(node.text, lang)]
+  for (const field of types?.[node.type]?.fields ?? []) {
+    if (field.kind === 'options') (settings[field.name] ?? []).forEach((o, i) => lines.push(`${i + 1}. ${pick(o.label, lang)}`))
+    if (field.kind === 'choices' && settings.answer_type === 'choice') (settings[field.name] ?? []).forEach((o, i) => lines.push(`${i + 1}. ${pick(o.label, lang)}`))
+  }
+  if (node.type === 'question' && settings.answer_type === 'yes_no') lines.push(...(lang === 'tn' ? ['1. Ee', '2. Nnyaa'] : ['1. Yes', '2. No']))
   return lines.filter(Boolean).join('\n')
 }
 
-export const USSD_LIMIT = 182
+/** Answer names the journey saves, for the "comes from" pickers. */
+export function variablesOf(nodes, types) {
+  const names = new Set(['draft_reference'])
+  for (const node of nodes) {
+    for (const field of types?.[node.type]?.fields ?? []) {
+      if (field.kind === 'variable' && node.settings?.[field.name]) names.add(node.settings[field.name])
+    }
+  }
+  return [...names]
+}
 
-/** Strip builder-only fields before saving. */
+/** WhatsApp list: move a step so it runs after `afterKey` ('' = first). Keeps every other arrow. */
+export function moveAfter(nodes, key, afterKey, startKey) {
+  if (key === afterKey) return { nodes, startKey }
+  const byKey = Object.fromEntries(nodes.map((n) => [n.key, { ...n }]))
+  const moving = byKey[key]
+  if (!moving) return { nodes, startKey }
+  // Take it out of the chain: whoever went to it now goes where it went.
+  let start = startKey
+  for (const n of Object.values(byKey)) if (n.next === key) n.next = moving.next || ''
+  if (start === key) start = moving.next || ''
+  // Put it back after afterKey (or at the start).
+  if (!afterKey) {
+    moving.next = start
+    start = key
+  } else {
+    const after = byKey[afterKey]
+    moving.next = after.next || ''
+    after.next = key
+  }
+  return { nodes: nodes.map((n) => byKey[n.key]), startKey: start }
+}
+
 export function toPayload(nodes) {
-  return nodes.map(({ key, type, title, text, settings, next, position }) => ({ key, type, title: title ?? '', text: text ?? {}, settings: settings ?? {}, next: next ?? '', position }))
+  return nodes.map(({ key, type, title, text, settings, next, position }) => ({ key, type, title: title ?? '', text: text ?? {}, settings: settings ?? {}, next: next ?? '', position: position ?? {} }))
 }
 
 export function fromJourney(journey) {
-  return (journey?.nodes ?? []).map((n) => ({ ...n, next: n.next ?? '', position: n.position?.x !== undefined ? n.position : { x: 40, y: 40 } }))
+  return (journey?.nodes ?? []).map((n) => ({ ...n, next: n.next ?? '', settings: n.settings ?? {}, text: n.text ?? {} }))
 }

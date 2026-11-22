@@ -507,6 +507,7 @@ class SimulatorTests(ChannelsTestCase):
         self.assertFalse(IntegrationConnection.objects.exists())
         first = self.simulate(journey=str(self.ussd_journey.id), channel="ussd")
         self.assertEqual(first["screen"]["node_key"], "main")
+        self.assertEqual(first["screen"]["node_title"], "Main menu")
         self.assertTrue(first["screen"]["ussd_text"].startswith("CEDA Innovation\n1. Submit an idea"))
         self.assertFalse(first["registered"])
 

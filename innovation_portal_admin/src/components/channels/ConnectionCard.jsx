@@ -37,7 +37,7 @@ export function CopyValue({ label, value, mono = true }) {
   )
 }
 
-function TestResult({ result }) {
+export function TestResult({ result }) {
   const t = useT()
   if (!result?.steps) return null
   return (
@@ -170,9 +170,9 @@ export default function ConnectionCard({ connection, onEdit }) {
         <DropdownMenu
           label={t('ch.conn.more', { name: connection.name })}
           items={[
-            { key: 'edit', label: t('ch.conn.edit'), icon: Pencil, onSelect: () => onEdit(connection) },
-            { key: 'rotate', label: t('ch.conn.rotate'), icon: RefreshCw, onSelect: doRotate },
-            { key: 'delete', label: t('ch.conn.delete'), icon: Trash2, danger: true, onSelect: doDelete },
+            { key: 'edit', label: t('ch.conn.edit'), icon: <Pencil size={14} />, onSelect: () => onEdit(connection) },
+            { key: 'rotate', label: t('ch.conn.rotate'), icon: <RefreshCw size={14} />, onSelect: doRotate },
+            { key: 'delete', label: t('ch.conn.delete'), icon: <Trash2 size={14} />, danger: true, onSelect: doDelete },
           ]}
         />
       }

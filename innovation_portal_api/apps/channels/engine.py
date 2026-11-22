@@ -25,7 +25,7 @@ from apps.channels.actions import pick
 
 logger = logging.getLogger(__name__)
 
-USSD_SCREEN_LIMIT = 182
+USSD_SCREEN_LIMIT = 160  # Figma 3.31: each USSD screen holds up to 160 characters
 MAX_AUTO_STEPS = 30
 TRANSCRIPT_KEEP = 40
 
@@ -67,6 +67,7 @@ class Screen:
     choices: list[Choice] = field(default_factory=list)
     expects: str = "none"  # choice, text, none
     outcome: str = ""  # completed, handed_over (set when the session ends)
+    node_title: str = ""  # the name staff gave the step (builder and simulator only)
 
     def ussd_text(self) -> str:
         body = self.text
@@ -80,6 +81,7 @@ class Screen:
             "end": self.end,
             "node_key": self.node_key,
             "node_type": self.node_type,
+            "node_title": self.node_title,
             "choices": [{"id": c.id, "title": c.title} for c in self.choices],
             "expects": self.expects,
         }
@@ -232,7 +234,7 @@ class JourneyRunner:
         elif kind == "handoff":
             body = body or self.default("handoff_note")
         text = "\n".join(part for part in [*prefix, error, body] if part)
-        screen = Screen(text=text, end=False, node_key=node["key"], node_type=kind, choices=choices, expects=expects)
+        screen = Screen(text=text, end=False, node_key=node["key"], node_type=kind, choices=choices, expects=expects, node_title=node.get("title") or "")
         self._say("bot", screen.ussd_text() if self.channel == "ussd" else text)
         return screen
 
@@ -242,7 +244,8 @@ class JourneyRunner:
         self.state["ended"] = outcome
         self.logged_steps.append((node_key, node_type, ""))
         self._say("bot", text)
-        return Screen(text=text, end=True, node_key=node_key, node_type=node_type, outcome=outcome)
+        title = (self._node(node_key) or {}).get("title") or ""
+        return Screen(text=text, end=True, node_key=node_key, node_type=node_type, outcome=outcome, node_title=title)
 
     def _record_answer(self, node: dict, text: str) -> None:
         hidden = bool((node.get("settings") or {}).get("sensitive"))

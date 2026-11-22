@@ -270,6 +270,7 @@ class ScreenSerializer(serializers.Serializer):
     end = serializers.BooleanField()
     node_key = serializers.CharField()
     node_type = serializers.CharField()
+    node_title = serializers.CharField(required=False)
     choices = serializers.ListField(child=serializers.DictField())
     expects = serializers.CharField()
     ussd_text = serializers.CharField(required=False)

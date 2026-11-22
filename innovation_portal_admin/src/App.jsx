@@ -39,10 +39,11 @@ const Forms = lazy(() => import('./pages/forms/Forms'))
 const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 // C2: WhatsApp and USSD journeys (channels.manage)
-const ChannelJourneys = lazy(() => import('./pages/channels/Journeys'))
-const JourneyBuilder = lazy(() => import('./pages/channels/JourneyBuilder'))
-const ChannelConnections = lazy(() => import('./pages/channels/Connections'))
-const ChannelActivity = lazy(() => import('./pages/channels/Activity'))
+const ChannelsOverview = lazy(() => import('./pages/channels/ChannelsOverview'))
+const ChannelConnections = lazy(() => import('./pages/channels/ChannelConnections'))
+const UssdMenus = lazy(() => import('./pages/channels/UssdMenus'))
+const WhatsAppFlows = lazy(() => import('./pages/channels/WhatsAppFlows'))
+const TryJourney = lazy(() => import('./pages/channels/TryJourney'))
 const Users = lazy(() => import('./pages/users/Users'))
 const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
@@ -153,11 +154,15 @@ export default function App() {
                   <Route path="/admin/terms"                   element={<Navigate to="/content/policies" replace />} />
                 </Route>
                 <Route element={<CapabilityRoute need="channels.manage" />}>
-                  <Route path="/channels" element={<Navigate to="/channels/journeys" replace />} />
-                  <Route path="/channels/journeys" element={<ErrorBoundary><ChannelJourneys /></ErrorBoundary>} />
-                  <Route path="/channels/journeys/:id" element={<ErrorBoundary><JourneyBuilder /></ErrorBoundary>} />
-                  <Route path="/channels/connections" element={<ErrorBoundary><ChannelConnections /></ErrorBoundary>} />
-                  <Route path="/channels/activity" element={<ErrorBoundary><ChannelActivity /></ErrorBoundary>} />
+                  {/* C2: 3.33 overview and connections, 3.31 USSD menus, 3.31b WhatsApp flows, 3.32 simulator. */}
+                  <Route path="/channels" element={<ErrorBoundary><ChannelsOverview /></ErrorBoundary>} />
+                  <Route path="/channels/connections/:kind" element={<ErrorBoundary><ChannelConnections /></ErrorBoundary>} />
+                  <Route path="/channels/ussd" element={<ErrorBoundary><UssdMenus /></ErrorBoundary>} />
+                  <Route path="/channels/ussd/:id" element={<ErrorBoundary><UssdMenus /></ErrorBoundary>} />
+                  <Route path="/channels/whatsapp" element={<ErrorBoundary><WhatsAppFlows /></ErrorBoundary>} />
+                  <Route path="/channels/whatsapp/:id" element={<ErrorBoundary><WhatsAppFlows /></ErrorBoundary>} />
+                  <Route path="/channels/try" element={<ErrorBoundary><TryJourney /></ErrorBoundary>} />
+                  <Route path="/channels/*" element={<Navigate to="/channels" replace />} />
                 </Route>
                 <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
