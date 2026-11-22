@@ -106,3 +106,16 @@ class HeadlineMarksTests(TestCase):
         version.refresh_from_db()
         self.assertEqual(version.sections[0]["settings"]["headline_marks"]["en"], [SEED, GROW])
         self.assertTrue(Page.objects.filter(slug="home").exists())
+
+
+class HeadlineMarksCompareTests(TestCase):
+    def test_the_approvals_compare_shows_marked_words_not_offsets(self):
+        from apps.content.approval_compare import fields
+
+        live = {"headline": {"en": HEADLINE, "tn": ""}, "headline_marks": {"en": [SEED], "tn": []}}
+        proposed = {"headline": {"en": HEADLINE, "tn": ""}, "headline_marks": {"en": [SEED, GROW, {"start": 16, "end": 20, "type": "bold"}], "tn": []}}
+        row = next(r for r in fields(live, proposed) if r["key"] == "headline_marks")
+        self.assertEqual(row["label"], "Marked words")
+        self.assertEqual(row["live"], {"en": "Amber: seed", "tn": ""})
+        self.assertEqual(row["proposed"], {"en": "Amber: seed, grow · Bold: CEDA", "tn": ""})
+        self.assertTrue(row["changed"])

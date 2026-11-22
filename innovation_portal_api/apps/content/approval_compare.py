@@ -8,6 +8,7 @@ from __future__ import annotations
 
 LABELS = {
     "highlighted_words": "Small label",
+    "headline_marks": "Marked words",
     "headline": "Headline",
     "text": "Supporting text",
     "photo": "Photo",
@@ -65,9 +66,37 @@ def flatten(value, prefix: str = "", label: str = "") -> dict[str, tuple[str, ob
     return out
 
 
+MARK_NAMES = {"highlight": "Amber", "bold": "Bold", "italic": "Italic"}
+
+
+def _mark_words(text: str, marks) -> str:
+    """'Amber: seed, grow · Bold: CEDA' for the headline marks (3.8), so the compare shows words, not offsets."""
+    parts = []
+    for kind, name in MARK_NAMES.items():
+        words = [text[m["start"]:m["end"]] for m in (marks or []) if isinstance(m, dict) and m.get("type") == kind]
+        if words:
+            parts.append(f"{name}: {', '.join(words)}")
+    return " · ".join(parts)
+
+
+def readable(value):
+    """Replace headline_marks with the marked words in each language."""
+    if isinstance(value, list):
+        return [readable(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    out = {key: readable(item) for key, item in value.items()}
+    marks = value.get("headline_marks")
+    if isinstance(marks, dict):
+        headline = value.get("headline")
+        headline = {"en": headline} if isinstance(headline, str) else (headline or {})
+        out["headline_marks"] = {lang: _mark_words(headline.get(lang) or "", marks.get(lang)) for lang in ("en", "tn")}
+    return out
+
+
 def fields(live: dict | None, proposed: dict) -> list[dict]:
-    live_flat = flatten(live or {})
-    new_flat = flatten(proposed or {})
+    live_flat = flatten(readable(live or {}))
+    new_flat = flatten(readable(proposed or {}))
     out = []
     for path in dict.fromkeys([*new_flat, *live_flat]):
         label, new_value = new_flat.get(path, (live_flat.get(path, (path, None))[0], None))
