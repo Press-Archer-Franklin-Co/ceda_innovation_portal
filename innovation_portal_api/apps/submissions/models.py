@@ -109,6 +109,8 @@ class SubmissionResponse(UUIDModel, TimeStampedModel):
     value = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        # A fixed order: an edited answer (2.4b resend) stays where it was on the idea.
+        ordering = ("created_at", "id")
         unique_together = ("submission", "form_field")
 
 

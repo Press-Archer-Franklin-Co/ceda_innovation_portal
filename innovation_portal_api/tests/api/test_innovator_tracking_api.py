@@ -246,6 +246,7 @@ class ReturnedForChangesTests(TrackingBase):
         self.assertEqual(sub.workflow_instance.status, "in_progress")
         self.assertEqual(sub.current_status, step.submission_status)
         self.assertEqual(sub.responses.get(field_key_snapshot="price").value, "P2.40")
+        self.assertEqual([r.field_key_snapshot for r in sub.responses.all()], ["idea", "price", "district"])  # the edited answer stays in place
         self.assertEqual(ReturnRequest.objects.get(submission=sub).status, ReturnRequest.Status.RESENT)
         self.assertTrue(WorkflowActionLog.objects.filter(workflow_instance=sub.workflow_instance, action=WorkflowActionLog.ACTION_RESUBMIT).exists())
         self.assertTrue(SubmissionStatusHistory.objects.filter(submission=sub, to_status=SubmissionStatus.RETURNED).exists())
