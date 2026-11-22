@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from apps.channels.actions import LOOKUPS, pick
 from apps.channels.engine import LANGUAGES, USSD_SCREEN_LIMIT, DEFAULT_TEXT
+from apps.channels.node_schema import DESCRIPTIONS_TN, NODE_SETTINGS
 
 MAX_USSD_OPTIONS = 8
 MAX_WHATSAPP_ROWS = 10
@@ -24,6 +25,10 @@ NODE_TYPES = (
     {"type": "language", "label": "Language", "label_tn": "Puo", "description": "English or Setswana for the rest of the session."},
     {"type": "handoff", "label": "Talk to a person", "label_tn": "Bua le motho", "description": "WhatsApp: the chat goes to the staff Inbox. USSD: takes a short note and asks for a call-back."},
     {"type": "end", "label": "End", "label_tn": "Bokhutlo", "description": "Says goodbye and ends the session."},
+)
+# Each type also carries what the builders draw: its text label, ports and settings (node_schema.py).
+NODE_TYPES = tuple(
+    {**item, "description_tn": DESCRIPTIONS_TN.get(item["type"], ""), **NODE_SETTINGS[item["type"]]} for item in NODE_TYPES
 )
 TYPE_KEYS = {item["type"] for item in NODE_TYPES}
 SCREEN_TYPES = {"menu", "question", "language", "handoff", "end", "message"}

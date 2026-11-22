@@ -10,6 +10,7 @@ import { programmesEn } from './programmes'
 import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 import { contentBEn } from './contentB'
+import { channelsEn } from './channels'
 
 const en = {
   'lang.en': 'English',
@@ -150,6 +151,7 @@ const en = {
   ...conversationsEn,
   ...reviewEn,
   ...contentBEn,
+  ...channelsEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,
