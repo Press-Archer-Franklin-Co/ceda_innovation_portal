@@ -57,8 +57,25 @@ def author_display(message: Message, *, viewer_is_applicant: bool) -> dict:
     return {"name": name, "role": role, "label": f"{name}, {role}"}
 
 
+def short_name(user) -> str:
+    if user is None:
+        return ""
+    first, last = (user.first_name or "").strip(), (user.last_name or "").strip()
+    return f"{first} {last[:1]}." if first and last else (first or "CEDA officer")
+
+
+def seen_by(message: Message, *, viewer_is_applicant: bool) -> dict | None:
+    """C1: on the viewer's own messages, who on the other side read it and when."""
+    if viewer_is_applicant and message.author_role == Message.AuthorRole.APPLICANT and message.read_by_staff_at:
+        return {"name": short_name(message.read_by_staff) if message.read_by_staff_id else "CEDA", "at": _iso(message.read_by_staff_at)}
+    if not viewer_is_applicant and message.author_role == Message.AuthorRole.OFFICER and message.read_by_applicant_at:
+        return {"name": "Applicant", "at": _iso(message.read_by_applicant_at)}
+    return None
+
+
 def message_payload(message: Message, *, viewer_is_applicant: bool, request=None) -> dict:
     return {
+        "seen_by": seen_by(message, viewer_is_applicant=viewer_is_applicant),
         "id": str(message.id),
         "author_role": message.author_role,
         "author": author_display(message, viewer_is_applicant=viewer_is_applicant),
@@ -233,15 +250,15 @@ class MessagingService:
             CommunicationService._dispatch_or_enqueue(log)
 
     @staticmethod
-    def mark_read(thread, *, applicant: bool) -> int:
+    def mark_read(thread, *, applicant: bool, user=None) -> int:
         field = "read_by_applicant_at" if applicant else "read_by_staff_at"
         others = Message.AuthorRole.APPLICANT if applicant else None
         queryset = thread.messages.filter(**{f"{field}__isnull": True})
         if applicant:
             queryset = queryset.exclude(author_role=others)
-        else:
-            queryset = queryset.filter(author_role=Message.AuthorRole.APPLICANT)
-        return queryset.update(**{field: timezone.now()})
+            return queryset.update(**{field: timezone.now()})
+        queryset = queryset.filter(author_role=Message.AuthorRole.APPLICANT)
+        return queryset.update(read_by_staff_at=timezone.now(), read_by_staff=user)
 
 
 def _link(notification, link_type, target_id, *, due=None):
