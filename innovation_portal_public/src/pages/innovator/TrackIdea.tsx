@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import clsx from 'clsx'
-import { Check, Eye, Lock } from 'lucide-react'
+import { Check, Eye, Lock, Paperclip } from 'lucide-react'
 import Card from '../../components/ui/Card'
 import { ErrorState } from '../../components/ui/EmptyState'
 import Skeleton from '../../components/ui/Skeleton'
 import Tag from '../../components/ui/Tag'
 import { useShellSettings } from '../../components/layout/shellData'
 import MessageThread from '../../components/innovator/MessageThread'
-import { uploadedFiles } from '../../components/innovator/form/UploadField'
+import { answerFiles, answerText, isFile } from '../../components/innovator/answers'
 import { formatDate, formatShortDate } from '../../components/innovator/format'
 import { statusWord } from '../../components/innovator/ideaStatus'
 import { useI18n } from '../../i18n'
@@ -101,7 +101,20 @@ export default function TrackIdea() {
               {idea.responses.filter((answer) => !isLayout(answer)).map((answer) => (
                 <div key={answer.id}>
                   <dt className="text-d-cap text-muted">{answer.field_label || answer.field_key}</dt>
-                  <dd className="text-d-body-s text-text whitespace-pre-line break-words">{answerText(answer, t('form.yes'), t('form.noAnswer'))}</dd>
+                  <dd className="text-d-body-s text-text whitespace-pre-line break-words">
+                    {isFile(answer) && answerFiles(answer.value).length ? (
+                      <ul className="flex flex-col gap-1">
+                        {answerFiles(answer.value).map((file, i) => (
+                          <li key={file.id ?? i} className="flex items-center gap-1.5">
+                            <Paperclip size={14} aria-hidden className="shrink-0 text-muted" />
+                            {file.url ? <a href={file.url} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:no-underline">{file.name}</a> : <span>{file.name}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      answerText(answer, t('form.yes'), t('form.noAnswer'))
+                    )}
+                  </dd>
                 </div>
               ))}
             </dl>
@@ -155,19 +168,6 @@ function Stage({ stage, nextPanelAt }: { stage: TimelineStage; nextPanelAt: stri
 
 function isLayout(answer: SubmissionAnswer): boolean {
   return answer.field_type === 'heading' || answer.field_type === 'paragraph'
-}
-
-function answerText(answer: SubmissionAnswer, yes: string, none: string): string {
-  const value = answer.value
-  if (value === null || value === undefined || value === '' || (Array.isArray(value) && value.length === 0)) return none
-  if (answer.field_type === 'file' || answer.field_type === 'media') {
-    const files = uploadedFiles(value)
-    if (files.length) return files.map((f) => f.filename).join(', ')
-  }
-  if (Array.isArray(value)) return value.map(String).join(', ')
-  if (typeof value === 'boolean') return value ? yes : none
-  if (typeof value === 'object') return none
-  return String(value)
 }
 
 function TrackSkeleton() {

@@ -553,6 +553,28 @@ def save_rules(program, items: list[dict], *, actor) -> list[dict]:
     return after
 
 
+def mark_spotlight_winners(program, *, actor) -> int:
+    """Winners picked by hand get the winner status when results go out, as the automatic ranking gives them,
+    so My ideas, the dashboard and staff lists say "Winner" (CEDA status words), not "Shortlisted"."""
+    from apps.core.constants import SubmissionStatus
+    from apps.submissions.models import SubmissionStatusHistory
+
+    changed = 0
+    for spotlight in program.winner_spotlights.select_related("submission").exclude(submission__isnull=True):
+        entry = spotlight.submission
+        if entry.current_status == SubmissionStatus.WINNER:
+            continue
+        previous = entry.current_status
+        entry.current_status = SubmissionStatus.WINNER
+        entry.save(update_fields=["current_status", "updated_at"])
+        SubmissionStatusHistory.objects.create(
+            submission=entry, from_status=previous, to_status=SubmissionStatus.WINNER, changed_by=actor,
+            reason="challenge_results", comment=f"Placed {spotlight.position} (picked by hand).",
+        )
+        changed += 1
+    return changed
+
+
 def publish_results(program: Program, *, actor, show_names: bool | None = None) -> dict:
     """Staff "Publish results" (1.10). Winners already chosen by hand are published as they are; otherwise the
     automatic ranking runs now, without waiting for the results date. A tie or missing marks keeps them on hold.
@@ -572,6 +594,7 @@ def publish_results(program: Program, *, actor, show_names: bool | None = None) 
         program.results_announced_at = timezone.now()
         program.results_hold_reason = ""
         program.save(update_fields=["results_announced_at", "results_hold_reason", "updated_at"])
+        mark_spotlight_winners(program, actor=actor)
         AuditService.log_action(actor=actor, action_type="challenge_results_published", target=program, metadata={"by_hand": True})
     else:
         saved_date = program.results_publish_at

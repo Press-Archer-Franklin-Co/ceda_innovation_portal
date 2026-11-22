@@ -16,6 +16,7 @@ import { useT } from '../../i18n/context'
 import { client } from '../../lib/api/client'
 import { programs as programsApi } from '../../lib/api/endpoints'
 import { useProgram } from '../../lib/queries/programs'
+import { closingState } from '../../lib/programs/closing'
 import { EMPTY_CELL } from '../../lib/format'
 
 // 3.6 Challenge status (Figma 20:840, phone; the website uses the same layout). Live numbers for a running call
@@ -83,7 +84,7 @@ export default function ChallengeStatus() {
   if (program.isError) return <ErrorState framed title={t('cst.loadError')} message={program.error?.message} onRetry={program.refetch} />
 
   const closesAt = p.closing_date ? new Date(p.closing_date) : null
-  const daysLeft = closesAt ? Math.ceil((closesAt.getTime() - Date.now()) / 864e5) : null
+  const closing = closingState(p.closing_date, p.status)
   const n = numbers.data ?? {}
 
   async function sendUpdate() {
@@ -124,8 +125,10 @@ export default function ChallengeStatus() {
       />
       <div className="flex flex-wrap items-center gap-2">
         <StatusPill status={p.status} />
-        {daysLeft != null && p.status === 'published' && (
-          <Tag tone={daysLeft <= 3 ? 'red' : 'amber'}>{daysLeft > 0 ? t('cst.daysLeft', { n: daysLeft }) : t('cst.closesToday')}</Tag>
+        {closing.state === 'closed' ? (
+          <Tag tone="neutral">{t('cst.closed')}</Tag>
+        ) : closing.days != null && p.status === 'published' && (
+          <Tag tone={closing.days <= 3 ? 'red' : 'amber'}>{closing.state === 'today' ? t('cst.closesToday') : t('cst.daysLeft', { n: closing.days })}</Tag>
         )}
       </div>
 
@@ -142,7 +145,7 @@ export default function ChallengeStatus() {
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <Button ref={updateRef} onClick={() => setDialog('update')} className="sm:flex-1">{t('cst.postUpdate')}</Button>
-        <Button ref={extendRef} variant="secondary" onClick={() => setDialog('extend')} className="sm:flex-1">{t('cst.extend')}</Button>
+        {closing.state !== 'closed' && <Button ref={extendRef} variant="secondary" onClick={() => setDialog('extend')} className="sm:flex-1">{t('cst.extend')}</Button>}
       </div>
       <Link to={`/submissions?program=${id}`} className="self-start text-[13px] font-bold text-primary hover:underline">{t('cst.seeIdeas')}</Link>
 

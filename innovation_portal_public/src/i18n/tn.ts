@@ -355,6 +355,8 @@ const tn: Record<StringKey, string> = {
   'chd.tab.support': 'Thuso', // TODO tn-review
   'chd.tab.judge': 'Ka moo re atlholang', // TODO tn-review
   'chd.tab.dates': 'Malatsi', // TODO tn-review
+  'chd.tab.schedule': 'Lenaneo', // TODO tn-review
+  'chd.tab.updates': 'Dikgang', // TODO tn-review
   'chd.tab.faqs': 'Dipotso', // TODO tn-review
   'chd.lookingFor': 'Se re se batlang', // TODO tn-review
   'chd.whoTitle': 'Ba ba ka tsenelang', // TODO tn-review
@@ -362,6 +364,9 @@ const tn: Record<StringKey, string> = {
   'chd.judgeTitle': 'Ka moo re atlholang ka teng', // TODO tn-review
   'chd.judgeNote': 'Kakanyo nngwe le nngwe e tshwaiwa ka tsone, ka bokete jo.', // TODO tn-review
   'chd.datesTitle': 'Malatsi', // TODO tn-review
+  'chd.scheduleTitle': 'Lenaneo la hackathon', // TODO tn-review
+  'chd.updatesTitle': 'Dikgang go tswa kwa lefelong', // TODO tn-review
+  'chd.now': 'Jaanong', // TODO tn-review
   'chd.faqTitle': 'Dipotso tse batho ba di botsang', // TODO tn-review
   'chd.closeIn': 'Go tsenela go tswalwa mo', // TODO tn-review
   'chd.openIn': 'Go tsenela go bulwa mo', // TODO tn-review
