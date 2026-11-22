@@ -172,7 +172,7 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
                 <label
                   key={s.id}
                   className={clsx(
-                    'inline-flex items-center min-h-[32px] px-3 rounded-full text-d-label-s cursor-pointer border transition-colors',
+                    'inline-flex items-center min-h-[32px] lg:min-h-[30px] px-3 rounded-full text-d-label-s cursor-pointer border transition-colors',
                     'has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-primary has-[:focus-visible]:ring-offset-2',
                     on ? 'bg-primary border-primary text-on-primary' : 'bg-surface border-border text-text hover:border-muted/60',
                   )}
@@ -195,7 +195,8 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
         {t('qs.continue')}
       </Button>
 
-      <p className="flex items-start gap-1.5 text-d-cap text-muted" aria-live="polite">
+      {/* Empty until there is something to say; then it takes no extra room above the privacy line (Figma 10:280). */}
+      <p className="flex items-start gap-1.5 text-d-cap text-muted empty:-mt-2" aria-live="polite">
         {save === 'saving' ? (
           <span>{t('qs.saving')}</span>
         ) : save === 'saved' ? (

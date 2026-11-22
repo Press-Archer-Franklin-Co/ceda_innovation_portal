@@ -283,6 +283,7 @@ export const programmesEn = {
   'cst.edit': 'Edit challenge',
   'cst.daysLeft': '{n} days left',
   'cst.closesToday': 'Closes today',
+  'cst.closed': 'Closed',
   'cst.numbersError': 'We could not load the numbers',
   'cst.started': 'started',
   'cst.submitted': 'submitted',
@@ -757,6 +758,7 @@ export const programmesTn = {
   'cst.edit': 'Fetola kgwetlho', // TODO tn-review
   'cst.daysLeft': 'Go setse malatsi a le {n}', // TODO tn-review
   'cst.closesToday': 'E tswala gompieno', // TODO tn-review
+  'cst.closed': 'E tswetswe', // TODO tn-review
   'cst.numbersError': 'Ga re a kgona go bula dipalo', // TODO tn-review
   'cst.started': 'ba simolotse', // TODO tn-review
   'cst.submitted': 'di rometswe', // TODO tn-review
