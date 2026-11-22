@@ -99,7 +99,7 @@ class HeadlineMarksTests(TestCase):
         old = {"headline": {"en": HEADLINE, "tn": ""}, "highlighted_words": "seed, grow"}
         PageSection.objects.filter(page=self.page, type="hero_banner").update(settings=old)
         version = PageVersion.objects.create(page=self.page, number=1, sections=[{"id": None, "type": "hero_banner", "enabled": True, "settings": dict(old)}])
-        import_module("apps.content.migrations.0022_hero_headline_marks").forwards(django_apps, None)
+        import_module("apps.content.migrations.0023_hero_headline_marks").forwards(django_apps, None)
         draft = PageSection.objects.get(page=self.page, type="hero_banner").settings
         self.assertEqual(draft["headline_marks"]["en"], [SEED, GROW])
         self.assertNotIn("highlighted_words", draft)

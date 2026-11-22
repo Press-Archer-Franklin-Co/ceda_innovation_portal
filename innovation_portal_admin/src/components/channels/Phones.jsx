@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { List as ListIcon, Phone, Send } from 'lucide-react'
+import { List as ListIcon, Paperclip, Phone, Send } from 'lucide-react'
 import Button from '../ui/Button'
 import { InputControl } from '../ui/Input'
 import { useI18n } from '../../i18n/context'
@@ -119,6 +119,11 @@ export function WhatsAppPhone({ sim }) {
                 ))}
               </ul>
               <Button size="sm" variant="ghost" block onClick={() => setListOpen(false)}>{t('ch.sim.cancel')}</Button>
+            </div>
+          )}
+          {screen?.expects === 'file' && !screen.end && (
+            <div className="px-2 pb-1">
+              <Button size="sm" variant="secondary" block icon={<Paperclip size={14} />} onClick={() => sim.sendFile(t('ch.sim.fileSent'))}>{t('ch.sim.sendFile')}</Button>
             </div>
           )}
           {screen?.end ? (

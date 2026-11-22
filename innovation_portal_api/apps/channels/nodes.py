@@ -25,31 +25,34 @@ NODE_TYPES = (
     {"type": "language", "label": "Language", "label_tn": "Puo", "description": "English or Setswana for the rest of the session."},
     {"type": "handoff", "label": "Talk to a person", "label_tn": "Bua le motho", "description": "WhatsApp: the chat goes to the staff Inbox. USSD: takes a short note and asks for a call-back."},
     {"type": "end", "label": "End", "label_tn": "Bokhutlo", "description": "Says goodbye and ends the session."},
+    {"type": "file", "label": "Ask for a file", "label_tn": "Kopa faele", "description": "Asks for a photo or document (WhatsApp) and saves it on the idea draft. Needs a Save to an idea draft step before it."},
+    {"type": "submit", "label": "Send the idea", "label_tn": "Romela kakanyo", "description": "Sends the idea draft to CEDA and gives the idea number in {reference}. Needs a Save to an idea draft step before it."},
 )
 # Each type also carries what the builders draw: its text label, ports and settings (node_schema.py).
 NODE_TYPES = tuple(
     {**item, "description_tn": DESCRIPTIONS_TN.get(item["type"], ""), **NODE_SETTINGS[item["type"]]} for item in NODE_TYPES
 )
 TYPE_KEYS = {item["type"] for item in NODE_TYPES}
-SCREEN_TYPES = {"menu", "question", "language", "handoff", "end", "message"}
+SCREEN_TYPES = {"menu", "question", "language", "handoff", "end", "message", "file"}
+NEEDS_DRAFT_TYPES = {"file", "submit"}
 
 
 def edges(node: dict) -> list[str]:
-    """Every node key this node can go to."""
+    """Every node key this node can go to: its next, each option's next and every port setting."""
     settings = node.get("settings") or {}
+    spec = NODE_SETTINGS.get(node.get("type") or "") or {}
     found = [node.get("next") or ""]
-    if node.get("type") == "menu":
-        found += [option.get("next") or "" for option in settings.get("options") or []]
-    if node.get("type") == "condition":
-        found += [settings.get("true_next") or "", settings.get("false_next") or ""]
-    if node.get("type") == "save_draft":
-        found.append(settings.get("error_next") or "")
+    for field in spec.get("fields", []):
+        if field["kind"] == "options":
+            found += [option.get("next") or "" for option in settings.get(field["name"]) or []]
+        elif field["kind"] == "node":
+            found.append(settings.get(field["name"]) or "")
     return [key for key in found if key]
 
 
 def is_terminal(node: dict) -> bool:
     kind = node.get("type")
-    if kind in ("end", "handoff"):
+    if kind in ("end", "handoff", "submit"):
         return True
     if kind == "message" and ((node.get("settings") or {}).get("end") or not node.get("next")):
         return True
@@ -100,7 +103,7 @@ def check_graph(graph: dict, channel: str) -> list[dict]:
         for target in edges(node):
             if target not in nodes:
                 add(key, "error", "broken_link", f"{name}: points to a step that no longer exists.")
-        needs_text = kind in ("menu", "question", "message", "end")
+        needs_text = kind in ("menu", "question", "message", "end", "file")
         if needs_text and not pick(node.get("text"), "en"):
             add(key, "error", "missing_text", f"{name}: add the English text.")
         if needs_text and pick(node.get("text"), "en") and not (node.get("text") or {}).get("tn"):
@@ -134,7 +137,7 @@ def check_graph(graph: dict, channel: str) -> list[dict]:
                 add(key, "error", "no_variable", f"{name}: choose the answer to check.")
         if kind == "lookup" and settings.get("lookup") not in {k for k, _ in LOOKUPS}:
             add(key, "error", "no_lookup", f"{name}: choose what to look up.")
-        if kind in ("save_draft", "lookup", "subscribe", "language") and not node.get("next"):
+        if kind in ("save_draft", "lookup", "subscribe", "language", "file") and not node.get("next"):
             add(key, "error", "goes_nowhere", f"{name}: choose what happens next.")
         if on_ussd and kind in SCREEN_TYPES:
             for lang in ("en", "tn"):
@@ -155,6 +158,23 @@ def check_graph(graph: dict, channel: str) -> list[dict]:
     for key, node in nodes.items():
         if key not in reachable and start in nodes:
             add(key, "error", "unreachable", f"{node.get('title') or key}: nobody can reach this step.")
+
+    # A file or submit step works on the idea draft, so a Save to an idea draft step must come first.
+    before_save: set[str] = set()
+    stack = [start] if start in nodes else []
+    while stack:
+        key = stack.pop()
+        if key in before_save or key not in nodes:
+            continue
+        before_save.add(key)
+        if nodes[key].get("type") != "save_draft":
+            stack.extend(edges(nodes[key]))
+    for key in sorted(before_save):
+        if nodes[key].get("type") in NEEDS_DRAFT_TYPES:
+            add(key, "error", "needs_save_first", f"{nodes[key].get('title') or key}: put a Save to an idea draft step before this one.")
+    for key, node in nodes.items():
+        if node.get("type") == "file" and channel == "ussd":
+            add(key, "warning", "file_on_ussd", f"{node.get('title') or key}: USSD cannot send files; on USSD this step is skipped.")
 
     # Loops with no way out: a reachable step from which no ending can be reached.
     can_finish: set[str] = {key for key, node in nodes.items() if is_terminal(node)}

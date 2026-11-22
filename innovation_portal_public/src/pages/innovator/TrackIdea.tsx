@@ -77,7 +77,7 @@ export default function TrackIdea() {
           </p>
 
           <h2 className="sr-only">{t('track.timeline')}</h2>
-          <ol className="mt-6 grid gap-4 rounded-card border border-border bg-surface p-5 sm:grid-cols-2 lg:grid-cols-5 lg:p-6">
+          <ol data-guide="track.progress" className="mt-6 grid gap-4 rounded-card border border-border bg-surface p-5 sm:grid-cols-2 lg:grid-cols-5 lg:p-6">
             {stages.map((stage) => (
               <Stage key={stage.code} stage={stage} nextPanelAt={idea.timeline.next_panel_at} />
             ))}

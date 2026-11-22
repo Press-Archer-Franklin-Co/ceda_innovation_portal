@@ -3,7 +3,7 @@ import { Suspense, useEffect } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import MobileTabBar from './MobileTabBar'
-import HelpBubble from '../livechat/HelpBubble'
+import NeedHelp from '../guide/NeedHelp'
 import { useT } from '../../i18n'
 import PageSkeleton from '../ui/PageSkeleton'
 import PageErrorBoundary from '../ui/PageErrorBoundary'
@@ -36,8 +36,8 @@ export default function Layout() {
       </main>
       <Footer />
       <MobileTabBar />
-      {/* C1: the help bubble shows itself only while live chat is on. */}
-      <HelpBubble />
+      {/* 2.14: one Need help? button: the guide, or the live chat bubble (C1) when the guide is off. */}
+      <NeedHelp />
     </div>
   )
 }

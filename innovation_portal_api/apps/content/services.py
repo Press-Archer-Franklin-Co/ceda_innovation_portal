@@ -82,7 +82,7 @@ class ApprovalService:
     def flow(cls):
         from apps.content.models import ApprovalFlow, ApprovalStep
 
-        flow, created = ApprovalFlow.objects.get_or_create(key=cls.FLOW_KEY, defaults={"approvers_can_approve_own_work": False})
+        flow, created = ApprovalFlow.objects.get_or_create(key=cls.FLOW_KEY, defaults={"approvers_can_approve_own_work": True})
         if created or not flow.steps.exists():
             ApprovalStep.objects.get_or_create(flow=flow, order=1, defaults={"name": "Approval", "capability": "content.approve", "approvals_needed": 1, "language": "all"})
         return flow
@@ -338,7 +338,7 @@ class ApprovalService:
         if user is not None:
             data["can_approve"] = cls.can_approve(user, approval)
             data["can_send_back"] = cls.can_decide(user, approval)
-            # U9 (3.25): why Approve is off for this person ("own_change" when they made it and the flow forbids that).
+            # U9 (3.25): this person made the change. Whether they may still approve it is the approval steps switch.
             data["own_change"] = approval.requested_by_id == getattr(user, "id", None)
         try:
             from apps.content.approval_compare import change_type

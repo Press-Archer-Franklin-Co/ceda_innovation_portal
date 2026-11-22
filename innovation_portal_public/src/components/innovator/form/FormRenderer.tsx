@@ -44,7 +44,12 @@ export default function FormRenderer({ step, answers, onChange, lang, errors = {
         return (
           <div key={row.row} className="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-6">
             {fields.map((field) => (
-              <div key={field.key} className={clsx('min-w-0', WIDTH_SPAN[field.width] ?? WIDTH_SPAN.full)}>
+              <div
+                key={field.key}
+                className={clsx('min-w-0', WIDTH_SPAN[field.width] ?? WIDTH_SPAN.full)}
+                // Need help guide (2.14): each question can be ringed; its label is sent, never the answer.
+                {...(field.type === 'heading' || field.type === 'paragraph' ? {} : { 'data-guide': `idea.field.${field.key}`, 'data-guide-kind': 'field', 'data-guide-label': pick(field.label as MaybeBilingual, lang) })}
+              >
                 <FieldBlock field={field} answers={answers} onChange={onChange} lang={lang} error={errors[field.key]} preview={preview} />
               </div>
             ))}

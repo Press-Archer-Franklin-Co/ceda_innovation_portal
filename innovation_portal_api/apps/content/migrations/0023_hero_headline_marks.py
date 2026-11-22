@@ -40,6 +40,6 @@ def forwards(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-    dependencies = [("content", "0021_u9_staff_admin")]
+    dependencies = [("content", "0022_own_approval_default_on")]
 
     operations = [migrations.RunPython(forwards, migrations.RunPython.noop)]

@@ -114,7 +114,7 @@ export default function Forms() {
         title={t('forms.title')}
         subtitle={t('forms.subtitle')}
         actions={
-          <Button ref={createRef} onClick={() => setCreating(true)}>
+          <Button ref={createRef} data-guide="forms.create" onClick={() => setCreating(true)}>
             <Plus size={16} aria-hidden />
             {t('forms.create')}
           </Button>

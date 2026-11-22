@@ -62,7 +62,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <span className="text-d-cap text-muted">{meta}</span>
-        <Link to={needsAction ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm' })}>
+        <Link data-guide="myIdeas.open" to={needsAction ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm' })}>
           {action}
         </Link>
       </div>

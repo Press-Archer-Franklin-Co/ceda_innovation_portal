@@ -30,7 +30,7 @@ export interface HeroSettings {
   show_quick_start: boolean
 }
 
-function CtaLink({ button, variant }: { button: ButtonLink; variant: 'accent' | 'onDark' }) {
+function CtaLink({ button, variant, guide }: { button: ButtonLink; variant: 'accent' | 'onDark'; guide?: string }) {
   const external = /^https?:\/\//.test(button.url)
   const cls = buttonClasses({ variant, className: 'w-full sm:w-auto' })
   const inner = (
@@ -40,9 +40,9 @@ function CtaLink({ button, variant }: { button: ButtonLink; variant: 'accent' | 
     </>
   )
   return external ? (
-    <a href={button.url} className={cls}>{inner}</a>
+    <a href={button.url} className={cls} data-guide={guide}>{inner}</a>
   ) : (
-    <Link to={button.url} className={cls}>{inner}</Link>
+    <Link to={button.url} className={cls} data-guide={guide}>{inner}</Link>
   )
 }
 
@@ -135,8 +135,8 @@ export default function HeroBanner({ settings, card, photo = null }: { settings:
           {settings.text && <p className="text-d-body-s lg:text-d-body text-banner-muted">{settings.text}</p>}
           {(settings.primary_button?.label || settings.secondary_button?.label) && (
             <div className="flex flex-col sm:flex-row gap-3">
-              {settings.primary_button?.label && settings.primary_button.url && <CtaLink button={settings.primary_button} variant="accent" />}
-              {settings.secondary_button?.label && settings.secondary_button.url && <CtaLink button={settings.secondary_button} variant="onDark" />}
+              {settings.primary_button?.label && settings.primary_button.url && <CtaLink button={settings.primary_button} variant="accent" guide="home.primaryAction" />}
+              {settings.secondary_button?.label && settings.secondary_button.url && <CtaLink button={settings.secondary_button} variant="onDark" guide="home.secondaryAction" />}
             </div>
           )}
           <ul className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-x-5 text-d-label-s">

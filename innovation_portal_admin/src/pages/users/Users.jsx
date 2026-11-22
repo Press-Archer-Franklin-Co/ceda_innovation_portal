@@ -211,7 +211,7 @@ export default function Users() {
               <option value="true">Verified</option>
               <option value="false">Pending verify</option>
             </select>
-            <input className="input h-9 py-0 text-sm w-56" placeholder="Search name or email…" value={search} onChange={(e) => resetPage(setSearch)(e.target.value)} />
+            <input data-guide="users.search" className="input h-9 py-0 text-sm w-56" placeholder="Search name or email…" value={search} onChange={(e) => resetPage(setSearch)(e.target.value)} />
           </div>
         }
         padding={false}
