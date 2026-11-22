@@ -203,6 +203,12 @@ class HackathonDetail(UUIDModel, TimeStampedModel):
         help_text='Array of {date, label, description}',
     )
     is_published = models.BooleanField(default=False)
+    # R-59 (3.36): the live hackathon page. These are the live version; `draft` waits for approval.
+    page_sections = models.JSONField(default=list, blank=True, help_text='[{"key": "banner|schedule|venue|prizes|teams|updates|faqs", "enabled": true, "order": 1}]')
+    venue = models.JSONField(default=dict, blank=True, help_text='{"name": "...", "address": "...", "map_url": "..."}')
+    schedule_items = models.JSONField(default=list, blank=True, help_text='[{"id": "...", "starts_at": "<iso>", "title": {"en": "...", "tn": "..."}}]')
+    prize_items = models.JSONField(default=list, blank=True, help_text='[{"place": "1st", "label": "...", "amount": "...", "sponsor_partner_id": null}]')
+    draft = models.JSONField(default=dict, blank=True, help_text="The page as staff are editing it: {page_sections, venue, schedule_items, prize_items}.")
 
     class Meta:
         verbose_name = "Hackathon Detail"
@@ -673,6 +679,18 @@ class HeroPhoto(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return self.filename or str(self.id)
+
+
+class HackathonUpdate(UUIDModel, TimeStampedModel):
+    """R-59 (3.36): a short live notice from the venue. Posts at once (no approval)."""
+
+    hackathon = models.ForeignKey(HackathonDetail, on_delete=models.CASCADE, related_name="updates")
+    body = models.JSONField(default=dict, help_text='{"en": "...", "tn": "..."}')
+    photo = models.ImageField(upload_to="content/hackathon_updates/", null=True, blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("-created_at",)
 
 
 class PolicyPage(UUIDModel, TimeStampedModel):

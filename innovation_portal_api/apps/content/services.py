@@ -280,6 +280,11 @@ class ApprovalService:
         elif isinstance(target, LeadershipCard) and approve:
             LeadershipCard.objects.filter(pk=target.pk).update(approved_at=timezone.now())
             clear_home_cache()
+        elif target.__class__.__name__ == "HackathonDetail" and approve:
+            # R-59 (3.36): the hackathon page goes live when approved.
+            from apps.content.hackathon_page import apply_approved
+
+            apply_approved(target, approval.payload)
         elif isinstance(target, PolicyPage) and approve:
             # U11C: the policy text that was sent goes live; sending it back leaves the live text alone.
             from apps.content.policies import apply_approved
