@@ -18,6 +18,7 @@ from apps.programs.views import (
     FormFieldRuleListCreateView,
     FormSectionDetailView,
     FormSectionFieldListCreateView,
+    ChallengeJudgeInviteDeclineView,
     ChallengeJudgeInviteView,
     ProgramTypeListView,
     ProgramViewSet,
@@ -32,6 +33,7 @@ router.register("", ProgramViewSet, basename="programs")
 urlpatterns = [
     path("types/", ProgramTypeListView.as_view(), name="program-type-list"),
     path("judge-invite/<uuid:token>/", ChallengeJudgeInviteView.as_view(), name="challenge-judge-invite"),
+    path("judge-invite/<uuid:token>/decline/", ChallengeJudgeInviteDeclineView.as_view(), name="challenge-judge-invite-decline"),
     path("public/challenges/", PublicChallengeListView.as_view(), name="public-challenges"),
     path("public/<slug:slug>/", PublicChallengeDetailView.as_view(), name="public-challenge-detail"),
     path("public/<slug:slug>/entry/", ChallengeEntryStateView.as_view(), name="public-challenge-entry"),

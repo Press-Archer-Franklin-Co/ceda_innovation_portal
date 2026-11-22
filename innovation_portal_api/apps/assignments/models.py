@@ -13,6 +13,7 @@ class SpecialistInvitationStatus(models.TextChoices):
     COMPLETED = "completed", "Completed"
     EXPIRED   = "expired",   "Expired"
     REVOKED   = "revoked",   "Revoked"
+    DECLINED  = "declined",  "Declined"
 
 
 class ReviewPanel(UUIDModel, TimeStampedModel):
@@ -71,6 +72,7 @@ class SpecialistInvitation(UUIDModel, TimeStampedModel):
     expires_at    = models.DateTimeField()
     accepted_by   = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="specialist_invitations_accepted")
     assignment    = models.OneToOneField(Assignment, on_delete=models.SET_NULL, null=True, blank=True, related_name="specialist_invitation")
+    decline_reason = models.CharField(max_length=500, blank=True, default="", help_text="R-50: why the invitee said no.")
 
     def save(self, *args, **kwargs):
         if not self.expires_at:

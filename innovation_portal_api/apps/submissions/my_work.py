@@ -216,7 +216,7 @@ def invite_items(user) -> list[dict]:
             why={"kind": "invite", "name": "Judging invitation"},
             link=f"/programs/{judge.program_id}",
         )
-        for judge in ChallengeJudge.objects.filter(email=email, invited_at__isnull=False, accepted_at__isnull=True).select_related("program")
+        for judge in ChallengeJudge.objects.filter(email=email, invited_at__isnull=False, accepted_at__isnull=True, declined_at__isnull=True).select_related("program")
     ]
     now = timezone.now()
     for invitation in SpecialistInvitation.objects.filter(invitee_email__iexact=email, status=SpecialistInvitationStatus.PENDING, expires_at__gt=now).select_related(
