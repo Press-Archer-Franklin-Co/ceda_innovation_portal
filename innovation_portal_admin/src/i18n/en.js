@@ -2,7 +2,14 @@
 import { challengesEn } from './challenges'
 import { rolesEn } from './roles'
 import { contentEn } from './content'
+import { dashboardEn } from './dashboard'
+import { u7En } from './u7'
 import { formsEn } from './forms'
+import { ideasEn } from './ideas'
+import { programmesEn } from './programmes'
+import { conversationsEn } from './conversations'
+import { reviewEn } from './review'
+import { contentBEn } from './contentB'
 import { channelsEn } from './channels'
 
 const en = {
@@ -139,10 +146,17 @@ const en = {
   'crop.createError': 'We could not make the cropped picture. Please try again.',
   'crop.taintedError': 'This picture cannot be cropped here. Upload the original file again and crop it before saving.',
   ...formsEn,
+  ...ideasEn,
+  ...programmesEn,
+  ...conversationsEn,
+  ...reviewEn,
+  ...contentBEn,
   ...channelsEn,
   ...challengesEn,
   ...rolesEn,
   ...contentEn,
+  ...dashboardEn,
+  ...u7En,
 }
 
 export default en

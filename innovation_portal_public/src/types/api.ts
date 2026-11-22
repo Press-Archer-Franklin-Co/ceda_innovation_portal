@@ -62,6 +62,7 @@ export interface UserSummary {
 
 export interface AuthenticatedUser extends UserSummary {
   email_verified: boolean
+  phone_verified?: boolean
   primary_auth_method: string
   mfa_enabled?: boolean
   mfa_method?: string
@@ -208,6 +209,13 @@ export interface ApiFAQ {
   answer: string
   ordering?: number
   is_public: boolean
+  /** B6: the group it sits in (ordered by the admins), its name in the asked language. */
+  group?: string | null
+  group_name?: string | null
+  /** Where it shows: help, home, program, whatsapp_bot. Empty on older questions. */
+  placements?: string[]
+  /** Set when the question belongs to one challenge's page. */
+  program?: string | null
 }
 
 

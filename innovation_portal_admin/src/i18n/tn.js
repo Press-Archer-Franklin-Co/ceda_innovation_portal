@@ -2,7 +2,14 @@
 import { challengesTn } from './challenges'
 import { rolesTn } from './roles'
 import { contentTn } from './content'
+import { dashboardTn } from './dashboard'
+import { u7Tn } from './u7'
 import { formsTn } from './forms'
+import { ideasTn } from './ideas'
+import { programmesTn } from './programmes'
+import { conversationsTn } from './conversations'
+import { reviewTn } from './review'
+import { contentBTn } from './contentB'
 import { channelsTn } from './channels'
 
 const tn = {
@@ -139,10 +146,17 @@ const tn = {
   'crop.createError': 'Ga re a kgona go dira setshwantsho se se segilweng. Tsweetswee leka gape.', // TODO tn-review
   'crop.taintedError': 'Setshwantsho se ga se kgone go segelwa fano. Tsenya faele ya ntlha gape mme o e sege pele o boloka.', // TODO tn-review
   ...formsTn,
+  ...ideasTn,
+  ...programmesTn,
+  ...conversationsTn,
+  ...reviewTn,
+  ...contentBTn,
   ...channelsTn,
   ...challengesTn,
   ...rolesTn,
   ...contentTn,
+  ...dashboardTn,
+  ...u7Tn,
 }
 
 export default tn

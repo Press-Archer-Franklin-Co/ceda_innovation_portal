@@ -39,6 +39,25 @@ jobs:
         run: |
           git fetch --no-tags origin main
           bash scripts/check_em_dash.sh origin/main
+      - name: Removed sign-in pages and nav tab stay removed (U7)
+        run: bash scripts/check_u7_removed.sh
+
+  old-ui:
+    name: old-ui
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: No old UI outside the list (R0, both frontends)
+        run: |
+          git fetch --no-tags origin main
+          node scripts/check_old_ui.mjs origin/main
 
   api:
     name: api
@@ -290,7 +309,7 @@ jobs:
   # publishes a result.
   report:
     name: report
-    needs: [api, admin, public, em-dash]
+    needs: [api, admin, public, em-dash, old-ui]
     if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

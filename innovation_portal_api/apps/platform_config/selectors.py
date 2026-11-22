@@ -127,7 +127,11 @@ class FeatureFlagSelector:
                 "code": bool(flags.get("code_sign_in")),
                 "code_by_sms": bool(flags.get("code_sign_in")) and bool(flags.get("sms_messages")),
                 "sso": {"active": sso_active, "provider": "ceda_staff", "label": SSO_BUTTON_LABEL},
+                # U7: the one second step after phone or email ("code" or "password").
+                "second_step": _second_step(),
             },
+            # U7: present only while both demo gates are on; never emails or passwords.
+            **_demo_logins(),
         }
 
 
@@ -141,3 +145,18 @@ class IntegrationHistorySelector:
             .select_related("actor")
             .order_by("-created_at")[:limit]
         )
+
+
+def _second_step() -> str:
+    from apps.accounts.models import AuthPolicy
+
+    return AuthPolicy.current().second_step
+
+
+def _demo_logins() -> dict:
+    from apps.accounts import demo_logins
+
+    if not demo_logins.enabled():
+        return {}
+    return {"demo_logins": {"accounts": demo_logins.accounts()}}
+

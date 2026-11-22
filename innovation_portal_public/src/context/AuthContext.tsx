@@ -17,6 +17,7 @@ export interface AuthUser {
   last_name: string
   phone_number?: string
   email_verified: boolean
+  phone_verified?: boolean
   primary_auth_method: string
   mfa_enabled?: boolean
   mfa_method?: string
@@ -44,6 +45,8 @@ interface AuthContextType {
   isLoading: boolean
   login: (email: string, password: string) => Promise<LoginOutcome>
   signInWithCode: (target: OtpTarget, code: string) => Promise<LoginOutcome>
+  /** U7: store the answer of /api/auth/finish/, /signup/ or /demo-login/ (tokens or a two-step challenge). */
+  acceptSignIn: (result: Awaited<ReturnType<typeof authService.login>>) => Promise<LoginOutcome>
   completeMfa: (code: string) => Promise<void>
   updatePendingMfa: (challenge: PendingMfa) => void
   clearPendingMfa: () => void
@@ -94,6 +97,7 @@ function toAuthUser(user: AuthenticatedUser): AuthUser {
     last_name:    user.last_name,
     phone_number: user.phone_number,
     email_verified: user.email_verified,
+    phone_verified: user.phone_verified,
     primary_auth_method: user.primary_auth_method,
     mfa_enabled:  user.mfa_enabled,
     mfa_method:   user.mfa_method,
@@ -246,6 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         signInWithCode,
+        acceptSignIn: finishSignIn,
         completeMfa,
         updatePendingMfa,
         clearPendingMfa,

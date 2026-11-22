@@ -66,7 +66,9 @@ async function loadUser(token, signal) {
   ])
   if (profile == null) return null
   const normalised = normaliseProfile(profile, token)
-  return { ...normalised, is_admin: Boolean(me?.is_admin ?? normalised.is_admin), capabilities: capabilitiesOf(me) }
+  // 3.39 (R-48 item 7): the staff account's own photo, phone and language come from /api/auth/me/ when it sends them.
+  const account = Object.fromEntries(['photo_url', 'phone_number', 'preferred_language'].filter((k) => me && k in me).map((k) => [k, me[k]]))
+  return { ...normalised, ...account, is_admin: Boolean(me?.is_admin ?? normalised.is_admin), capabilities: capabilitiesOf(me) }
 }
 
 function loadCachedUser() {

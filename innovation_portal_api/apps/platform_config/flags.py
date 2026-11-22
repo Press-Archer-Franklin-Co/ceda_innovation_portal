@@ -37,6 +37,13 @@ class FlagDefinition:
 FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     FlagDefinition("password_sign_in", "Email and password sign-in", "People can sign in and register with an email address and password.", "sign_in", True, is_public=True),
     FlagDefinition("code_sign_in", "Sign-in with a code", "People can sign in with a one-time code sent to their phone or email.", "sign_in", True, is_public=True),
+    FlagDefinition(
+        "demo_logins",
+        "Show test accounts on sign-in",
+        "Demo servers only: the sign-in page lists test accounts that sign in with one click. Works only while the server allows it (INNOVATION_PORTAL_DEMO_LOGINS). Switch off before launch.",
+        "sign_in",
+        False,
+    ),
     FlagDefinition("staff_sso", "CEDA staff single sign-on", "Staff can sign in with their CEDA account. Needs an active, tested SSO connection.", "sign_in", False, is_public=True),
     FlagDefinition("guest_quick_start", "2-minute guest start", "People can start an idea before creating an account.", "ideas", True, is_public=True),
     FlagDefinition(
@@ -51,8 +58,11 @@ FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     FlagDefinition("public_search", "Website search", "Search box on the public website.", "website", True, is_public=True),
     FlagDefinition("subscriptions", "Email subscriptions", "Visitors can subscribe to news and new challenges.", "website", True, is_public=True),
     FlagDefinition("sms_messages", "SMS messages", "Send SMS, including sign-in codes. Needs an active SMS connection.", "messaging", False),
-    FlagDefinition("whatsapp_messages", "WhatsApp messages", "Send WhatsApp messages.", "messaging", False, coming_soon=True),
-    FlagDefinition("ussd", "USSD", "Let people use the portal from a USSD menu.", "messaging", False, coming_soon=True),
+    # C2: on only when the switch is on and at least one connection is active (apps.channels).
+    FlagDefinition("whatsapp_messages", "WhatsApp messages", "WhatsApp journeys and messages. Needs at least one active WhatsApp connection.", "messaging", False),
+    FlagDefinition("ussd", "USSD", "Let people use the portal from a USSD menu. Needs at least one active USSD connection.", "messaging", False),
+    # C1: the staff Inbox, the website help chat and live idea messages hints.
+    FlagDefinition("live_chat", "Live chat", "Website help chat and the staff Inbox for chats and hand-overs from WhatsApp, USSD and the AI helper.", "messaging", False, is_public=True),
     FlagDefinition("translation_suggestions", "Translation suggestions", "Suggest Setswana text for staff to review.", "integrations", False),
 )
 FLAG_DEFAULTS = {definition.key: definition.default for definition in FLAG_DEFINITIONS}

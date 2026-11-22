@@ -66,11 +66,20 @@ class MyAssignedEvaluationSerializer(serializers.ModelSerializer):
     workflow_step = serializers.CharField(source="workflow_step.name", read_only=True)
     latest_score_sheet_id = serializers.SerializerMethodField()
     latest_score_status = serializers.SerializerMethodField()
+    # R-42 (3.17): the challenge, the conflict answer and this judge's own score. Never other judges' names.
+    assignment_id = serializers.UUIDField(source="id", read_only=True)
+    program = serializers.SerializerMethodField()
+    conflict = serializers.SerializerMethodField()
+    my_score = serializers.SerializerMethodField()
 
     class Meta:
         model = Assignment
         fields = (
             "id",
+            "assignment_id",
+            "program",
+            "conflict",
+            "my_score",
             "submission_id",
             "submission_title",
             "reference_number",
@@ -81,6 +90,28 @@ class MyAssignedEvaluationSerializer(serializers.ModelSerializer):
             "latest_score_sheet_id",
             "latest_score_status",
         )
+
+    def get_program(self, obj) -> dict:
+        program = obj.submission.program
+        return {"id": str(program.id), "title": program.title}
+
+    def get_conflict(self, obj) -> str:
+        """none, declared (POST /api/assignments/{id}/conflict/) or confirmed_none (POST .../accept/)."""
+        if hasattr(obj, "conflict_declaration"):
+            return "declared"
+        from apps.programs.challenge_judging import AUTO_ACCEPT_NOTE
+
+        acceptance = getattr(obj, "acceptance", None)
+        # Challenge judges' assignments are accepted for them; only their own POST .../accept/ says "no conflict".
+        if acceptance and acceptance.accepted and acceptance.response_note != AUTO_ACCEPT_NOTE:
+            return "confirmed_none"
+        return "none"
+
+    def get_my_score(self, obj) -> float | None:
+        from apps.evaluation.services import sheet_weighted_score
+
+        sheet = obj.submission.score_sheets.filter(judge=obj.assignee).order_by("-is_final", "-updated_at").first()
+        return sheet_weighted_score(sheet) if sheet else None
 
     def get_latest_score_sheet_id(self, obj):
         sheet = obj.submission.score_sheets.filter(judge=obj.assignee).order_by("-updated_at").first()

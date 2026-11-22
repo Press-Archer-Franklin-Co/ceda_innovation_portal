@@ -96,7 +96,9 @@ function clearAuthAndRedirect() {
   localStorage.removeItem(TOKEN_KEY)
   localStorage.removeItem(REFRESH_KEY)
   localStorage.removeItem('ceda_innovation_user')
-  window.location.href = window.location.origin + '/'
+  // U7: back to the one sign-in page, then to the same console page.
+  const here = window.location.pathname + window.location.search
+  window.location.href = window.location.origin + '/sign-in?next=' + encodeURIComponent(here)
 }
 
 

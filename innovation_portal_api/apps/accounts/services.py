@@ -105,6 +105,9 @@ class RoleService:
         if not role_codes:
             raise ValueError("At least one role is required.")
         role_codes = list(dict.fromkeys(role_codes))
+        from apps.accounts.demo_logins import assert_roles_allowed
+
+        assert_roles_allowed(user, role_codes)
         custom = set(Role.objects.filter(code__in=role_codes, is_system=False, is_active=True).values_list("code", flat=True))
         invalid = [code for code in role_codes if code not in RoleService.CANONICAL_ROLE_CODES and code not in custom]
         if invalid:
@@ -202,9 +205,16 @@ class UserSecurityTokenService:
 class AuthTokenService:
     @staticmethod
     def issue_tokens(user: User) -> dict:
+        # U7: every sign-in path ends here; demo accounts only while the server allows demo logins.
+        from apps.accounts.demo_logins import assert_can_sign_in
+
+        assert_can_sign_in(user)
         refresh = RefreshToken.for_user(user)
         refresh["email"] = user.email
         refresh["roles"] = list(user.roles.filter(user_roles__is_active=True).values_list("code", flat=True))
+        from apps.accounts.sessions import start
+
+        refresh["sid"] = start(user)  # R-51: where this person is signed in
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),

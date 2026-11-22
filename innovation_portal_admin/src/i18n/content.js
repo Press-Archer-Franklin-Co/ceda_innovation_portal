@@ -8,6 +8,7 @@ export const contentEn = {
   'approvals.type.page': 'Home page',
   'approvals.type.post': 'News post',
   'approvals.type.quote': 'Leadership quote',
+  'approvals.type.policy': 'Policy page',
   'approvals.sentBy': 'Sent by {name} on {date}',
   'approvals.goesLive': 'goes live {date}',
   'approvals.step': 'Step',
@@ -512,6 +513,7 @@ export const contentTn = {
   'approvals.type.page': 'Tsebe ya ntlha',
   'approvals.type.post': 'Kwalo ya dikgang',
   'approvals.type.quote': 'Lefoko la moeteledipele',
+  'approvals.type.policy': 'Tsebe ya pholisi', // TODO tn-review
   'approvals.sentBy': 'E rometswe ke {name} ka {date}',
   'approvals.goesLive': 'e bonala ka {date}',
   'approvals.step': 'Kgato',

@@ -140,6 +140,8 @@ INSTALLED_APPS = [
     "apps.reference",
     "apps.media_library",
     "apps.platform_config",
+    "apps.channels",
+    "apps.conversations",
 ]
 
 MIDDLEWARE = [
@@ -152,6 +154,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "apps.audit.refusals.RefusalRecordingMiddleware",
+    "apps.accounts.sessions.CurrentRequestMiddleware",
 ]
 
 # S1: refusals are logged to "security.authorization" (ceda-security section 5).
@@ -162,6 +165,8 @@ LOGGING = {
     "handlers": {"console": {"class": "logging.StreamHandler"}},
     "loggers": {
         "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # C2: refused USSD and WhatsApp webhooks (security.webhook_rejected).
+        "security.webhook": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 
@@ -252,12 +257,18 @@ REST_FRAMEWORK = {
         "subscribe": "10/hour",
         "subscription_link": "60/hour",
         "challenges_public": "120/minute",
+        "chat_typing": "30/minute",
+        "help_chat": "20/hour",
     },
 }
 
 # Guest quick start (B2): how long the resume token kept by the browser is valid,
 # and which version of the consent text the submit screen shows.
 DRAFT_RESUME_TOKEN_MAX_AGE = int(os.getenv("INNOVATION_PORTAL_DRAFT_RESUME_TOKEN_MAX_AGE", str(30 * 24 * 3600)))
+# U7: test accounts on the sign-in page. Only for demo servers; never set in production.
+# Needs the "demo_logins" switch in Platform settings too (apps.accounts.demo_logins).
+DEMO_LOGINS = os.getenv("INNOVATION_PORTAL_DEMO_LOGINS", "False").strip().lower() in ("1", "true", "yes", "on")
+ACCOUNT_TERMS_VERSION = os.getenv("INNOVATION_PORTAL_ACCOUNT_TERMS_VERSION", "2026-11")
 IDEA_SUBMISSION_CONSENT_VERSION = os.getenv("INNOVATION_PORTAL_IDEA_SUBMISSION_CONSENT_VERSION", "2026-11")
 # Sign-in codes (R-4): seconds the screen waits before offering "Resend code".
 LOGIN_CODE_RESEND_AFTER_SECONDS = int(os.getenv("INNOVATION_PORTAL_LOGIN_CODE_RESEND_AFTER_SECONDS", "60"))
@@ -343,6 +354,15 @@ CELERY_BEAT_SCHEDULE = {
         "task": "apps.content.tasks.publish_due_content",
         "schedule": crontab(minute="*/5"),
         "options": {"expires": 240},
+    },
+    "escalate-unanswered-chats": {
+        "task": "apps.conversations.tasks.escalate_unanswered_chats",
+        "schedule": crontab(minute="*"),
+        "options": {"expires": 50},
+    },
+    "daily-summaries": {
+        "task": "apps.notifications.tasks.send_daily_summaries",
+        "schedule": crontab(hour=7, minute=30),
     },
     "question-reminders": {
         "task": "apps.notifications.tasks.send_question_reminders",

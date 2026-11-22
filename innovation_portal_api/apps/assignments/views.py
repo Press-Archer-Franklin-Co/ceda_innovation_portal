@@ -1,3 +1,4 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError as DRFValidationError
@@ -10,6 +11,7 @@ from apps.assignments.serializers import AssignmentSerializer, ConflictSerialize
 from apps.assignments.services import AssignmentService
 from apps.audit.serializers import AuditLogSerializer
 from apps.audit.models import AuditLog
+from apps.audit.services import AuditService
 from apps.core.api import api_success
 from apps.core.constants import AssignmentRoleType, AssignmentStatus
 from apps.core.permissions import IsJudge, IsJudgeOrOfficer, IsOfficerOrAdmin, IsStaffWorker
@@ -141,7 +143,7 @@ class ReviewerQueueView(generics.ListAPIView):
         completed = self.request.query_params.get("completed") == "true"
 
         queryset = Submission.objects.select_related(
-            "workflow_instance__current_step"
+            "workflow_instance__current_step", "program"
         ).prefetch_related("assignments__assignee").filter(workflow_instance__isnull=False)
         queryset = self._apply_filters(queryset)
 
@@ -212,6 +214,31 @@ class ReviewerQueueView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(self.get_queryset(), many=True)
         return api_success(data=serializer.data)
+
+
+class ReviewerQueueCountsView(ReviewerQueueView):
+    """R-55: the chip counts for the queue (3.3). Same filters as the queue."""
+
+    @extend_schema(tags=["Assignments"], summary="Review queue counts (3.3)", description="{all, mine, overdue}: overdue counts your own queue (mine) past its due date.")
+    def get(self, request, *args, **kwargs):
+        from django.http import QueryDict
+
+        def count(**extra):
+            params = QueryDict(mutable=True)
+            params.update(request.query_params)
+            for key in ("mine", "overdue"):
+                params.pop(key, None)
+            for key, value in extra.items():
+                params[key] = value
+            request._request.GET = params
+            return len(self.get_queryset())
+
+        original = request._request.GET
+        try:
+            data = {"all": count(), "mine": count(mine="true"), "overdue": count(mine="true", overdue="true")}
+        finally:
+            request._request.GET = original
+        return api_success(data=data)
 
 
 class ReviewerQueueStatsView(generics.GenericAPIView):
@@ -442,6 +469,9 @@ class SpecialistInvitationTokenView(generics.RetrieveAPIView):
             "required_review_count": invitation.required_review_count,
             "expires_at": invitation.expires_at.isoformat(),
             "is_expired": invitation.is_expired,
+            # R-50 (1.15)
+            "can_decline": invitation.status == SpecialistInvitationStatus.PENDING and not invitation.is_expired,
+            "declined": invitation.status == SpecialistInvitationStatus.DECLINED,
         })
 
 
@@ -601,3 +631,34 @@ def _send_specialist_invite_email(invitation, request):
         template_name="notification_generic",
         context=context,
     )
+
+
+class SpecialistInvitationDeclineView(generics.GenericAPIView):
+    """R-50: decline a specialist invitation from the link. No sign-in: the unguessable token is the key."""
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = [IPRateThrottle]
+
+    @extend_schema(tags=["Assignments"], summary="Decline a specialist invitation (1.15)", description="{reason?} up to 500 characters. Tells the person who invited.")
+    def post(self, request, token=None):
+        from apps.notifications.services import NotificationService
+
+        invitation = SpecialistInvitation.objects.select_related("invited_by", "submission").filter(token=token).first()
+        if invitation is None:
+            return Response({"detail": "Invalid invitation link."}, status=status.HTTP_404_NOT_FOUND)
+        if invitation.status == SpecialistInvitationStatus.DECLINED:
+            return api_success(data={"declined": True})
+        if invitation.status != SpecialistInvitationStatus.PENDING or invitation.is_expired:
+            raise DRFValidationError({"detail": "This invitation can no longer be declined."})
+        reason = str(request.data.get("reason") or "").strip()
+        if len(reason) > 500:
+            raise DRFValidationError({"reason": "Keep it to 500 characters."})
+        invitation.status = SpecialistInvitationStatus.DECLINED
+        invitation.decline_reason = reason
+        invitation.save(update_fields=["status", "decline_reason", "updated_at"])
+        AuditService.log_action(actor=None, action_type="specialist_invitation_declined", target=invitation, metadata={"reason": reason})
+        if invitation.invited_by is not None:
+            text = f"{invitation.invitee_name} will not review {invitation.submission.title}." + (f" Reason: {reason}" if reason else "")
+            NotificationService.notify(user=invitation.invited_by, notification_type="specialist_invitation_declined", title="An invitation was declined", message=text)
+        return api_success(data={"declined": True}, message="Thank you for letting us know.")

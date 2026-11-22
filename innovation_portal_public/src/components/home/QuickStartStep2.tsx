@@ -139,8 +139,9 @@ export default function QuickStartStep2({ draft, onEdit, onSent }: { draft: Quic
         },
         token,
       )
-      resumeStorage.clear()
+      // Go to 1.5 first, then forget the local draft, so the card never flashes back to an empty form.
       onSent(result)
+      resumeStorage.clear()
     } catch (err) {
       const c = apiCode(err)
       if (needsMoreAnswers(err) && !isChallenge) setServerAsked(true)

@@ -1,0 +1,14 @@
+# Pages still in the old look (R0). The old-UI guard (scripts/check_old_ui.mjs) does not check these yet.
+# Each rebuild PR deletes its lines. Adding a line is not allowed: the guard fails if this list grows.
+admin/src/pages/users/Users.jsx
+admin/src/components/assignments/ActionDrawer.jsx
+admin/src/pages/admin/RolesPermissions.jsx
+admin/src/pages/content/Approvals.jsx
+admin/src/pages/admin/platform/PlatformSettings.jsx
+admin/src/pages/audit/AuditLogs.jsx
+admin/src/pages/history/History.jsx
+admin/src/pages/history/HistorySnapshot.jsx
+# Added when the guard was first set up (U8): also still in the old look.
+# Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
+public/src/pages/VerifyEmail.tsx
+public/src/pages/AuthCallback.tsx

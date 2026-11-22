@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, status, viewsets
+from rest_framework import generics, serializers, status, viewsets
 from rest_framework.decorators import action
 from django.utils import timezone
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -8,7 +8,7 @@ from drf_spectacular.utils import OpenApiExample, OpenApiResponse, extend_schema
 
 from apps.audit.services import AuditService
 from apps.core.api import api_success
-from apps.core.permissions import IsOfficerOrAdmin
+from apps.core.permissions import IPRateThrottle, IsOfficerOrAdmin
 from apps.programs.access import ProgramAccessService
 from apps.programs.challenge_judging import ChallengeJudgingService
 from apps.programs.models import ChallengeJudge, FieldValidationRule, FormSection, Program, ProgramStage, ProgramType, SubmissionForm, SubmissionFormField, SubmissionFormFieldOption, TermsAndConditions
@@ -436,17 +436,59 @@ class ChallengeJudgeInviteView(generics.GenericAPIView):
         return [IsAuthenticated()]
 
     def get(self, request, token=None):
-        judge = get_object_or_404(ChallengeJudge.objects.select_related("program"), token=token)
+        from apps.communications.messaging import role_title
+
+        def short_name(user) -> str:
+            first, last = (user.first_name or "").strip(), (user.last_name or "").strip()
+            return f"{first} {last[:1]}." if first and last else (first or "CEDA officer")
+
+        judge = get_object_or_404(ChallengeJudge.objects.select_related("program__owner", "program__marking_criteria"), token=token)
         program = judge.program
+        marking_closed = bool(program.marking_closes_at and timezone.now() > program.marking_closes_at)
+        owner = program.owner
+        criteria = program.marking_criteria
         return api_success(data={
             "name": judge.name,
             "email": judge.email,
             "program_title": program.title,
             "marking_closes_at": program.marking_closes_at,
             "accepted": bool(judge.accepted_at),
-            "marking_closed": bool(program.marking_closes_at and timezone.now() > program.marking_closes_at),
+            "marking_closed": marking_closed,
+            # R-50 (1.15)
+            "invited_by": {"name": short_name(owner), "role_label": role_title(owner)} if owner else None,
+            "invited_at": judge.invited_at,
+            "idea_count": ChallengeJudgingService.entries_to_mark(program).count(),
+            "criteria_count": criteria.items.count() if criteria is not None else 0,
+            "marking_opens_at": program.evaluation_opens_at or program.judging_start,
+            "declined": bool(judge.declined_at),
+            "can_decline": not judge.accepted_at and not judge.declined_at and not marking_closed,
         })
 
     def post(self, request, token=None):
         judge = ChallengeJudgingService.accept_invitation(token, request.user)
         return api_success(data={"accepted": True, "program_title": judge.program.title, "next": "/staff/assignments"})
+
+
+class JudgeInviteDeclineThrottle(IPRateThrottle):
+    scope = "ip_public"
+
+
+class InviteDeclineSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+
+class ChallengeJudgeInviteDeclineView(generics.GenericAPIView):
+    """R-50: decline a judging invitation from the link. No sign-in: the unguessable token is the key."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [JudgeInviteDeclineThrottle]
+    serializer_class = InviteDeclineSerializer
+
+    @extend_schema(tags=["Programs"], summary="Decline a judging invitation (1.15)", description="{reason?} up to 500 characters. Afterwards the invitation answers declined: true and accepting is refused.")
+    def post(self, request, token=None):
+        from apps.programs.challenge_judging import decline_invitation
+
+        serializer = InviteDeclineSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        judge = decline_invitation(token, serializer.validated_data["reason"])
+        return api_success(data={"declined": True, "program_title": judge.program.title}, message="Thank you for letting us know.")

@@ -1,26 +1,23 @@
-import { lazy, Suspense } from 'react'
-import { Navigate, Routes, Route, useLocation } from 'react-router-dom'
+import { lazy, Suspense, useRef } from 'react'
+import { Navigate, Routes, Route, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
 import PrivateRoute  from './components/ui/PrivateRoute'
 const Home = lazy(() => import('./pages/Home'))
 const IdeaSent = lazy(() => import('./pages/IdeaSent'))
 const ChallengeDetail = lazy(() => import('./pages/ChallengeDetail'))
+const ChallengeEnter = lazy(() => import('./pages/ChallengeEnter'))
+const ChallengeResults = lazy(() => import('./pages/ChallengeResults'))
+const MyResult = lazy(() => import('./pages/innovator/MyResult'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const About = lazy(() => import('./pages/About'))
 const Guidelines = lazy(() => import('./pages/Guidelines'))
 const FAQ = lazy(() => import('./pages/FAQ'))
+const Accessibility = lazy(() => import('./pages/Accessibility'))
 const Challenges = lazy(() => import('./pages/Challenges'))
-const Suggestions = lazy(() => import('./pages/Suggestions'))
-const Innovate = lazy(() => import('./pages/Innovate'))
-const Skills = lazy(() => import('./pages/Skills'))
-const Login = lazy(() => import('./pages/Login'))
-const SignUp = lazy(() => import('./pages/SignUp'))
-const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
-const ResetPassword = lazy(() => import('./pages/ResetPassword'))
+const Submit = lazy(() => import('./pages/Submit'))
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'))
 const SubscriptionLink = lazy(() => import('./pages/SubscriptionLink'))
-const MfaChallenge = lazy(() => import('./pages/MfaChallenge'))
 const AuthCallback = lazy(() => import('./pages/AuthCallback'))
 const Profile = lazy(() => import('./pages/Profile'))
 const Security = lazy(() => import('./pages/Security'))
@@ -29,12 +26,10 @@ const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
 const TermsOfUse = lazy(() => import('./pages/TermsOfUse'))
 const News = lazy(() => import('./pages/News'))
 const PostDetail = lazy(() => import('./pages/PostDetail'))
-const HackathonDetail = lazy(() => import('./pages/HackathonDetail'))
-const SubmissionDetail = lazy(() => import('./pages/SubmissionDetail'))
 const DocumentPage = lazy(() => import('./pages/DocumentPage'))
 const SpecialistInvite = lazy(() => import('./pages/SpecialistInvite'))
 const JudgeInvite = lazy(() => import('./pages/JudgeInvite'))
-const CodeSignIn = lazy(() => import('./pages/innovator/CodeSignIn'))
+const SignIn = lazy(() => import('./pages/SignIn'))
 const InnovatorHome = lazy(() => import('./pages/innovator/InnovatorHome'))
 const MyIdeas = lazy(() => import('./pages/innovator/MyIdeas'))
 const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
@@ -52,14 +47,36 @@ import { isStaff } from './lib/roles'
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
 
-function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth()
-  const location = useLocation()
-  const from = (location.state as { from?: Location })?.from?.pathname ?? '/'
+// U7: these all lead to the one sign-in page, keeping ?next=...
+const OLD_SIGN_IN_PATHS = ['/login', '/signup', '/forgot-password', '/reset-password', '/mfa']
 
+function ToSignIn() {
+  const location = useLocation()
+  return <Navigate to={{ pathname: '/sign-in', search: location.search }} state={location.state} replace />
+}
+
+/**
+ * /sign-in: someone already signed in when the page opens goes on to `next` (or their home).
+ * It does not jump away in the middle of signing in: the page sends
+ * people on itself, to the place the server allowed.
+ */
+function SignInRoute() {
+  const { isAuthenticated, isLoading, user } = useAuth()
+  const location = useLocation()
+  const signedInOnOpen = useRef<boolean | null>(null)
   if (isLoading) return null
-  if (isAuthenticated) return <Navigate to={from} replace />
-  return <>{children}</>
+  if (signedInOnOpen.current === null) signedInOnOpen.current = isAuthenticated
+  if (signedInOnOpen.current) {
+    const next = new URLSearchParams(location.search).get('next') || ''
+    const home = isStaff(user) ? '/staff/' : '/dashboard'
+    const target = next.startsWith('/') && !next.startsWith('//') ? next : home
+    if (target.startsWith('/staff')) {
+      window.location.replace(isStaff(user) ? target : '/dashboard')
+      return null
+    }
+    return <Navigate to={target} replace />
+  }
+  return <SignIn />
 }
 
 /** "/" is the website home for visitors and staff; signed-in innovators go to their dashboard. */
@@ -70,6 +87,32 @@ function HomeOrDashboard() {
   return <Home />
 }
 
+/**
+ * The old submission page (/innovate) is gone. Its links still work:
+ * ?draft= opens that draft in the full form, ?program= enters that challenge (its own form, U10),
+ * ?submission= opens the idea's page, and the bare address starts a new idea.
+ */
+function InnovateRedirect() {
+  const [params] = useSearchParams()
+  const draft = params.get('draft')
+  const program = params.get('program')
+  const submission = params.get('submission')
+  const to = draft
+    ? `/my-ideas/draft/${encodeURIComponent(draft)}`
+    : submission
+      ? `/my-ideas/${encodeURIComponent(submission)}`
+      : program
+        ? `/challenges/${encodeURIComponent(program)}/enter`
+        : '/submit'
+  return <Navigate to={to} replace />
+}
+
+/** Old submission detail addresses go to the idea's page (2.2). */
+function SubmissionRedirect() {
+  const { id = '' } = useParams()
+  return <Navigate to={`/my-ideas/${encodeURIComponent(id)}`} replace />
+}
+
 function AppRoutes() {
   const { pathname } = useLocation()
   return (
@@ -78,18 +121,14 @@ function AppRoutes() {
     <PageErrorBoundary resetKey={pathname}>
     <Suspense fallback={<div className="max-w-[1200px] mx-auto px-5 py-10"><PageSkeleton shape="form" /></div>}>
     <Routes>
-      <Route path="/login"           element={<PublicOnlyRoute><Login          /></PublicOnlyRoute>} />
-      <Route path="/signup"          element={<PublicOnlyRoute><SignUp         /></PublicOnlyRoute>} />
-      <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPassword /></PublicOnlyRoute>} />
-      <Route path="/reset-password"  element={<PublicOnlyRoute><ResetPassword  /></PublicOnlyRoute>} />
+      {/* U7: one sign-in page. The old sign-in, sign-up, password reset and two-step pages are gone. */}
+      {OLD_SIGN_IN_PATHS.map((path) => (
+        <Route key={path} path={path} element={<ToSignIn />} />
+      ))}
 
       <Route path="/verify-email"    element={<VerifyEmail />} />
-      <Route path="/mfa"            element={<MfaChallenge />} />
 
       <Route path="/auth/callback"   element={<AuthCallback />} />
-
-      <Route path="/specialist-invite/:token" element={<SpecialistInvite />} />
-      <Route path="/judge-invite/:token" element={<JudgeInvite />} />
 
 
       {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
@@ -104,20 +143,28 @@ function AppRoutes() {
         <Route path="/about"       element={<About />} />
         <Route path="/guidelines"  element={<Guidelines />} />
         <Route path="/faq"         element={<FAQ />} />
+        <Route path="/accessibility" element={<Accessibility />} />
+        {/* 1.15: invitations sit in the normal header and footer. */}
+        <Route path="/specialist-invite/:token" element={<SpecialistInvite />} />
+        <Route path="/judge-invite/:token" element={<JudgeInvite />} />
         <Route path="/challenges"  element={<Challenges />} />
         <Route path="/challenges/:slug" element={<ChallengeDetail />} />
-        <Route path="/suggestions" element={<Suggestions />} />
-        <Route path="/innovate"    element={<Innovate />} />
-        <Route path="/skills"      element={<Skills />} />
+        <Route path="/challenges/:slug/enter" element={<ChallengeEnter />} />
+        <Route path="/challenges/:slug/results" element={<ChallengeResults />} />
+        <Route path="/submit"      element={<Submit />} />
+        <Route path="/innovate"    element={<InnovateRedirect />} />
+        {/* Old pages nothing links to any more (D3): sent somewhere useful instead. */}
+        <Route path="/suggestions" element={<Navigate to="/faq" replace />} />
+        <Route path="/skills"      element={<Navigate to="/" replace />} />
+        <Route path="/hackathons/:id" element={<Navigate to="/challenges" replace />} />
         <Route path="/news"        element={<News />} />
         <Route path="/subscribe/confirm/:token" element={<SubscriptionLink action="confirm" />} />
         <Route path="/unsubscribe/:token" element={<SubscriptionLink action="unsubscribe" />} />
         {/* TODO(U2): own Stories page; until then the news feed. */}
         <Route path="/stories"     element={<News />} />
         <Route path="/news/:slug"  element={<PostDetail />} />
-        <Route path="/hackathons/:id" element={<HackathonDetail />} />
 
-        <Route path="/sign-in"     element={<PublicOnlyRoute><CodeSignIn /></PublicOnlyRoute>} />
+        <Route path="/sign-in"     element={<SignInRoute />} />
 
         <Route path="/terms-of-agreement" element={<TermsOfAgreement />} />
         <Route path="/privacy-policy"     element={<PrivacyPolicy />} />
@@ -127,9 +174,11 @@ function AppRoutes() {
           <Route path="/dashboard"          element={<InnovatorHome />} />
           <Route path="/my-ideas"           element={<MyIdeas />} />
           <Route path="/my-ideas/draft/:id" element={<IdeaForm />} />
+          <Route path="/challenges/:slug/entry/:id" element={<IdeaForm />} />
+          <Route path="/challenges/:slug/my-result" element={<MyResult />} />
           <Route path="/my-ideas/:id"       element={<TrackIdea />} />
           <Route path="/notifications"      element={<Notifications />} />
-          <Route path="/submissions/:id"    element={<SubmissionDetail />} />
+          <Route path="/submissions/:id"    element={<SubmissionRedirect />} />
           <Route path="/documents/:id"      element={<DocumentPage />} />
           <Route path="/profile"            element={<Profile />} />
           <Route path="/security"           element={<Security />} />

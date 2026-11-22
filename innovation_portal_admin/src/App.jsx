@@ -1,9 +1,13 @@
 import React, { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
+import { documents as documentsApi } from './lib/api/endpoints'
 import { retryUnlessRefused } from './lib/api/refusals'
 import { AuthProvider }    from './lib/auth/AuthContext'
-import { ProtectedRoute, CapabilityRoute }  from './lib/auth/ProtectedRoute'
+import { ProtectedRoute, CapabilityRoute, ToSignIn }  from './lib/auth/ProtectedRoute'
+import { OLD_SIGN_IN_PATHS } from './lib/auth/signInPaths'
+import { useJudgeOnly } from './lib/auth/useJudgeOnly'
+import { useAuth } from './lib/auth/AuthContext'
 import AppLayout           from './layout/AppLayout'
 import PageErrorBoundary   from './components/ui/PageErrorBoundary'
 
@@ -13,25 +17,26 @@ function ErrorBoundary({ children }) {
 }
 
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
-const Programs = lazy(() => import('./pages/programs/Programs'))
-const ProgramDetail = lazy(() => import('./pages/programs/ProgramDetail'))
-const ProgramEditor = lazy(() => import('./pages/programs/ProgramEditor'))
+const Challenges = lazy(() => import('./pages/programs/Challenges'))
+const ChallengeStatus = lazy(() => import('./pages/programs/ChallengeStatus'))
 const Submissions = lazy(() => import('./pages/submissions/Submissions'))
 const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail'))
-const MyWork = lazy(() => import('./pages/assignments/MyWork'))
-const EvaluationForm = lazy(() => import('./pages/evaluation/EvaluationForm'))
-const Analytics = lazy(() => import('./pages/analytics/Analytics'))
-const Settings = lazy(() => import('./pages/settings/Settings'))
-const AssignmentDetail = lazy(() => import('./pages/assignments/AssignmentDetail'))
-const DocumentPage = lazy(() => import('./pages/documents/DocumentPage'))
-const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows'))
+const MyWork = lazy(() => import('./pages/mywork/MyWork'))
+const Judging = lazy(() => import('./pages/judging/Judging'))
+const ScoreIdea = lazy(() => import('./pages/judging/ScoreIdea'))
+const Inbox = lazy(() => import('./pages/inbox/Inbox'))
+const LiveChatSettings = lazy(() => import('./pages/inbox/LiveChatSettings'))
+const ReviewQueue = lazy(() => import('./pages/review/ReviewQueue'))
+const AllScores = lazy(() => import('./pages/judging/AllScores'))
+const Reports = lazy(() => import('./pages/reports/Reports'))
+const NotificationsProfile = lazy(() => import('./pages/settings/NotificationsProfile'))
+const Workflows = lazy(() => import('./pages/admin/workflows/Workflows'))
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
-const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
+const WorkflowIdeas = lazy(() => import('./pages/admin/workflows/WorkflowIdeas'))
 const MarkingCriteria = lazy(() => import('./pages/challenges/MarkingCriteria'))
 const ChallengeBuilder = lazy(() => import('./pages/challenges/ChallengeBuilder'))
 const Forms = lazy(() => import('./pages/forms/Forms'))
 const FormBuilder = lazy(() => import('./pages/forms/FormBuilder'))
-const TermsManager = lazy(() => import('./pages/admin/TermsManager'))
 const PlatformSettings = lazy(() => import('./pages/admin/platform/PlatformSettings'))
 // C2: WhatsApp and USSD journeys (channels.manage)
 const ChannelJourneys = lazy(() => import('./pages/channels/Journeys'))
@@ -41,7 +46,8 @@ const ChannelActivity = lazy(() => import('./pages/channels/Activity'))
 const Users = lazy(() => import('./pages/users/Users'))
 const RolesPermissions = lazy(() => import('./pages/admin/RolesPermissions'))
 const AuditLogs = lazy(() => import('./pages/audit/AuditLogs'))
-const ContentIndex = lazy(() => import('./pages/content/ContentIndex'))
+const AllContent = lazy(() => import('./pages/content/AllContent'))
+const Policies = lazy(() => import('./pages/content/Policies'))
 const HomePageEditor = lazy(() => import('./pages/content/HomePageEditor'))
 const NewsList = lazy(() => import('./pages/content/NewsList'))
 const PostEditor = lazy(() => import('./pages/content/PostEditor'))
@@ -50,13 +56,13 @@ const Partners = lazy(() => import('./pages/content/Partners'))
 const Faqs = lazy(() => import('./pages/content/Faqs'))
 const Stories = lazy(() => import('./pages/content/Stories'))
 const Approvals = lazy(() => import('./pages/content/Approvals'))
-const HackathonContentEditor = lazy(() => import('./pages/content/HackathonContentEditor'))
-const WinnersManager = lazy(() => import('./pages/content/WinnersManager'))
+const HackathonPage = lazy(() => import('./pages/content/HackathonPage'))
+const HackathonNew = lazy(() => import('./pages/content/HackathonNew'))
+const Winners = lazy(() => import('./pages/content/Winners'))
 const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
 const LeadershipCardEditor = lazy(() => import('./pages/content/LeadershipManager').then((m) => ({ default: m.LeadershipCardEditor })))
 const FaqList = lazy(() => import('./pages/content/FaqManager'))
 const FaqEditor = lazy(() => import('./pages/content/FaqManager').then((m) => ({ default: m.FaqEditor })))
-const EvaluationView = lazy(() => import('./pages/evaluate/EvaluationView'))
 const History = lazy(() => import('./pages/history/History'))
 
 // Dev-only component gallery; not part of the production bundle.
@@ -80,7 +86,10 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter basename="/staff">
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/" element={<Landing />} />
+            {OLD_SIGN_IN_PATHS.map((path) => (
+              <Route key={path} path={path} element={<ToSignIn />} />
+            ))}
 
             {Styleguide && (
               <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />
@@ -90,37 +99,58 @@ export default function App() {
               <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
 
-                <Route path="/programs"     element={<ErrorBoundary><Programs /></ErrorBoundary>} />
+                <Route path="/programs"     element={<ErrorBoundary><Challenges /></ErrorBoundary>} />
                 <Route path="/programs/new" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
-                <Route path="/programs/:id" element={<ErrorBoundary><ProgramDetail /></ErrorBoundary>} />
+                <Route path="/programs/:id" element={<ErrorBoundary><ChallengeStatus /></ErrorBoundary>} />
                 <Route path="/programs/:id/edit" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
-                <Route path="/programs/:id/settings" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/:id/settings" element={<ParamRedirect to="/programs/:id/edit?section=basics" />} />
 
-                <Route path="/submissions"     element={<ErrorBoundary><Submissions /></ErrorBoundary>} />
+                {/* U8 (3.15 to 3.20). Old addresses redirect to the new screens. */}
+                <Route element={<CapabilityRoute need="entries.search" />}>
+                  <Route path="/submissions"   element={<ErrorBoundary><Submissions /></ErrorBoundary>} />
+                </Route>
                 <Route path="/submissions/:id" element={<ErrorBoundary><SubmissionDetail /></ErrorBoundary>} />
-                <Route path="/documents/:id"   element={<ErrorBoundary><DocumentPage /></ErrorBoundary>} />
+                <Route element={<CapabilityRoute need={['entries.assign', 'dashboard.view']} />}>
+                  <Route path="/submissions/:id/scores" element={<ErrorBoundary><AllScores /></ErrorBoundary>} />
+                </Route>
+                <Route path="/documents/:id"   element={<ErrorBoundary><DocumentRedirect /></ErrorBoundary>} />
+
+                {/* C1 live chat: 3.30 Inbox. */}
+                <Route element={<CapabilityRoute need="conversations.reply" />}>
+                  <Route path="/inbox"         element={<ErrorBoundary><Inbox /></ErrorBoundary>} />
+                </Route>
+
+                {/* U4 3.3 Review queue and scoring. */}
+                <Route element={<CapabilityRoute need="entries.review" />}>
+                  <Route path="/review"        element={<ErrorBoundary><ReviewQueue /></ErrorBoundary>} />
+                </Route>
 
                 <Route path="/assignments"     element={<ErrorBoundary><MyWork /></ErrorBoundary>} />
-                <Route path="/assignments/:id" element={<ErrorBoundary><AssignmentDetail /></ErrorBoundary>} />
+                <Route path="/assignments/:id" element={<WorkItemRedirect />} />
+                <Route path="/tasks"           element={<Navigate to="/assignments" replace />} />
+                <Route path="/tasks/:id"       element={<WorkItemRedirect />} />
 
                 <Route path="/history" element={<ErrorBoundary><History /></ErrorBoundary>} />
                 <Route path="/history/:id" element={<ErrorBoundary><HistorySnapshot /></ErrorBoundary>} />
 
-                <Route path="/evaluate/:id" element={<ErrorBoundary><EvaluationView /></ErrorBoundary>} />
-                <Route path="/tasks"     element={<Navigate to="/assignments" replace />} />
-                <Route path="/tasks/:id" element={<ErrorBoundary><AssignmentDetail /></ErrorBoundary>} />
-
-                <Route path="/evaluations/mine" element={<Navigate to="/assignments" replace />} />
-                <Route path="/evaluations/:id"  element={<ErrorBoundary><EvaluationForm /></ErrorBoundary>} />
+                <Route element={<CapabilityRoute need="entries.score" />}>
+                  <Route path="/judging"       element={<ErrorBoundary><Judging /></ErrorBoundary>} />
+                </Route>
+                {/* Anyone with a review to score lands here; the API decides (cycle can_score). */}
+                <Route path="/judging/:id"     element={<ErrorBoundary><ScoreIdea /></ErrorBoundary>} />
+                <Route path="/evaluate/:id"    element={<ParamRedirect to="/judging/:id" />} />
+                <Route path="/evaluations/mine" element={<Navigate to="/judging" replace />} />
+                <Route path="/evaluations/:id" element={<ParamRedirect to="/judging/:id" />} />
 
                 {/* Each group asks for the capability the API checks on the endpoints behind it (S1). */}
                 <Route element={<CapabilityRoute need="entries.assign" />}>
-                  <Route path="/admin/workflows"               element={<ErrorBoundary><AdminWorkflows /></ErrorBoundary>} />
+                  <Route path="/admin/workflows"               element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
+                  <Route path="/workflows"                     element={<Navigate to="/admin/workflows" replace />} />
                   <Route path="/admin/workflows/:id/builder"   element={<ErrorBoundary><WorkflowBuilder /></ErrorBoundary>} />
-                  <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
+                  <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowIdeas /></ErrorBoundary>} />
                 </Route>
                 <Route element={<CapabilityRoute need="challenges.manage" />}>
-                  <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
+                  <Route path="/admin/terms"                   element={<Navigate to="/content/policies" replace />} />
                 </Route>
                 <Route element={<CapabilityRoute need="channels.manage" />}>
                   <Route path="/channels" element={<Navigate to="/channels/journeys" replace />} />
@@ -131,11 +161,14 @@ export default function App() {
                 </Route>
                 <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
+                  <Route path="/admin/live-chat"               element={<ErrorBoundary><LiveChatSettings /></ErrorBoundary>} />
                   <Route path="/admin/roles"                   element={<ErrorBoundary><RolesPermissions /></ErrorBoundary>} />
                 </Route>
-                <Route element={<CapabilityRoute need="analytics.view" />}>
-                  <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
+                <Route element={<CapabilityRoute need={['dashboard.view', 'analytics.view']} />}>
+                  <Route path="/reports" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
                 </Route>
+                {/* U4: Analytics became Reports; old links (and ?tab=responses) still land in the right place. */}
+                <Route path="/analytics" element={<OldAnalyticsLink />} />
                 <Route element={<CapabilityRoute need="users.manage" />}>
                   <Route path="/users"     element={<ErrorBoundary><Users /></ErrorBoundary>} />
                 </Route>
@@ -153,15 +186,18 @@ export default function App() {
                 {/* Website content editors (U6) need content.edit. Approving is its own capability (content.approve);
                     the approvals list below opens for either, and its buttons follow can_approve / can_send_back. */}
                 <Route element={<CapabilityRoute need="content.edit" />}>
-                  <Route path="/content"                        element={<ErrorBoundary><ContentIndex /></ErrorBoundary>} />
+                  <Route path="/content"                        element={<ErrorBoundary><AllContent /></ErrorBoundary>} />
+                  <Route path="/content/policies"               element={<ErrorBoundary><Policies /></ErrorBoundary>} />
+                  <Route path="/content/hackathon"              element={<ErrorBoundary><HackathonPage /></ErrorBoundary>} />
+                  <Route path="/content/winners"                element={<ErrorBoundary><Winners /></ErrorBoundary>} />
                   <Route path="/content/home"                   element={<ErrorBoundary><HomePageEditor /></ErrorBoundary>} />
                   <Route path="/content/news"                   element={<ErrorBoundary><NewsList /></ErrorBoundary>} />
                   <Route path="/content/news/new"               element={<ErrorBoundary><PostEditor /></ErrorBoundary>} />
                   <Route path="/content/news/:id"               element={<ErrorBoundary><PostEditor /></ErrorBoundary>} />
-                  <Route path="/content/hackathons/new"         element={<ErrorBoundary><HackathonContentEditor /></ErrorBoundary>} />
-                  <Route path="/content/hackathons/:id"         element={<ErrorBoundary><HackathonContentEditor /></ErrorBoundary>} />
-                  <Route path="/content/winners/new"            element={<ErrorBoundary><WinnersManager /></ErrorBoundary>} />
-                  <Route path="/content/winners/:id"            element={<ErrorBoundary><WinnersManager /></ErrorBoundary>} />
+                  <Route path="/content/hackathons/new"         element={<ErrorBoundary><HackathonNew /></ErrorBoundary>} />
+                  <Route path="/content/hackathons/:id"         element={<ErrorBoundary><HackathonPage /></ErrorBoundary>} />
+                  <Route path="/content/winners/new"            element={<Navigate to="/content/winners" replace />} />
+                  <Route path="/content/winners/:id"            element={<Navigate to="/content/winners" replace />} />
                   <Route path="/content/leadership"             element={<Navigate to="/content/quotes" replace />} />
                   <Route path="/content/quotes"                 element={<ErrorBoundary><LeadershipQuotes /></ErrorBoundary>} />
                   <Route path="/content/partners"               element={<ErrorBoundary><Partners /></ErrorBoundary>} />
@@ -177,7 +213,7 @@ export default function App() {
                   <Route path="/content/approvals"              element={<ErrorBoundary><Approvals /></ErrorBoundary>} />
                 </Route>
 
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<NotificationsProfile />} />
 
 
 
@@ -194,4 +230,43 @@ export default function App() {
       </AuthProvider>
     </QueryClientProvider>
   )
+}
+
+/** People who only judge start on their judging list (3.17); everyone else on the dashboard. */
+function Landing() {
+  const judgeOnly = useJudgeOnly()
+  const { loading } = useAuth()
+  if (loading) return null
+  return <Navigate to={judgeOnly ? '/judging' : '/dashboard'} replace />
+}
+
+/** /evaluate/:id and the like: same id, new address. */
+function ParamRedirect({ to }) {
+  const { id } = useParams()
+  return <Navigate to={to.replace(':id', id)} replace />
+}
+
+/** Old task and assignment pages open the item in My work. */
+function WorkItemRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/assignments?item=${encodeURIComponent(id)}`} replace />
+}
+
+/** The old document page: the document now lives in its idea's Documents tab (3.16). */
+function DocumentRedirect() {
+  const { id } = useParams()
+  const doc = useQuery({ queryKey: ['documents', id], queryFn: () => documentsApi.get(id), retry: false })
+  if (doc.isLoading) return null
+  const submission = doc.data?.submission ?? doc.data?.submission_id
+  if (!submission) return <Navigate to="/submissions" replace />
+  return <Navigate to={`/submissions/${submission}?tab=documents`} replace />
+}
+
+function OldAnalyticsLink() {
+  const { search } = useLocation()
+  const params = new URLSearchParams(search)
+  if (params.get('tab') === 'responses') params.set('tab', 'answers')
+  else params.delete('tab')
+  const query = params.toString()
+  return <Navigate to={`/reports${query ? `?${query}` : ''}`} replace />
 }

@@ -59,6 +59,8 @@ class WorkflowDefinitionSerializer(serializers.ModelSerializer):
     node_count = serializers.SerializerMethodField()
     transition_count = serializers.SerializerMethodField()
     program_detail = WorkflowProgramSummarySerializer(source="program", read_only=True)
+    used_by = serializers.SerializerMethodField(help_text="R-48: [{id, title, general_ideas}]; the title is General ideas for the general programme.")
+    step_count = serializers.SerializerMethodField()
 
     class Meta:
         model = WorkflowDefinition
@@ -82,10 +84,20 @@ class WorkflowDefinitionSerializer(serializers.ModelSerializer):
             "node_count",
             "transition_count",
             "steps",
+            "used_by",
+            "step_count",
         )
 
     def get_node_count(self, obj):
         return obj.nodes.count()
+
+    def get_used_by(self, obj) -> list:
+        from apps.workflow.builder import used_by
+
+        return used_by(obj)
+
+    def get_step_count(self, obj) -> int:
+        return sum(1 for step in obj.steps.all() if step.is_active)
 
     def get_transition_count(self, obj):
         return obj.transitions.count()

@@ -13,6 +13,7 @@ import { useI18n, type StringKey } from '../../i18n'
 import { ideaMessagesService } from '../../services/ideaMessages.service'
 import { innovatorService } from '../../services/innovator.service'
 import type { IdeasFilter, IdeasList, RecentMessages } from '../../types/innovator'
+import { SUBMIT_PATH } from '../../lib/paths'
 
 const TABS: Array<{ key: IdeasFilter; label: StringKey }> = [
   { key: 'all', label: 'ideas.tabAll' },
@@ -75,7 +76,7 @@ export default function MyIdeas() {
           )}
         </div>
         {/* TODO(U2): the quick start on the home page; the old submit page until then. */}
-        <Link to="/innovate" className={buttonClasses({ variant: 'primary', size: 'md' })}>
+        <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'md' })}>
           <Plus size={18} aria-hidden />
           {t('ideas.new')}
         </Link>
@@ -98,7 +99,7 @@ export default function MyIdeas() {
             ) : results.length === 0 ? (
               tab === 'all' ? (
                 <EmptyState title={t('ideas.emptyAll')}>
-                  <Link to="/innovate" className={buttonClasses({ variant: 'primary', size: 'sm' })}>{t('ideas.new')}</Link>
+                  <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'sm' })}>{t('ideas.new')}</Link>
                 </EmptyState>
               ) : (
                 <EmptyState title={t('ideas.emptyTab')} />

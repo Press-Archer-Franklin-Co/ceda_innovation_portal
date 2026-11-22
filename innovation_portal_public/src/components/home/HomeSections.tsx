@@ -17,7 +17,7 @@ export default function HomeSections({ sections, card, onOpenVideo }: { sections
         const key = section.id ?? `${section.type}-${i}`
         switch (section.type) {
           case 'hero_banner':
-            return <HeroBanner key={key} settings={section.settings as HeroSettings} card={card} />
+            return <HeroBanner key={key} settings={section.settings as HeroSettings} card={card} photo={section.data?.photo ?? null} />
           case 'partners_strip':
             return <PartnersStrip key={key} title={section.settings.title} items={section.data?.items ?? []} />
           case 'challenges':

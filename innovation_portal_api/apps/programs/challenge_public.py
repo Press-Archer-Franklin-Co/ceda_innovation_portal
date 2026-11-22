@@ -254,6 +254,7 @@ def judging_settings(program) -> dict:
         "total": float(sum((item.weight for item in items), Decimal("0"))),
         "pass_mark": float(program.pass_mark) if program.pass_mark is not None else None,
         "reviewers_per_idea": program.reviewers_per_idea,
+        "disagreement_threshold": float(program.disagreement_threshold),
         "judge_count": program.challenge_judges.count(),
     }
 
@@ -301,7 +302,9 @@ def save_judging(program, data: dict, *, actor) -> dict:
         program.pass_mark = data["pass_mark"]
     if "reviewers_per_idea" in data:
         program.reviewers_per_idea = data["reviewers_per_idea"]
-    program.save(update_fields=["marking_criteria", "pass_mark", "reviewers_per_idea", "updated_at"])
+    if data.get("disagreement_threshold") is not None:
+        program.disagreement_threshold = data["disagreement_threshold"]
+    program.save(update_fields=["marking_criteria", "pass_mark", "reviewers_per_idea", "disagreement_threshold", "updated_at"])
     ChallengeJudgingService.sync_workflow(program, actor=actor)
     AuditService.log_action(actor=actor, action_type="challenge_judging_updated", target=program, after_state={"criteria": len(keep), "pass_mark": str(program.pass_mark)})
     return judging_settings(program)

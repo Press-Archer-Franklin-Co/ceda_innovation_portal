@@ -2,6 +2,15 @@
 // First draft: needs review by a Setswana speaker at CEDA before launch.
 import type { StringKey } from './en'
 import { innovatorTn } from './innovator'
+import { signInTn } from './signin'
+import { pagesTn } from './pages'
+import { policiesTn } from './policies'
+import { a11yTn } from './a11y'
+import { statusTn } from './status'
+import { inviteTn } from './invite'
+import { accountTn } from './account'
+import { challengeEntryTn } from './challengeEntry'
+import { liveChatTn } from './livechat'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -77,6 +86,9 @@ const tn: Record<StringKey, string> = {
   'home.check1': 'Ga go duelelwe', // TODO tn-review
   'home.check2': 'Latela mo webosaeteng, WhatsApp kgotsa USSD', // TODO tn-review
   'home.check3': 'Motlhankedi wa CEDA o a araba', // TODO tn-review
+  'submit.headline': 'Abelana kakanyo ya gago le CEDA', // TODO tn-review
+  'submit.highlight': 'kakanyo ya gago', // TODO tn-review
+  'submit.text': 'Re bolelele ka yona mo metsotsong e mebedi. Ga o tlhoke akhaonto go simolola.', // TODO tn-review
   'qs.title': 'Simolola kakanyo ya gago ka metsotso e le 2', // TODO tn-review
   'qs.step': 'Kgato {n} go 2', // TODO tn-review
   'qs.intro': 'Ditlhaloso tsa motheo fela jaanong. O ka oketsa dintlha, ditshwantsho le dikwalo morago.', // TODO tn-review
@@ -266,7 +278,7 @@ const tn: Record<StringKey, string> = {
   'sent.trackTitle': 'E latele ka tsela e o e ratang', // TODO tn-review
   'sent.trackBody': 'Akhaonto ya gago, dikitsiso tsa WhatsApp, kgotsa leletsa {ussd} o bo o tsenya nomore ya gago ya tshupetso.', // TODO tn-review
   'sent.trackBodyNoUssd': 'Akhaonto ya gago kgotsa dikitsiso tsa WhatsApp, ka nomore ya gago ya tshupetso.', // TODO tn-review
-  'sent.trackCta': 'Bula letlapa la me', // TODO tn-review
+  'sent.trackCta': 'Latela kakanyo e', // TODO tn-review
   'sent.signInCta': 'Tsena go latela', // TODO tn-review
   'sent.moreTitle': 'O na le kakanyo e nngwe?', // TODO tn-review
   'sent.moreBody': 'Tlhola dikgwetlho tse di bulegileng. Dingwe di tla le dithuso tsa madi le kaelo.', // TODO tn-review
@@ -421,6 +433,15 @@ const tn: Record<StringKey, string> = {
   'tabs.news': 'Dikgang',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorTn,
+  ...signInTn,
+  ...pagesTn,
+  ...policiesTn,
+  ...a11yTn,
+  ...statusTn,
+  ...inviteTn,
+  ...accountTn,
+  ...challengeEntryTn,
+  ...liveChatTn,
 }
 
 export default tn

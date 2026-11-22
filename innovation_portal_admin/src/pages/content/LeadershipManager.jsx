@@ -26,8 +26,7 @@ function CardPreview({ card, photoPreview }) {
   const photo = photoPreview || card?.photo_url || null
   return (
     <div
-      className="rounded-2xl overflow-hidden p-6 flex flex-col sm:flex-row items-center gap-6"
-      style={{ background: 'radial-gradient(ellipse at 72% 50%, #6B4A3E 0%, #5A3C32 52%, #2E1E18 100%)' }}
+      className="rounded-2xl overflow-hidden p-6 flex flex-col sm:flex-row items-center gap-6 bg-banner"
     >
       <div className="shrink-0">
         <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/20 shadow-lg bg-white/10 flex items-center justify-center">
