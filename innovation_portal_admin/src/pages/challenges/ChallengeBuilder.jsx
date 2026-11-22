@@ -12,16 +12,23 @@ import Modal from '../../components/ui/Modal'
 import Tag from '../../components/ui/Tag'
 import Avatar from '../../components/ui/Avatar'
 import ErrorState from '../../components/ui/ErrorState'
+import EmptyState from '../../components/ui/EmptyState'
+import StatusPill from '../../components/ui/StatusPill'
+import { Checkbox, RadioGroup, Toggle } from '../../components/ui/Choice'
 import Skeleton from '../../components/ui/Skeleton'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import JudgingEditor from '../../components/challenges/JudgingEditor'
 import CoverPicker from '../../components/challenges/CoverPicker'
+import EligibilityRules from '../../components/challenges/EligibilityRules'
+import useEligibilityDraft from '../../components/challenges/useEligibilityDraft'
+import StageList from '../../components/challenges/StageList'
 import { useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
 import { client } from '../../lib/api/client'
 import { programs as programsApi } from '../../lib/api/endpoints'
-import { useProgram, useProgramTypes } from '../../lib/queries/programs'
+import { useProgram, useProgramTypes, useTermsAndConditionsList } from '../../lib/queries/programs'
+import { useActivateWorkflowDef, useWorkflowDefinitions, useWorkflowSteps } from '../../lib/queries/workflowBuilder'
 import {
   formKeys, useAttachProgramForm, useForms, useProgramJudging, useProgramSetupStatus, useSaveProgramJudging,
 } from '../../lib/queries/forms'
@@ -92,8 +99,8 @@ function payloadFor(step, f) {
   return {}
 }
 
-/** 3.6: the challenge builder in six steps; each step saves on its own. */
-export default function ChallengeBuilder() {
+/** 3.6: the new-challenge wizard in six steps; each step saves on its own. */
+function ChallengeWizard() {
   const { id } = useParams()
   const t = useT()
   const navigate = useNavigate()
@@ -103,6 +110,7 @@ export default function ChallengeBuilder() {
   const step = STEPS.includes(params.get('step')) ? params.get('step') : 'details'
   const program = useProgram(id)
   const setup = useProgramSetupStatus(id)
+  const eligibility = useEligibilityDraft(id)
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -167,13 +175,13 @@ export default function ChallengeBuilder() {
         title={id ? program.data?.title : t('cb.titleNew')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            {id && <Link to={`/programs/${id}/settings`} className="text-[13px] text-primary hover:underline">{t('cb.moreSettings')}</Link>}
+            {id && <Link to={`/programs/${id}/edit?section=basics`} className="text-[13px] text-primary hover:underline">{t('cb.moreSettings')}</Link>}
             {formStep && <Button variant="secondary" size="sm" onClick={() => saveStep()} loading={saving} disabled={!form.title.trim() || !form.program_type_id}>{t('cb.saveDraft')}</Button>}
           </div>
         }
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
         <nav aria-label={t('steps.label')}>
           <ol className="flex flex-col gap-1">
             {STEPS.map((key, i) => {
@@ -234,6 +242,396 @@ export default function ChallengeBuilder() {
     </div>
   )
 }
+
+/**
+ * Editing a challenge: 3.6b / 3.6c (Figma 135:1197, 135:1555). One builder with sections Basics, Eligibility,
+ * Stages and forms, Judging, Workflow, Publish; dots show what is done. Creating a challenge keeps the 3.6 wizard
+ * (?step=). The old "More settings" page (ProgramEditor) is folded in: its dates go to Basics, who may enter and
+ * team rules to Eligibility, status and the public switch to Publish.
+ */
+export default function ChallengeBuilder() {
+  const { id } = useParams()
+  const [params] = useSearchParams()
+  if (id && !params.get('step')) return <EditChallenge id={id} />
+  return <ChallengeWizard />
+}
+
+const SECTIONS = ['basics', 'eligibility', 'stages', 'judging', 'workflow', 'publish']
+const EXTRA_DATES = ['screening_start', 'screening_end', 'judging_start', 'judging_end', 'event_date']
+const AUDIENCES = ['both', 'public', 'internal']
+
+function editForm(p) {
+  return {
+    ...fromProgram(p),
+    description: p?.description ?? '',
+    ...Object.fromEntries(EXTRA_DATES.map((k) => [k, toInput(p?.[k])])),
+    audience: p?.audience ?? 'both',
+    max_entries_per_person: p?.max_entries_per_person == null ? '' : String(p.max_entries_per_person),
+    allow_individual_submission: p ? !!p.allow_individual_submission : true,
+    allow_team_submission: !!p?.allow_team_submission,
+    max_team_size: String(p?.max_team_size ?? 5),
+    terms_and_conditions_id: p?.terms_and_conditions?.id ?? '',
+  }
+}
+
+function sectionPayload(section, f) {
+  if (section === 'basics') {
+    const details = payloadFor('details', f)
+    const support = payloadFor('support', f)
+    return {
+      ...details,
+      ...payloadFor('dates', f),
+      ...support,
+      translations: { tn: { ...details.translations.tn, ...support.translations.tn } },
+      description: f.description,
+      ...Object.fromEntries(EXTRA_DATES.map((k) => [k, toIso(f[k])])),
+    }
+  }
+  if (section === 'eligibility') {
+    return {
+      audience: f.audience,
+      max_entries_per_person: f.max_entries_per_person === '' ? null : Number(f.max_entries_per_person),
+      allow_individual_submission: f.allow_individual_submission,
+      allow_team_submission: f.allow_team_submission,
+      max_team_size: Number(f.max_team_size || 1),
+      terms_and_conditions_id: f.terms_and_conditions_id || null,
+    }
+  }
+  return null
+}
+
+function EditChallenge({ id }) {
+  const t = useT()
+  const toast = useToast()
+  const qc = useQueryClient()
+  const [params, setParams] = useSearchParams()
+  const section = SECTIONS.includes(params.get('section')) ? params.get('section') : 'basics'
+  const program = useProgram(id)
+  const setup = useProgramSetupStatus(id)
+  const eligibility = useEligibilityDraft(id)
+  const [form, setForm] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => { if (program.data) setForm(editForm(program.data)) }, [program.data])
+  useEffect(() => { document.title = `${program.data?.title ?? ''} · CEDA Innovation` }, [program.data])
+
+  const done = useMemo(() => Object.fromEntries((setup.data?.steps ?? []).map((s) => [s.step, s.complete])), [setup.data])
+  const set = (patch) => setForm((prev) => ({ ...prev, ...patch }))
+  const goTo = (key) => { setError(''); setParams({ section: key }, { replace: true }) }
+
+  async function save() {
+    setError('')
+    if (section === 'basics' && form.opening_date && form.closing_date && new Date(form.closing_date) <= new Date(form.opening_date)) {
+      setError(t('cb.datesError'))
+      return
+    }
+    setSaving(true)
+    try {
+      await programsApi.update(id, sectionPayload(section, form))
+      if (section === 'eligibility') await eligibility.save()
+      qc.invalidateQueries({ queryKey: ['programs', id] })
+      qc.invalidateQueries({ queryKey: formKeys.setupStatus(id) })
+      toast.show({ tone: 'success', title: t('cb.saved'), duration: 2500 })
+    } catch (err) {
+      const data = err?.data?.errors ?? err?.data ?? {}
+      const first = typeof data === 'object' ? Object.values(data).flat()[0] : null
+      setError(typeof first === 'string' ? first : err?.message || t('cb.saveError'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (program.isError) return <ErrorState title={t('cb.loadError')} message={program.error?.message} onRetry={program.refetch} framed />
+  if (!form) return <Skeleton className="h-[520px] rounded-card" />
+
+  const p = program.data
+  const workflow = p.active_workflow_definition
+  const doneOf = {
+    basics: Boolean(done.details && done.dates),
+    eligibility: Boolean(p.audience),
+    stages: Boolean(workflow),
+    judging: Boolean(done.judging),
+    workflow: Boolean(workflow),
+    publish: p.status === 'published',
+  }
+  const savable = section === 'basics' || section === 'eligibility'
+  const publicUrl = p.slug ? `${window.location.origin}/challenges/${p.slug}` : null
+
+  return (
+    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
+      <PageHeader
+        back={
+          <span className="text-[12px] text-muted">
+            <Link to="/programs" className="hover:text-text hover:underline">{t('cbs.crumb')}</Link> / {p.title}
+          </span>
+        }
+        title={p.title}
+        subtitle={t('cbs.subtitle')}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            {publicUrl && <a href={publicUrl} target="_blank" rel="noreferrer" className="text-[13px] font-bold text-primary hover:underline">{t('cbs.preview')}</a>}
+            <Link to={`/programs/${id}`} className="text-[13px] font-bold text-primary hover:underline">{t('cbs.status')}</Link>
+            {savable && <Button onClick={save} loading={saving} disabled={!form.title.trim() || !form.program_type_id}>{t('common.save')}</Button>}
+          </div>
+        }
+      />
+
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
+        <nav aria-label={t('cbs.sections')} className="min-w-0">
+          <ul className="relative flex gap-1 overflow-x-auto lg:flex-col">
+            {SECTIONS.map((key) => {
+              const current = key === section
+              return (
+                <li key={key} className="shrink-0">
+                  <button
+                    type="button"
+                    aria-current={current ? 'page' : undefined}
+                    onClick={() => goTo(key)}
+                    className={cn(
+                      'flex w-full items-center gap-2.5 rounded-control px-3 py-2.5 text-left text-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                      current ? 'bg-primary-soft font-bold text-primary' : 'text-text hover:bg-surface2',
+                    )}
+                  >
+                    <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', current ? 'bg-primary' : doneOf[key] ? 'bg-success' : 'bg-border')} />
+                    {t(`cbs.section.${key}`)}
+                    <span className="sr-only">{doneOf[key] ? t('cb.stepDone') : t('cb.stepTodo')}</span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </nav>
+
+        <div className="flex min-w-0 flex-col gap-[14px]">
+          {error && <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</p>}
+          {section === 'basics' && (
+            <>
+              <Panel title={t('cb.step.details')}><DetailsStep form={form} set={set} /><div className="mt-4"><Textarea label={t('cbs.description')} hint={t('cbs.descriptionHint')} optional rows={4} value={form.description} onChange={(e) => set({ description: e.target.value })} /></div></Panel>
+              <Panel title={t('cb.step.dates')}>
+                <DatesStep form={form} set={set} />
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  {EXTRA_DATES.map((k) => <Input key={k} type="datetime-local" label={t(`cbs.date.${k}`)} optional value={form[k]} onChange={(e) => set({ [k]: e.target.value })} />)}
+                </div>
+              </Panel>
+              <Panel title={t('cb.step.support')}><SupportStep form={form} set={set} /></Panel>
+            </>
+          )}
+          {section === 'eligibility' && <EligibilitySection form={form} set={set} eligibility={eligibility} />}
+          {section === 'stages' && <StagesSection program={p} onGoWorkflow={() => goTo('workflow')} />}
+          {section === 'judging' && (
+            <>
+              <Panel><JudgingStep programId={id} onDone={() => goTo('workflow')} /></Panel>
+              <Panel><FormStep program={p} programId={id} /></Panel>
+            </>
+          )}
+          {section === 'workflow' && <WorkflowSection program={p} />}
+          {section === 'publish' && <PublishSection program={p} programId={id} done={done} />}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Panel({ title, children, className }) {
+  return (
+    <section className={cn('min-w-0 rounded-card border border-border bg-surface p-[14px] 2xl:p-[22px]', className)}>
+      {title && <h2 className="mb-4 text-[16px] font-bold text-text">{title}</h2>}
+      {children}
+    </section>
+  )
+}
+
+/** 3.6b: rule blocks, documents and the plain-words sentence (R-48), then audience, entries, teams and terms. */
+function EligibilitySection({ form, set, eligibility }) {
+  const t = useT()
+  const terms = useTermsAndConditionsList()
+  const termsList = list(terms.data)
+  return (
+    <>
+      <EligibilityRules draft={eligibility} />
+      <Panel title={t('cbs.entriesPanel')}>
+        <div className="flex flex-col gap-4">
+          <RadioGroup
+            name="audience"
+            legend={t('cbs.audience')}
+            options={AUDIENCES.map((a) => ({ value: a, label: t(`cbs.audience.${a}`), description: t(`cbs.audienceHint.${a}`) }))}
+            value={form.audience}
+            onChange={(v) => set({ audience: v })}
+          />
+          <Input label={t('cbs.entriesPerPerson')} hint={t('cbs.entriesPerPersonHint')} type="number" min="1" optional value={form.max_entries_per_person} onChange={(e) => set({ max_entries_per_person: e.target.value })} />
+          <div className="flex flex-col gap-2">
+            <Checkbox label={t('cbs.individuals')} checked={form.allow_individual_submission} onChange={(e) => set({ allow_individual_submission: e.target.checked })} />
+            <Checkbox label={t('cbs.teams')} checked={form.allow_team_submission} onChange={(e) => set({ allow_team_submission: e.target.checked })} />
+          </div>
+          {form.allow_team_submission && <Input label={t('cbs.teamSize')} type="number" min="2" value={form.max_team_size} onChange={(e) => set({ max_team_size: e.target.value })} />}
+        </div>
+      </Panel>
+      <Panel title={t('cbs.terms')}>
+        <div className="flex flex-col gap-3">
+          <Select
+            label={t('cbs.termsPick')}
+            optional
+            options={[{ value: '', label: t('cbs.noTerms') }, ...termsList.map((x) => ({ value: x.id, label: x.title }))]}
+            value={form.terms_and_conditions_id}
+            onChange={(v) => set({ terms_and_conditions_id: v })}
+          />
+          <Link to="/admin/terms" className="self-start text-[13px] font-bold text-primary hover:underline">{t('cbs.manageTerms')}</Link>
+        </div>
+      </Panel>
+    </>
+  )
+}
+
+/** 3.6c: each stage's form, dates and rules (StageList, R-48). Until the API has R-48, the workflow's steps alone. */
+function StagesSection({ program, onGoWorkflow }) {
+  return <StageList program={program} onGoWorkflow={onGoWorkflow} fallback={<StepsOnly program={program} onGoWorkflow={onGoWorkflow} />} />
+}
+
+function StepsOnly({ program, onGoWorkflow }) {
+  const t = useT()
+  const workflow = program.active_workflow_definition
+  const steps = useWorkflowSteps(workflow?.id)
+  const items = sortByOrder(list(steps.data))
+  if (!workflow) return <Panel><EmptyState compact title={t('cbs.noWorkflow')} message={t('cbs.noWorkflowBody')} action={<Button variant="secondary" size="sm" onClick={onGoWorkflow}>{t('cbs.chooseWorkflow')}</Button>} /></Panel>
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-card bg-info-soft px-4 py-3 text-[14px] text-text">
+        <span>{t('cbs.follows', { name: workflow.name, n: items.length })}</span>
+        <Link to={`/admin/workflows/${workflow.id}/builder`} className="font-bold text-primary hover:underline">{t('cbs.openWorkflow')}</Link>
+      </div>
+      {steps.isLoading ? (
+        <Skeleton className="h-40 rounded-card" />
+      ) : (
+        <ol className="flex flex-col gap-3">
+          {items.map((s, i) => (
+            <li key={s.id} className="rounded-card border border-border bg-surface p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-banner text-[12px] font-bold text-on-banner">{i + 1}</span>
+                <span className="text-[15px] font-bold text-text">{s.name}</span>
+                <Tag className="ml-auto">{t('cbs.noForm')}</Tag>
+              </div>
+              <p className="mt-2 text-[13px] text-muted">{s.advance_automatically ? t('cbs.movesAuto') : t('cbs.movesOfficer')}</p>
+            </li>
+          ))}
+        </ol>
+      )}
+      <p className="rounded-control bg-surface2 px-3 py-2 text-[13px] text-muted">{t('cbs.stagesSoon')}</p>
+    </>
+  )
+}
+
+/** Which workflow this challenge follows (3.21a, 3.21). */
+function WorkflowSection({ program }) {
+  const t = useT()
+  const toast = useToast()
+  const qc = useQueryClient()
+  const defs = useWorkflowDefinitions({ program: program.id })
+  const activate = useActivateWorkflowDef()
+  const current = program.active_workflow_definition
+  const others = list(defs.data).filter((w) => w.id !== current?.id && w.status !== 'archived')
+
+  async function use(wf) {
+    try {
+      await activate.mutateAsync(wf.id)
+      qc.invalidateQueries({ queryKey: ['programs', program.id] })
+      toast.show({ tone: 'success', title: t('wfl.activated', { name: wf.name }) })
+    } catch (err) {
+      toast.show({ tone: 'error', title: t('common.somethingWrong'), body: err?.message })
+    }
+  }
+
+  return (
+    <>
+      <Panel title={t('cbs.currentWorkflow')}>
+        {current ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-[15px] font-bold text-text">{current.name}</span>
+            <span className="flex gap-3 text-[13px] font-bold">
+              <Link to={`/admin/workflows/${current.id}/builder`} className="text-primary hover:underline">{t('cbs.openWorkflow')}</Link>
+              <Link to={`/admin/workflows/${current.id}/instances`} className="text-primary hover:underline">{t('wfl.seeIdeas')}</Link>
+            </span>
+          </div>
+        ) : (
+          <p className="text-[14px] text-muted">{t('cbs.noWorkflowBody')}</p>
+        )}
+      </Panel>
+      <Panel title={t('cbs.otherWorkflows')}>
+        {defs.isLoading ? (
+          <Skeleton className="h-16" />
+        ) : others.length === 0 ? (
+          <p className="text-[14px] text-muted">{t('cbs.noOtherWorkflows')}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border">
+            {others.map((wf) => (
+              <li key={wf.id} className="flex flex-wrap items-center gap-3 py-2.5">
+                <span className="min-w-0 flex-1 text-[14px] text-text">{wf.name}</span>
+                <StatusPill status={wf.status} />
+                {wf.status === 'published' && <Button size="sm" variant="secondary" onClick={() => use(wf)} loading={activate.isPending}>{t('cbs.useThis')}</Button>}
+                <Link to={`/admin/workflows/${wf.id}/builder`} className="text-[13px] font-bold text-primary hover:underline">{t('wfl.open')}</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <Link to="/admin/workflows" className="mt-3 inline-block text-[13px] font-bold text-primary hover:underline">{t('cbs.allWorkflows')}</Link>
+      </Panel>
+    </>
+  )
+}
+
+/** Panel members and going live (3.6 step 6), plus closing, archiving and the public switch. */
+function PublishSection({ program, programId, done }) {
+  const t = useT()
+  const toast = useToast()
+  const confirm = useConfirm()
+  const qc = useQueryClient()
+  const [busy, setBusy] = useState(null)
+
+  async function act(key, fn, success) {
+    setBusy(key)
+    try {
+      await fn()
+      qc.invalidateQueries({ queryKey: ['programs', programId] })
+      toast.show({ tone: 'success', title: success })
+    } catch (err) {
+      toast.show({ tone: 'error', title: t('common.somethingWrong'), body: err?.message })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  async function close() {
+    const ok = await confirm({ title: t('cbs.closeTitle'), body: t('cbs.closeBody'), confirmLabel: t('cbs.close') })
+    if (ok) act('close', () => programsApi.close(programId), t('cbs.closed'))
+  }
+
+  return (
+    <>
+      <Panel><PanelStep program={program} programId={programId} done={done} /></Panel>
+      <Panel title={t('cbs.statusTitle')}>
+        <div className="flex flex-col gap-4">
+          <p className="flex items-center gap-2 text-[14px] text-text">{t('cbs.statusNow')} <StatusPill status={program.status} /></p>
+          <Toggle
+            label={t('cbs.isPublic')}
+            description={t('cbs.isPublicHint')}
+            checked={!!program.is_public}
+            disabled={busy === 'public'}
+            onChange={(on) => act('public', () => programsApi.update(programId, { is_public: on }), t('cb.saved'))}
+          />
+          <div className="flex flex-wrap gap-2">
+            {program.status === 'published' && <Button variant="secondary" onClick={close} loading={busy === 'close'}>{t('cbs.close')}</Button>}
+            {program.status === 'closed' && <Button variant="secondary" onClick={() => act('reopen', () => programsApi.setStatus(programId, { status: 'published' }), t('cbs.reopened'))} loading={busy === 'reopen'}>{t('cbs.reopen')}</Button>}
+            {program.status !== 'archived' && program.status !== 'published' && (
+              <Button variant="ghost" onClick={() => act('archive', () => programsApi.setStatus(programId, { status: 'archived' }), t('cbs.archived'))} loading={busy === 'archive'}>{t('cbs.archive')}</Button>
+            )}
+          </div>
+        </div>
+      </Panel>
+    </>
+  )
+}
+
+const sortByOrder = (items) => [...items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
 
 function Bilingual({ label, hint, en, tn, onEn, onTn, multiline }) {
   const t = useT()

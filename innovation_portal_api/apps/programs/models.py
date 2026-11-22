@@ -115,6 +115,7 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     pass_mark = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="0 to 100 on the weighted score. Copied to the judging stage.")
     reviewers_per_idea = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Judges who mark each entry. Default: every judge.")
     share_scores_with_entrants = models.BooleanField(default=False, help_text="U10: after results are out, entrants see their own score summary (2.11).")
+    show_names_on_results = models.BooleanField(default=True, help_text="1.10: the public results page names winners and shortlisted entries. Off: idea titles only.")
     disagreement_threshold = models.DecimalField(max_digits=3, decimal_places=1, default=Decimal("2"), help_text="R-42: a criterion is flagged when judges' scores differ by more than this (1 to 5 scale).")
 
     TRANSLATABLE = ("summary", "problem_statement", "support_headline", "who_can_enter", "where")

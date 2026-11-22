@@ -6,6 +6,7 @@ import { dashboardTn } from './dashboard'
 import { u7Tn } from './u7'
 import { formsTn } from './forms'
 import { ideasTn } from './ideas'
+import { programmesTn } from './programmes'
 import { conversationsTn } from './conversations'
 import { reviewTn } from './review'
 import { contentBTn } from './contentB'
@@ -145,6 +146,7 @@ const tn = {
   'crop.taintedError': 'Setshwantsho se ga se kgone go segelwa fano. Tsenya faele ya ntlha gape mme o e sege pele o boloka.', // TODO tn-review
   ...formsTn,
   ...ideasTn,
+  ...programmesTn,
   ...conversationsTn,
   ...reviewTn,
   ...contentBTn,
