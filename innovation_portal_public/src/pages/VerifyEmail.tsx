@@ -23,7 +23,6 @@ export default function VerifyEmail() {
   const { refreshProfile } = useAuth()
 
   const [status, setStatus] = useState<Status>(token ? 'loading' : 'no-token')
-  const [error, setError] = useState('')
   const [countdown, setCountdown] = useState(5)
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState<'' | 'ok' | 'failed'>('')
@@ -43,10 +42,7 @@ export default function VerifyEmail() {
         localStorage.removeItem('ceda_post_verify_redirect')
         setStatus('success')
       })
-      .catch((err) => {
-        setError(parseApiError(err, ''))
-        setStatus('error')
-      })
+      .catch(() => setStatus('error'))
   }, [token, refreshProfile])
 
   useEffect(() => {
@@ -100,7 +96,7 @@ export default function VerifyEmail() {
         </AuthState>
       )}
       {status === 'error' && (
-        <AuthState tone="error" title={t('authState.verifyFailed')} body={error || t('authState.verifyFailedBody')}>
+        <AuthState tone="error" title={t('authState.verifyFailed')} body={t('authState.verifyFailedBody')}>
           {newLink}
         </AuthState>
       )}

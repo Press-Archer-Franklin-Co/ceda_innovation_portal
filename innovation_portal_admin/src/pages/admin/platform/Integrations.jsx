@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bot, KeyRound, Megaphone, MessageCircle, ShieldCheck, Smartphone } from 'lucide-react'
+import { Bot, Megaphone, MessageCircle, ShieldCheck, Smartphone } from 'lucide-react'
 import PageHeader from '../../../components/ui/PageHeader'
 import Modal from '../../../components/ui/Modal'
 import Button from '../../../components/ui/Button'
@@ -16,6 +16,7 @@ import { TestResult } from '../../../components/channels/ConnectionCard'
 import { useConfirm } from '../../../components/ui/confirm'
 import { useToast } from '../../../components/ui/toast'
 import { useT } from '../../../i18n/context'
+import { cn } from '../../../lib/cn'
 import {
   useActivateIntegration, useDeactivateIntegration, useIntegrations, useProviders, useSaveIntegration, useStartSsoTrial, useTestIntegration,
 } from '../../../lib/queries/platform'
@@ -36,6 +37,8 @@ const SERVICES = [
   { kind: 'sso', icon: ShieldCheck },
 ]
 const GUIDE = { sms: 'integrations.sms', sso: 'integrations.sso' }
+// Phone (frame 123:1471): a compact row; the whole row is the Set up or Manage control.
+const ROW_TAP = 'max-sm:absolute max-sm:inset-0 max-sm:rounded-card max-sm:text-[0px]'
 const STATE_TONE = { not_set_up: 'neutral', testing: 'amber', active: 'green' }
 const STEP_KEYS = ['provider', 'key', 'test', 'activate']
 const rowsOf = (data) => (Array.isArray(data) ? data : data?.results ?? [])
@@ -193,11 +196,11 @@ function ServiceCard({ service, info, connections, hasProviders, onOpen }) {
   const active = connections.find((c) => c.is_active)
   const label = state === 'not_set_up' ? t('integ.setUp') : t('integ.manage')
   let action
-  if (service.elsewhere) action = <Link to={service.elsewhere} className="text-[13px] font-bold text-primary hover:underline">{label}</Link>
-  else if (hasProviders) action = <button ref={ref} type="button" data-guide={GUIDE[service.kind]} onClick={() => onOpen(service.kind, active ?? connections[0] ?? null, ref)} className="text-[13px] font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{label}</button>
-  else action = <span className="text-[12px] text-muted">{t('integ.notHere')}</span>
+  if (service.elsewhere) action = <Link to={service.elsewhere} aria-label={`${label}: ${name}`} className={cn('text-[13px] font-bold text-primary hover:underline', ROW_TAP)}>{label}</Link>
+  else if (hasProviders) action = <button ref={ref} type="button" data-guide={GUIDE[service.kind]} aria-label={`${label}: ${name}`} onClick={() => onOpen(service.kind, active ?? connections[0] ?? null, ref)} className={cn('text-[13px] font-bold text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', ROW_TAP)}>{label}</button>
+  else action = <span className="hidden text-[12px] text-muted sm:inline">{t('integ.notHere')}</span>
   return (
-    <li className="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">
+    <li className="relative flex flex-col gap-2 rounded-card border border-border bg-surface p-3 sm:p-4">
       <div className="flex items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2.5">
           <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-surface2 text-text"><Icon size={16} /></span>
@@ -205,10 +208,10 @@ function ServiceCard({ service, info, connections, hasProviders, onOpen }) {
         </span>
         <Tag tone={STATE_TONE[state]}>{t(`integ.state.${state}`)}</Tag>
       </div>
-      <p className="text-[12px] text-muted">{t(`integ.svc.${service.kind}.body`)}</p>
-      {service.elsewhere && <p className="text-[12px] text-muted">{t('integ.inChannels')}</p>}
-      {active?.activated_at && <p className="text-[12px] text-muted">{t('integ.active', { when: when(active.activated_at) })}</p>}
-      <div className="mt-auto pt-1">{action}</div>
+      <p className="hidden text-[12px] text-muted sm:block">{t(`integ.svc.${service.kind}.body`)}</p>
+      {service.elsewhere && <p className="hidden text-[12px] text-muted sm:block">{t('integ.inChannels')}</p>}
+      {active?.activated_at && <p className="hidden text-[12px] text-muted sm:block">{t('integ.active', { when: when(active.activated_at) })}</p>}
+      <div className="mt-auto sm:pt-1">{action}</div>
     </li>
   )
 }
@@ -247,7 +250,7 @@ export default function Integrations() {
       <PageHeader
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / <Link to="/admin/platform" className="hover:underline">{t('ps.crumb')}</Link> / {t('integ.crumb')}</span>}
         title={t('integ.title')}
-        subtitle={<span className="inline-flex items-center gap-1.5"><KeyRound size={13} aria-hidden className="shrink-0" />{t('integ.subtitle')}</span>}
+        subtitle={t('integ.subtitle')}
       />
       {body}
       {panel && <SetUpPanel key={`${panel.kind}-${panel.connection?.id ?? 'new'}`} kind={panel.kind} connection={panel.connection} triggerRef={panel.ref} onClose={() => setPanel(null)} />}

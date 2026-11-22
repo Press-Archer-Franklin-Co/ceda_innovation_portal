@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Info, Lock, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Info, Lock, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -62,6 +62,9 @@ function RoleDialog({ role, onClose }) {
     </Modal>
   )
 }
+
+// The frame's area names where they differ from the older matrix.
+const GROUP_LABEL = { website: 'roles.u9.group.website', administration: 'roles.u9.group.admin' }
 
 /** 3.24 ① roles down the side with their people; ② what the chosen role can do, in plain words. */
 function RolesView() {
@@ -187,7 +190,7 @@ function RolesView() {
       </div>
       {groups.map((g) => (
         <div key={g.key} role="group" aria-labelledby={`grp-${g.key}`}>
-          <p id={`grp-${g.key}`} className="border-t border-border px-3 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted sm:px-4">{t(`roles.group.${g.key}`)}</p>
+          <p id={`grp-${g.key}`} className="border-t border-border px-3 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted sm:px-4">{t(GROUP_LABEL[g.key] ?? `roles.group.${g.key}`)}</p>
           {g.rows.map((row) => {
             const rowLabel = row.label ? pickText(row.label, lang) : t(`roles.row.${row.key}`)
             return (
@@ -201,10 +204,14 @@ function RolesView() {
                   const changed = on !== saved.includes(key)
                   return (
                     <span key={col} className={cn('flex justify-center rounded py-0.5', changed && 'bg-warning-soft')} title={reason ? t('roles.locked', { reason }) : undefined}>
-                      <input type="checkbox" className="h-4 w-4 accent-primary disabled:cursor-not-allowed" checked={on}
-                        disabled={!editable || reason != null}
-                        aria-label={t('roles.cell', { role: pickText(selected.name, lang), capability: `${rowLabel}: ${t(`roles.u9.${col}`)}` })}
-                        onChange={(e) => setDraft(toggleCell({ [id]: held }, id, key, e.target.checked)[id])} />
+                      {/* Drawn by hand so a read-only tick keeps the frame's red; a disabled native box turns grey. */}
+                      <span className="relative flex h-4 w-4">
+                        <input type="checkbox" className="peer h-4 w-4 cursor-pointer appearance-none rounded-[4px] border border-border bg-surface checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed" checked={on}
+                          disabled={!editable || reason != null}
+                          aria-label={t('roles.cell', { role: pickText(selected.name, lang), capability: `${rowLabel}: ${t(`roles.u9.${col}`)}` })}
+                          onChange={(e) => setDraft(toggleCell({ [id]: held }, id, key, e.target.checked)[id])} />
+                        <Check size={12} strokeWidth={3} aria-hidden className="pointer-events-none absolute left-0.5 top-0.5 hidden text-white peer-checked:block" />
+                      </span>
                       {reason != null && editable && <Lock size={10} aria-hidden className="-ml-0.5 -mt-1 text-muted" />}
                     </span>
                   )
@@ -355,7 +362,7 @@ export default function RolesPermissions() {
     <div>
       <PageHeader
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('roles.title')}</span>}
-        title={t('roles.title')}
+        title={t('roles.u9.title')}
         subtitle={t('roles.u9.subtitle')}
         actions={wide && tab === 'roles' ? <Button data-guide="roles.create" onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
       />

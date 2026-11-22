@@ -1,6 +1,9 @@
 // S2 admin screens: Roles & permissions, Website approvals. Spread into en.js and tn.js.
 
 export const rolesEn = {
+  'roles.u9.title': 'Roles and permissions',
+  'roles.u9.group.website': 'Website content',
+  'roles.u9.group.admin': 'Admin',
   'roles.u9.subtitle': 'What each role can see and do. Changes apply the next time people sign in.',
   'roles.u9.whatTheyCanDo': '{name} · what they can do',
   'roles.u9.view': 'View',
@@ -127,6 +130,9 @@ export const rolesEn = {
 }
 
 export const rolesTn = {
+  'roles.u9.title': 'Maemo le ditetla',
+  'roles.u9.group.website': 'Diteng tsa webosaete',
+  'roles.u9.group.admin': 'Tsamaiso',
   'roles.u9.subtitle': 'Se maemo mangwe le mangwe a ka se bonang le go se dira. Diphetogo di dira fa batho ba tsena gape.',
   'roles.u9.whatTheyCanDo': '{name} · se ba ka se dirang',
   'roles.u9.view': 'Bona',

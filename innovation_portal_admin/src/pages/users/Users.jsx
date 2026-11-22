@@ -11,10 +11,12 @@ import { SelectControl } from '../../components/ui/Select'
 import Tag from '../../components/ui/Tag'
 import Avatar from '../../components/ui/Avatar'
 import Field from '../../components/ui/Field'
+import Pagination from '../../components/ui/Pagination'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
 import { cn } from '../../lib/cn'
+import { useMediaQuery } from '../../lib/useMediaQuery'
 import { EMPTY_CELL } from '../../lib/format'
 import { pickText } from '../../lib/admin/roles'
 import { listParams, userStatus, usersApi } from '../../lib/api/users'
@@ -138,12 +140,14 @@ export default function Users() {
   const [status, setStatus] = useState('active')
   const [page, setPage] = useState(1)
   const [dialog, setDialog] = useState(null)
+  const wide = useMediaQuery('(min-width: 768px)')
   const roles = useStaffRoles()
+  const allRoles = useAdminRoles()
 
   const params = listParams({ search: search.trim(), role, status, page, pageSize: PAGE_SIZE })
   const list = useQuery({ queryKey: ['users', params], queryFn: () => usersApi.list(params), placeholderData: (prev) => prev })
   const rows = rowsOf(list.data)
-  const roleName = (code) => pickText(roles.find((r) => r.code === code)?.name, lang) || code.replace(/_/g, ' ')
+  const roleName = (code) => pickText(rowsOf(allRoles.data).find((r) => r.code === code)?.name, lang) || t('users.otherRole')
 
   const act = useMutation({
     mutationFn: ({ fn }) => fn(),
@@ -212,24 +216,55 @@ export default function Users() {
   ]
   const roleOptions = roles.map((r) => ({ value: r.code, label: pickText(r.name, lang) }))
 
-  return (
-    <div>
-      <PageHeader
-        back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('users.crumb')}</span>}
-        title={t('users.title')}
-        subtitle={t('users.subtitle')}
-        actions={<Button ref={inviteRef} className="max-sm:w-full" onClick={() => setDialog({ mode: 'invite' })}>{t('users.invite')}</Button>}
-      />
-      <DataTable
-        caption={t('users.title')}
-        toolbar={(
+  const inviteButton = <Button ref={inviteRef} block={!wide} onClick={() => setDialog({ mode: 'invite' })}>{t('users.invite')}</Button>
+  const toolbar = (
           <div className="flex flex-wrap items-center gap-2">
             <InputControl data-guide="users.search" type="search" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder={t('users.search')} aria-label={t('users.search')} leading={<Search size={15} aria-hidden />} className="w-full sm:w-[280px]" />
             <SelectControl options={[{ value: '', label: t('users.allRoles') }, ...roleOptions]} value={role} onChange={(v) => { setRole(v ?? ''); setPage(1) }} aria-label={t('users.col.roles')} className="w-[calc(50%-4px)] sm:w-[160px]" />
             <SelectControl options={[{ value: '', label: t('users.allStatus') }, ...statusOptions]} value={status} onChange={(v) => { setStatus(v ?? ''); setPage(1) }} aria-label={t('users.col.status')} className="w-[calc(50%-4px)] sm:w-[150px]" />
           </div>
-        )}
+  )
+  const totalPages = Math.max(1, Math.ceil((list.data?.count ?? rows.length) / PAGE_SIZE))
+  // Loading, error and empty stay with the shared table; the phone cards are for real rows.
+  const phoneCards = !wide && !list.isLoading && !list.isError && rows.length > 0
+
+  return (
+    <div>
+      <PageHeader
+        back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('users.crumb')}</span>}
+        title={t('users.title')}
+        subtitle={t('users.subtitle')}
+        actions={wide ? inviteButton : null}
+      />
+      {!wide && <div className="mb-3">{inviteButton}</div>}
+      {phoneCards ? (
+        <div className="flex flex-col gap-3">
+          {toolbar}
+          <ul className="flex flex-col gap-3" aria-label={t('users.title')}>
+            {rows.map((u) => {
+              const state = userStatus(u)
+              return (
+                <li key={u.id} className="flex items-center gap-3 rounded-card border border-border bg-surface p-3">
+                  <Avatar name={nameOf(u)} size="md" decorative />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[14px] font-semibold text-text">{nameOf(u)}</span>
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {(u.roles ?? []).map((c) => <Tag key={c}>{roleName(c)}</Tag>)}
+                      {state !== 'active' && <Tag tone={STATUS_TONE[state]}>{t(`users.status.${state}`)}</Tag>}
+                    </span>
+                  </span>
+                  {menu(u)}
+                </li>
+              )
+            })}
+          </ul>
+          {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
+        </div>
+      ) : (
+      <DataTable
+        caption={t('users.title')}
+        toolbar={toolbar}
         columns={columns}
         data={rows}
         loading={list.isLoading}
@@ -243,6 +278,7 @@ export default function Users() {
         pageSize={PAGE_SIZE}
         onPageChange={setPage}
       />
+      )}
       {dialog && <PersonDialog key={dialog.person?.id ?? 'invite'} mode={dialog.mode} person={dialog.person} onClose={() => setDialog(null)} triggerRef={dialog.mode === 'invite' ? inviteRef : undefined} />}
     </div>
   )
