@@ -873,3 +873,10 @@ class FormResponseExport:
                 + [cls._cell(answers.get(key)) for key in columns]
             )
             yield flush()
+
+
+def create_draft_form_from_document(document: dict, *, title: str = "", actor, program=None):
+    """Copilot: the same as apps.programs.services.create_draft_form_from_document (the AI lane imports it from here)."""
+    from apps.programs.services import create_draft_form_from_document as create
+
+    return create(document, title=title, actor=actor, program=program)

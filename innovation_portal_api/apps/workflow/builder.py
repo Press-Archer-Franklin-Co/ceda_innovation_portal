@@ -372,3 +372,303 @@ def board(definition) -> dict:
             ],
         },
     }
+
+
+# Copilot: a draft workflow from a plain spec (no AI here) -------------------------------------------------------------
+
+END_TARGETS = {"end": "Finished", "rejected": "Not accepted"}
+
+
+def _check_condition(expression, path: str, errors: list) -> None:
+    from apps.workflow.catalogue import CONDITION_OPERATORS
+
+    if expression in (None, "", {}):
+        return
+    if isinstance(expression, (bool, int, float, str)):
+        return
+    if isinstance(expression, list):
+        for index, item in enumerate(expression):
+            _check_condition(item, f"{path}[{index}]", errors)
+        return
+    if not isinstance(expression, dict) or len(expression) != 1:
+        errors.append({"path": path, "message": "A condition is one operator, for example {\"==\": [{\"var\": \"payload.sector\"}, \"agriculture\"]}."})
+        return
+    operator, value = next(iter(expression.items()))
+    if operator not in CONDITION_OPERATORS:
+        errors.append({"path": path, "message": f"Unknown operator \"{operator}\". Use one of: {', '.join(CONDITION_OPERATORS)}."})
+        return
+    if operator != "var":
+        _check_condition(value, f"{path}.{operator}", errors)
+
+
+def _resolve_who(who, path: str, errors: list) -> dict:
+    """{"mode": role|team|policy, ...} for a role code, a staff team (name or id) or an assignment policy code."""
+    from apps.accounts.models import Role
+    from apps.assignments.models import ReviewPanel
+    from apps.workflow.models import AssignmentPolicy
+
+    if isinstance(who, str):
+        who = {"role": who}
+    if not isinstance(who, dict) or len([key for key in ("role", "team", "policy") if who.get(key)]) != 1:
+        errors.append({"path": path, "message": "Say who has it: {\"role\": code}, {\"team\": name} or {\"policy\": code}."})
+        return {}
+    if who.get("role"):
+        role = Role.objects.filter(code=who["role"], is_active=True).first()
+        if role is None:
+            errors.append({"path": path, "message": f"there is no role \"{who['role']}\""})
+            return {}
+        return {"mode": "role", "role": role.code, "label": role.name}
+    if who.get("team"):
+        value = str(who["team"])
+        teams = ReviewPanel.objects.filter(is_active=True)
+        team = None
+        try:
+            team = teams.filter(id=value).first()
+        except Exception:  # noqa: BLE001 - not an id, look it up by name
+            team = None
+        team = team or teams.filter(name__iexact=value).first()
+        if team is None:
+            errors.append({"path": path, "message": f"there is no team \"{value}\""})
+            return {}
+        return {"mode": "team", "team_id": str(team.id), "label": team.name}
+    policy = AssignmentPolicy.objects.filter(code=who["policy"], is_active=True).first()
+    if policy is None:
+        errors.append({"path": path, "message": f"there is no assignment policy \"{who['policy']}\""})
+        return {}
+    return {"mode": "policy", "policy": policy, "label": policy.name}
+
+
+def _from_steps(steps: list) -> list:
+    """The AI lane's ordered-steps shape (WorkflowStep fields) as stages: one after another."""
+    stages = []
+    for step in steps:
+        if not isinstance(step, dict):
+            stages.append(step)
+            continue
+        hours = step.get("due_in_hours")
+        stages.append(
+            {
+                "code": step.get("code"),
+                "name": step.get("name"),
+                "kind": "review" if step.get("requires_evaluation") else "task",
+                "who": {"role": step["role_required"]} if step.get("role_required") else step.get("who"),
+                "due_days": (float(hours) / 24) if hours else None,
+                "execution_mode": step.get("execution_mode"),
+                "must_complete": step.get("minimum_completions_required"),
+                "decisions": step.get("actions_allowed") or None,
+                "_step": {name: step[name] for name in ("submission_status", "requires_assignment", "assignment_role", "requires_evaluation", "minimum_assignments") if name in step},
+            }
+        )
+    return stages
+
+
+def _plan(spec: dict) -> tuple[list[dict], list[dict], list[dict]]:
+    """Checks the spec. Returns (stages, transitions, errors) without saving anything."""
+    from django.utils.text import slugify
+
+    from apps.workflow.catalogue import EXECUTION_MODES, STAGE_KINDS
+
+    errors: list[dict] = []
+    if not isinstance(spec, dict):
+        return [], [], [{"path": "", "message": "Send the workflow as one JSON object."}]
+    if not str(spec.get("name") or "").strip():
+        errors.append({"path": "name", "message": "Give the workflow a name."})
+    if spec.get("steps") and not spec.get("stages"):
+        raw = [(f"steps[{index}]", item, None) for index, item in enumerate(_from_steps(spec["steps"]))]
+    else:
+        raw = [(f"stages[{index}]", item, None) for index, item in enumerate(spec.get("stages") or [])]
+    raw += [(f"approval_steps[{index}]", item, "approval") for index, item in enumerate(spec.get("approval_steps") or [])]
+    if not raw:
+        errors.append({"path": "stages", "message": "Add at least one stage."})
+    stages, codes = [], set()
+    for path, item, forced_kind in raw:
+        if not isinstance(item, dict):
+            errors.append({"path": path, "message": "Each stage is an object."})
+            continue
+        name = str(item.get("name") or "").strip()
+        if not name:
+            errors.append({"path": f"{path}.name", "message": "Give the stage a name."})
+        code = slugify(str(item.get("code") or name))[:60].replace("-", "_") or f"stage_{len(stages) + 1}"
+        if code in codes or code in END_TARGETS or code == "start":
+            errors.append({"path": f"{path}.code", "message": f"The stage code \"{code}\" is used twice or is reserved."})
+        codes.add(code)
+        kind = forced_kind or item.get("kind") or "task"
+        if kind not in STAGE_KINDS:
+            errors.append({"path": f"{path}.kind", "message": f"Use one of: {', '.join(STAGE_KINDS)}."})
+        mode = item.get("execution_mode") or "sequential"
+        if mode not in EXECUTION_MODES:
+            errors.append({"path": f"{path}.execution_mode", "message": f"Use one of: {', '.join(EXECUTION_MODES)}."})
+        try:
+            due_days = float(item.get("due_days") or 3)
+            must = int(item.get("must_complete") or 1)
+        except (TypeError, ValueError):
+            errors.append({"path": path, "message": "due_days and must_complete are numbers."})
+            due_days, must = 3, 1
+        if due_days <= 0 or due_days > 365 or must < 1:
+            errors.append({"path": path, "message": "due_days is between 1 and 365 and must_complete is at least 1."})
+        decisions = [str(key) for key in (item.get("decisions") or ["approve", "reject"])]
+        if not decisions:
+            errors.append({"path": f"{path}.decisions", "message": "A stage needs at least one decision."})
+        who = _resolve_who(item.get("who"), f"{path}.who", errors)
+        extra = item.get("_step") or {}
+        if extra.get("requires_assignment") and not extra.get("assignment_role"):
+            errors.append({"path": f"{path}.assignment_role", "message": "Say which kind of assignment (for example judge) when the step needs assignments."})
+        stages.append({"code": code, "name": name or code, "kind": STAGE_KINDS.get(kind, "user_task"), "who": who, "due_days": due_days, "mode": mode, "must": must, "decisions": decisions, "path": path, "extra": extra})
+    transitions = []
+    given = spec.get("transitions")
+    if given:
+        by_code = {stage["code"]: stage for stage in stages}
+        for index, item in enumerate(given):
+            path = f"transitions[{index}]"
+            if not isinstance(item, dict):
+                errors.append({"path": path, "message": "Each transition is an object."})
+                continue
+            source, target = str(item.get("from") or ""), str(item.get("to") or "")
+            if source != "start" and source not in by_code:
+                errors.append({"path": f"{path}.from", "message": f"there is no stage \"{source}\""})
+            if target not in by_code and target not in END_TARGETS:
+                errors.append({"path": f"{path}.to", "message": f"there is no stage \"{target}\" (or use end or rejected)"})
+            decision = str(item.get("decision") or "")
+            if decision and source in by_code and decision not in by_code[source]["decisions"]:
+                errors.append({"path": f"{path}.decision", "message": f"stage \"{source}\" has no decision \"{decision}\""})
+            _check_condition(item.get("when"), f"{path}.when", errors)
+            transitions.append({"from": source, "to": target, "decision": decision, "when": item.get("when") or {}, "default": bool(item.get("default")), "priority": index + 1})
+        if stages and not any(item["from"] == "start" for item in transitions):
+            transitions.insert(0, {"from": "start", "to": stages[0]["code"], "decision": "", "when": {}, "default": True, "priority": 0})
+    elif stages:
+        # No transitions given: one stage after another; any "reject" ends as not accepted.
+        transitions.append({"from": "start", "to": stages[0]["code"], "decision": "", "when": {}, "default": True, "priority": 0})
+        for index, stage in enumerate(stages):
+            after = stages[index + 1]["code"] if index + 1 < len(stages) else "end"
+            for decision in stage["decisions"]:
+                target = "rejected" if decision == "reject" else after
+                transitions.append({"from": stage["code"], "to": target, "decision": decision, "when": {}, "default": False, "priority": 1})
+    return stages, transitions, errors
+
+
+@transaction.atomic
+def _save_draft(spec, stages, transitions, *, program, actor, existing=None):
+    from apps.workflow.models import NodeAction, NodeAssignmentBinding, WorkflowNode, WorkflowTransition
+    from apps.workflow.services import WorkflowDefinitionService
+
+    steps = []
+    for order, stage in enumerate(stages, start=1):
+        who = stage["who"]
+        settings = {"who_has_it": {"mode": who.get("mode") if who.get("mode") in WHO_MODES else "role", "team_id": who.get("team_id"), "people": []}, "source": "copilot"}
+        if who.get("mode") == "policy":
+            settings["assignment_policy"] = who["policy"].code
+        steps.append(
+            {
+                "name": stage["name"],
+                "code": stage["code"],
+                "order": order,
+                "role_required": who.get("role", ""),
+                "actions_allowed": stage["decisions"],
+                "due_in_hours": int(stage["due_days"] * 24),
+                "execution_mode": stage["mode"],
+                "minimum_completions_required": stage["must"],
+                "settings_json": settings,
+                **stage.get("extra", {}),
+            }
+        )
+    if existing is not None:
+        # Revise keeps the same draft: its steps and graph are replaced, the definition row and id stay.
+        from apps.workflow.models import WorkflowStep
+
+        definition = existing
+        definition.rules.all().delete()
+        definition.transitions.all().delete()
+        definition.nodes.all().delete()
+        definition.steps.all().delete()
+        definition.name = str(spec["name"]).strip()[:255]
+        definition.updated_by = actor
+        definition.save(update_fields=["name", "updated_by", "updated_at"])
+        for item in steps:
+            WorkflowStep.objects.create(workflow_definition=definition, **item)
+        WorkflowDefinitionService.validate_definition(definition)
+    else:
+        definition = WorkflowDefinitionService.create_definition(program=program, name=str(spec["name"]).strip()[:255], actor=actor, steps_data=steps)
+    nodes = {"start": WorkflowNode.objects.create(workflow_definition=definition, name="Start", code="start", node_type=WorkflowNode.TYPE_START, is_initial=True)}
+    for index, stage in enumerate(stages, start=1):
+        node = WorkflowNode.objects.create(
+            workflow_definition=definition,
+            name=stage["name"],
+            code=stage["code"],
+            node_type=stage["kind"],
+            position_x=index * 240,
+            metadata_json={"who": {key: value for key, value in stage["who"].items() if key != "policy"}, "due_days": stage["due_days"]},
+        )
+        for key in stage["decisions"]:
+            NodeAction.objects.create(node=node, key=key, label=key.replace("_", " ").capitalize())
+        if stage["who"].get("mode") == "policy":
+            NodeAssignmentBinding.objects.create(
+                node=node, assignment_policy=stage["who"]["policy"], minimum_assignees=stage["must"], maximum_assignees=max(stage["must"], 1),
+                execution_mode=stage["mode"], minimum_completions_required=stage["must"],
+            )
+        nodes[stage["code"]] = node
+    for code, label in END_TARGETS.items():
+        if any(item["to"] == code for item in transitions):
+            nodes[code] = WorkflowNode.objects.create(workflow_definition=definition, name=label, code=code, node_type=WorkflowNode.TYPE_END, is_terminal=True)
+    for item in transitions:
+        WorkflowTransition.objects.create(
+            workflow_definition=definition, from_node=nodes[item["from"]], to_node=nodes[item["to"]], action_key=item["decision"],
+            condition_expression=item["when"], priority=item["priority"], is_default=item["default"],
+            label=f"{item['decision'] or 'next'} to {nodes[item['to']].name}",
+        )
+    return definition
+
+
+def create_draft_workflow_from_spec(spec: dict, *, program=None, general_ideas: bool = False, actor):
+    # Spec: {name, stages | steps, approval_steps?, transitions?, id?}. "steps" is the AI lane's ordered-steps shape.
+    """Makes a draft workflow (never active, never published) from a plain spec. Returns (definition, errors).
+
+    Uses only roles, staff teams and assignment policies that exist; anything unknown is an error with a path
+    (stages[2].who: there is no team "Finance"), never a new record. The saved draft is checked with
+    WorkflowValidationService.validate_definition; if it has problems, nothing is kept and they come back as errors.
+    """
+    from apps.workflow.models import WorkflowDefinition
+    from apps.workflow.services import WorkflowValidationService
+
+    existing = None
+    if isinstance(spec, dict) and spec.get("id"):
+        try:
+            existing = WorkflowDefinition.objects.filter(pk=spec["id"]).first()
+        except Exception:  # noqa: BLE001 - not an id
+            existing = None
+        if existing is None:
+            return None, [{"path": "id", "message": "There is no workflow with this id."}]
+        if existing.status != WorkflowDefinition.STATUS_DRAFT or existing.is_active or existing.instances.exists():
+            return None, [{"path": "id", "message": "Only a draft workflow that no idea uses yet can be changed here."}]
+        program = existing.program
+    if general_ideas:
+        program = general_ideas_program()
+    if program is None:
+        return None, [{"path": "program", "message": "Pick a challenge, or general ideas."}]
+    stages, transitions, errors = _plan(spec)
+    if errors:
+        return None, errors
+    try:
+        with transaction.atomic():
+            definition = _save_draft(spec, stages, transitions, program=program, actor=actor, existing=existing)
+            result = WorkflowValidationService.validate_definition(definition)
+            if not result["valid"]:
+                raise _Invalid(result["errors"])
+            AuditService.log_action(
+                actor=actor,
+                action_type="workflow_draft_updated" if existing else "workflow_draft_created",
+                target=definition,
+                after_state={"name": definition.name, "status": definition.status, "stages": [stage["code"] for stage in stages]},
+                metadata={"source": "spec", "program_id": str(program.id)},
+            )
+    except _Invalid as exc:
+        return None, [{"path": str(key), "message": " ".join(map(str, value)) if isinstance(value, list) else str(value)} for key, value in exc.problems.items()]
+    except ValidationError as exc:
+        detail = exc.detail if isinstance(exc.detail, dict) else {"detail": exc.detail}
+        return None, [{"path": str(key), "message": " ".join(map(str, value)) if isinstance(value, list) else str(value)} for key, value in detail.items()]
+    return definition, []
+
+
+class _Invalid(Exception):
+    def __init__(self, problems):
+        super().__init__("invalid workflow")
+        self.problems = problems

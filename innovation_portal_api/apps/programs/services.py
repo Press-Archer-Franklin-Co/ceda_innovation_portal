@@ -114,3 +114,72 @@ class SubmissionFormLifecycleService:
             metadata={"program_id": str(form.program_id)},
         )
         return form
+
+
+# Copilot helpers (no AI here) ---------------------------------------------------------------------------------------
+
+
+def create_draft_form_from_document(document: dict, *, title: str = "", actor, program=None):
+    """Makes a new draft form and saves the whole form document into it, in one transaction.
+
+    Returns (form, errors). errors is the form builder's [{path, message}] list; when there are errors nothing is
+    saved and form is None. Never publishes. title defaults to the document's English name. With "id" in the
+    document, that draft form is updated in place instead (the AI lane's "revise keeps the same draft"); only a
+    draft can be updated. With a challenge that has no form yet, a new draft becomes its form; a challenge that
+    already has a form keeps it.
+    """
+    from apps.programs.form_builder import FormDocumentService, FormLibraryService
+    from apps.programs.models import SubmissionForm
+
+    if not isinstance(document, dict):
+        return None, [{"path": "", "message": "Send the form as one JSON object."}]
+    document = dict(document)
+    existing_id = document.pop("id", None)
+    name = document.get("name")
+    title = (title or (name.get("en") if isinstance(name, dict) else name) or "").strip()[:255]
+    if not title and not existing_id:
+        return None, [{"path": "title", "message": "Give the form a name."}]
+    existing = None
+    if existing_id:
+        existing = SubmissionForm.objects.filter(pk=existing_id).first() if _is_uuid(existing_id) else None
+        if existing is None:
+            return None, [{"path": "id", "message": "There is no form with this id."}]
+        if existing.status != SubmissionForm.Status.DRAFT:
+            return None, [{"path": "id", "message": "Only a draft form can be changed here. Make a copy of a live form."}]
+    errors = FormDocumentService.validate_document(document)
+    if errors:
+        return None, errors
+    try:
+        with transaction.atomic():
+            form = existing or FormLibraryService.create(start="blank", name=title, actor=actor)
+            FormDocumentService.save_document(form, document, actor=actor, audit=False)
+            form.refresh_from_db()
+            attached = False
+            if existing is None and program is not None and program.form_id is None:
+                program.form = form
+                program.save(update_fields=["form", "updated_at"])
+                attached = True
+            AuditService.log_action(
+                actor=actor,
+                action_type="form_draft_updated" if existing else "form_draft_created",
+                target=form,
+                after_state={"title": form.title, "status": form.status},
+                metadata={"source": "document", "program_id": str(program.id) if program else None, "attached_to_program": attached},
+            )
+    except ValidationError as exc:
+        detail = exc.detail if isinstance(exc.detail, dict) else {"detail": exc.detail}
+        found = detail.get("errors")
+        if isinstance(found, list):
+            return None, [{"path": str(item.get("path", "")), "message": str(item.get("message", ""))} for item in found]
+        return None, [{"path": str(key), "message": " ".join(str(part) for part in (value if isinstance(value, list) else [value]))} for key, value in detail.items()]
+    return form, []
+
+
+def _is_uuid(value) -> bool:
+    import uuid
+
+    try:
+        uuid.UUID(str(value))
+        return True
+    except ValueError:
+        return False
