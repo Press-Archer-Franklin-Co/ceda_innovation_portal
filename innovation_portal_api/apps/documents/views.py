@@ -5,6 +5,7 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponseRedirec
 from django.shortcuts import get_object_or_404
 from django.utils.http import content_disposition_header
 from rest_framework import generics, status
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -48,12 +49,23 @@ class SubmissionDocumentListCreateView(generics.ListCreateAPIView):
         accessible_submissions = SubmissionSelector.for_user(self.request.user)
         submission = get_object_or_404(accessible_submissions, id=self.kwargs["submission_id"])
         upload = self.request.FILES.get("file")
+        replace_id = self.request.data.get("replace_document_id") or None
+        # 2.4: the innovator adds files while the idea is open; staff can still file documents afterwards.
+        if submission.innovator_id == self.request.user.id:
+            from apps.submissions.status_labels import FINISHED_STATUSES
+
+            instance = getattr(submission, "workflow_instance", None)
+            if submission.current_status in FINISHED_STATUSES or (instance and instance.status in {"completed", "rejected", "cancelled"}):
+                raise ValidationError({"file": "This idea is finished, so no more files can be added."})
+        # A new version may only replace a file of the same idea.
+        if replace_id and not SubmissionDocument.objects.filter(id=replace_id, submission=submission, is_active=True).exists():
+            raise ValidationError({"replace_document_id": "That file is not on this idea."})
         DocumentService.create_document(
             serializer=serializer,
             actor=self.request.user,
             submission=submission,
             upload=upload,
-            replace_document_id=self.request.data.get("replace_document_id"),
+            replace_document_id=replace_id,
         )
 
 

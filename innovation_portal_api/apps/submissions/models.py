@@ -205,3 +205,32 @@ class EntryPanelFeedback(UUIDModel, TimeStampedModel):
     written_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     attending = models.BooleanField(null=True, blank=True, help_text="The entrant's answer to Confirm I will attend.")
     attendance_answered_at = models.DateTimeField(null=True, blank=True)
+
+
+class ReturnRequest(UUIDModel, TimeStampedModel):
+    """2.4b / 3.16: an officer returned an idea for changes. Says why, by when, and exactly what to change.
+
+    items: [{"id", "kind": "answer"|"document", "field_key", "label"}]. ``before`` keeps the requested answers
+    and the current document ids as they were, so a resend can check that each requested part changed and
+    that nothing else did.
+    """
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Waiting for the innovator"
+        RESENT = "resent", "Resent"
+        CANCELLED = "cancelled", "Cancelled"
+
+    submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name="return_requests")
+    step_code = models.CharField(max_length=100, blank=True)
+    step_name = models.CharField(max_length=255, blank=True)
+    reason = models.TextField()
+    fix_by = models.DateField(null=True, blank=True)
+    items = models.JSONField(default=list, blank=True)
+    before = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.OPEN, db_index=True)
+    requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+    resent_at = models.DateTimeField(null=True, blank=True)
+    resent_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        ordering = ("-created_at",)

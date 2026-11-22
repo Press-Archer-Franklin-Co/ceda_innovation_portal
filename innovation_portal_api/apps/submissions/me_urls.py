@@ -7,7 +7,9 @@ from apps.submissions.my_work import MyWorkView
 from apps.submissions.innovator_views import (
     IdeaChallengeMatchesView,
     LinkIdeaToChallengeView,
+    MyIdeaResendView,
     MyIdeasView,
+    MyIdeaTrackingView,
     MySummaryView,
     MyUpdatesView,
     RecommendedChallengesView,
@@ -23,6 +25,8 @@ urlpatterns = [
     path("ideas/<uuid:idea_id>/messages/typing/", MyIdeaTypingView.as_view(), name="me-idea-messages-typing"),
     path("messages/recent/", MyRecentMessagesView.as_view(), name="me-messages-recent"),
     path("ideas/", MyIdeasView.as_view(), name="me-ideas"),
+    path("ideas/<uuid:idea_id>/tracking/", MyIdeaTrackingView.as_view(), name="me-idea-tracking"),
+    path("ideas/<uuid:idea_id>/resend/", MyIdeaResendView.as_view(), name="me-idea-resend"),
     path("updates/", MyUpdatesView.as_view(), name="me-updates"),
     path("challenges/recommended/", RecommendedChallengesView.as_view(), name="me-recommended-challenges"),
     path("ideas/<uuid:idea_id>/challenge-matches/", IdeaChallengeMatchesView.as_view(), name="me-idea-challenge-matches"),
