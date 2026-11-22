@@ -23,6 +23,7 @@ RUN npm run build
 
 FROM nginx:1.27-alpine
 RUN rm -f /etc/nginx/conf.d/default.conf
+RUN mkdir -p /etc/nginx/site-extra
 COPY deploy/edge/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/edge/public.conf /etc/nginx/conf.d/public.conf
 COPY deploy/edge/staff.conf /etc/nginx/conf.d/staff.conf
