@@ -1184,7 +1184,9 @@ class RuleEvaluationService:
         if isinstance(expression, bool):
             return expression
         if not isinstance(expression, dict):
-            return bool(expression)
+            # Literals stay as they are, so {"==": [{"var": "payload.sector"}, "agriculture"]} compares with the text,
+            # not with True (copilot helpers). Callers use the result as true or false, which is unchanged.
+            return expression
         if "var" in expression:
             return cls._resolve_var(expression["var"], context)
         if "==" in expression:
@@ -2853,3 +2855,20 @@ class SubmissionWorkflowService:
     @classmethod
     def transition(cls, submission: Submission, to_status: str, actor, reason: str = "", note: str = ""):
         cls.validate_transition(submission, to_status, actor, reason)
+
+
+
+# Copilot helpers, importable from here (the AI lane's builder looks for them in this module) -----------------------
+
+
+def create_draft_workflow_from_spec(spec: dict, *, program=None, general_ideas: bool = False, actor):
+    from apps.workflow.builder import create_draft_workflow_from_spec as create
+
+    return create(spec, program=program, general_ideas=general_ideas, actor=actor)
+
+
+def run_workflow_dry_run(*, workflow, answers: dict | None = None, submission_fields: dict | None = None, actor=None) -> dict:
+    """The dry run with the AI lane's argument names. submission_fields are added to the answers."""
+    from apps.workflow.dry_run import WorkflowDryRunService
+
+    return WorkflowDryRunService.run(workflow, answers={**(submission_fields or {}), **(answers or {})}, actor=actor)

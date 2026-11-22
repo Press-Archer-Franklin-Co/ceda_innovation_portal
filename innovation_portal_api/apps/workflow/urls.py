@@ -1,7 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
-from apps.workflow.builder_views import StaffTeamDetailView, StaffTeamListView, WorkflowStepSettingsView, WorkflowTemplatesView
+from apps.workflow.builder_views import StaffTeamDetailView, StaffTeamListView, WorkflowDryRunView, WorkflowStepSettingsView, WorkflowTemplatesView
 from apps.workflow.views import (
     AssignmentInstanceAcceptView,
     AssignmentInstanceCancelView,
@@ -42,7 +42,9 @@ router = DefaultRouter()
 router.register("workflow-definitions", WorkflowDefinitionViewSet, basename="workflow-definition")
 router.register("assignment-policies", AssignmentPolicyViewSet, basename="assignment-policy")
 
-urlpatterns = router.urls + [
+urlpatterns = [
+    path("workflow-definitions/<uuid:pk>/dry-run/", WorkflowDryRunView.as_view(), name="workflow-definition-dry-run"),
+] + router.urls + [
     path("workflow-steps/<uuid:pk>/", WorkflowStepDetailView.as_view(), name="workflow-step-detail"),
     path("workflow-steps/<uuid:pk>/settings/", WorkflowStepSettingsView.as_view(), name="workflow-step-settings"),
     path("workflow-templates/", WorkflowTemplatesView.as_view(), name="workflow-templates"),

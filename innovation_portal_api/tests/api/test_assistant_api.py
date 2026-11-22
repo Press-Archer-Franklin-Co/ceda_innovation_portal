@@ -281,7 +281,10 @@ class HiddenWhenOffTests(AssistantTestCase):
         self.assertEqual(UsageRecord.objects.latest("created_at").outcome, "refused")
 
     def test_feature_switch_reaches_public_config(self):
+        # U9: switched on but no active AI connection means "Needs setup", so the site still hides it.
         set_features(self, ai_helper=True)
+        self.assertFalse(data(self.client.get("/api/platform/public-config/"))["features"]["ai_helper"])
+        self.switch_on()
         features = data(self.client.get("/api/platform/public-config/"))["features"]
         self.assertTrue(features["ai_helper"])
 

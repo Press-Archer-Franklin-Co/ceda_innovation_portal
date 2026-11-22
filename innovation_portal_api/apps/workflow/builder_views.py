@@ -140,3 +140,32 @@ class StaffTeamDetailView(APIView):
         team.save(update_fields=["is_active", "updated_at"])
         AuditService.log_action(actor=request.user, action_type="staff_team_retired", target=team)
         return api_success(data=StaffTeamSerializer(team).data)
+
+
+class DryRunSerializer(serializers.Serializer):
+    answers = serializers.DictField(required=False, default=dict, help_text='Sample answers, read by conditions as payload.<key>. "decisions": {stage code: decision} picks a decision; otherwise the first one.')
+
+
+class WorkflowDryRunView(APIView):
+    """Copilot and 3.21: test a workflow with sample answers. Nothing is saved and nobody is notified."""
+
+    permission_classes = [IsOfficerOrAdmin]
+
+    @extend_schema(
+        tags=["Workflows"],
+        summary="Test a workflow without saving (dry run)",
+        description="{answers: {...}}. Walks from the start with those answers, using the real conditions and transitions, and "
+        "answers {path: [{stage, code, step, who, decision, outcome, why}], problems: [{path, message}], finished: end code or null}. "
+        "A dead end or a loop is a problem. "
+        "Runs in a transaction that is always rolled back.",
+        request=DryRunSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request, pk):
+        from apps.workflow.dry_run import WorkflowDryRunService
+        from apps.workflow.models import WorkflowDefinition
+
+        serializer = DryRunSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        definition = get_object_or_404(WorkflowDefinition, pk=pk)
+        return api_success(data=WorkflowDryRunService.run(definition, answers=serializer.validated_data["answers"], actor=request.user))
