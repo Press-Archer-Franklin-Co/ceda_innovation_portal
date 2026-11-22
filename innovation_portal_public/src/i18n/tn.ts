@@ -7,6 +7,7 @@ import { pagesTn } from './pages'
 import { policiesTn } from './policies'
 import { a11yTn } from './a11y'
 import { statusTn } from './status'
+import { guideTn } from './guide'
 import { inviteTn } from './invite'
 import { accountTn } from './account'
 import { challengeEntryTn } from './challengeEntry'
@@ -438,6 +439,7 @@ const tn: Record<StringKey, string> = {
   ...policiesTn,
   ...a11yTn,
   ...statusTn,
+  ...guideTn,
   ...inviteTn,
   ...accountTn,
   ...challengeEntryTn,

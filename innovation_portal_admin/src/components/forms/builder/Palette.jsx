@@ -35,6 +35,7 @@ function PaletteItem({ type, onAdd, disabled }) {
       type="button"
       {...attributes}
       {...listeners}
+      data-guide="formBuilder.addField"
       onClick={() => onAdd(type)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {

@@ -76,6 +76,7 @@ function DesktopLink({ item }: { item: NavItem }) {
     <NavLink
       to={item.to}
       end={item.end}
+      data-guide={item.to === '/challenges' ? 'nav.challenges' : undefined}
       className={({ isActive }) =>
         clsx(
           'group relative flex flex-col items-center gap-1.5 pt-1.5 text-d-label font-body whitespace-nowrap rounded',
@@ -284,7 +285,7 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout, onAccessibility 
           </div>
         </nav>
         <div className="p-5 border-t border-border shrink-0 space-y-3">
-          <Link to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
+          <Link data-guide="nav.submitIdea" to={SUBMIT_PATH} onClick={onClose} className={buttonClasses({ variant: 'primary', block: true })}>
             {t(isAuthenticated ? 'nav.newIdea' : 'nav.submit')} <ArrowRight size={18} aria-hidden />
           </Link>
           {!isAuthenticated && (
@@ -350,11 +351,11 @@ export default function Navbar() {
                 <UserMenu canStaff={canStaff} onLogout={handleLogout} />
               </>
             ) : (
-              <Link to={SIGN_IN_PATH} className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
+              <Link data-guide="nav.signIn" to={SIGN_IN_PATH} className={buttonClasses({ variant: 'secondary', size: 'sm' })}>
                 {t('common.signIn')}
               </Link>
             )}
-            <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
+            <Link data-guide="nav.submitIdea" to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'sm' })}>
               {t(submitKey)}
             </Link>
           </div>

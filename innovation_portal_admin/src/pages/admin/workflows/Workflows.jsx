@@ -129,12 +129,12 @@ function CreateWorkflow({ open, onClose, triggerRef, workflows }) {
         step === 0 ? (
           <>
             <Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button>
-            <Button onClick={next}>{t('wfl.next')}</Button>
+            <Button data-guide="workflows.next" onClick={next}>{t('wfl.next')}</Button>
           </>
         ) : (
           <>
             <Button variant="ghost" onClick={() => setStep(0)}>{t('wfl.back')}</Button>
-            <Button onClick={finish} loading={busy}>{t('wfl.createAndOpen')}</Button>
+            <Button data-guide="workflows.createAndOpen" onClick={finish} loading={busy}>{t('wfl.createAndOpen')}</Button>
           </>
         )
       }
@@ -171,7 +171,7 @@ function CreateWorkflow({ open, onClose, triggerRef, workflows }) {
           </>
         ) : (
           <>
-            <Input label={t('wfl.name')} required value={name} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })) }} error={errors.name} maxLength={255} />
+            <Input data-guide="workflows.name" label={t('wfl.name')} required value={name} onChange={(e) => { setName(e.target.value); setErrors((x) => ({ ...x, name: undefined })) }} error={errors.name} maxLength={255} />
             <Select
               label={t('wfl.usedBy')}
               hint={t('wfl.usedByHint')}
@@ -233,7 +233,7 @@ export default function Workflows() {
         title={t('wfl.title')}
         subtitle={t('wfl.subtitle')}
         actions={
-          <Button ref={createRef} onClick={() => setCreating(true)} className="hidden md:inline-flex">
+          <Button ref={createRef} data-guide="workflows.create" onClick={() => setCreating(true)} className="hidden md:inline-flex">
             <Plus size={16} aria-hidden />
             {t('wfl.create')}
           </Button>
@@ -246,7 +246,7 @@ export default function Workflows() {
       ) : list.isError ? (
         <ErrorState framed title={t('wfl.loadError')} message={list.error?.message} onRetry={list.refetch} />
       ) : shown.length === 0 ? (
-        <EmptyState framed icon={Layers} title={t('wfl.empty')} message={t('wfl.emptyBody')} action={<Button onClick={() => setCreating(true)}>{t('wfl.create')}</Button>} />
+        <EmptyState framed icon={Layers} title={t('wfl.empty')} message={t('wfl.emptyBody')} action={<Button data-guide="workflows.create" onClick={() => setCreating(true)}>{t('wfl.create')}</Button>} />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((wf) => (

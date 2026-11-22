@@ -31,6 +31,8 @@ export default function DataTable({
   emptyIcon,
   emptyAction,
   onRowClick,
+  // Need help guide: a data-guide id for the rows (the guide rings the first one, e.g. "review.open").
+  rowGuide,
   selectable = false,
   selected = [],
   onSelectionChange,
@@ -189,6 +191,7 @@ export default function DataTable({
               rows.map((row, i) => (
                 <tr
                   key={row.id ?? i}
+                  data-guide={rowGuide}
                   onClick={() => onRowClick?.(row)}
                   className={cn(
                     'transition-colors',
@@ -234,6 +237,7 @@ export default function DataTable({
             {rows.map((row, i) => (
               <li
                 key={row.id ?? i}
+                data-guide={rowGuide}
                 onClick={() => onRowClick?.(row)}
                 className={cn('rounded-card border border-border bg-surface p-3', onRowClick && 'cursor-pointer active:bg-surface2')}
               >

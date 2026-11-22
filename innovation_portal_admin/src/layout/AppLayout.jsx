@@ -6,6 +6,7 @@ import DemoLoginsBanner from './DemoLoginsBanner'
 import { LayoutContext } from './LayoutContext'
 import PageSkeleton from '../components/ui/PageSkeleton'
 import PageErrorBoundary from '../components/ui/PageErrorBoundary'
+import NeedHelp from '../components/guide/NeedHelp'
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen]             = useState(true)
@@ -67,6 +68,8 @@ export default function AppLayout() {
             </main>
           )}
         </div>
+        {/* 3.40: the Need help? guide, bottom right on every staff page. */}
+        <NeedHelp />
       </div>
     </LayoutContext.Provider>
   )

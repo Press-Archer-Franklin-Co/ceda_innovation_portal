@@ -240,6 +240,7 @@ function Composer({ ideaId, onSent, typingSupported = false }: { ideaId: string;
     <div className="mt-6 rounded-card border border-border bg-surface p-3">
       <label htmlFor="reply" className="sr-only">{t('track.replyLabel')}</label>
       <textarea
+        data-guide="track.reply"
         id="reply"
         value={body}
         onChange={(e) => {
