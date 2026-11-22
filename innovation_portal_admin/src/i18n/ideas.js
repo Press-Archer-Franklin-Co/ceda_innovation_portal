@@ -84,6 +84,25 @@ export const ideasEn = {
   'ideas.loadError': 'We could not load this idea',
   'ideas.notFound': 'This idea does not exist or was removed.',
   'ideas.askMore': 'Ask for more',
+  'ideas.back.title': 'Ask for changes',
+  'ideas.back.body': 'The idea goes back to the innovator. Only the parts you list can change, and it returns to this stage.',
+  'ideas.back.reason': 'Why it needs changes',
+  'ideas.back.reasonHint': 'The innovator reads this.',
+  'ideas.back.reasonNeeded': 'Say why the idea needs changes.',
+  'ideas.back.fixBy': 'Fix by',
+  'ideas.back.items': 'What to change',
+  'ideas.back.what': 'Part of the idea',
+  'ideas.back.newDocument': 'A new document',
+  'ideas.back.ask': 'What to do',
+  'ideas.back.askExample': 'Add your supplier quote',
+  'ideas.back.itemNeeded': 'Say what to change.',
+  'ideas.back.add': 'Add another',
+  'ideas.back.remove': 'Remove item {n}',
+  'ideas.back.send': 'Send back',
+  'ideas.back.sent': 'Sent back to the innovator.',
+  'ideas.back.error': 'It could not be sent back. Try again.',
+  'ideas.back.loadError': 'The questions could not load.',
+  'ideas.back.justMessage': 'Only send a message instead',
   'ideas.moreActions': 'More actions',
   'ideas.allScores': 'All scores',
   'ideas.addNote': 'Add a note',
@@ -373,6 +392,25 @@ export const ideasTn = {
   'ideas.loadError': 'Ga re a kgona go bula kakanyo e', // TODO tn-review
   'ideas.notFound': 'Kakanyo e ga e yo kgotsa e tlositswe.', // TODO tn-review
   'ideas.askMore': 'Kopa go le gontsi', // TODO tn-review
+  'ideas.back.title': 'Kopa diphetogo', // TODO tn-review
+  'ideas.back.body': 'Kakanyo e boela kwa go moitseanape. Ke dikarolo tse o di kwadileng fela tse di ka fetolwang, mme e boela mo kgatong e.', // TODO tn-review
+  'ideas.back.reason': 'Lebaka la diphetogo', // TODO tn-review
+  'ideas.back.reasonHint': 'Moitseanape o bala se.', // TODO tn-review
+  'ideas.back.reasonNeeded': 'Bolela gore ke eng kakanyo e tlhoka diphetogo.', // TODO tn-review
+  'ideas.back.fixBy': 'Baakanya pele ga', // TODO tn-review
+  'ideas.back.items': 'Se se tshwanetseng go fetolwa', // TODO tn-review
+  'ideas.back.what': 'Karolo ya kakanyo', // TODO tn-review
+  'ideas.back.newDocument': 'Sekwalo se sesha', // TODO tn-review
+  'ideas.back.ask': 'Se se tshwanetseng go dirwa', // TODO tn-review
+  'ideas.back.askExample': 'Tsenya tlhwatlhwa ya mogwebi', // TODO tn-review
+  'ideas.back.itemNeeded': 'Bolela se se tshwanetseng go fetolwa.', // TODO tn-review
+  'ideas.back.add': 'Oketsa se sengwe', // TODO tn-review
+  'ideas.back.remove': 'Tlosa ntlha {n}', // TODO tn-review
+  'ideas.back.send': 'Busetsa', // TODO tn-review
+  'ideas.back.sent': 'E busitswe kwa go moitseanape.', // TODO tn-review
+  'ideas.back.error': 'Ga e a kgona go busediwa. Leka gape.', // TODO tn-review
+  'ideas.back.loadError': 'Dipotso ga di a kgona go tla.', // TODO tn-review
+  'ideas.back.justMessage': 'Romela molaetsa fela', // TODO tn-review
   'ideas.moreActions': 'Ditiro tse dingwe', // TODO tn-review
   'ideas.allScores': 'Maduo otlhe', // TODO tn-review
   'ideas.addNote': 'Tsenya ntlha', // TODO tn-review

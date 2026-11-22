@@ -79,11 +79,11 @@ class MyIdeaTrackingView(APIView):
         description="{id, feedback_by_stage [{code, name, decision: received|passed|not_taken_forward|returned|resent|in_progress, comment, by, "
         "by_you, automatic, at}], documents [{id, name, size_bytes, mime_type, version, sent_at, download_url, field_key, by_you, older_versions}], "
         "can_add_documents, returned {reason, fix_by, requested_by, requested_at, stage, items [{id, kind: answer|document, field_key, "
-        "field_label, label, done}], answers} | null}. Only the owner; feedback is only what staff shared.",
+        "field_label, label, done}], answers, fields (the requested questions as form fields)} | null}. Only the owner; feedback is only what staff shared.",
         responses=OpenApiTypes.OBJECT,
     )
     def get(self, request, idea_id):
-        return api_success(data=tracking.tracking(request.user, idea_id))
+        return api_success(data=tracking.tracking(request.user, idea_id, _lang(request)))
 
 
 class MyIdeaResendView(APIView):
@@ -98,7 +98,7 @@ class MyIdeaResendView(APIView):
         responses=OpenApiTypes.OBJECT,
     )
     def post(self, request, idea_id):
-        return api_success(data=tracking.resend(request.user, idea_id, answers=request.data.get("answers"), comment=request.data.get("comment", "")))
+        return api_success(data=tracking.resend(request.user, idea_id, answers=request.data.get("answers"), comment=request.data.get("comment", ""), lang=_lang(request)))
 
 
 class MyUpdatesView(APIView):

@@ -212,7 +212,12 @@ class ReturnedForChangesTests(TrackingBase):
         self.assertEqual(self.client.post(f"/api/me/ideas/{sub.id}/resend/", {"answers": {"price": "P2.40"}}, format="json").status_code, 400)
         self.assertEqual(sub.responses.get(field_key_snapshot="price").value, "P10")
 
-        self.client.post(f"/api/documents/submissions/{sub.id}/documents/", {"file": SimpleUploadedFile("quote.pdf", b"%PDF-1.4 quote")}, format="multipart")
+        # A general upload does not tick the requested item; one with the item's key does.
+        self.client.post(f"/api/documents/submissions/{sub.id}/documents/", {"file": SimpleUploadedFile("other.pdf", b"%PDF-1.4 other")}, format="multipart")
+        self.assertEqual(self.client.post(f"/api/me/ideas/{sub.id}/resend/", {"answers": {"price": "P2.40"}}, format="json").status_code, 400)
+        key = returned["items"][0]["field_key"]
+        self.client.post(f"/api/documents/submissions/{sub.id}/documents/", {"file": SimpleUploadedFile("quote.pdf", b"%PDF-1.4 quote"), "field_key": key}, format="multipart")
+        self.assertEqual([f["key"] for f in returned["fields"]], ["price"])
         done = self.client.post(f"/api/me/ideas/{sub.id}/resend/", {"answers": {"price": "P2.40"}}, format="json")
         self.assertEqual(done.status_code, 200, done.content)
         self.assertIsNone(data(done)["returned"])
@@ -252,4 +257,4 @@ class ReturnedForChangesTests(TrackingBase):
         self.client.force_authenticate(self.officer)
         info = data(self.client.get(f"/api/submissions/{sub.id}/send-back/"))
         self.assertIsNone(info["open"])
-        self.assertEqual([q["field_key"] for q in info["questions"]], ["idea", "price", "district"])
+        self.assertEqual([(q["field_key"], q["kind"]) for q in info["questions"]], [("idea", "answer"), ("price", "answer"), ("district", "answer")])

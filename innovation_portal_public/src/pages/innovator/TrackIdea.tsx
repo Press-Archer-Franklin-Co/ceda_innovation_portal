@@ -8,12 +8,15 @@ import Skeleton from '../../components/ui/Skeleton'
 import Tag from '../../components/ui/Tag'
 import { useShellSettings } from '../../components/layout/shellData'
 import MessageThread from '../../components/innovator/MessageThread'
+import DocumentsCard from '../../components/innovator/tracking/DocumentsCard'
+import FeedbackByStage from '../../components/innovator/tracking/FeedbackByStage'
+import ReturnedCard from '../../components/innovator/tracking/ReturnedCard'
 import { uploadedFiles } from '../../components/innovator/form/UploadField'
 import { formatDate, formatShortDate } from '../../components/innovator/format'
 import { statusWord } from '../../components/innovator/ideaStatus'
 import { useI18n } from '../../i18n'
 import { innovatorService } from '../../services/innovator.service'
-import type { SubmissionAnswer, TimelineStage, TrackedIdea } from '../../types/innovator'
+import type { IdeaTracking, SubmissionAnswer, TimelineStage, TrackedIdea } from '../../types/innovator'
 
 /** Screen 2.4: where the idea is, the conversation with the officer, and the idea read-only. */
 export default function TrackIdea() {
@@ -23,6 +26,18 @@ export default function TrackIdea() {
   const settings = useShellSettings()
   const [idea, setIdea] = useState<TrackedIdea | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'not_found'>('loading')
+  const [tracking, setTracking] = useState<IdeaTracking | null>(null)
+  const [trackingFailed, setTrackingFailed] = useState(false)
+  const [resent, setResent] = useState(false)
+
+  const loadTracking = useCallback(async () => {
+    setTrackingFailed(false)
+    try {
+      setTracking(await innovatorService.tracking(id, lang))
+    } catch {
+      setTrackingFailed(true)
+    }
+  }, [id, lang])
 
   const load = useCallback(async () => {
     setState('loading')
@@ -38,6 +53,10 @@ export default function TrackIdea() {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    loadTracking()
+  }, [loadTracking])
 
   useEffect(() => {
     if (idea) document.title = `${idea.title} · CEDA Innovation`
@@ -86,7 +105,32 @@ export default function TrackIdea() {
       </section>
 
       <div className="mx-auto grid max-w-[1200px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <MessageThread ideaId={idea.id} />
+        <div className="flex min-w-0 flex-col gap-6">
+          {resent && <p role="status" className="rounded-control bg-success-soft px-4 py-3 text-d-body-s text-success">{t('trk.resent')}</p>}
+          {tracking?.returned && (
+            <ReturnedCard
+              ideaId={idea.id}
+              returned={tracking.returned}
+              onChanged={loadTracking}
+              onResent={(next) => {
+                setTracking(next)
+                setResent(true)
+                innovatorService.trackedIdea(id).then(setIdea).catch(() => undefined)
+              }}
+            />
+          )}
+          <MessageThread ideaId={idea.id} />
+          {trackingFailed ? (
+            <ErrorState title={t('trk.feedbackError')} onRetry={loadTracking} />
+          ) : tracking ? (
+            <>
+              <FeedbackByStage events={tracking.feedback_by_stage} />
+              <DocumentsCard ideaId={idea.id} documents={tracking.documents} canAdd={tracking.can_add_documents} onChanged={loadTracking} />
+            </>
+          ) : (
+            <Skeleton className="h-[220px] w-full rounded-card" />
+          )}
+        </div>
 
         <aside className="flex flex-col gap-4">
           <Card padding="md">

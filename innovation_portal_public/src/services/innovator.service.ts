@@ -1,7 +1,7 @@
 import api from './api'
 import { query, unwrapData } from './envelope'
 import type {
-  ChallengeMatches, Envelope, IdeasFilter, IdeasList, Lang, LinkChallengeResult,
+  ChallengeMatches, Envelope, IdeaTracking, IdeasList, IdeasQuery, Lang, LinkChallengeResult,
   MySummary, ProfileCompleteness, RecommendedChallenge, Timeline, TrackedIdea, UpdatesFeed,
 } from '../types/innovator'
 
@@ -12,8 +12,21 @@ export const innovatorService = {
     return unwrapData(data)
   },
 
-  async ideas(filter: IdeasFilter = 'all', lang?: Lang): Promise<IdeasList> {
-    const { data } = await api.get<Envelope<IdeasList>>(`/me/ideas/${query({ filter, lang })}`)
+  /** 2.2: one page, searched and sorted on the server. */
+  async ideas(params: IdeasQuery = {}): Promise<IdeasList> {
+    const { data } = await api.get<Envelope<IdeasList>>(`/me/ideas/${query({ ...params })}`)
+    return unwrapData(data)
+  },
+
+  /** 2.4 and 2.4b: feedback by stage, documents and the returned-for-changes block. */
+  async tracking(ideaId: string, lang?: Lang): Promise<IdeaTracking> {
+    const { data } = await api.get<Envelope<IdeaTracking>>(`/me/ideas/${ideaId}/tracking/${query({ lang })}`)
+    return unwrapData(data)
+  },
+
+  /** 2.4b Fix and resend: only the requested answers; documents are uploaded first. */
+  async resend(ideaId: string, answers: Record<string, unknown>, lang?: Lang): Promise<IdeaTracking> {
+    const { data } = await api.post<Envelope<IdeaTracking>>(`/me/ideas/${ideaId}/resend/${query({ lang })}`, { answers })
     return unwrapData(data)
   },
 

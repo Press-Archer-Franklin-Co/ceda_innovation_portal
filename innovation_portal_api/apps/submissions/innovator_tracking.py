@@ -24,6 +24,7 @@ PAGE_SIZE = 10
 MAX_PAGE_SIZE = 50
 ITEM_KINDS = ("answer", "document")
 MAX_ITEMS = 10
+FILE_TYPES = ("file", "media")
 
 
 def _iso(value):
@@ -124,6 +125,13 @@ def ideas_page(user, *, filter_name="all", q="", program="", sort="newest", page
         for s in Submission.objects.filter(id__in=sub_ids).select_related("program", "sector", "workflow_instance__current_step")
     }
     results = [draft_item(drafts_by_id[pk], lang) if kind == "draft" else submission_item(subs_by_id[pk], lang) for _, pk, kind in window]
+    # A returned idea's card says why and by when (one query for the page).
+    open_returns = {str(r.submission_id): r for r in ReturnRequest.objects.filter(submission_id__in=sub_ids, status=ReturnRequest.Status.OPEN)}
+    for item in results:
+        ret = open_returns.get(item["id"]) if item["kind"] == "submission" else None
+        if ret:
+            item["needs_action_reason"] = ret.reason
+            item["reply_by"] = ret.fix_by.isoformat() if ret.fix_by else item["reply_by"]
 
     from apps.programs.models import Program
 
@@ -213,12 +221,11 @@ def documents(submission) -> list[dict]:
     /api/documents/{id}/download/, which checks the person can see the idea."""
     from apps.documents.models import SubmissionDocument
 
-    rows = list(
-        SubmissionDocument.objects.filter(submission=submission, is_active=True).select_related("uploaded_by").order_by("upload_group_id", "-version_number")
-    )
+    rows = list(SubmissionDocument.objects.filter(submission=submission, is_active=True).order_by("-created_at", "-version_number"))
     groups: dict = {}
     for doc in rows:
-        groups.setdefault(doc.upload_group_id, []).append(doc)
+        # A new upload for the same question, or a replacement, is a new version of one document.
+        groups.setdefault(doc.field_key or doc.upload_group_id, []).append(doc)
 
     def one(doc):
         return {
@@ -235,12 +242,10 @@ def documents(submission) -> list[dict]:
 
     out = []
     for versions in groups.values():
-        latest = versions[0]
-        if not latest.is_current and not latest.is_latest:
+        if not versions[0].is_current:
             continue
-        item = one(latest)
-        item["older_versions"] = [one(v) for v in versions[1:]]
-        out.append(item)
+        numbered = [{**one(doc), "version": len(versions) - index} for index, doc in enumerate(versions)]
+        out.append({**numbered[0], "older_versions": numbered[1:]})
     out.sort(key=lambda d: d["sent_at"] or "", reverse=True)
     return out
 
@@ -265,12 +270,28 @@ def item_done(ret: ReturnRequest, item: dict, *, answers: dict | None = None, do
         new = (answers or {}).get(item["field_key"])
         return new not in (None, "", [], {}) and new != old
     new_ids = set(document_ids or []) - set(before.get("documents") or [])
-    if not item.get("field_key"):
-        return bool(new_ids)
     return any((documents_by_id or {}).get(pk) == item["field_key"] for pk in new_ids)
 
 
-def returned_payload(submission) -> dict | None:
+def _fix_fields(submission, keys, lang: str) -> list[dict]:
+    """The requested questions as form fields (same shape as the published form), for the fix form."""
+    from apps.programs.form_schema import field_document, localize_schema
+
+    responses = (
+        submission.responses.filter(field_key_snapshot__in=keys, form_field__isnull=False)
+        .select_related("form_field")
+        .prefetch_related("form_field__options", "form_field__field_rules")
+    )
+    docs = [field_document(r.form_field) for r in responses]
+    localized = localize_schema({"id": "", "name": {}, "description": {}, "languages": ["en", "tn"], "steps": [], "loose_fields": docs}, lang)["loose_fields"]
+    order = {key: index for index, key in enumerate(keys)}
+    # Only the requested parts: conditions on other questions must not hide or lock them here.
+    for field in localized:
+        field.update({"visible_if": {}, "enabled_if": {}, "required_if": {}, "required": True})
+    return sorted(localized, key=lambda f: order.get(f["key"], 0))
+
+
+def returned_payload(submission, lang: str = "en") -> dict | None:
     ret = submission.return_requests.filter(status=ReturnRequest.Status.OPEN).select_related("requested_by").first()
     if ret is None:
         return None
@@ -298,10 +319,11 @@ def returned_payload(submission) -> dict | None:
         "stage": ret.step_name,
         "items": items,
         "answers": {key: answers.get(key) for key in answer_keys},
+        "fields": _fix_fields(submission, answer_keys, lang),
     }
 
 
-def tracking(user, idea_id) -> dict:
+def tracking(user, idea_id, lang: str = "en") -> dict:
     submission = owned_submission(user, idea_id)
     instance = getattr(submission, "workflow_instance", None)
     finished = submission.current_status in FINISHED_STATUSES or bool(instance and instance.status in ENDED_WORKFLOW_STATUSES)
@@ -310,7 +332,7 @@ def tracking(user, idea_id) -> dict:
         "feedback_by_stage": feedback_by_stage(submission),
         "documents": documents(submission),
         "can_add_documents": not finished,
-        "returned": returned_payload(submission),
+        "returned": returned_payload(submission, lang),
     }
 
 
@@ -338,7 +360,8 @@ def send_back(submission: Submission, *, actor, reason: str, fix_by, items) -> R
             errors["fix_by"] = "Pick today or a later date."
     else:
         fix_by = None
-    keys = set(submission.responses.values_list("field_key_snapshot", flat=True))
+    types = dict(submission.responses.values_list("field_key_snapshot", "field_type_snapshot"))
+    keys = set(types)
     clean = []
     if not isinstance(items, list) or not items:
         errors["items"] = "Add at least one thing to change."
@@ -354,9 +377,14 @@ def send_back(submission: Submission, *, actor, reason: str, fix_by, items) -> R
                 errors[f"items[{index}].label"] = "Say what to change."
             elif len(label) > 200:
                 errors[f"items[{index}].label"] = "At most 200 characters."
-            if kind == "answer" and key not in keys:
+            field_type = types.get(key)
+            if kind == "answer" and (key not in keys or field_type in FILE_TYPES):
                 errors[f"items[{index}].field_key"] = "Pick the question to change."
-            clean.append({"id": uuid.uuid4().hex[:8], "kind": kind, "field_key": key, "label": label})
+            if kind == "document" and key and field_type not in FILE_TYPES:
+                errors[f"items[{index}].field_key"] = "Pick a file question, or leave it empty for a new document."
+            item_id = uuid.uuid4().hex[:8]
+            # Each document item has its own key, so one upload can never tick two items.
+            clean.append({"id": item_id, "kind": kind, "field_key": key or (f"return-{item_id}" if kind == "document" else ""), "label": label})
     if submission.return_requests.filter(status=ReturnRequest.Status.OPEN).exists():
         errors["detail"] = "This idea is already waiting for changes."
     if errors:
@@ -380,11 +408,21 @@ def send_back(submission: Submission, *, actor, reason: str, fix_by, items) -> R
     return ret
 
 
-def resend(user, idea_id, *, answers=None, comment: str = "") -> dict:
+def _unconditional(field):
+    """The requested question on its own: its type and rules apply, conditions on other answers do not."""
+    field.visible_if = {}
+    field.enabled_if = {}
+    field.required_if = {}
+    field.required = True
+    return field
+
+
+def resend(user, idea_id, *, answers=None, comment: str = "", lang: str = "en") -> dict:
     """2.4b "Fix and resend": only the requested answers may change, every requested item must be done, then the
     idea goes back to the same stage (WorkflowRuntimeService.resubmit) and the officer hears about it."""
     from apps.documents.models import SubmissionDocument
     from apps.notifications.services import NotificationService
+    from apps.submissions.draft_services import ApplicationDraftService
     from apps.workflow.services import WorkflowRuntimeService
 
     submission = owned_submission(user, idea_id)
@@ -401,11 +439,15 @@ def resend(user, idea_id, *, answers=None, comment: str = "") -> dict:
         raise ValidationError(errors)
 
     with transaction.atomic():
-        responses = {r.field_key_snapshot: r for r in submission.responses.select_for_update().filter(field_key_snapshot__in=list(answers))}
+        responses = {r.field_key_snapshot: r for r in submission.responses.select_for_update(of=("self",)).select_related("form_field").filter(field_key_snapshot__in=list(answers))}
         for key, value in answers.items():
             response = responses.get(key)
             if response is None:
                 raise ValidationError({f"answers.{key}": "This question is not on the idea."})
+            if response.form_field_id:
+                problems = ApplicationDraftService.field_errors(_unconditional(response.form_field), {key: value})
+                if problems:
+                    raise ValidationError({f"answers.{key}": problems})
             response.value = value
             response.save(update_fields=["value", "updated_at"])
         current = _current_answers(submission, list(allowed))
@@ -436,4 +478,4 @@ def resend(user, idea_id, *, answers=None, comment: str = "") -> dict:
                 send_email=False,
             )
     submission.refresh_from_db()
-    return tracking(user, submission.id)
+    return tracking(user, submission.id, lang)

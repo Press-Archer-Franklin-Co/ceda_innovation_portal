@@ -352,7 +352,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         summary="Ask for changes: return the idea with a reason, a fix-by date and what to change (3.16, 2.4b)",
         description="POST {reason, fix_by?: YYYY-MM-DD, items: [{kind: answer|document, field_key, label}]}. Uses the step's "
         "request info (return) action, so the same people can do it. GET answers the open request and the questions it can point at: "
-        "{open: {...} | null, questions: [{field_key, label}]}.",
+        "{open: {...} | null, questions: [{field_key, label, kind}]}.",
         request=OpenApiTypes.OBJECT,
         responses=OpenApiTypes.OBJECT,
     )
@@ -362,7 +362,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         submission = self.get_object()
         if request.method == "GET":
             questions = [
-                {"field_key": key, "label": label or key}
+                {"field_key": key, "label": label or key, "kind": "document" if kind in tracking.FILE_TYPES else "answer"}
                 for key, label, kind in submission.responses.order_by("created_at").values_list("field_key_snapshot", "field_label_snapshot", "field_type_snapshot")
                 if key and kind not in ("heading", "paragraph")
             ]
