@@ -500,6 +500,11 @@ class TranslationProviderNotConfigured(Exception):
 def get_translation_provider() -> TranslationProvider:
     path = getattr(settings, "FORM_TRANSLATION_PROVIDER", "") or ""
     if not path:
+        # Copilot B3: the AI Copilot suggests Setswana when its `translate` feature can answer.
+        from apps.assistant import translation
+
+        if translation.available():
+            return translation.AIFormTranslator()
         raise TranslationProviderNotConfigured
     return import_string(path)()
 
@@ -625,7 +630,8 @@ class FormTranslationService:
         if not rows:
             return []
         suggestions = provider.translate([row["en"] for row in rows], source=DEFAULT_LANGUAGE, target=lang)
-        return [{"key": row["key"], "en": row["en"], "suggested": suggestion} for row, suggestion in zip(rows, suggestions)]
+        # needs_review: a suggestion is never final; a person checks it before saving (Copilot B3).
+        return [{"key": row["key"], "en": row["en"], "suggested": suggestion, "needs_review": True} for row, suggestion in zip(rows, suggestions)]
 
     @staticmethod
     def request_review(form: SubmissionForm, *, role: str, actor, note: str = "") -> int:

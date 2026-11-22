@@ -1,13 +1,14 @@
 import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useI18n } from '../../i18n'
-import Logo from '../ui/Logo'
+import { BrandLockup } from '../ui/Logo'
 import { SUBMIT_PATH } from './Navbar'
 import { useShellSettings } from './shellData'
 import { TAB_BAR_SPACE } from './MobileTabBar'
 
 // Figma 1 · Public home › Footer (10:762 website, 10:1324 phone). Chocolate banner, white headings,
-// heroMuted links, yellow tagline. Contact lines show only when the site settings have them.
+// heroMuted links. The full CEDA logo on dark carries the tagline itself (U12). Contact lines show only when
+// the site settings have them.
 
 const link =
   'text-d-body-s text-banner-muted hover:text-on-banner hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner'
@@ -32,8 +33,7 @@ export default function Footer() {
       <div className="max-w-[1200px] mx-auto px-5 lg:px-6 pt-10 lg:pt-14 pb-8">
         <div className="grid gap-8 lg:gap-16 grid-cols-2 lg:grid-cols-[320px_1fr_1fr_1fr]">
           <div className="col-span-2 lg:col-span-1 flex flex-col gap-3">
-            <Logo theme="dark" className="!p-0 self-start" />
-            <p className="text-d-h5 font-heading text-yellow">{t('footer.tagline')}</p>
+            <BrandLockup theme="dark" width={176} className="self-start" />
             <p className="text-d-body-s">{t('footer.about')}</p>
           </div>
 

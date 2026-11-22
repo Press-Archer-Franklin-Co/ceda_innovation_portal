@@ -54,6 +54,8 @@ CAPABILITIES: dict[str, tuple[str, ...]] = {
     # Judges see hints only for entries assigned to them (SubmissionSelector.for_user decides).
     "assistant.hints": (R.JUDGE, R.INNOVATION_OFFICER, R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     "assistant.manage": (R.ADMINISTRATOR,),
+    # Copilot B2: describe a process and get a draft form and workflow (drafts only; publishing is unchanged).
+    "assistant.build": (R.INNOVATION_MANAGER, R.ADMINISTRATOR),
     # C2: WhatsApp and USSD journeys, channel connections and their activity.
     "channels.manage": OFFICER_ADMIN,
     # C1: answer chats and hand-overs in the Inbox.
@@ -90,6 +92,12 @@ CATALOGUE: dict[str, dict] = {
         "label": "Tune the AI helper",
         "label_tn": "Baakanya mothusi wa AI",
         "description": "Write guidance, upload the user manual, switch helper features on or off and see what it costs.",
+    },
+    "assistant.build": {
+        "group": "challenges",
+        "label": "Create forms and workflows with AI",
+        "label_tn": "Dira diforomo le ditsamaiso ka AI",  # TODO tn-review
+        "description": "Describe a process and get a draft form and workflow to preview, edit, test and send for approval. Needs form or workflow rights too.",
     },
     "channels.manage": {
         "group": "administration",

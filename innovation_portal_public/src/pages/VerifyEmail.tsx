@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams, useNavigate } from 'react-router-dom'
 import { CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
-import logoSrc from '../assets/logo.png'
+import { BrandLockup } from '../components/ui/Logo'
 import { authService } from '../services/auth.service'
 import { parseApiError } from '../utils/apiError'
 import { tokenStorage } from '../services/api'
@@ -78,7 +78,7 @@ export default function VerifyEmail() {
           backgroundSize: '48px 48px',
         }} />
         <div className="relative flex items-center gap-3">
-          <img src={logoSrc} alt="CEDA" className="h-11 w-auto" />
+          <BrandLockup width={150} />
           <div className="w-px h-9 bg-white/25" />
           <div className="flex flex-col leading-none">
             <span style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 24, color: '#fff', lineHeight: 1 }}>ceda</span>
@@ -101,7 +101,7 @@ export default function VerifyEmail() {
       <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 bg-white">
         <div className="w-full max-w-sm">
           <Link to="/" className="flex items-center gap-3 mb-12 lg:hidden">
-            <img src={logoSrc} alt="CEDA" className="h-9 w-auto" />
+            <BrandLockup width={120} />
             <div className="w-px h-8 bg-gray-200" />
             <div className="flex flex-col leading-none">
               <span style={{ fontFamily: 'Poppins', fontWeight: 900, fontSize: 22, color: '#A01E0A', lineHeight: 1 }}>ceda</span>

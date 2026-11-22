@@ -44,6 +44,8 @@
   --c-on-accent: 46 30 24;       /* color/onAccent #2E1E18 */
   --c-amber: 250 160 20;         /* color/amber #FAA014 */
   --c-yellow: 250 200 0;         /* color/yellow #FAC800 */
+  --c-brand-text: 97 66 58;      /* #61423A: the words of the CEDA logo on light grounds (U12) */
+  --c-loader-glass: 90 60 50;    /* the idea bulb's glass line, used at 55% (U12) */
 
   /* Status */
   --c-success: 43 118 47;        /* #2B762F: darkened from #2E7D32 so it passes AA on success-soft (4.47 to 4.91) */
@@ -95,6 +97,8 @@
   --c-warning: 245 180 90;
   --c-danger: 255 130 120;
   --c-info: 120 180 230;
+  --c-brand-text: 244 237 233;   /* logo words on the dark-grey page */
+  --c-loader-glass: 234 219 210;
   color-scheme: dark;
 }
 

@@ -290,6 +290,8 @@ def status_for(user, requested_language: str | None = None) -> dict:
                 if user_has(user, "assistant.hints"):
                     features["hints"] = can("hints")
                     features["related"] = can("related") and not _judge_only(user)
+                if user_has(user, "assistant.build"):
+                    features["builder_draft"] = can("builder_draft")
                 if user_has(user, "forms.manage"):
                     features["translate"] = can("translate")
     except Exception:

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Bell, Copy, Pencil, Trash2 } from 'lucide-react'
 import { Inbox, Plus } from 'lucide-react'
 import Button from '../components/ui/Button'
@@ -21,7 +21,9 @@ import { SkeletonTable } from '../components/ui/LoadingSkeleton'
 import Pagination from '../components/ui/Pagination'
 import LanguageSwitch from '../components/ui/LanguageSwitch'
 import StepProgress from '../components/ui/StepProgress'
-import Logo, { CedaMark } from '../components/ui/Logo'
+import Logo, { BrandLockup, CedaMark } from '../components/ui/Logo'
+import BrandLoader from '../components/ui/BrandLoader'
+import { createBoot } from '../lib/boot'
 import PageHeader from '../components/ui/PageHeader'
 import SectionCard from '../components/ui/SectionCard'
 import Sidebar from '../layout/Sidebar'
@@ -136,18 +138,8 @@ export default function Styleguide() {
           </div>
         </Section>
 
-        <Section figma="Shell" title="Sidebar (as an administrator) and top bar">
-          <div className="relative h-[720px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)' }}>
-            <LayoutContext.Provider value={{ sidebarOpen: true, mobileSidebarOpen: false, setSidebarOpen: () => {}, setMobileSidebarOpen: () => {} }}>
-              <Sidebar previewUser={previewAdmin} />
-            </LayoutContext.Provider>
-            <div className="absolute inset-y-0 right-0 left-[var(--sidebar-width)] bg-bg p-4">
-              <PageHeader title="Review queue" subtitle="Ideas waiting for a first look." actions={<Button size="sm" icon={<Plus size={14} aria-hidden />}>Add challenge</Button>} />
-              <SectionCard title="Entries" subtitle="Skeleton rows keep the columns while loading" padding={false}>
-                <SkeletonTable rows={5} cols={5} />
-              </SectionCard>
-            </div>
-          </div>
+        <Section figma="Shell (U12 lit menu)" title="Sidebar (as an administrator), lit open and dim rail">
+          <ShellPreview />
         </Section>
 
         <Section figma="Foundations board › Colours" title="Colour tokens">
@@ -161,12 +153,20 @@ export default function Styleguide() {
           </div>
         </Section>
 
-        <Section figma="Components › Brand" title="CEDA mark and Logo">
+        <Section figma="Components › Brand (U12)" title="CEDA mark, Logo and BrandLockup">
           <div className="flex flex-wrap items-center gap-6">
             <CedaMark height={64} label="CEDA" />
             <Logo />
             <Logo theme="dark" subtitle="Staff console" />
           </div>
+          <div className="flex flex-wrap items-center gap-6 mt-4">
+            <div className="p-6 rounded-card border border-border bg-bg"><BrandLockup width={240} /></div>
+            <div className="p-6 rounded-card bg-banner"><BrandLockup width={240} theme="dark" /></div>
+          </div>
+        </Section>
+
+        <Section figma="Components › Brand loader (U12)" title="BrandLoader: the idea bulb">
+          <LoaderPreview />
         </Section>
 
         <Section figma="Components › Buttons" title="Button (staff sizes)">
@@ -385,6 +385,49 @@ export default function Styleguide() {
             <span className="bg-banner px-3 py-2 rounded-control"><LanguageSwitch tone="dark" /></span>
           </div>
         </Section>
+      </div>
+    </div>
+  )
+}
+
+/** The loader with a pretend start-up of three steps, so it can be watched again. */
+function LoaderPreview() {
+  const [run, setRun] = useState(0)
+  const boot = useMemo(() => createBoot(['me', 'config', 'page'], { timeoutMs: 0 }), [run]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const ids = [700, 1500, 2300].map((ms, i) => setTimeout(() => boot.done(boot.steps[i]), ms))
+    return () => ids.forEach(clearTimeout)
+  }, [boot])
+  return (
+    <div>
+      <Button size="sm" onClick={() => setRun((n) => n + 1)}>Replay</Button>
+      <div className="relative mt-3 h-[480px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)' }}>
+        <BrandLoader key={run} boot={boot} intro contained />
+      </div>
+    </div>
+  )
+}
+
+/** The staff shell with the lit menu: Collapse and Expand play the real motion. */
+function ShellPreview() {
+  const [open, setOpen] = useState(true)
+  const shellRef = useRef(null)
+  return (
+    <div>
+      <div className="flex gap-2 mb-3">
+        <Button size="sm" variant="secondary" onClick={() => setOpen(false)} disabled={!open}>Collapse</Button>
+        <Button size="sm" variant="secondary" onClick={() => setOpen(true)} disabled={open}>Expand</Button>
+      </div>
+      <div ref={shellRef} className="relative h-[720px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)', '--sidebar-current': open ? 'var(--sidebar-width)' : 'var(--sidebar-rail)' }}>
+        <LayoutContext.Provider value={{ sidebarOpen: open, mobileSidebarOpen: false, setSidebarOpen: setOpen, setMobileSidebarOpen: () => {}, phone: false, shellRef }}>
+          <Sidebar previewUser={previewAdmin} />
+        </LayoutContext.Provider>
+        <div className="absolute inset-y-0 right-0 bg-bg p-4" style={{ left: 'var(--sidebar-current)' }}>
+          <PageHeader title="Review queue" subtitle="Ideas waiting for a first look." actions={<Button size="sm" icon={<Plus size={14} aria-hidden />}>Add challenge</Button>} />
+          <SectionCard title="Entries" subtitle="Skeleton rows keep the columns while loading" padding={false}>
+            <SkeletonTable rows={5} cols={5} />
+          </SectionCard>
+        </div>
       </div>
     </div>
   )
