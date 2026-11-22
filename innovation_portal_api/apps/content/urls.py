@@ -2,6 +2,13 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from apps.content.all_content_views import AllContentView
+from apps.content.hackathon_views import (
+    ActiveHackathonView,
+    HackathonPageSubmitView,
+    HackathonPageView,
+    HackathonUpdateDetailView,
+    HackathonUpdatesView,
+)
 
 from .b6_views import (
     ApprovalDecisionView,
@@ -56,7 +63,15 @@ leadership_router = DefaultRouter()
 leadership_router.register(r"leadership", LeadershipCardViewSet, basename="leadership-card")
 
 urlpatterns = (
-    news_router.urls
+    [
+        # Before the routers, so "active" is not read as a hackathon id.
+        path("hackathons/active/", ActiveHackathonView.as_view(), name="hackathon-active"),
+        path("hackathons/<uuid:pk>/page/", HackathonPageView.as_view(), name="hackathon-page"),
+        path("hackathons/<uuid:pk>/page/submit/", HackathonPageSubmitView.as_view(), name="hackathon-page-submit"),
+        path("hackathons/<uuid:pk>/updates/", HackathonUpdatesView.as_view(), name="hackathon-updates"),
+        path("hackathons/<uuid:pk>/updates/<uuid:update_id>/", HackathonUpdateDetailView.as_view(), name="hackathon-update-detail"),
+    ]
+    + news_router.urls
     + hackathon_router.urls
     + media_router.urls
     + winners_router.urls

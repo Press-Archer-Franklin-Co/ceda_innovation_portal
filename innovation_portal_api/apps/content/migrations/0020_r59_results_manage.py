@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0018_u11c_seed_policy_pages'),
+        ('content', '0019_r59_hackathon_page'),
         ('programs', '0021_r48_eligibility_stages'),
         ('submissions', '0011_merge_0010_b6_part2_0010_known_drift'),
     ]
