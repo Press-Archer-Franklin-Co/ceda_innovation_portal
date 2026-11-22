@@ -206,7 +206,7 @@ export const notifications = {
   list:        (params) => client.get('/api/notifications/', params),
   unreadCount: ()       => client.get('/api/notifications/unread-count/'),
   markRead:    (id)     => client.post(`/api/notifications/${id}/mark-read/`),
-  markAllRead: ()       => client.post('/api/notifications/mark-read/'),
+  markAllRead: ()       => client.post('/api/notifications/mark-read/', { mark_all: true }),
 }
 
 export const workflows = {

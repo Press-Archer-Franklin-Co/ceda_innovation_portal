@@ -17,9 +17,8 @@ function ErrorBoundary({ children }) {
 }
 
 const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
-const Programs = lazy(() => import('./pages/programs/Programs'))
-const ProgramDetail = lazy(() => import('./pages/programs/ProgramDetail'))
-const ProgramEditor = lazy(() => import('./pages/programs/ProgramEditor'))
+const Challenges = lazy(() => import('./pages/programs/Challenges'))
+const ChallengeStatus = lazy(() => import('./pages/programs/ChallengeStatus'))
 const Submissions = lazy(() => import('./pages/submissions/Submissions'))
 const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail'))
 const MyWork = lazy(() => import('./pages/mywork/MyWork'))
@@ -30,10 +29,10 @@ const LiveChatSettings = lazy(() => import('./pages/inbox/LiveChatSettings'))
 const ReviewQueue = lazy(() => import('./pages/review/ReviewQueue'))
 const AllScores = lazy(() => import('./pages/judging/AllScores'))
 const Reports = lazy(() => import('./pages/reports/Reports'))
-const Settings = lazy(() => import('./pages/settings/Settings'))
-const AdminWorkflows = lazy(() => import('./pages/admin/workflows/AdminWorkflows'))
+const NotificationsProfile = lazy(() => import('./pages/settings/NotificationsProfile'))
+const Workflows = lazy(() => import('./pages/admin/workflows/Workflows'))
 const WorkflowBuilder = lazy(() => import('./pages/admin/workflows/WorkflowBuilder'))
-const WorkflowInstances = lazy(() => import('./pages/admin/workflows/WorkflowInstances'))
+const WorkflowIdeas = lazy(() => import('./pages/admin/workflows/WorkflowIdeas'))
 const MarkingCriteria = lazy(() => import('./pages/challenges/MarkingCriteria'))
 const ChallengeBuilder = lazy(() => import('./pages/challenges/ChallengeBuilder'))
 const Forms = lazy(() => import('./pages/forms/Forms'))
@@ -94,11 +93,11 @@ export default function App() {
               <Route element={<ErrorBoundary><AppLayout /></ErrorBoundary>}>
                 <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
 
-                <Route path="/programs"     element={<ErrorBoundary><Programs /></ErrorBoundary>} />
+                <Route path="/programs"     element={<ErrorBoundary><Challenges /></ErrorBoundary>} />
                 <Route path="/programs/new" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
-                <Route path="/programs/:id" element={<ErrorBoundary><ProgramDetail /></ErrorBoundary>} />
+                <Route path="/programs/:id" element={<ErrorBoundary><ChallengeStatus /></ErrorBoundary>} />
                 <Route path="/programs/:id/edit" element={<ErrorBoundary><ChallengeBuilder /></ErrorBoundary>} />
-                <Route path="/programs/:id/settings" element={<ErrorBoundary><ProgramEditor /></ErrorBoundary>} />
+                <Route path="/programs/:id/settings" element={<ParamRedirect to="/programs/:id/edit?section=basics" />} />
 
                 {/* U8 (3.15 to 3.20). Old addresses redirect to the new screens. */}
                 <Route element={<CapabilityRoute need="entries.search" />}>
@@ -139,9 +138,10 @@ export default function App() {
 
                 {/* Each group asks for the capability the API checks on the endpoints behind it (S1). */}
                 <Route element={<CapabilityRoute need="entries.assign" />}>
-                  <Route path="/admin/workflows"               element={<ErrorBoundary><AdminWorkflows /></ErrorBoundary>} />
+                  <Route path="/admin/workflows"               element={<ErrorBoundary><Workflows /></ErrorBoundary>} />
+                  <Route path="/workflows"                     element={<Navigate to="/admin/workflows" replace />} />
                   <Route path="/admin/workflows/:id/builder"   element={<ErrorBoundary><WorkflowBuilder /></ErrorBoundary>} />
-                  <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowInstances /></ErrorBoundary>} />
+                  <Route path="/admin/workflows/:id/instances" element={<ErrorBoundary><WorkflowIdeas /></ErrorBoundary>} />
                 </Route>
                 <Route element={<CapabilityRoute need="challenges.manage" />}>
                   <Route path="/admin/terms"                   element={<ErrorBoundary><TermsManager /></ErrorBoundary>} />
@@ -197,7 +197,7 @@ export default function App() {
                   <Route path="/content/approvals"              element={<ErrorBoundary><Approvals /></ErrorBoundary>} />
                 </Route>
 
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<NotificationsProfile />} />
 
 
 
