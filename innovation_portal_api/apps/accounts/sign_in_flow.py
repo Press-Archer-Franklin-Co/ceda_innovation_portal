@@ -112,7 +112,7 @@ def second_step_for(user: User) -> str:
 def send_code(identifier: Identifier, *, ip: str | None) -> dict:
     from apps.accounts.otp_services import OTPService
 
-    OTPService.assert_channel_available(identifier.kind)
+    OTPService.assert_channel_available(identifier.kind, identifier.value)
     result = OTPService.request_code(target_type=identifier.kind, target=identifier.value, ip=ip)
     return {
         "next": "code",
@@ -134,6 +134,13 @@ def start(raw_identifier: str, *, ip: str | None = None, want_code: bool = False
     if not user.is_active:
         raise ValidationError({"code": "account_disabled", "detail": "This account is switched off. Contact CEDA."})
     demo_logins.assert_can_sign_in(user)
+    # Password sign-in stays available while email cannot reach this person.
+    if identifier.is_email and not want_code and user.has_usable_password():
+        from apps.platform_config.email_backend import delivery_block
+        from apps.platform_config.flags import is_enabled
+
+        if delivery_block([identifier.value]) and is_enabled("password_sign_in"):
+            return {"next": "password"}
     # want_code: "Forgot password?" signs in with a one-time code instead.
     if want_code or second_step_for(user) == AuthPolicy.SecondStep.CODE:
         return send_code(identifier, ip=ip)
@@ -193,6 +200,10 @@ def signup(*, identifier_raw: str, full_name: str, phone: str = "", email: str =
         errors["email"] = {"code": "email_taken", "detail": "This email address already has an account. Sign in instead."}
     if errors:
         raise ValidationError(errors)
+    if identifier.is_email and policy == AuthPolicy.SecondStep.CODE:
+        from apps.accounts.otp_services import OTPService
+
+        OTPService.assert_channel_available(identifier.kind, identifier.value)  # checked before an account is made
 
     first, _, last = name.partition(" ")
     with transaction.atomic():

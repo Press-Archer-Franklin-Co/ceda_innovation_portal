@@ -128,11 +128,14 @@ class OTPService:
         return OTPService.MAX_CODES_PER_TARGET_PER_HOUR
 
     @staticmethod
-    def assert_channel_available(target_type: str) -> None:
-        """Codes by phone need SMS (or WhatsApp) switched on as well as code sign-in."""
+    def assert_channel_available(target_type: str, target: str = "") -> None:
+        """Codes by phone need SMS (or WhatsApp) switched on; codes by email need Email to reach that address."""
+        from apps.platform_config.email_backend import delivery_block
         from apps.platform_config.flags import require_feature
 
         require_feature("code_sign_in")
+        if target_type == LoginCode.TargetType.EMAIL and target and delivery_block([target]):
+            raise ValidationError({"code": "email_not_available", "detail": "We cannot email a code right now. Sign in with your phone or password, or contact CEDA."})
         if target_type == LoginCode.TargetType.PHONE:
             channel = OTPService._phone_channel()
             require_feature("whatsapp_messages" if channel == LoginCode.Channel.WHATSAPP else "sms_messages")

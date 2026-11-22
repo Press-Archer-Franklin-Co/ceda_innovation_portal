@@ -287,6 +287,9 @@ class IntegrationService:
                     inputs["phone"] = normalize_phone(inputs["phone"])
                 except InvalidPhoneNumber as exc:
                     raise ValidationError({"phone": [str(exc)]}) from exc
+        if connection.kind == IntegrationConnection.Kind.EMAIL:
+            # The test email goes to the signed-in staff member, never to an address typed in the request.
+            inputs = {"to_email": getattr(actor, "email", "") or ""}
         secret_values = decrypt_secrets(connection.secrets_encrypted)
         provider = IntegrationRuntimeSelector.provider_for(connection, secrets=secret_values)
         if provider is None:

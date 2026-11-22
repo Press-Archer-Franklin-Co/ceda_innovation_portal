@@ -34,7 +34,19 @@ FEATURE_NEEDS = {
     "staff_sso": "sso",
     "translation_suggestions": "translation",
     "ai_helper": "ai",
+    "subscriptions": "email",
 }
+# Features that work with any one of these services.
+FEATURE_NEEDS_ANY = {"code_sign_in": ("sms", "whatsapp", "email")}
+
+
+def needed_kinds(key: str) -> tuple[str, ...]:
+    found = FEATURE_NEEDS_ANY.get(key) or ((FEATURE_NEEDS[key],) if key in FEATURE_NEEDS else ())
+    return tuple(kind for kind in found if kind in kinds())
+
+
+def _keys_for(kind: str) -> list[str]:
+    return [key for key in [*FEATURE_NEEDS, *FEATURE_NEEDS_ANY] if kind in needed_kinds(key)]
 
 
 def kinds() -> list[str]:
@@ -64,26 +76,34 @@ def states() -> dict[str, str]:
 
 
 def needs_setup(key: str, current: dict | None = None) -> bool:
-    kind = FEATURE_NEEDS.get(key)
-    if not kind or kind not in kinds():
+    needed = needed_kinds(key)
+    if not needed:
         return False
-    return (current or states()).get(kind) != "active"
+    current = current or states()
+    return not any(current.get(kind) == "active" for kind in needed)
 
 
 def feature_service(key: str, current: dict | None = None) -> dict | None:
-    kind = FEATURE_NEEDS.get(key)
-    if not kind or kind not in kinds():
+    needed = needed_kinds(key)
+    if not needed:
         return None
-    state = (current or states()).get(kind, "not_set_up")
+    current = current or states()
+    kind = next((item for item in needed if current.get(item) == "active"), needed[0])
+    state = current.get(kind, "not_set_up")
     return {"kind": kind, "label": _label(kind), "state": state, "state_label": STATE_LABELS[state]}
 
 
 def features_for(kind: str, *, only_on: bool = False) -> list[dict]:
-    keys = [key for key, needed in FEATURE_NEEDS.items() if needed == kind]
-    rows = FeatureFlag.objects.filter(key__in=keys)
+    rows = FeatureFlag.objects.filter(key__in=_keys_for(kind))
     if only_on:
         rows = rows.filter(enabled=True)
     return [{"key": row.key, "label": row.label, "enabled": row.enabled} for row in rows.order_by("ordering", "key")]
+
+
+def _hidden_without(kind: str, current: dict) -> list[dict]:
+    """Features that are on and would have no working service if ``kind`` stopped."""
+    after = {**current, kind: "not_set_up"}
+    return [{"key": item["key"], "label": item["label"]} for item in features_for(kind, only_on=True) if needs_setup(item["key"], after)]
 
 
 def would_hide(connection: IntegrationConnection) -> list[dict]:
@@ -95,7 +115,7 @@ def would_hide(connection: IntegrationConnection) -> list[dict]:
 
     if others or IntegrationRuntimeSelector.environment_configured(connection.kind):
         return []
-    return [{"key": item["key"], "label": item["label"]} for item in features_for(connection.kind, only_on=True)]
+    return _hidden_without(connection.kind, states())
 
 
 def services() -> list[dict]:
@@ -121,7 +141,7 @@ def services() -> list[dict]:
                 "connections_count": len(connections),
                 "features": features,
                 # What switching off would hide, for the confirmation (3.27).
-                "hides_when_off": [{"key": item["key"], "label": item["label"]} for item in features if item["enabled"]] if current[kind] == "active" else [],
+                "hides_when_off": _hidden_without(kind, current) if current[kind] == "active" else [],
             }
         )
     return out
