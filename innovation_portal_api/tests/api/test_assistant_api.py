@@ -281,9 +281,35 @@ class HiddenWhenOffTests(AssistantTestCase):
         self.assertEqual(UsageRecord.objects.latest("created_at").outcome, "refused")
 
     def test_feature_switch_reaches_public_config(self):
+        # U9: public-config reports ai_helper on only while an AI service is Active.
+        self.switch_on(guests=True)
+        config = data(self.client.get("/api/platform/public-config/"))
+        self.assertTrue(config["features"]["ai_helper"])
+        self.assertTrue(config["assistant"]["guide"])
+        self.assertTrue(config["assistant"]["guide_for_guests"])
+
+    def test_switch_on_without_an_active_ai_service_keeps_everything_off(self):
+        """The switch is on and guests are allowed, but no AI service is Active: nothing shows."""
         set_features(self, ai_helper=True)
-        features = data(self.client.get("/api/platform/public-config/"))["features"]
-        self.assertTrue(features["ai_helper"])
+        AssistantSettings.objects.update_or_create(pk=AssistantSettings.load().pk, defaults={"guests_can_use_guide": True})
+        for setup in ("none", "saved_not_active"):
+            with self.subTest(setup=setup):
+                if setup == "saved_not_active":
+                    IntegrationConnection.objects.filter(pk=self.connect().pk).update(is_active=False, status=IntegrationConnection.Status.TESTED)
+                    AssistantSettings.objects.update(guests_can_use_guide=True)
+                reset_platform_caches(self)
+                cache.clear()
+                self.client.force_authenticate(None)
+                config = data(self.client.get("/api/platform/public-config/"))
+                self.assertFalse(config["features"]["ai_helper"])
+                self.assertFalse(config["assistant"]["guide"])
+                self.assertFalse(config["assistant"]["guide_for_guests"])
+                for user in (None, self.innovator, self.officer, self.admin):
+                    self.client.force_authenticate(user)
+                    status = data(self.client.get(f"{BASE}/status/"))
+                    self.assertFalse(status["available"], user)
+                    self.assertFalse(any(status["features"].values()), (user, status["features"]))
+                    self.assertFalse(status["features"]["guide"], user)
 
 
 # -- innovator guidance ---------------------------------------------------------------------------

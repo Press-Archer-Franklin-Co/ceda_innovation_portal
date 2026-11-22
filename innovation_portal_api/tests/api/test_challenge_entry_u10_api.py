@@ -269,6 +269,19 @@ class StaffTests(EntryTestCase):
         done.refresh_from_db()
         self.assertIsNotNone(done.results_announced_at)
 
+    def test_hand_picked_winners_get_the_winner_status_when_results_go_out(self):
+        from apps.submissions.models import SubmissionStatusHistory
+
+        done = self.challenge("Done", opens_in=-30, closes_in=-2)
+        entry = self.send(program=done, status=SubmissionStatus.FINALIST)
+        WinnerSpotlight.objects.create(program=done, team_name="Neo", project_name="Solar milk cooler", position="1st", year=2026, submission=entry)
+        self.client.force_authenticate(self.officer)
+        self.assertTrue(data(self.client.post(f"/api/programs/{done.id}/results/publish/"))["published"])
+        entry.refresh_from_db()
+        self.assertEqual(entry.current_status, SubmissionStatus.WINNER)
+        history = SubmissionStatusHistory.objects.get(submission=entry, to_status=SubmissionStatus.WINNER)
+        self.assertEqual((history.from_status, history.reason), (SubmissionStatus.FINALIST, "challenge_results"))
+
     def test_publish_can_hide_names_and_the_switch_is_editable(self):
         done = self.challenge("Done", opens_in=-30, closes_in=-2)
         entry = self.send(program=done, status=SubmissionStatus.WINNER)

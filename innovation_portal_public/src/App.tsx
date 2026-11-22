@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from 'react'
+import { lazy, Suspense, useEffect, useRef } from 'react'
 import { Navigate, Routes, Route, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Layout        from './components/layout/Layout'
@@ -43,6 +43,9 @@ import { ConfirmProvider } from './components/ui/ConfirmDialog'
 import PageSkeleton from './components/ui/PageSkeleton'
 import PageErrorBoundary from './components/ui/PageErrorBoundary'
 import { isStaff } from './lib/roles'
+import BrandLoader, { BootStep } from './components/ui/BrandLoader'
+import { boot } from './lib/boot'
+import { load as loadPublicConfig } from './lib/usePublicConfig'
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
@@ -128,13 +131,13 @@ function AppRoutes() {
 
       <Route path="/verify-email"    element={<VerifyEmail />} />
 
-      <Route path="/auth/callback"   element={<AuthCallback />} />
+      <Route path="/auth/callback"   element={<><BootStep boot={boot} /><AuthCallback /></>} />
 
 
       {/* Staff form builder preview (U5): shown in an iframe in the staff console, no site chrome. */}
-      <Route path="/preview/form" element={<PreviewForm />} />
+      <Route path="/preview/form" element={<><BootStep boot={boot} /><PreviewForm /></>} />
       {/* Staff home page editor preview (U6, 3.8), same idea. */}
-      <Route path="/preview/home" element={<PreviewHome />} />
+      <Route path="/preview/home" element={<><BootStep boot={boot} /><PreviewHome /></>} />
 
       <Route element={<Layout />}>
         <Route path="/"            element={<HomeOrDashboard />} />
@@ -185,7 +188,7 @@ function AppRoutes() {
         </Route>
 
         {Styleguide && (
-          <Route path="/styleguide" element={<Suspense fallback={null}><Styleguide /></Suspense>} />
+          <Route path="/styleguide" element={<Suspense fallback={null}><BootStep boot={boot} /><Styleguide /></Suspense>} />
         )}
 
         <Route path="*" element={<NotFound />} />
@@ -196,14 +199,36 @@ function AppRoutes() {
   )
 }
 
+/**
+ * Start-up steps for the idea bulb loader (U12): translations (they ship with the code, so ready once the
+ * provider is up), public config, and the signed-in check (skipped when no one is signed in). The first page's
+ * code reports itself (BootStep).
+ */
+function BootSteps() {
+  const { isLoading } = useAuth()
+  useEffect(() => {
+    boot.done('i18n')
+    loadPublicConfig().then(
+      () => boot.done('config'),
+      () => boot.fail('config'),
+    )
+  }, [])
+  useEffect(() => {
+    if (!isLoading) boot.done('me')
+  }, [isLoading])
+  return null
+}
+
 export default function App() {
   return (
     <I18nProvider>
       <ToastProvider>
         <ConfirmProvider>
           <AuthProvider>
+            <BootSteps />
             <AppRoutes />
           </AuthProvider>
+          <BrandLoader boot={boot} quiet={typeof window !== 'undefined' && window.location.pathname.startsWith('/preview/')} />
         </ConfirmProvider>
       </ToastProvider>
     </I18nProvider>

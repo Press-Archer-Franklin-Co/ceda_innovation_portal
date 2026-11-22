@@ -126,7 +126,25 @@ def _is_uuid(value) -> bool:
         return False
 
 
-def public_detail(program, lang: str) -> dict:
+def hackathon_block(program, lang: str, request=None) -> dict | None:
+    """The live hackathon page's schedule and updates for the challenge page (1.8), when the challenge has a
+    published hackathon page (3.36). Sections switched off there stay off here. Never the draft."""
+    from apps.content.hackathon_page import public_document
+    from apps.content.models import HackathonDetail
+
+    detail = HackathonDetail.objects.filter(program=program, is_published=True).first()
+    if detail is None:
+        return None
+    doc = public_document(detail, lang, request)
+    enabled = {item.get("key") for item in doc["sections"]}
+    block = {
+        "schedule": [{k: item[k] for k in ("id", "starts_at", "title", "now")} for item in doc["schedule"]] if "schedule" in enabled else [],
+        "updates": [{k: item[k] for k in ("id", "body", "photo_url", "created_at")} for item in doc["updates"]] if "updates" in enabled else [],
+    }
+    return block if block["schedule"] or block["updates"] else None
+
+
+def public_detail(program, lang: str, request=None) -> dict:
     """Everything the challenge page shows (1.8), in one call."""
     from apps.submissions.models import ApplicationDraft, Submission
     from apps.support.models import FAQ
@@ -180,6 +198,7 @@ def public_detail(program, lang: str) -> dict:
             "estimated_minutes": estimated,
             "form_id": str(program.form_id) if program.form_id else None,
             "availability": program.availability_summary(),
+            "hackathon": hackathon_block(program, lang, request),
         }
     )
     return data

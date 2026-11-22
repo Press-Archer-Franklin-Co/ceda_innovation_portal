@@ -7,7 +7,8 @@ import { authService, PublicConfig } from '../services/auth.service'
 let cached: PublicConfig | null = null
 let pending: Promise<PublicConfig> | null = null
 
-function load(): Promise<PublicConfig> {
+/** The one shared request (also the loader's "config" start-up step, U12). */
+export function load(): Promise<PublicConfig> {
   if (!pending) {
     pending = authService.getPublicConfig().then(
       (config) => (cached = config),

@@ -6,6 +6,7 @@ import { pagesEn } from './pages'
 import { policiesEn } from './policies'
 import { a11yEn } from './a11y'
 import { statusEn } from './status'
+import { brandEn } from './brand'
 import { guideEn } from './guide'
 import { inviteEn } from './invite'
 import { accountEn } from './account'
@@ -353,6 +354,8 @@ const en = {
   'chd.tab.support': 'Support',
   'chd.tab.judge': 'How we judge',
   'chd.tab.dates': 'Dates',
+  'chd.tab.schedule': 'Schedule',
+  'chd.tab.updates': 'Updates',
   'chd.tab.faqs': 'FAQs',
   'chd.lookingFor': 'What we are looking for',
   'chd.whoTitle': 'Who can enter',
@@ -360,6 +363,9 @@ const en = {
   'chd.judgeTitle': 'How we judge',
   'chd.judgeNote': 'Each idea is scored against these, with these weights.',
   'chd.datesTitle': 'Dates',
+  'chd.scheduleTitle': 'Hackathon schedule',
+  'chd.updatesTitle': 'Updates from the venue',
+  'chd.now': 'Now',
   'chd.faqTitle': 'Questions people ask',
   'chd.closeIn': 'Entries close in',
   'chd.openIn': 'Entries open in',
@@ -410,7 +416,6 @@ const en = {
   'utility.helpCentre': 'Help centre',
   'utility.accessibility': 'Accessibility',
 
-  'footer.tagline': 'Finance. Develop. Sustain.',
   'footer.explore': 'Portal',
   'footer.support': 'Help',
   'footer.legal': 'Legal',
@@ -438,6 +443,7 @@ const en = {
   ...policiesEn,
   ...a11yEn,
   ...statusEn,
+  ...brandEn,
   ...guideEn,
   ...inviteEn,
   ...accountEn,

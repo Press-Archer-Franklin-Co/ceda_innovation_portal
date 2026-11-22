@@ -58,6 +58,8 @@ jobs:
         run: |
           git fetch --no-tags origin main
           node scripts/check_old_ui.mjs origin/main
+      - name: Official CEDA logo and favicons (U12, both frontends)
+        run: bash scripts/check_brand.sh
 
   api:
     name: api
