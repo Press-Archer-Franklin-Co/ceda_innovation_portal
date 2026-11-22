@@ -61,6 +61,8 @@ FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
     # C2: on only when the switch is on and at least one connection is active (apps.channels).
     FlagDefinition("whatsapp_messages", "WhatsApp messages", "WhatsApp journeys and messages. Needs at least one active WhatsApp connection.", "messaging", False),
     FlagDefinition("ussd", "USSD", "Let people use the portal from a USSD menu. Needs at least one active USSD connection.", "messaging", False),
+    # C1: the staff Inbox, the website help chat and live idea messages hints.
+    FlagDefinition("live_chat", "Live chat", "Website help chat and the staff Inbox for chats and hand-overs from WhatsApp, USSD and the AI helper.", "messaging", False, is_public=True),
     FlagDefinition("translation_suggestions", "Translation suggestions", "Suggest Setswana text for staff to review.", "integrations", False),
 )
 FLAG_DEFAULTS = {definition.key: definition.default for definition in FLAG_DEFINITIONS}
