@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, FileText, Plus, X } from 'lucide-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Button from '../ui/Button'
 import { InputControl } from '../ui/Input'
 import { SelectControl } from '../ui/Select'
@@ -8,7 +7,6 @@ import { MultiSelectControl } from '../ui/MultiSelect'
 import Skeleton from '../ui/Skeleton'
 import ErrorState from '../ui/ErrorState'
 import { useI18n, useT } from '../../i18n/context'
-import { client } from '../../lib/api/client'
 import { useReferenceList } from '../../lib/queries/analytics'
 import { pickText } from '../../lib/admin/roles'
 import { cn } from '../../lib/cn'
@@ -29,7 +27,7 @@ const OPERATORS = {
   registered_company: ['is'],
 }
 const STAGES = ['idea', 'testing', 'selling', 'growing']
-const key = () => Math.random().toString(36).slice(2)
+import { newKey as key } from './useEligibilityDraft'
 
 /** The starting value when the field or operator changes, so a block is never left with a value of the wrong kind. */
 function blankValue(field, operator) {
@@ -38,54 +36,6 @@ function blankValue(field, operator) {
   if (field === 'registered_company') return true
   if (field === 'business_stage') return operator === 'is_one_of' ? [] : 'idea'
   return operator === 'is_one_of' ? [] : ''
-}
-
-const eligibilityKey = (id) => ['programs', id, 'eligibility']
-
-/** Loads the rules and documents and keeps an editable copy. available is false while the API has no R-48 (404/405). */
-export function useEligibilityDraft(programId) {
-  const qc = useQueryClient()
-  const query = useQuery({
-    queryKey: eligibilityKey(programId),
-    queryFn: async () => {
-      try {
-        return await client.get(`/api/programs/${programId}/eligibility/`)
-      } catch (err) {
-        if (err?.status === 404 || err?.status === 405) return { unavailable: true }
-        throw err
-      }
-    },
-    enabled: !!programId,
-  })
-  const [draft, setDraft] = useState(null)
-  useEffect(() => {
-    if (!query.data || query.data.unavailable) return
-    setDraft({
-      rules: (query.data.rules ?? []).map((r) => ({ ...r, _key: r.id ?? key() })),
-      documents: (query.data.documents ?? []).map((d) => ({ ...d, _key: d.id ?? key() })),
-    })
-  }, [query.data])
-
-  const available = !!query.data && !query.data.unavailable
-  const changed = available && draft && JSON.stringify(strip(draft)) !== JSON.stringify(strip({ rules: query.data.rules ?? [], documents: query.data.documents ?? [] }))
-
-  async function save() {
-    if (!changed) return
-    const body = strip(draft)
-    const res = await client.put(`/api/programs/${programId}/eligibility/`, body)
-    qc.setQueryData(eligibilityKey(programId), res)
-  }
-  return { query, draft, setDraft, available, changed, save }
-}
-
-/** The PUT body: rules and documents in order, without the editor's keys or the read-only sentences. */
-function strip(draft) {
-  return {
-    rules: draft.rules.map((r) => (r.field
-      ? { id: r.id ?? null, field: r.field, operator: r.operator, value: r.value }
-      : { id: r.id ?? null, question: r.question ?? '', help: r.help ?? '', required_answer: r.required_answer ?? true, reason: r.reason ?? '', active: r.active ?? true, translations: r.translations ?? {} })),
-    documents: draft.documents.map((d) => ({ id: d.id ?? null, name: d.name ?? '', hint: d.hint ?? '', required: !!d.required, accept: d.accept ?? [], max_mb: d.max_mb ?? 5, translations: d.translations ?? {} })),
-  }
 }
 
 function Segment({ label, options, value, onChange, size = 'md' }) {

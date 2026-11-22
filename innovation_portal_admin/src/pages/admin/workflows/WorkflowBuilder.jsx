@@ -28,7 +28,8 @@ import {
 } from '../../../lib/queries/workflowBuilder'
 import { useMarkingCriteriaList, useSetStageConfig, useStageConfig } from '../../../lib/queries/evaluations'
 import { useT } from '../../../i18n/context'
-import StepExtras, { useStepExtras } from '../../../components/workflow/StepExtras'
+import StepExtras from '../../../components/workflow/StepExtras'
+import useStepExtras from '../../../components/workflow/useStepExtras'
 
 // 3.21 Workflow builder (Figma 143:1902 website, 143:2270 phone). A restyle of the step builder: same steps,
 // same save logic, laid out as the frame. ① A palette of steps to add. ② Each step card shows who has it, what
