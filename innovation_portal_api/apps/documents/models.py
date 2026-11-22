@@ -59,3 +59,14 @@ class DocumentVersion(UUIDModel, TimeStampedModel):
     file = models.FileField(upload_to="submission_documents/versions/", blank=True)
     external_url = models.URLField(blank=True)
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    # Copilot: the text read from the file (apps.documents.text), filled after upload and on demand.
+    extracted_text = models.TextField(blank=True, default="")
+    extracted_pages = models.JSONField(default=list, blank=True, help_text="The text of each page, so answers can say page 3.")
+    text_status = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        choices=[("ok", "Read"), ("empty", "No text (a scan?)"), ("unsupported", "Not a readable type"), ("too_large", "Too large"), ("failed", "Could not read")],
+    )
+    text_detail = models.CharField(max_length=300, blank=True, default="")
+    text_extracted_at = models.DateTimeField(null=True, blank=True)
