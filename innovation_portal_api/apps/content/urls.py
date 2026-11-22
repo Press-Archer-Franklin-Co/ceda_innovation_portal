@@ -1,3 +1,4 @@
+from apps.content.all_content_views import AllContentView
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
@@ -83,6 +84,7 @@ urlpatterns = (
         path("subscribers/counts/", SubscriberCountsView.as_view(), name="content-subscriber-counts"),
         path("posts/<uuid:post_id>/blast/", PostBlastView.as_view(), name="content-post-blast"),
         path("site-settings/", SiteSettingsView.as_view(), name="site-settings"),
+        path("all/", AllContentView.as_view(), name="content-all"),
         path("public-stats/", PublicStatsView.as_view(), name="public-stats"),
     ]
 )
