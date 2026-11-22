@@ -322,8 +322,6 @@ export const programmesEn = {
   'ntf.none': 'No notifications yet',
   'ntf.noneUnread': 'You have read everything',
   'ntf.profile': 'Your profile',
-  'ntf.firstName': 'First name',
-  'ntf.lastName': 'Last name',
   'ntf.language': 'Language',
   'ntf.phone': 'Phone',
   'ntf.phoneHint': 'For WhatsApp and SMS messages.',
@@ -699,8 +697,6 @@ export const programmesTn = {
   'ntf.none': 'Ga go ise go nne le dikitsiso', // TODO tn-review
   'ntf.noneUnread': 'O badile tsotlhe', // TODO tn-review
   'ntf.profile': 'Porofaele ya gago', // TODO tn-review
-  'ntf.firstName': 'Leina', // TODO tn-review
-  'ntf.lastName': 'Sefane', // TODO tn-review
   'ntf.language': 'Puo', // TODO tn-review
   'ntf.phone': 'Founu', // TODO tn-review
   'ntf.phoneHint': 'Ya melaetsa ya WhatsApp le SMS.', // TODO tn-review

@@ -58,7 +58,7 @@ export default function Challenges() {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs tabs={TABS.map((x) => ({ key: x.key, label: t(`chl.tab.${x.key}`), count: counts[x.key] }))} active={tab} onChange={setTab} variant="segment" label={t('chl.title')} idPrefix="chl" />
+        <Tabs tabs={TABS.map((x) => ({ key: x.key, label: t(`chl.tab.${x.key}`), count: programs.data ? counts[x.key] : undefined }))} active={tab} onChange={setTab} variant="segment" label={t('chl.title')} idPrefix="chl" />
         <div className="w-full sm:w-[260px]">
           <InputControl type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('chl.search')} aria-label={t('chl.search')} leading={<Search size={16} aria-hidden />} />
         </div>

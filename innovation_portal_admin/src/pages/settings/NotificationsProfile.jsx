@@ -22,7 +22,7 @@ import { cn } from '../../lib/cn'
 // 3.39 Staff notifications and profile (Figma 141:2912 website, 141:3187 phone). ① The bell opens this list:
 // unread in bold, Mark all read. ② Each item links to the right page. ③ Profile: name, language, phone (photo
 // when the API has it, R-51). ④ How to be told, per type: in the portal, email or WhatsApp. Sign-in follows the one
-// sign-in page; there are no password settings here. Phone: the list first, then profile and alerts.
+// sign-in page; there are no password settings here. Names come from the account (no name fields in the frame). Phone: the list first, then profile and alerts.
 
 const asList = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 const CHANNELS = ['web', 'email', 'whatsapp']
@@ -116,21 +116,21 @@ function ProfileCard() {
   const { lang, setLang } = useI18n()
   const toast = useToast()
   const { user, refreshUser } = useAuth()
-  const [form, setForm] = useState({ first_name: '', last_name: '', phone_number: '' })
+  const [form, setForm] = useState({ phone_number: '' })
   const [busy, setBusy] = useState(false)
   const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || ''
 
   useEffect(() => {
-    setForm({ first_name: user?.first_name ?? '', last_name: user?.last_name ?? '', phone_number: user?.phone_number ?? '' })
-  }, [user?.first_name, user?.last_name, user?.phone_number])
+    setForm({ phone_number: user?.phone_number ?? '' })
+  }, [user?.phone_number])
 
-  const changed = form.first_name !== (user?.first_name ?? '') || form.last_name !== (user?.last_name ?? '') || form.phone_number !== (user?.phone_number ?? '')
+  const changed = form.phone_number !== (user?.phone_number ?? '')
 
   async function save(extra = {}) {
     setBusy(true)
     try {
       // TODO(R-51): PATCH /api/auth/me/. Until it lands the API answers 404 or 405 and we say so.
-      await client.patch('/api/auth/me/', { first_name: form.first_name.trim(), last_name: form.last_name.trim(), phone_number: form.phone_number.trim(), ...extra })
+      await client.patch('/api/auth/me/', { phone_number: form.phone_number.trim(), ...extra })
       await refreshUser?.()
       toast.show({ tone: 'success', title: t('ntf.profileSaved') })
     } catch (err) {
@@ -155,10 +155,6 @@ function ProfileCard() {
           <p className="truncate text-[15px] font-bold text-text">{name}</p>
           <p className="truncate text-[12px] text-muted">{user?.email}</p>
         </div>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Input label={t('ntf.firstName')} value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} />
-        <Input label={t('ntf.lastName')} value={form.last_name} onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} />
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-[14px] font-bold text-text" id="ntf-lang">{t('ntf.language')}</span>
@@ -206,7 +202,7 @@ function AlertsCard() {
         <>
           <div role="table" aria-label={t('ntf.howToTell')} className="flex flex-col">
             <div role="row" className="grid grid-cols-[1fr_repeat(3,64px)] items-end gap-1 pb-2 text-[12px] text-muted">
-              <span role="columnheader" className="sr-only">{t('ntf.what')}</span>
+              <span role="columnheader"><span className="sr-only">{t('ntf.what')}</span></span>
               {CHANNELS.map((c) => <span key={c} role="columnheader" className="text-center">{t(`ntf.channel.${c}`)}</span>)}
             </div>
             {types.map((code) => (
@@ -242,7 +238,7 @@ export default function NotificationsProfile() {
   return (
     <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
       <PageHeader back={name ? <span className="text-[12px] text-muted">{name}</span> : undefined} title={t('ntf.title')} subtitle={t('ntf.subtitle')} />
-      <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-[minmax(0,1fr)_380px] 2xl:gap-[22px]">
+      <div className="grid grid-cols-1 items-start gap-[14px] lg:grid-cols-[minmax(0,1fr)_380px] 2xl:gap-[22px]">
         <NotificationList />
         <div className="flex flex-col gap-[14px]">
           <ProfileCard />

@@ -177,7 +177,7 @@ function ChallengeWizard() {
         }
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
         <nav aria-label={t('steps.label')}>
           <ol className="flex flex-col gap-1">
             {STEPS.map((key, i) => {
@@ -371,9 +371,9 @@ function EditChallenge({ id }) {
         }
       />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
+      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
         <nav aria-label={t('cbs.sections')} className="min-w-0">
-          <ul className="flex gap-1 overflow-x-auto lg:flex-col">
+          <ul className="relative flex gap-1 overflow-x-auto lg:flex-col">
             {SECTIONS.map((key) => {
               const current = key === section
               return (
