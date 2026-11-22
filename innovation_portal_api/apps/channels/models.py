@@ -101,6 +101,8 @@ class JourneyNode(UUIDModel, TimeStampedModel):
         END = "end", "End"
         FILE = "file", "Ask for a file"
         SUBMIT = "submit", "Send the idea"
+        FORM_QUESTIONS = "form_questions", "Ask the form's questions"
+        MY_IDEAS = "my_ideas", "Show my ideas"
 
     journey = models.ForeignKey(Journey, on_delete=models.CASCADE, related_name="nodes")
     key = models.SlugField(max_length=40, help_text="Short id, unique in the journey. Edges point at it.")

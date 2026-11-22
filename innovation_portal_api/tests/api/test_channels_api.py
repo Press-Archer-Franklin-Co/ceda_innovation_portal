@@ -21,6 +21,7 @@ from apps.platform_config.models import IntegrationConnection
 from apps.platform_config.providers.ussd import PRESETS, GenericUSSDProvider
 from apps.platform_config.providers.whatsapp import WhatsAppLogOnlyProvider
 from apps.platform_config.testing import reset_platform_caches, set_features
+from apps.programs.general_intake import GeneralIntakeService
 from apps.submissions.models import ApplicationDraft
 
 BASE = "/api/channels"
@@ -513,15 +514,17 @@ class SimulatorTests(ChannelsTestCase):
         self.assertTrue(first["screen"]["ussd_text"].startswith("CEDA Innovation\n1. Submit an idea"))
         self.assertFalse(first["registered"])
 
-    def test_new_number_starts_an_idea_and_the_draft_appears_for_that_person(self):
+    def test_new_number_walks_the_idea_but_nothing_is_saved(self):
+        # R-69 (Nshathisi, 22 Nov): simulator runs never create a real draft or account.
+        GeneralIntakeService.program()  # makes its system owner the first time it is needed
+        drafts, users = ApplicationDraft.objects.count(), User.objects.count()
         session = self.simulate(journey=str(self.ussd_journey.id), channel="ussd")["session_id"]
         for answer in ["1", "Mobile clinic", "Clinics are far", "A clinic in a van", "Kago Molefe"]:
             last = self.simulate(journey=str(self.ussd_journey.id), channel="ussd", session_id=session, input=answer)
         self.assertTrue(last["screen"]["end"])
-        self.assertIsNotNone(last["draft"])
-        draft = ApplicationDraft.objects.get(id=last["draft"]["id"])
-        self.assertEqual(draft.innovator.phone_number, last["phone"])
-        self.assertTrue(draft.metadata.get("simulation"))
+        self.assertIn("TEST-IDEA", last["screen"]["text"])
+        self.assertIsNone(last["draft"])
+        self.assertEqual((ApplicationDraft.objects.count(), User.objects.count()), (drafts, users))
 
     def test_registered_mode_uses_the_signed_in_person(self):
         first = self.simulate(journey=str(self.ussd_journey.id), channel="ussd", as_registered=True)
@@ -663,7 +666,7 @@ class BuilderSupportTests(ChannelsTestCase):
         from apps.channels.node_schema import defaults_for
 
         types = data(self.client.get(f"{BASE}/node-types/"))
-        self.assertEqual({t["type"] for t in types}, {"menu", "message", "question", "save_draft", "lookup", "condition", "subscribe", "language", "handoff", "end", "file", "submit"})
+        self.assertEqual({t["type"] for t in types}, {"menu", "message", "question", "save_draft", "lookup", "condition", "subscribe", "language", "handoff", "end", "file", "submit", "form_questions", "my_ideas"})
         for item in types:
             self.assertIn("next", item, item["type"])
             self.assertIn("text", item, item["type"])

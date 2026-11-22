@@ -65,6 +65,8 @@ class InboundMessage:
     name: str = ""  # the sender's WhatsApp profile name
     wa_id: str = ""
     media: list[MediaItem] = field(default_factory=list)
+    # Where the choice came from: "button", "list" or "text" (logged by name only, never the value).
+    choice_source: str = "text"
 
 
 @dataclass
@@ -78,6 +80,25 @@ def numbered(text: str, choices: list[Choice]) -> str:
     if not choices:
         return text
     return text + "\n" + "\n".join(f"{c.id}. {c.title}" for c in choices)
+
+
+ELLIPSIS = "\u2026"
+
+
+def cut_title(title: str, limit: int) -> str:
+    """Fit a button or list title into WhatsApp's limit, cutting at a word, never mid-word.
+
+    "Submit an idea to a challenge" at 20 becomes "Submit an idea to\u2026". A single word longer
+    than the limit is the only case cut inside the word (there is no other way to fit it)."""
+    title = " ".join((title or "").split())
+    if len(title) <= limit:
+        return title
+    room = limit - 1  # leave space for the ellipsis
+    cut = title[: room + 1]
+    space = cut.rfind(" ")
+    if space > 0:
+        return title[:space].rstrip(" ,.;:-") + ELLIPSIS
+    return title[:room] + ELLIPSIS
 
 
 TEMPLATE_FIELD = FieldSpec(
@@ -323,13 +344,13 @@ class WhatsAppCloudProvider(BaseWhatsAppProvider):
             interactive = {
                 "type": "button",
                 "body": body,
-                "action": {"buttons": [{"type": "reply", "reply": {"id": c.id, "title": c.title[:20]}} for c in reply.choices]},
+                "action": {"buttons": [{"type": "reply", "reply": {"id": c.id, "title": cut_title(c.title, 20)}} for c in reply.choices]},
             }
         elif len(reply.choices) <= MAX_LIST_ROWS:
             interactive = {
                 "type": "list",
                 "body": body,
-                "action": {"button": reply.list_button[:20], "sections": [{"title": "Options", "rows": [{"id": c.id, "title": c.title[:24]} for c in reply.choices]}]},
+                "action": {"button": cut_title(reply.list_button, 20), "sections": [{"title": "Options", "rows": [{"id": c.id, "title": cut_title(c.title, 24)} for c in reply.choices]}]},
             }
         else:
             return self.send_text(to, numbered(reply.text, reply.choices))
@@ -413,8 +434,8 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
             "interactive_mode",
             "How choices are sent",
             FieldType.SELECT,
-            default="numbered",
-            choices=(("numbered", "Numbered text (works everywhere)"), ("buttons", "WhatsApp buttons and lists (Twilio Content API)")),
+            default="buttons",
+            choices=(("buttons", "WhatsApp buttons and lists (Twilio Content API)"), ("numbered", "Numbered text (works everywhere)")),
             help_text="Buttons for up to 3 choices, a list for up to 10. If Twilio refuses, numbered text is sent instead.",
         ),
         TEMPLATE_FIELD,
@@ -448,9 +469,14 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
         own = str(self.config.get("from_number") or "").replace(" ", "")
         if own and sender.replace(" ", "") == own:
             return []
-        # A tapped button or list row sends its id; the typed text or the title is the fallback.
-        chosen = get("ButtonPayload") or get("ListId") or ""
-        text = str(chosen or get("Body") or "")
+        # A tapped quick reply button sends ButtonPayload (its id) and ButtonText; a list row
+        # sends ListId and ListTitle. Body carries the title too, so typed text is the fallback.
+        if get("ButtonPayload"):
+            text, source = str(get("ButtonPayload")), "button"
+        elif get("ListId"):
+            text, source = str(get("ListId")), "list"
+        else:
+            text, source = str(get("Body") or get("ButtonText") or get("ListTitle") or ""), "text"
         media = []
         try:
             count = int(get("NumMedia") or 0)
@@ -463,7 +489,7 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
         return [
             InboundMessage(
                 phone=sender, text=text, message_id=str(get("MessageSid") or ""), name=str(get("ProfileName") or ""),
-                wa_id=str(get("WaId") or ""), media=media,
+                wa_id=str(get("WaId") or ""), media=media, choice_source=source,
             )
         ]
 
@@ -505,12 +531,12 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
         kind = "twilio/quick-reply" if len(reply.choices) <= MAX_BUTTONS else "twilio/list-picker"
         body = reply.text[:1024] or "."
         if kind == "twilio/quick-reply":
-            spec = {"body": body, "actions": [{"title": c.title[:TWILIO_BUTTON_TITLE], "id": c.id} for c in reply.choices]}
+            spec = {"body": body, "actions": [{"title": cut_title(c.title, TWILIO_BUTTON_TITLE), "id": c.id} for c in reply.choices]}
         else:
             spec = {
                 "body": body,
-                "button": reply.list_button[:TWILIO_LIST_BUTTON],
-                "items": [{"item": c.title[:TWILIO_LIST_ITEM], "id": c.id, "description": ""} for c in reply.choices],
+                "button": cut_title(reply.list_button, TWILIO_LIST_BUTTON),
+                "items": [{"item": cut_title(c.title, TWILIO_LIST_ITEM), "id": c.id, "description": ""} for c in reply.choices],
             }
         fingerprint = hashlib.sha256(json.dumps([self.config.get("account_sid", ""), kind, spec], sort_keys=True).encode()).hexdigest()[:32]
         cache_key = f"channels:twilio-content:{fingerprint}"
@@ -625,7 +651,7 @@ class WhatsAppInfobipProvider(BaseWhatsAppProvider):
             return self.send_text(to, numbered(reply.text, reply.choices))
         content = {
             "body": {"text": reply.text[:1024] or "."},
-            "action": {"buttons": [{"type": "REPLY", "id": c.id, "title": c.title[:20]} for c in reply.choices]},
+            "action": {"buttons": [{"type": "REPLY", "id": c.id, "title": cut_title(c.title, 20)} for c in reply.choices]},
         }
         return self._post("/whatsapp/1/message/interactive/buttons", {"to": to.lstrip("+"), "content": content})
 

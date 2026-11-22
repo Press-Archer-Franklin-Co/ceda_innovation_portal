@@ -26,7 +26,9 @@ NODE_TYPES = (
     {"type": "handoff", "label": "Talk to a person", "label_tn": "Bua le motho", "description": "WhatsApp: the chat goes to the staff Inbox. USSD: takes a short note and asks for a call-back."},
     {"type": "end", "label": "End", "label_tn": "Bokhutlo", "description": "Says goodbye and ends the session."},
     {"type": "file", "label": "Ask for a file", "label_tn": "Kopa faele", "description": "Asks for a photo or document (WhatsApp) and saves it on the idea draft. Needs a Save to an idea draft step before it."},
-    {"type": "submit", "label": "Send the idea", "label_tn": "Romela kakanyo", "description": "Sends the idea draft to CEDA and gives the idea number in {reference}. Needs a Save to an idea draft step before it."},
+    {"type": "submit", "label": "Send the idea", "label_tn": "Romela kakanyo", "description": "Sends the idea draft to CEDA and gives the idea number in {reference}. Needs a Save to an idea draft or Ask the form's questions step before it."},
+    {"type": "form_questions", "label": "Ask the form's questions", "label_tn": "Botsa dipotso tsa foromo", "description": "Asks the challenge's form questions one by one (the live form), checks each answer with the form's rules and saves it in the idea draft. Starts the draft itself when there is none. BACK goes to the previous question, SKIP leaves out one that is not needed."},
+    {"type": "my_ideas", "label": "Show my ideas", "label_tn": "Bontsha dikakanyo tsa me", "description": "Lists the person's open and recent ideas as buttons, with status and what to do next, and lets them continue a draft. No idea numbers needed."},
 )
 # Each type also carries what the builders draw: its text label, ports and settings (node_schema.py).
 NODE_TYPES = tuple(
@@ -35,6 +37,8 @@ NODE_TYPES = tuple(
 TYPE_KEYS = {item["type"] for item in NODE_TYPES}
 SCREEN_TYPES = {"menu", "question", "language", "handoff", "end", "message", "file"}
 NEEDS_DRAFT_TYPES = {"file", "submit"}
+# Steps after which the session has an idea draft.
+MAKES_DRAFT_TYPES = {"save_draft", "form_questions"}
 
 
 def edges(node: dict) -> list[str]:
@@ -54,6 +58,8 @@ def is_terminal(node: dict) -> bool:
     kind = node.get("type")
     if kind in ("end", "handoff", "submit"):
         return True
+    if kind == "my_ideas" and not node.get("next"):
+        return True  # "Main menu" goes back to the start
     if kind == "message" and ((node.get("settings") or {}).get("end") or not node.get("next")):
         return True
     return False
@@ -137,7 +143,13 @@ def check_graph(graph: dict, channel: str) -> list[dict]:
                 add(key, "error", "no_variable", f"{name}: choose the answer to check.")
         if kind == "lookup" and settings.get("lookup") not in {k for k, _ in LOOKUPS}:
             add(key, "error", "no_lookup", f"{name}: choose what to look up.")
-        if kind in ("save_draft", "lookup", "subscribe", "language", "file") and not node.get("next"):
+        if kind == "form_questions":
+            source = settings.get("program_source") or "ask"
+            if source == "variable" and not settings.get("program_variable"):
+                add(key, "error", "no_variable", f"{name}: choose the answer that holds the challenge.")
+            if on_ussd:
+                add(key, "warning", "form_on_ussd", f"{name}: on USSD long questions are cut to {USSD_SCREEN_LIMIT} characters and file questions go to the website.")
+        if kind in ("save_draft", "lookup", "subscribe", "language", "file", "form_questions") and not node.get("next"):
             add(key, "error", "goes_nowhere", f"{name}: choose what happens next.")
         if on_ussd and kind in SCREEN_TYPES:
             for lang in ("en", "tn"):
@@ -167,11 +179,31 @@ def check_graph(graph: dict, channel: str) -> list[dict]:
         if key in before_save or key not in nodes:
             continue
         before_save.add(key)
-        if nodes[key].get("type") != "save_draft":
+        if nodes[key].get("type") not in MAKES_DRAFT_TYPES and nodes[key].get("type") != "my_ideas":
             stack.extend(edges(nodes[key]))
+        elif nodes[key].get("type") == "my_ideas" and nodes[key].get("next"):
+            stack.append(nodes[key]["next"])  # "Continue this idea" brings a draft; "Main menu" does not
     for key in sorted(before_save):
         if nodes[key].get("type") in NEEDS_DRAFT_TYPES:
-            add(key, "error", "needs_save_first", f"{nodes[key].get('title') or key}: put a Save to an idea draft step before this one.")
+            add(key, "error", "needs_save_first", f"{nodes[key].get('title') or key}: put a Save to an idea draft or Ask the form's questions step before this one.")
+
+    # The form's answers are only sent by a Send the idea step after it.
+    for key, node in nodes.items():
+        if node.get("type") != "form_questions":
+            continue
+        seen: set[str] = set()
+        stack = list(edges(node))
+        found = False
+        while stack and not found:
+            target = stack.pop()
+            if target in seen or target not in nodes:
+                continue
+            seen.add(target)
+            if nodes[target].get("type") == "submit":
+                found = True
+            stack.extend(edges(nodes[target]))
+        if not found:
+            add(key, "error", "needs_submit_after", f"{node.get('title') or key}: put a Send the idea step after this one, or the answers are never sent.")
     for key, node in nodes.items():
         if node.get("type") == "file" and channel == "ussd":
             add(key, "warning", "file_on_ussd", f"{node.get('title') or key}: USSD cannot send files; on USSD this step is skipped.")

@@ -284,6 +284,21 @@ def save_file(*, draft_id: str, field_key: str, content: bytes, content_type: st
     return document, ""
 
 
+def check_pretend_submit(*, program_id: str, user):
+    """Simulator: would this idea be accepted? Nothing is created. Returns (reference, error)."""
+    from apps.programs.access import ProgramAccessService
+    from apps.channels.form_steps import program_by_id
+
+    program = program_by_id(program_id)
+    if program is None or not program.is_submission_open():
+        return "", "closed"
+    try:
+        ProgramAccessService.assert_can_enter(program, user)
+    except Exception:
+        return "", "closed"
+    return "TEST-IDEA", ""
+
+
 # --------------------------------------------------------------------------------------
 # Send the idea (prompt 10)
 # --------------------------------------------------------------------------------------

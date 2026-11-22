@@ -66,7 +66,7 @@ class TwilioTestCase(ChannelsTestCase):
             {
                 "kind": "whatsapp", "provider": "whatsapp_twilio", "name": name, "address": number,
                 "journey": str((journey or self.whatsapp_journey).id),
-                "config": {"account_sid": SID, "from_number": number, **config}, "secrets": {"auth_token": TOKEN},
+                "config": {"account_sid": SID, "from_number": number, "interactive_mode": "numbered", **config}, "secrets": {"auth_token": TOKEN},
             },
             format="json",
         )
