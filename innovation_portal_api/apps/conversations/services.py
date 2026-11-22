@@ -132,6 +132,10 @@ def _add(conversation, *, role, body, author=None, internal=False, attachments=N
         message.created_at = at
     if attachments:
         message.attachments.set(attachments)
+    if not internal and role in (ConversationMessage.Author.PERSON, ConversationMessage.Author.STAFF):
+        from apps.conversations import live
+
+        live.clear_typing("conversation", conversation.id, "person" if role == ConversationMessage.Author.PERSON else "staff")
     if not internal and (conversation.last_message_at is None or message.created_at > conversation.last_message_at):
         conversation.last_message_at = message.created_at
         conversation.save(update_fields=["last_message_at", "updated_at"])

@@ -5,6 +5,7 @@ import { innovatorTn } from './innovator'
 import { signInTn } from './signin'
 import { pagesTn } from './pages'
 import { challengeEntryTn } from './challengeEntry'
+import { liveChatTn } from './livechat'
 
 const tn: Record<StringKey, string> = {
   'lang.en': 'English',
@@ -430,6 +431,7 @@ const tn: Record<StringKey, string> = {
   ...signInTn,
   ...pagesTn,
   ...challengeEntryTn,
+  ...liveChatTn,
 }
 
 export default tn

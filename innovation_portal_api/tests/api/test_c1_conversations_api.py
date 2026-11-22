@@ -209,6 +209,10 @@ class SettingsAndHelpChatTests(C1Base):
         self.assertEqual(saved["hours"]["mon"], [{"opens": "08:00", "closes": "16:30"}])
         self.assertEqual(saved["hours"]["tue"], [])
         self.assertTrue(saved["saved_replies"][0]["id"])
+        # Officers read the saved replies for the Inbox (English when Setswana is empty).
+        replies = data(self.as_user(self.officer).get("/api/inbox/saved-replies/?lang=tn"))
+        self.assertEqual([(r["title"], r["body"]) for r in replies], [("Reference", "Thanks, your idea reference is...")])
+        self.as_user(admin)
         for bad in ({"hours": {"mon": [{"opens": "17:00", "closes": "08:00"}]}}, {"roles": ["nobody"]}, {"hours": {"funday": []}}):
             self.assertEqual(self.client.put("/api/live-chat/settings/", bad, format="json").status_code, 400, bad)
         self.assertFalse(data(self.client.put("/api/live-chat/settings/", {"enabled": False}, format="json"))["enabled"])
@@ -229,8 +233,18 @@ class SettingsAndHelpChatTests(C1Base):
         mine = data(self.as_user(self.innovator).get(f"/api/help-chat/{conversation.id}/", {"after": chat["messages"]["last_id"]}))
         self.assertEqual([row["body"] for row in mine["messages"]["results"]], ["Open the challenge and press Enter."])
         self.assertNotIn("is_internal", mine["messages"]["results"][0])
+        # The person has read it: staff polling with ?after= learn it from seen_at.
+        staff_view = data(self.as_user(self.officer).get(f"/api/inbox/conversations/{conversation.id}/", {"after": mine["messages"]["last_id"]}))
+        self.assertEqual(staff_view["messages"]["results"], [])
+        self.assertIsNotNone(staff_view["messages"]["seen_at"])
+        # A second device finds the open chat.
+        self.assertEqual(data(self.as_user(self.innovator).get("/api/help-chat/mine/"))["conversation"]["id"], str(conversation.id))
+        self.assertIsNone(data(self.as_user(self.other).get("/api/help-chat/mine/"))["conversation"])
+        self.as_user(self.innovator)
         self.client.post(f"/api/help-chat/{conversation.id}/typing/")
         self.assertEqual(data(self.as_user(self.officer).get(f"/api/inbox/conversations/{conversation.id}/"))["messages"]["typing"], {"name": "Neo Kebadile"})
+        self.as_user(self.innovator).post(f"/api/help-chat/{conversation.id}/messages/", {"body": "Thank you"}, format="json")
+        self.assertIsNone(data(self.as_user(self.officer).get(f"/api/inbox/conversations/{conversation.id}/"))["messages"]["typing"])  # sending ends typing
         self.as_user(self.other).get("/api/inbox/")  # someone else's chat stays private
         self.assertEqual(self.as_user(self.other).get(f"/api/help-chat/{conversation.id}/").status_code, 404)
 

@@ -17,7 +17,6 @@ const FRONTENDS = ['innovation_portal_admin/src', 'innovation_portal_public/src'
 // Capabilities the API defines that no screen asks for yet, each with the reason. Keep this short.
 const NOT_IN_UI = {
   'channels.manage': 'C2 screens come in feat/c2-journey-builder; remove this line there',
-  'conversations.reply': 'C1 Inbox screens come in feat/c1-inbox-screens; remove this line there',
 }
 
 // Role-name tests that are allowed: auth internals and display-only role pickers.

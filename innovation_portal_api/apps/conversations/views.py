@@ -12,7 +12,7 @@ from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
 
@@ -81,7 +81,19 @@ def _messages(conversation, request, *, for_staff: bool) -> dict:
                 raise ValidationError({"after": "Use a message id or an ISO time."}) from None
         rows = rows.filter(created_at__gt=cursor)
     items = [message_payload(message, for_staff=for_staff, request=request) for message in rows]
-    return {"results": items, "last_id": items[-1]["id"] if items else (after or None), "typing": live.typing("conversation", conversation.id, "person" if for_staff else "staff"), "typing_supported": True}
+    # When the other side last read this chat, so a client polling with ?after= can show "Seen" on messages it
+    # already has: staff see when the person read, the person sees when staff read.
+    from django.db.models import Max
+
+    sent = conversation.messages.filter(is_internal=False, author_role=ConversationMessage.Author.STAFF if for_staff else ConversationMessage.Author.PERSON)
+    seen_at = sent.aggregate(at=Max("read_by_person_at" if for_staff else "read_by_staff_at"))["at"]
+    return {
+        "results": items,
+        "last_id": items[-1]["id"] if items else (after or None),
+        "typing": live.typing("conversation", conversation.id, "person" if for_staff else "staff"),
+        "typing_supported": True,
+        "seen_at": _iso(seen_at),
+    }
 
 
 def conversation_detail(conversation) -> dict:
@@ -179,6 +191,25 @@ class InboxPeopleView(StaffBase):
                 for user in people.order_by("first_name", "last_name")
             ]
         )
+
+
+class InboxSavedRepliesView(StaffBase):
+    @extend_schema(
+        tags=TAGS,
+        summary="Saved replies officers can insert (3.28 ⑤, 3.30 ③)",
+        description="[{id, title, body}] with body in the asked language (?lang=en|tn), English when Setswana is empty.",
+        parameters=[OpenApiParameter("lang", OpenApiTypes.STR, enum=["en", "tn"])],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request):
+        lang = "tn" if request.query_params.get("lang") == "tn" else "en"
+        replies = []
+        for item in LiveChatSettings.load().saved_replies or []:
+            body = item.get("body") or {}
+            text = (body.get(lang) or "").strip() or (body.get("en") or "").strip()
+            if text:
+                replies.append({"id": item.get("id") or "", "title": item.get("title") or text[:40], "body": text})
+        return api_success(data=replies)
 
 
 class ConversationView(StaffBase):
@@ -470,6 +501,20 @@ class HelpChatStartView(APIView):
             },
             status_code=status.HTTP_201_CREATED,
         )
+
+
+class HelpChatMineView(APIView):
+    permission_classes = [IsAuthenticated, LIVE]
+
+    @extend_schema(tags=PUBLIC_TAGS, summary="My open help chat, on any device", description="{conversation: {id, status}} for the signed-in person's latest web chat that is not closed, else {conversation: null}.", responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        conversation = (
+            Conversation.objects.filter(contact_user=request.user, channel__in=[Conversation.Channel.WEB, Conversation.Channel.AI])
+            .exclude(status=Conversation.Status.CLOSED)
+            .order_by("-updated_at")
+            .first()
+        )
+        return api_success(data={"conversation": {"id": str(conversation.id), "status": conversation.status} if conversation else None})
 
 
 class HelpChatView(APIView):

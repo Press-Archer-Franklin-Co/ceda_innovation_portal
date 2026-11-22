@@ -64,6 +64,15 @@ def set_typing(kind: str, object_id, side: str, name: str) -> None:
     _set(f"typing:{kind}:{object_id}:{side}", {"name": name, "at": timezone.now().isoformat()}, TYPING_SECONDS)
 
 
+def clear_typing(kind: str, object_id, side: str) -> None:
+    """A sent message ends the typing hint at once instead of after 10 seconds."""
+    key = PREFIX + f"typing:{kind}:{object_id}:{side}"
+    try:
+        _redis().delete(key)
+    except Exception:
+        cache.delete(key)
+
+
 def typing(kind: str, object_id, side: str, now=None) -> dict | None:
     """{name} while the other side typed in the last 10 seconds, else None."""
     value = _get(f"typing:{kind}:{object_id}:{side}")
