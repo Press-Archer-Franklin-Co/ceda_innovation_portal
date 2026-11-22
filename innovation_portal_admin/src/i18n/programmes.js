@@ -456,6 +456,26 @@ export const programmesEn = {
   'stg.loadError': 'We could not load the stages',
   'stg.addInWorkflow': 'Add or reorder stages in the workflow',
   'stg.notEnforced': 'Who takes part and what moves an idea on are saved now. The portal starts using them in a later update.',
+  'ntf.group.new_assignment': 'New assignment',
+  'ntf.group.replies': 'Replies and messages',
+  'ntf.group.approvals': 'Approvals',
+  'ntf.group.deadlines': 'Deadlines',
+  'ntf.groupsSoon': 'New assignments and approvals can be set here soon.',
+  'ntf.dailySummary': 'Send one summary a day instead (07:30)',
+  'ntf.changePhoto': 'Change photo',
+  'ntf.photoTooBig': 'The photo must be 5 MB or smaller.',
+  'ntf.photoSaved': 'Photo saved',
+  'wfx.title': 'More for this step',
+  'wfx.team': 'Team',
+  'wfx.teamHint': 'A staff team takes this step instead of everyone with the role.',
+  'wfx.noTeam': 'No team, use the role',
+  'wfx.conflictFirst': 'Ask about conflicts of interest first',
+  'wfx.conflictFirstHint': 'Before they open an idea, people say if they know the applicant.',
+  'wfx.commentEvery': 'A comment on every criterion',
+  'wfx.reminder': 'Remind after (days)',
+  'wfx.reminderHint': 'Leave empty for no reminder.',
+  'wfx.saved': 'Step saved',
+  'wfx.saveError': 'We could not save the extra step settings',
 }
 
 export const programmesTn = {
@@ -910,4 +930,24 @@ export const programmesTn = {
   'stg.loadError': 'Ga re a kgona go tsenya dikgato', // TODO tn-review
   'stg.addInWorkflow': 'Tsenya kgotsa rulaganya dikgato mo tsamaisong', // TODO tn-review
   'stg.notEnforced': 'Ke mang yo o tsayang karolo le se se tsamaisang kakanyo di bolokilwe jaanong. Potale e tla simolola go di dirisa mo phetogong e e tlang.', // TODO tn-review
+  'ntf.group.new_assignment': 'Tiro e ntšhwa', // TODO tn-review
+  'ntf.group.replies': 'Dikarabo le melaetsa', // TODO tn-review
+  'ntf.group.approvals': 'Ditetlelelo', // TODO tn-review
+  'ntf.group.deadlines': 'Malatsi a bofelo', // TODO tn-review
+  'ntf.groupsSoon': 'Ditiro tse dintšhwa le ditetlelelo di tla kgona go baakanngwa fano go ise go ye kae.', // TODO tn-review
+  'ntf.dailySummary': 'Romela kakaretso e le nngwe ka letsatsi (07:30)', // TODO tn-review
+  'ntf.changePhoto': 'Fetola setshwantsho', // TODO tn-review
+  'ntf.photoTooBig': 'Setshwantsho se tshwanetse go nna 5 MB kgotsa go le kwa tlase.', // TODO tn-review
+  'ntf.photoSaved': 'Setshwantsho se bolokilwe', // TODO tn-review
+  'wfx.title': 'Tse dingwe tsa kgato e', // TODO tn-review
+  'wfx.team': 'Setlhopha', // TODO tn-review
+  'wfx.teamHint': 'Setlhopha sa badiri se dira kgato e go na le botlhe ba ba nang le seabe.', // TODO tn-review
+  'wfx.noTeam': 'Ga go setlhopha, dirisa seabe', // TODO tn-review
+  'wfx.conflictFirst': 'Botsa ka kgotlhang ya dikgatlhego pele', // TODO tn-review
+  'wfx.conflictFirstHint': 'Pele ba bula kakanyo, batho ba bolela fa ba itse mokopi.', // TODO tn-review
+  'wfx.commentEvery': 'Ntlha mo tekanyong nngwe le nngwe', // TODO tn-review
+  'wfx.reminder': 'Gakolola morago ga (malatsi)', // TODO tn-review
+  'wfx.reminderHint': 'Tlogela go se na sepe fa go sa tlhokege kgakololo.', // TODO tn-review
+  'wfx.saved': 'Kgato e bolokilwe', // TODO tn-review
+  'wfx.saveError': 'Ga re a kgona go boloka dithulaganyo tse dingwe tsa kgato', // TODO tn-review
 }

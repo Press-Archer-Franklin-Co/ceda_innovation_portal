@@ -27,10 +27,11 @@ function WaitBars({ rows, limits }) {
     <SectionCard title={t('wfi.waitTitle')} subtitle={t('wfi.waitHint')}>
       <ul className="flex flex-col gap-3">
         {rows.map((r) => {
-          const over = limits?.[r.step] != null && r.days > limits[r.step]
+          const limit = Array.isArray(limits) ? limits.find((l) => l.step === r.step)?.days : limits?.[r.step]
+          const over = limit != null && r.days > limit
           return (
             <li key={r.step} className="grid grid-cols-[minmax(0,140px)_1fr_40px] items-center gap-3 text-[14px]">
-              <span className="truncate text-text">{r.step_name ?? r.step}</span>
+              <span className="truncate text-text">{r.name ?? r.step}</span>
               <span className="h-2 rounded-full bg-surface2" aria-hidden>
                 <span className={cn('block h-2 rounded-full', over ? 'bg-warning' : 'bg-primary')} style={{ width: `${((r.days ?? 0) / max) * 100}%` }} />
               </span>
@@ -80,7 +81,7 @@ export default function WorkflowIdeas() {
   }, [t])
 
   const b = board.data
-  const columns = b ? [...(b.columns ?? []), ...(b.done ? [{ step: 'done', step_name: t('wfi.done'), count: b.done.count, items: (b.done.items ?? []).map((i) => ({ ...i, status: i.status ?? 'approved' })) }] : [])] : []
+  const columns = b ? [...(b.columns ?? []), ...(b.done ? [{ step: 'done', name: t('wfi.done'), count: b.done.count, items: (b.done.items ?? []).map((i) => ({ ...i, status: i.status ?? 'approved' })) }] : [])] : []
   const program = wf.data?.program
   const activeStep = phoneStep ?? columns[0]?.step
 
@@ -111,7 +112,7 @@ export default function WorkflowIdeas() {
         <div aria-hidden className="flex flex-col gap-3"><Skeleton className="h-40 rounded-card" /><Skeleton className="h-72 rounded-card" /></div>
       ) : board.isError ? (
         board.error?.status === 404 || board.error?.status === 405 ? (
-          // TODO(R-48): the board endpoint. Until it lands, say so and offer the list.
+          // Before the API has R-48 the board answers 404: say so and offer the list.
           <EmptyState framed title={t('wfi.notYet')} message={t('wfi.notYetBody')} action={<Link to={program ? `/submissions?program=${program}` : '/submissions'} className="text-[13px] font-bold text-primary hover:underline">{t('wfi.openList')}</Link>} />
         ) : (
           <ErrorState framed title={t('wfi.loadError')} message={board.error?.message} onRetry={board.refetch} />
@@ -124,9 +125,9 @@ export default function WorkflowIdeas() {
           ) : isDesktop ? (
             <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(200px, 1fr))` }}>
               {columns.map((c) => (
-                <section key={c.step} aria-label={c.step_name ?? c.step} className="flex min-h-[320px] flex-col gap-2 rounded-card bg-surface2 p-2.5">
+                <section key={c.step} aria-label={c.name ?? c.step} className="flex min-h-[320px] flex-col gap-2 rounded-card bg-surface2 p-2.5">
                   <h2 className="flex items-center justify-between px-1 text-[14px] font-bold text-text">
-                    {c.step_name ?? c.step}
+                    {c.name ?? c.step}
                     <span className="text-[13px] text-muted">{c.count}</span>
                   </h2>
                   <ul className="flex flex-col gap-2">{(c.items ?? []).map((item) => <IdeaCard key={item.submission_id} item={item} />)}</ul>
@@ -138,7 +139,7 @@ export default function WorkflowIdeas() {
               <Tabs
                 label={t('wfi.steps')}
                 idPrefix="wfi-step"
-                tabs={columns.map((c) => ({ key: c.step, label: c.step_name ?? c.step, count: c.count }))}
+                tabs={columns.map((c) => ({ key: c.step, label: c.name ?? c.step, count: c.count }))}
                 active={activeStep}
                 onChange={setPhoneStep}
               />

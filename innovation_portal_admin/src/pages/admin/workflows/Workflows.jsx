@@ -53,7 +53,7 @@ function CreateWorkflow({ open, onClose, triggerRef, workflows }) {
   const [errors, setErrors] = useState({})
   const [busy, setBusy] = useState(false)
 
-  // TODO(R-48): the templates list. Until the API has one, "From a template" says so.
+  // GET /api/workflow-templates/ (R-48). Before the API has it (404), "From a template" says so.
   const templates = useQuery({ queryKey: ['workflow-templates'], queryFn: () => client.get('/api/workflow-templates/'), enabled: open, retry: false })
   const templateList = asList(templates.data)
   const templatesMissing = templates.isError
@@ -153,7 +153,7 @@ function CreateWorkflow({ open, onClose, triggerRef, workflows }) {
                 <RadioGroup
                   name="wf-template"
                   legend={t('wfl.templates')}
-                  options={templateList.map((x) => ({ value: x.id ?? x.code, label: x.name, description: x.summary ?? x.description }))}
+                  options={templateList.map((x) => ({ value: x.id ?? x.code, label: x.name, description: [x.description, (x.steps ?? []).map((st) => st.name).join(' › ')].filter(Boolean).join(' ') }))}
                   value={template}
                   onChange={setTemplate}
                 />
@@ -162,7 +162,7 @@ function CreateWorkflow({ open, onClose, triggerRef, workflows }) {
               <RadioGroup
                 name="wf-copy"
                 legend={t('wfl.copyWhich')}
-                options={workflows.filter((w) => w.status !== 'archived').map((w) => ({ value: w.id, label: w.name, description: t('wfl.stepsCount', { n: w.steps?.length || w.node_count || 0 }) }))}
+                options={workflows.filter((w) => w.status !== 'archived').map((w) => ({ value: w.id, label: w.name, description: t('wfl.stepsCount', { n: w.step_count ?? w.steps?.length ?? 0 }) }))}
                 value={copyOf}
                 onChange={setCopyOf}
               />
@@ -221,7 +221,10 @@ export default function Workflows() {
     if (ok) run(() => archive.mutateAsync(wf.id), 'wfl.archived', wf)
   }
 
-  const usedBy = (wf) => (wf.program_detail?.is_general_intake ? t('wfl.generalIdeas') : wf.program_detail?.title) ?? null
+  const usedBy = (wf) => {
+    if (Array.isArray(wf.used_by)) return wf.used_by.map((u) => (u.general_ideas ? t('wfl.generalIdeas') : u.title)).join(', ') || null
+    return (wf.program_detail?.is_general_intake ? t('wfl.generalIdeas') : wf.program_detail?.title) ?? null
+  }
 
   return (
     <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
@@ -274,7 +277,7 @@ export default function Workflows() {
                 <p className="text-[13px] text-muted">{usedBy(wf) ? t('wfl.usedByValue', { list: usedBy(wf) }) : t('wfl.notUsed')}</p>
                 <div className={cn('mt-auto flex flex-wrap items-center gap-2')}>
                   <StatusPill status={wf.status} />
-                  <Tag>{t('wfl.stepsCount', { n: wf.steps?.length || wf.node_count || 0 })}</Tag>
+                  <Tag>{t('wfl.stepsCount', { n: wf.step_count ?? wf.steps?.length ?? 0 })}</Tag>
                 </div>
               </Card>
             </li>

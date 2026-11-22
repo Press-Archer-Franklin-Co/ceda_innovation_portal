@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, Calendar, Eye, Megaphone, MessageCircle, Trophy } from 'lucide-react'
@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input'
 import Skeleton from '../../components/ui/Skeleton'
 import EmptyState from '../../components/ui/EmptyState'
 import ErrorState from '../../components/ui/ErrorState'
-import { Checkbox } from '../../components/ui/Choice'
+import { Checkbox, Toggle } from '../../components/ui/Choice'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
 import { useAuth } from '../../lib/auth/AuthContext'
@@ -21,7 +21,7 @@ import { cn } from '../../lib/cn'
 
 // 3.39 Staff notifications and profile (Figma 141:2912 website, 141:3187 phone). ① The bell opens this list:
 // unread in bold, Mark all read. ② Each item links to the right page. ③ Profile: name, language, phone (photo
-// when the API has it, R-51). ④ How to be told, per type: in the portal, email or WhatsApp. Sign-in follows the one
+// when the API has it, R-48). ④ How to be told, per type: in the portal, email or WhatsApp. Sign-in follows the one
 // sign-in page; there are no password settings here. Names come from the account (no name fields in the frame). Phone: the list first, then profile and alerts.
 
 const asList = (data) => (Array.isArray(data) ? data : data?.results ?? [])
@@ -118,6 +118,27 @@ function ProfileCard() {
   const { user, refreshUser } = useAuth()
   const [form, setForm] = useState({ phone_number: '' })
   const [busy, setBusy] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const fileRef = useRef(null)
+
+  async function uploadPhoto(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (file.size > 5 * 1024 * 1024) { toast.show({ tone: 'error', title: t('ntf.photoTooBig') }); return }
+    setPhotoBusy(true)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      await client.post('/api/auth/me/photo/', body)
+      await refreshUser?.()
+      toast.show({ tone: 'success', title: t('ntf.photoSaved') })
+    } catch (err) {
+      toast.show({ tone: 'error', title: t('common.somethingWrong'), body: err?.message })
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
   const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || ''
 
   useEffect(() => {
@@ -129,7 +150,7 @@ function ProfileCard() {
   async function save(extra = {}) {
     setBusy(true)
     try {
-      // TODO(R-51): PATCH /api/auth/me/. Until it lands the API answers 404 or 405 and we say so.
+      // PATCH /api/auth/me/ (R-48 item 7). An API without it answers 404 or 405, and we say so.
       await client.patch('/api/auth/me/', { phone_number: form.phone_number.trim(), ...extra })
       await refreshUser?.()
       toast.show({ tone: 'success', title: t('ntf.profileSaved') })
@@ -142,7 +163,7 @@ function ProfileCard() {
 
   function chooseLanguage(next) {
     setLang(next)
-    // The language is kept for the account when the API can (R-51); the screen changes at once either way.
+    // The language is kept on the account (R-48 item 7); the screen changes at once either way.
     client.patch('/api/auth/me/', { preferred_language: next }).catch(() => {})
   }
 
@@ -151,10 +172,16 @@ function ProfileCard() {
       <h2 id="ntf-profile" className="text-[16px] font-bold text-text">{t('ntf.profile')}</h2>
       <div className="flex items-center gap-3">
         <Avatar name={name} src={user?.photo_url} size="lg" decorative />
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-bold text-text">{name}</p>
           <p className="truncate text-[12px] text-muted">{user?.email}</p>
         </div>
+        {user && 'photo_url' in user && (
+          <>
+            <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" tabIndex={-1} aria-hidden onChange={uploadPhoto} />
+            <Button variant="link" size="sm" loading={photoBusy} onClick={() => fileRef.current?.click()}>{t('ntf.changePhoto')}</Button>
+          </>
+        )}
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="text-[14px] font-bold text-text" id="ntf-lang">{t('ntf.language')}</span>
@@ -172,18 +199,38 @@ function AlertsCard() {
   const qc = useQueryClient()
   const prefs = useQuery({ queryKey: ['notifications', 'preferences'], queryFn: () => client.get('/api/notifications/preferences/') })
   const [local, setLocal] = useState(null)
+  const [summary, setSummary] = useState(false)
   const [busy, setBusy] = useState(false)
-  useEffect(() => { if (prefs.data?.preferences) setLocal(prefs.data.preferences) }, [prefs.data])
+  useEffect(() => {
+    if (prefs.data?.preferences) setLocal(prefs.data.preferences)
+    setSummary(!!prefs.data?.daily_summary)
+  }, [prefs.data])
 
-  // TODO(R-48 item 7): the staff groups (new assignment, replies, approvals, deadlines) and the daily summary.
-  // Until then: the types the API knows, in plain words; a type without words is left out, never shown raw.
-  const types = useMemo(() => (prefs.data?.notification_types ?? []).map((x) => x.code).filter((code) => t(`ntf.type.${code}`) !== `ntf.type.${code}`), [prefs.data, t])
-  const changed = local && prefs.data && JSON.stringify(local) !== JSON.stringify(prefs.data.preferences)
+  // Rows: the staff groups (R-48) when the API sends them, each switching all its types at once. A group whose types
+  // the preferences do not hold yet is left out (R-57). Without groups: one row per type the API knows, in plain words.
+  const known = useMemo(() => new Set(Object.keys(prefs.data?.preferences ?? {})), [prefs.data])
+  const groups = prefs.data?.staff_groups
+  const rows = useMemo(() => {
+    if (Array.isArray(groups)) {
+      return groups
+        .map((g) => ({ key: g.code, label: t(`ntf.group.${g.code}`), types: (g.types ?? []).filter((x) => known.has(x)) }))
+        .filter((r) => r.types.length > 0 && r.label !== `ntf.group.${r.key}`)
+    }
+    return (prefs.data?.notification_types ?? [])
+      .map((x) => ({ key: x.code, label: t(`ntf.type.${x.code}`), types: [x.code] }))
+      .filter((r) => r.label !== `ntf.type.${r.key}`)
+  }, [groups, known, prefs.data, t])
+  const hiddenGroups = Array.isArray(groups) && rows.length < groups.length
+  const changed = local && prefs.data && (JSON.stringify(local) !== JSON.stringify(prefs.data.preferences) || summary !== !!prefs.data.daily_summary)
+  const hasSummary = prefs.data && 'daily_summary' in prefs.data
+
+  const isOn = (row, c) => row.types.every((x) => !!local[x]?.[c])
+  const setOn = (row, c, on) => setLocal((p) => ({ ...p, ...Object.fromEntries(row.types.map((x) => [x, { ...(p[x] ?? {}), [c]: on }])) }))
 
   async function save() {
     setBusy(true)
     try {
-      await client.put('/api/notifications/preferences/', { preferences: local })
+      await client.put('/api/notifications/preferences/', { preferences: local, ...(hasSummary ? { daily_summary: summary } : {}) })
       qc.invalidateQueries({ queryKey: ['notifications', 'preferences'] })
       toast.show({ tone: 'success', title: t('ntf.alertsSaved') })
     } catch (err) {
@@ -205,22 +252,19 @@ function AlertsCard() {
               <span role="columnheader"><span className="sr-only">{t('ntf.what')}</span></span>
               {CHANNELS.map((c) => <span key={c} role="columnheader" className="text-center">{t(`ntf.channel.${c}`)}</span>)}
             </div>
-            {types.map((code) => (
-              <div key={code} role="row" className="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-1 border-t border-border py-2">
-                <span role="rowheader" className="text-[14px] text-text">{t(`ntf.type.${code}`)}</span>
+            {rows.map((row) => (
+              <div key={row.key} role="row" className="grid grid-cols-[1fr_repeat(3,64px)] items-center gap-1 border-t border-border py-2">
+                <span role="rowheader" className="text-[14px] text-text">{row.label}</span>
                 {CHANNELS.map((c) => (
                   <span key={c} role="cell" className="flex justify-center">
-                    <Checkbox
-                      aria-label={`${t(`ntf.type.${code}`)}: ${t(`ntf.channel.${c}`)}`}
-                      label=""
-                      checked={!!local[code]?.[c]}
-                      onChange={(e) => setLocal((p) => ({ ...p, [code]: { ...(p[code] ?? {}), [c]: e.target.checked } }))}
-                    />
+                    <Checkbox aria-label={`${row.label}: ${t(`ntf.channel.${c}`)}`} label="" checked={isOn(row, c)} onChange={(e) => setOn(row, c, e.target.checked)} />
                   </span>
                 ))}
               </div>
             ))}
           </div>
+          {hiddenGroups && <p className="text-[12px] text-muted">{t('ntf.groupsSoon')}</p>}
+          {hasSummary && <Toggle label={t('ntf.dailySummary')} checked={summary} onChange={setSummary} />}
           <Button variant="secondary" size="sm" onClick={save} loading={busy} disabled={!changed} className="self-start">{t('common.save')}</Button>
         </>
       )}

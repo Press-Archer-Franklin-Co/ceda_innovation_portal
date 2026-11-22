@@ -28,6 +28,7 @@ import {
 } from '../../../lib/queries/workflowBuilder'
 import { useMarkingCriteriaList, useSetStageConfig, useStageConfig } from '../../../lib/queries/evaluations'
 import { useT } from '../../../i18n/context'
+import StepExtras, { useStepExtras } from '../../../components/workflow/StepExtras'
 
 // 3.21 Workflow builder (Figma 143:1902 website, 143:2270 phone). A restyle of the step builder: same steps,
 // same save logic, laid out as the frame. ① A palette of steps to add. ② Each step card shows who has it, what
@@ -252,6 +253,9 @@ function StepCard({ step, index, count, selected, onSelect, onMove, busy }) {
 function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
   const t = useT()
   const { data: stageConfig } = useStageConfig(step?.id)
+  const extras = useStepExtras(step?.id)
+  const toast = useToast()
+  const [savingExtras, setSavingExtras] = useState(false)
   const criteriaList = useMarkingCriteriaList({ active_only: true })
   const criteria = Array.isArray(criteriaList.data) ? criteriaList.data : criteriaList.data?.data ?? criteriaList.data?.results ?? []
   const [draft, setDraft] = useState(() => stepToDraft(step ?? {}))
@@ -262,7 +266,7 @@ function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
   const currentStagePayload = buildStageConfigPayload(stageDraft)
   const stepDirty = !!step && !isPayloadEqual(payload, initialPayload)
   const stageDirty = !!step && !isPayloadEqual(currentStagePayload, initialStagePayload)
-  const isDirty = stepDirty || stageDirty
+  const isDirty = stepDirty || stageDirty || extras.dirty
 
   useEffect(() => { if (step) setDraft(stepToDraft(step)) }, [step])
   useEffect(() => { setStageDraft(stageConfigToDraft(stageConfig ?? null)) }, [stageConfig, step?.id])
@@ -282,6 +286,20 @@ function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
   const setScoring = (on) => {
     setStage({ scoring_mode: on ? 'criteria' : 'manual', marking_criteria: on ? stageDraft.marking_criteria : '' })
     set({ requires_evaluation: on, minimum_evaluations: on ? Number(stageDraft.required_reviewer_count) || 1 : 0 })
+  }
+
+  async function saveAll() {
+    const ok = stepDirty || stageDirty ? await onSave(payload, currentStagePayload, stageDirty) : true
+    if (ok === false || !extras.dirty) return
+    setSavingExtras(true)
+    try {
+      await extras.save(payload.role_required)
+      if (!stepDirty && !stageDirty) toast.show({ tone: 'success', title: t('wfx.saved') })
+    } catch (err) {
+      toast.show({ tone: 'error', title: t('wfx.saveError'), body: err?.message })
+    } finally {
+      setSavingExtras(false)
+    }
   }
 
   return (
@@ -370,9 +388,11 @@ function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
         <Select label={t('wfb.position')} options={allSteps.map((_, i) => ({ value: String(i + 1), label: t('wfb.positionN', { n: i + 1 }) }))} value={String(draft.order)} onChange={(v) => set({ order: Number(v) })} />
       </fieldset>
 
+      <StepExtras extras={extras} scoring={scoring} />
+
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
         <Button variant="ghost" onClick={onDelete} disabled={busy} className="text-danger"><Trash2 size={15} aria-hidden />{t('wfb.remove')}</Button>
-        <Button onClick={() => onSave(payload, currentStagePayload, stageDirty)} loading={busy} disabled={!payload.name || (!stepDirty && !stageDirty)}>{t('wfb.saveStep')}</Button>
+        <Button onClick={saveAll} loading={busy || savingExtras} disabled={!payload.name || !isDirty}>{t('wfb.saveStep')}</Button>
       </div>
     </section>
   )
