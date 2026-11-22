@@ -6,7 +6,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('assignments', '0009_r42_judging_data'),
+        ('assignments', '0010_r48_workflow_profile'),
     ]
 
     operations = [
