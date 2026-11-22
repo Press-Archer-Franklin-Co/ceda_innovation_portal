@@ -342,6 +342,43 @@ export const programmesEn = {
   'ntf.type.new_challenge': 'New challenges',
   'ntf.type.news': 'News',
   'ntf.type.digest': 'Weekly summary',
+  'fa.filters': 'Form answer filters',
+  'fa.challenge': 'Challenge',
+  'fa.pickChallenge': 'Choose a challenge',
+  'fa.statusLabel': 'Status',
+  'fa.allStatuses': 'All sent-in ideas',
+  'fa.status.submitted': 'Sent in',
+  'fa.status.under_review': 'Being reviewed',
+  'fa.status.returned': 'Sent back for changes',
+  'fa.status.rejected': 'Not taken forward',
+  'fa.status.approved': 'Approved',
+  'fa.from': 'From',
+  'fa.to': 'To',
+  'fa.noChallenge': 'There are no challenges yet, so there are no form answers to show.',
+  'fa.entries': 'Ideas sent in',
+  'fa.questions': 'Questions',
+  'fa.complete': 'Answered',
+  'fa.archived': 'Old questions',
+  'fa.completion': 'How much of the form people answered',
+  'fa.completionSub': '{pct}% of all questions answered',
+  'fa.completionLabel': '{answered} answers given, {missing} skipped',
+  'fa.answered': 'Answered',
+  'fa.skipped': 'Skipped',
+  'fa.skippedTitle': 'Open questions people skip',
+  'fa.skippedSub': 'The written questions left blank most often.',
+  'fa.skipTip': '{count} skipped ({pct}%)',
+  'fa.choicesTitle': 'What people picked',
+  'fa.noChoices': 'No choice questions have answers yet.',
+  'fa.answeredBy': '{pct}% answered this',
+  'fa.choiceTip': '{count} people ({pct}%)',
+  'fa.choiceLabel': 'Answers to {name}',
+  'fa.col.option': 'Choice',
+  'fa.col.people': 'People',
+  'fa.col.share': 'Share',
+  'fa.col.what': 'Answer',
+  'fa.col.answers': 'Answers',
+  'fa.col.question': 'Question',
+  'fa.col.skipRate': 'Skipped',
 }
 
 export const programmesTn = {
@@ -682,4 +719,41 @@ export const programmesTn = {
   'ntf.type.new_challenge': 'Dikgwetlho tse dintšhwa', // TODO tn-review
   'ntf.type.news': 'Dikgang', // TODO tn-review
   'ntf.type.digest': 'Kakaretso ya beke', // TODO tn-review
+  'fa.filters': 'Ditlhotlhi tsa dikarabo tsa foromo', // TODO tn-review
+  'fa.challenge': 'Kgwetlho', // TODO tn-review
+  'fa.pickChallenge': 'Tlhopha kgwetlho', // TODO tn-review
+  'fa.statusLabel': 'Seemo', // TODO tn-review
+  'fa.allStatuses': 'Dikakanyo tsotlhe tse di rometsweng', // TODO tn-review
+  'fa.status.submitted': 'E rometswe', // TODO tn-review
+  'fa.status.under_review': 'E a sekasekwa', // TODO tn-review
+  'fa.status.returned': 'E busitswe go fetolwa', // TODO tn-review
+  'fa.status.rejected': 'Ga e a tsewa', // TODO tn-review
+  'fa.status.approved': 'E amogetswe', // TODO tn-review
+  'fa.from': 'Go tswa', // TODO tn-review
+  'fa.to': 'Go fitlha', // TODO tn-review
+  'fa.noChallenge': 'Ga go ise go nne le dikgwetlho, ka jalo ga go na dikarabo tsa foromo.', // TODO tn-review
+  'fa.entries': 'Dikakanyo tse di rometsweng', // TODO tn-review
+  'fa.questions': 'Dipotso', // TODO tn-review
+  'fa.complete': 'Di arabilwe', // TODO tn-review
+  'fa.archived': 'Dipotso tsa bogologolo', // TODO tn-review
+  'fa.completion': 'Batho ba arabile foromo go le kae', // TODO tn-review
+  'fa.completionSub': '{pct}% ya dipotso tsotlhe e arabilwe', // TODO tn-review
+  'fa.completionLabel': 'Dikarabo di le {answered}, di le {missing} di tlogetswe', // TODO tn-review
+  'fa.answered': 'Di arabilwe', // TODO tn-review
+  'fa.skipped': 'Di tlogetswe', // TODO tn-review
+  'fa.skippedTitle': 'Dipotso tse batho ba di tlogelang', // TODO tn-review
+  'fa.skippedSub': 'Dipotso tse di kwalwang tse di tlogelwang di se na sepe gantsi.', // TODO tn-review
+  'fa.skipTip': '{count} di tlogetswe ({pct}%)', // TODO tn-review
+  'fa.choicesTitle': 'Se batho ba se tlhophileng', // TODO tn-review
+  'fa.noChoices': 'Ga go ise go nne le dikarabo tsa dipotso tsa go tlhopha.', // TODO tn-review
+  'fa.answeredBy': '{pct}% ba arabile se', // TODO tn-review
+  'fa.choiceTip': 'Batho ba le {count} ({pct}%)', // TODO tn-review
+  'fa.choiceLabel': 'Dikarabo tsa {name}', // TODO tn-review
+  'fa.col.option': 'Tlhopho', // TODO tn-review
+  'fa.col.people': 'Batho', // TODO tn-review
+  'fa.col.share': 'Kabelo', // TODO tn-review
+  'fa.col.what': 'Karabo', // TODO tn-review
+  'fa.col.answers': 'Dikarabo', // TODO tn-review
+  'fa.col.question': 'Potso', // TODO tn-review
+  'fa.col.skipRate': 'Di tlogetswe', // TODO tn-review
 }
