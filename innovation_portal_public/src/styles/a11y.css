@@ -1,0 +1,33 @@
+/* U11C (Figma 1.12): what the accessibility panel's choices do. lib/a11y.ts sets these on <html>. */
+
+/* Text size: A (normal), A+ and A++. The type scale is in px, so the page is scaled as a whole. */
+html[data-text-size='large'] body { zoom: 1.125; }
+html[data-text-size='larger'] body { zoom: 1.25; }
+
+/* High contrast: darker muted text and borders, pure black text. */
+html[data-contrast='high'] {
+  --c-text: 0 0 0;
+  --c-muted: 46 30 24;
+  --c-border: 107 82 72;
+  --c-banner-muted: 255 255 255;
+}
+
+/* Less motion: no animations or smooth scrolling. */
+html[data-motion='reduce'] { --motion-ok: 0; scroll-behavior: auto; }
+html[data-motion='reduce'] *,
+html[data-motion='reduce'] *::before,
+html[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* Underline links. */
+html[data-underline='on'] a { text-decoration: underline !important; text-underline-offset: 3px; }
+
+/* Easy-to-read font: a plain, wide system font for headings and body text. */
+html[data-font='readable'] {
+  --font-heading: Verdana, Tahoma, 'DejaVu Sans', sans-serif;
+  --font-body: Verdana, Tahoma, 'DejaVu Sans', sans-serif;
+}

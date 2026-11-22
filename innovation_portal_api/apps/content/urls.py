@@ -1,6 +1,7 @@
 from django.urls import path
 from rest_framework.routers import DefaultRouter
 
+from apps.content.all_content_views import AllContentView
 from apps.content.hackathon_views import (
     ActiveHackathonView,
     HackathonPageSubmitView,
@@ -38,6 +39,7 @@ from .part2_views import (
     StoryViewSet,
     SubscriberCountsView,
 )
+from .policy_views import PolicyDetailView, PolicyDraftView, PolicyListView, PolicySubmitView, PublicPolicyView
 from .views import ContentItemViewSet, HackathonDetailViewSet, HackathonMediaViewSet, LeadershipCardViewSet, PublicStatsView, SiteSettingsView, WinnerSpotlightViewSet
 
 news_router = DefaultRouter()
@@ -82,6 +84,11 @@ urlpatterns = (
         path("hero-photo/<uuid:photo_id>/", HeroPhotoDetailView.as_view(), name="content-hero-photo-detail"),
         path("pages/home/preview/", HomePreviewView.as_view(), name="content-home-preview"),
         path("pages/home/submit/", HomeSubmitView.as_view(), name="content-home-submit"),
+        path("policies/", PolicyListView.as_view(), name="content-policies"),
+        path("policies/<slug:key>/", PolicyDetailView.as_view(), name="content-policy"),
+        path("policies/<slug:key>/draft/", PolicyDraftView.as_view(), name="content-policy-draft"),
+        path("policies/<slug:key>/submit/", PolicySubmitView.as_view(), name="content-policy-submit"),
+        path("public/policies/<slug:key>/", PublicPolicyView.as_view(), name="content-public-policy"),
         path("approvals/", ApprovalListView.as_view(), name="content-approvals"),
         path("approvals/<uuid:approval_id>/approve/", ApprovalDecisionView.as_view(), name="content-approval-approve"),
         path("approvals/<uuid:approval_id>/reject/", ApprovalRejectView.as_view(), name="content-approval-reject"),
@@ -99,6 +106,7 @@ urlpatterns = (
         path("subscribers/counts/", SubscriberCountsView.as_view(), name="content-subscriber-counts"),
         path("posts/<uuid:post_id>/blast/", PostBlastView.as_view(), name="content-post-blast"),
         path("site-settings/", SiteSettingsView.as_view(), name="site-settings"),
+        path("all/", AllContentView.as_view(), name="content-all"),
         path("public-stats/", PublicStatsView.as_view(), name="public-stats"),
     ]
 )

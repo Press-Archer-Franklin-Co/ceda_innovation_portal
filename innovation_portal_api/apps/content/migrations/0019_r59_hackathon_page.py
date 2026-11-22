@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('content', '0016_u7_hero_photo'),
+        ('content', "0018_u11c_seed_policy_pages"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

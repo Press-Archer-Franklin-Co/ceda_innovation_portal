@@ -10,7 +10,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.audit.services import AuditService
-from apps.content.models import ApprovalRequest, ContentItem, LeadershipCard, Page, PageSection, PageVersion, Partner, SiteSettings, WinnerSpotlight
+from apps.content.models import ApprovalRequest, ContentItem, LeadershipCard, Page, PageSection, PageVersion, Partner, PolicyPage, SiteSettings, WinnerSpotlight
 from apps.content.sections import DEFAULT_ORDER, SECTION_TYPES, SettingsError, default_settings, localize, normalize_settings
 from apps.core.constants import ProgramStatus, RoleType
 from apps.core.i18n import get_text
@@ -285,6 +285,11 @@ class ApprovalService:
             from apps.content.hackathon_page import apply_approved
 
             apply_approved(target, approval.payload)
+        elif isinstance(target, PolicyPage) and approve:
+            # U11C: the policy text that was sent goes live; sending it back leaves the live text alone.
+            from apps.content.policies import apply_approved
+
+            apply_approved(target, approval, actor=actor)
         AuditService.log_action(
             actor=actor,
             action_type="content_approved" if approve else "content_rejected",
@@ -313,7 +318,7 @@ class ApprovalService:
             )
         data = {
             "id": str(approval.id),
-            "target_type": {"contentitem": "post", "page": "page", "leadershipcard": "quote"}.get(target_type, target_type),
+            "target_type": {"contentitem": "post", "page": "page", "leadershipcard": "quote", "policypage": "policy"}.get(target_type, target_type),
             "target_id": approval.object_id,
             "summary": approval.summary,
             "status": approval.status,

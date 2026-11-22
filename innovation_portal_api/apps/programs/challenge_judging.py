@@ -82,7 +82,7 @@ class ChallengeJudgingService:
             step.requires_evaluation = True
             step.save(update_fields=["requires_evaluation", "updated_at"])
 
-        judges = max(1, program.challenge_judges.count())
+        judges = max(1, program.challenge_judges.filter(declined_at__isnull=True).count())
         # R-10: reviewers per idea and the pass mark are set on the programme (PUT /api/programs/{id}/judging/).
         required = min(judges, program.reviewers_per_idea) if program.reviewers_per_idea else judges
         StageEvaluationConfig.objects.update_or_create(
@@ -177,6 +177,8 @@ class ChallengeJudgingService:
         judge = ChallengeJudge.objects.select_for_update().select_related("program").filter(token=token).first()
         if judge is None:
             raise ValidationError("This judging link is not valid.")
+        if judge.declined_at:
+            raise ValidationError("You declined this invitation. Ask the innovation team to invite you again.")
         if (user.email or "").lower() != judge.email:
             raise PermissionDenied(f"This judging invitation was sent to {judge.email}. Sign in with that email address to continue.")
         if judge.user_id is None:
@@ -294,7 +296,7 @@ class ChallengeJudgingService:
         if marking_closes and now > marking_closes:
             return
         cls.sync_workflow(program)
-        for judge in program.challenge_judges.select_related("program", "user"):
+        for judge in program.challenge_judges.filter(declined_at__isnull=True).select_related("program", "user"):
             if judge.invited_at is None:
                 cls.send_invitation(judge, now=now)
                 continue
@@ -323,3 +325,24 @@ class ChallengeJudgingService:
         closes = program.marking_closes_at
         if closes and timezone.now() > closes:
             raise ValidationError("Marking for this challenge has closed.")
+
+
+def decline_invitation(token, reason: str = ""):
+    """R-50: the invitee says no from the link, with no sign-in. Logs it and tells the challenge owner."""
+    from apps.notifications.services import NotificationService
+
+    judge = ChallengeJudge.objects.select_related("program__owner").filter(token=token).first()
+    if judge is None:
+        raise ValidationError("This judging link is not valid.")
+    if judge.accepted_at:
+        raise ValidationError("You already accepted. Ask the innovation team if you can no longer judge.")
+    if judge.declined_at is None:
+        judge.declined_at = timezone.now()
+        judge.decline_reason = (reason or "").strip()[:500]
+        judge.save(update_fields=["declined_at", "decline_reason", "updated_at"])
+        AuditService.log_action(actor=None, action_type="challenge_judge_declined", target=judge.program, metadata={"judge_id": str(judge.id), "reason": judge.decline_reason})
+        owner = judge.program.owner
+        if owner is not None:
+            text = f"{judge.name} will not judge {judge.program.title}." + (f" Reason: {judge.decline_reason}" if judge.decline_reason else "")
+            NotificationService.notify(user=owner, notification_type="challenge_judge_declined", title="A judge declined", message=text)
+    return judge

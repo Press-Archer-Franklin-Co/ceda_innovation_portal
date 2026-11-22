@@ -25,6 +25,8 @@ const SubmissionDetail = lazy(() => import('./pages/submissions/SubmissionDetail
 const MyWork = lazy(() => import('./pages/mywork/MyWork'))
 const Judging = lazy(() => import('./pages/judging/Judging'))
 const ScoreIdea = lazy(() => import('./pages/judging/ScoreIdea'))
+const Inbox = lazy(() => import('./pages/inbox/Inbox'))
+const LiveChatSettings = lazy(() => import('./pages/inbox/LiveChatSettings'))
 const ReviewQueue = lazy(() => import('./pages/review/ReviewQueue'))
 const AllScores = lazy(() => import('./pages/judging/AllScores'))
 const Reports = lazy(() => import('./pages/reports/Reports'))
@@ -108,6 +110,11 @@ export default function App() {
                 </Route>
                 <Route path="/documents/:id"   element={<ErrorBoundary><DocumentRedirect /></ErrorBoundary>} />
 
+                {/* C1 live chat: 3.30 Inbox. */}
+                <Route element={<CapabilityRoute need="conversations.reply" />}>
+                  <Route path="/inbox"         element={<ErrorBoundary><Inbox /></ErrorBoundary>} />
+                </Route>
+
                 {/* U4 3.3 Review queue and scoring. */}
                 <Route element={<CapabilityRoute need="entries.review" />}>
                   <Route path="/review"        element={<ErrorBoundary><ReviewQueue /></ErrorBoundary>} />
@@ -141,6 +148,7 @@ export default function App() {
                 </Route>
                 <Route element={<CapabilityRoute need="settings.manage" />}>
                   <Route path="/admin/platform"                element={<ErrorBoundary><PlatformSettings /></ErrorBoundary>} />
+                  <Route path="/admin/live-chat"               element={<ErrorBoundary><LiveChatSettings /></ErrorBoundary>} />
                   <Route path="/admin/roles"                   element={<ErrorBoundary><RolesPermissions /></ErrorBoundary>} />
                 </Route>
                 <Route element={<CapabilityRoute need={['dashboard.view', 'analytics.view']} />}>
