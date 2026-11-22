@@ -673,3 +673,24 @@ class HeroPhoto(UUIDModel, TimeStampedModel):
 
     def __str__(self) -> str:
         return self.filename or str(self.id)
+
+
+class ResultEntry(UUIDModel, TimeStampedModel):
+    """R-59 (3.37): how one winning or shortlisted entry shows on the public results (1.10)."""
+
+    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, related_name="result_entries")
+    submission = models.OneToOneField("submissions.Submission", on_delete=models.CASCADE, related_name="result_entry")
+    show_on_results = models.BooleanField(default=True)
+    order = models.PositiveIntegerField(default=0)
+    story = models.JSONField(default=dict, blank=True, help_text='{"en": "...", "tn": "..."}')
+    photo = models.ImageField(upload_to="content/result_photos/", null=True, blank=True)
+
+    class Meta:
+        ordering = ("order", "created_at")
+
+
+class ResultsPageSettings(UUIDModel, TimeStampedModel):
+    """R-59 (3.37): per challenge, whether the public results show entrants' names."""
+
+    program = models.OneToOneField("programs.Program", on_delete=models.CASCADE, related_name="results_page_settings")
+    show_names = models.BooleanField(default=True)

@@ -4,6 +4,9 @@ from rest_framework.routers import DefaultRouter
 from apps.programs.challenge_views import JudgingSettingsView, PublicChallengeDetailView, PublicChallengeListView, SetupStatusView
 from apps.programs.stage_views import ProgramStageDetailView, ProgramStagesView
 from apps.programs.entry_views import (
+    ResultEntryManageView,
+    ResultEntryPhotoView,
+    ResultsManageView,
     ChallengeEligibilityRulesView,
     ChallengeEligibilityView,
     ChallengeEntryStateView,
@@ -41,6 +44,9 @@ urlpatterns = [
     path("public/<slug:slug>/my-result/", MyChallengeResultView.as_view(), name="public-challenge-my-result"),
     path("<uuid:program_id>/eligibility/", ChallengeEligibilityRulesView.as_view(), name="program-eligibility"),
     path("<uuid:program_id>/results/publish/", PublishChallengeResultsView.as_view(), name="program-results-publish"),
+    path("<uuid:program_id>/results/manage/", ResultsManageView.as_view(), name="program-results-manage"),
+    path("<uuid:program_id>/results/manage/<uuid:submission_id>/", ResultEntryManageView.as_view(), name="program-results-manage-entry"),
+    path("<uuid:program_id>/results/manage/<uuid:submission_id>/photo/", ResultEntryPhotoView.as_view(), name="program-results-manage-photo"),
     path("<uuid:program_id>/setup-status/", SetupStatusView.as_view(), name="program-setup-status"),
     path("<uuid:program_id>/judging/", JudgingSettingsView.as_view(), name="program-judging"),
     path("<uuid:program_id>/stages/", ProgramStagesView.as_view(), name="program-stages"),
