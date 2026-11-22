@@ -31,9 +31,9 @@ def pick(text: dict | str | None, lang: str) -> str:
 def find_user_by_phone(phone: str):
     if not phone:
         return None
-    from apps.accounts.models import User
+    from apps.accounts.phone_accounts import find_by_phone
 
-    return User.objects.filter(phone_number=phone, is_active=True).order_by("-phone_verified", "-last_login", "created_at").first()
+    return find_by_phone(phone, proved_only=True)
 
 
 # --------------------------------------------------------------------------------------

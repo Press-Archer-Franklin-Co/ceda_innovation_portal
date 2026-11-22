@@ -16,6 +16,8 @@ export const innovatorEn = {
   'channel.whatsapp': 'WhatsApp',
   'channel.sms': 'SMS',
   'channel.email': 'Email',
+  'channel.ussd': 'USSD',
+  'channel.office': 'CEDA office',
 
   // FormRenderer
   'form.challengeQuestion': 'Challenge question',
@@ -246,6 +248,8 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'channel.whatsapp': 'WhatsApp',
   'channel.sms': 'SMS',
   'channel.email': 'Imeile',
+  'channel.ussd': 'USSD',
+  'channel.office': 'Ofisi ya CEDA',
 
   'form.challengeQuestion': 'Potso ya kgwetlho',
   'form.err.required': 'Tsweetswee araba potso e.',
