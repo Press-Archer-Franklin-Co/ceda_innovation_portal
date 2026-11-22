@@ -7,6 +7,7 @@ import { u7En } from './u7'
 import { formsEn } from './forms'
 import { ideasEn } from './ideas'
 import { programmesEn } from './programmes'
+import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 
 const en = {
@@ -145,6 +146,7 @@ const en = {
   ...formsEn,
   ...ideasEn,
   ...programmesEn,
+  ...conversationsEn,
   ...reviewEn,
   ...challengesEn,
   ...rolesEn,

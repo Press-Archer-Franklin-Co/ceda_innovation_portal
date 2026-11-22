@@ -384,6 +384,8 @@ export interface IdeaMessage {
   /** Read by the person viewing. */
   read: boolean
   created_at: string
+  /** U11C (R-52): on your own messages, the officer who read it and when. */
+  seen_by?: { name: string; at: string } | null
 }
 
 /** GET /api/me/ideas/{id}/messages/ */
@@ -391,6 +393,9 @@ export interface MessageThreadPayload {
   idea_id: string
   open_question: IdeaMessage | null
   results: IdeaMessage[]
+  /** U11C (R-52): the officer typing a reply right now, and whether the API takes typing signals. */
+  typing?: { name: string } | null
+  typing_supported?: boolean
 }
 
 export interface NewMessage {

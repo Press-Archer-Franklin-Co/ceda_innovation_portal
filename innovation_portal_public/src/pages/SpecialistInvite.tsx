@@ -1,9 +1,20 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { CheckCircle, AlertCircle, Loader2, Mail, FileText } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { CalendarDays, FileText, MessageCircle } from 'lucide-react'
 import api from '../services/api'
+import { unwrapData } from '../services/envelope'
 import { useAuth } from '../context/AuthContext'
-import logoSrc from '../assets/logo.png'
+import { InviteActions, InvitePage, InviteRow, InviteRows } from '../components/invite/InviteCard'
+import { StatusScreen } from '../components/status/StatusScreen'
+import { buttonClasses } from '../components/ui/Button'
+import Skeleton, { SkeletonText } from '../components/ui/Skeleton'
+import { useI18n } from '../i18n'
+import { formatDate } from '../lib/dates'
+import { usePageTitle } from '../lib/usePageTitle'
+
+// Figma 1.15 (138:3382 / 138:3716), the same invitation card for a specialist asked to review one idea.
+// Accept continues to the one sign-in page (2.0) and lands on the person's work list.
+// Decline shows once the API can record it (can_decline, R-50).
 
 interface InviteDetails {
   id: string
@@ -15,225 +26,102 @@ interface InviteDetails {
   status: string
   is_expired: boolean
   expires_at: string
+  can_decline?: boolean
 }
 
-type PageState = 'loading' | 'ready' | 'claiming' | 'success' | 'error' | 'already_done'
+type State = 'ready' | 'accepted' | 'declined'
 
 export default function SpecialistInvite() {
-  const { token } = useParams<{ token: string }>()
+  const { token = '' } = useParams<{ token: string }>()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { isAuthenticated, isLoading: authLoading, user } = useAuth()
-
+  const { t, lang } = useI18n()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [invite, setInvite] = useState<InviteDetails | null>(null)
-  const [pageState, setPageState] = useState<PageState>('loading')
-  const [errorMsg, setErrorMsg] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [state, setState] = useState<State>('ready')
+  const [accepting, setAccepting] = useState(false)
+  const [acceptError, setAcceptError] = useState('')
+  const autoAccepted = useRef(false)
+  usePageTitle(t('invite.specialistTitle'))
 
   useEffect(() => {
-    if (!token) {
-      setPageState('error')
-      setErrorMsg('Invalid invitation link.')
-      return
-    }
     api.get(`/assignments/specialist-invite/${token}/`)
-      .then(res => {
-        const data: InviteDetails = res.data?.data ?? res.data
-        if (data.is_expired) {
-          setPageState('error')
-          setErrorMsg('This invitation link has expired.')
-          return
-        }
-        if (data.status !== 'pending') {
-          setPageState('already_done')
-          setInvite(data)
-          return
-        }
-        setInvite(data)
-        setPageState('ready')
-      })
-      .catch(err => {
-        const msg = err.response?.status === 404
-          ? 'This invitation link is invalid or has already been used.'
-          : 'Unable to load invitation. Please try again.'
-        setPageState('error')
-        setErrorMsg(msg)
-      })
+      .then((res) => setInvite(unwrapData<InviteDetails>(res.data)))
+      .catch(() => setLoadFailed(true))
   }, [token])
 
-  const handleAccept = () => {
+  const accept = async () => {
     if (!isAuthenticated) {
-      sessionStorage.setItem('specialist_invite_token', token ?? '')
-      navigate('/sign-in', { state: { from: { pathname: `/specialist-invite/${token}` } } })
+      navigate(`/sign-in?next=${encodeURIComponent(`/specialist-invite/${token}?accept=1`)}`)
       return
     }
-    claimInvite()
-  }
-
-  const claimInvite = () => {
-    setPageState('claiming')
-    api.post(`/assignments/specialist-invite/${token}/claim/`)
-      .then(() => setPageState('success'))
-      .catch(err => {
-        const data = err.response?.data
-        const msg = data?.detail
-          ?? data?.non_field_errors?.[0]
-          ?? (Array.isArray(data) ? data[0] : undefined)
-          ?? 'Failed to accept invitation. Please try again.'
-        setPageState('error')
-        setErrorMsg(msg)
-      })
+    setAccepting(true)
+    setAcceptError('')
+    try {
+      await api.post(`/assignments/specialist-invite/${token}/claim/`)
+      setState('accepted')
+    } catch (err) {
+      const data = (err as { response?: { data?: { detail?: string; errors?: { detail?: string } } } }).response?.data
+      setAcceptError(data?.errors?.detail ?? data?.detail ?? t('invite.acceptError'))
+    } finally {
+      setAccepting(false)
+    }
   }
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && pageState === 'ready' && invite?.status === 'pending') {
-      const pending = sessionStorage.getItem('specialist_invite_token')
-      if (pending === token) {
-        sessionStorage.removeItem('specialist_invite_token')
-        claimInvite()
-      }
-    }
-  }, [isAuthenticated, authLoading, pageState])
+    if (autoAccepted.current || params.get('accept') !== '1' || !invite || invite.is_expired || invite.status !== 'pending' || authLoading || !isAuthenticated) return
+    autoAccepted.current = true
+    void accept()
+  }, [invite, authLoading, isAuthenticated]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (pageState === 'loading' || authLoading) {
-    return (
-      <Shell>
-        <Loader2 size={36} className="animate-spin mx-auto mb-5 text-[#A01E0A]" />
-        <p className="text-sm text-gray-500">Validating invitation…</p>
-      </Shell>
-    )
-  }
+  const home = <Link to="/" className={buttonClasses({ variant: 'secondary' })}>{t('notFound.home')}</Link>
+  const work = <Link to="/dashboard" className={buttonClasses({ variant: 'primary' })}>{t('invite.goDashboard')}</Link>
 
-  if (pageState === 'error') {
+  if (loadFailed) return <StatusScreen title={t('invite.loadError')} body={t('invite.loadErrorBody')}>{home}</StatusScreen>
+  if (!invite || authLoading) {
     return (
-      <Shell>
-        <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
-          <AlertCircle size={26} className="text-red-500" />
+      <InvitePage title={t('invite.specialistTitle')}>
+        <div aria-hidden className="flex flex-col gap-4">
+          <Skeleton className="h-6 w-56" />
+          <SkeletonText lines={4} />
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Invitation Unavailable</h1>
-        <p className="text-sm text-gray-500 mb-6 leading-relaxed">{errorMsg}</p>
-        <button
-          onClick={() => navigate('/')}
-          className="text-sm font-semibold hover:underline"
-          style={{ color: '#A01E0A' }}
-        >
-          Go to Home
-        </button>
-      </Shell>
+      </InvitePage>
     )
   }
+  if (invite.is_expired) return <StatusScreen title={t('invite.expired')} body={t('invite.loadErrorBody')}>{home}</StatusScreen>
+  if (state === 'accepted') return <StatusScreen title={t('invite.specialistAccepted')} body={t('invite.specialistAcceptedBody')}>{work}</StatusScreen>
+  if (state === 'declined' || invite.status === 'declined') return <StatusScreen title={t('invite.declined')} body={t('invite.declinedBody')} />
+  if (invite.status !== 'pending') return <StatusScreen title={t('invite.specialistDone')} body={invite.submission_title}>{work}</StatusScreen>
 
-  if (pageState === 'already_done') {
-    return (
-      <Shell>
-        <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-5">
-          <CheckCircle size={26} className="text-green-600" />
-        </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Already Accepted</h1>
-        <p className="text-sm text-gray-500 mb-6">
-          You have already accepted this specialist invitation for{' '}
-          <span className="font-medium text-gray-800">{invite?.submission_title}</span>.
-        </p>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-sm font-semibold hover:underline"
-          style={{ color: '#A01E0A' }}
-        >
-          Go to Dashboard
-        </button>
-      </Shell>
-    )
-  }
-
-  if (pageState === 'success') {
-    return (
-      <Shell>
-        <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-5">
-          <CheckCircle size={26} className="text-green-600" />
-        </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">You're in!</h1>
-        <p className="text-sm text-gray-500 mb-2 leading-relaxed">
-          You've accepted the specialist reviewer role for:
-        </p>
-        <p className="text-base font-semibold text-gray-900 mb-1">{invite?.submission_title}</p>
-        <p className="text-sm text-gray-500 mb-6">{invite?.program_title}</p>
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: '#A01E0A' }}
-        >
-          Go to Dashboard
-        </button>
-      </Shell>
-    )
-  }
+  const rows: InviteRow[] = [{ icon: FileText, text: t('invite.specialistIdea', { title: invite.submission_title }) }]
+  if (invite.expires_at) rows.push({ icon: CalendarDays, text: t('invite.specialistDue', { date: formatDate(invite.expires_at, lang) }) })
+  rows.push({ icon: MessageCircle, text: t('invite.comments') })
 
   return (
-    <Shell>
-      <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-6"
-        style={{ background: '#A01E0A' }}>
-        <Mail size={24} className="text-white" />
-      </div>
-
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Specialist Review Invitation</h1>
-      <p className="text-sm text-gray-500 mb-6">
-        You've been invited to review a submission as a specialist.
-      </p>
-
-      <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 mb-6 text-left space-y-3">
-        <div className="flex items-start gap-3">
-          <FileText size={16} className="text-gray-400 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium mb-0.5">Submission</p>
-            <p className="text-sm font-semibold text-gray-900">{invite?.submission_title}</p>
-            <p className="text-xs text-gray-500">{invite?.program_title}</p>
-          </div>
+    <InvitePage title={t('invite.specialistTitle')} subtitle={invite.program_title}>
+      <InviteRows rows={rows} note={t('invite.conflict')} />
+      {invite.message && (
+        <div className="flex flex-col gap-1">
+          <p className="text-d-label-s text-muted">{t('invite.message')}</p>
+          <p className="text-d-body-s text-text whitespace-pre-line">{invite.message}</p>
         </div>
-
-        {invite?.message && (
-          <div className="border-t border-gray-200 pt-3">
-            <p className="text-[11px] text-gray-400 uppercase tracking-wide font-medium mb-1">Message from organiser</p>
-            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{invite.message}</p>
-          </div>
-        )}
-      </div>
-
-      {!isAuthenticated && (
-        <p className="text-xs text-gray-400 mb-4">
-          You'll be asked to sign in before accepting.
-        </p>
       )}
-
-      <button
-        onClick={handleAccept}
-        disabled={pageState === 'claiming'}
-        className="w-full py-3 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ background: '#A01E0A' }}
-      >
-        {pageState === 'claiming' ? (
-          <span className="flex items-center justify-center gap-2">
-            <Loader2 size={16} className="animate-spin" /> Accepting…
-          </span>
-        ) : (
-          'Accept Invitation'
-        )}
-      </button>
-
-      <button
-        onClick={() => navigate('/')}
-        className="mt-3 text-xs text-gray-400 hover:underline"
-      >
-        Decline — go to home
-      </button>
-    </Shell>
-  )
-}
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-white px-6 py-12">
-      <div className="text-center max-w-sm w-full">
-        <img src={logoSrc} alt="CEDA" className="h-10 w-auto mx-auto mb-8" />
-        {children}
-      </div>
-    </div>
+      {!isAuthenticated && <p className="text-d-cap text-muted">{t('invite.signInAs', { email: invite.invitee_email })}</p>}
+      {acceptError && <p role="alert" className="rounded-control bg-danger-soft px-4 py-3 text-d-body-s text-danger">{acceptError}</p>}
+      <InviteActions
+        acceptLabel={isAuthenticated ? t('invite.accept') : t('invite.acceptSignIn')}
+        accepting={accepting}
+        onAccept={accept}
+        onDecline={
+          invite.can_decline
+            ? async (reason) => {
+                await api.post(`/assignments/specialist-invite/${token}/decline/`, { reason })
+                setState('declined')
+              }
+            : undefined
+        }
+      />
+    </InvitePage>
   )
 }

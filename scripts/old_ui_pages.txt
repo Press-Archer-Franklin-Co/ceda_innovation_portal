@@ -13,18 +13,7 @@ admin/src/pages/content/ContentIndex.jsx
 admin/src/pages/content/ContentList.jsx
 admin/src/pages/content/HackathonContentEditor.jsx
 admin/src/pages/content/WinnersManager.jsx
-public/src/pages/NotFound.tsx
-public/src/pages/JudgeInvite.tsx
-public/src/pages/SpecialistInvite.tsx
-public/src/pages/Profile.tsx
-public/src/pages/Security.tsx
-public/src/pages/DocumentPage.tsx
 # Added when the guard was first set up (U8): also still in the old look.
 # Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
 public/src/pages/VerifyEmail.tsx
 public/src/pages/AuthCallback.tsx
-# Parts of the Security page (listed above).
-public/src/components/security/LinkedProviders.tsx
-public/src/components/security/MfaManagement.tsx
-public/src/components/security/PasswordManagement.tsx
-public/src/components/security/RecommendedActions.tsx
