@@ -9,6 +9,27 @@ CHANNEL_FIELDS = {
 }
 
 
+def staff_types() -> list[str]:
+    """R-57: the types in the staff settings groups (3.39), in group order."""
+    from apps.notifications.serializers import STAFF_GROUPS
+
+    seen = []
+    for _label, types in STAFF_GROUPS.values():
+        seen += [item for item in types if item not in seen and item not in NotificationType.values]
+    return seen
+
+
+def is_staff(user) -> bool:
+    from apps.core.capabilities import capabilities_for
+
+    return bool(capabilities_for(user))
+
+
+def types_for(user) -> list[str]:
+    """Innovators set the innovator types; staff also get the staff group types."""
+    return list(NotificationType.values) + (staff_types() if is_staff(user) else [])
+
+
 class NotificationPreferenceSelector:
     @staticmethod
     def defaults_for(user) -> dict[str, bool]:
@@ -27,7 +48,7 @@ class NotificationPreferenceSelector:
         defaults = NotificationPreferenceSelector.defaults_for(user)
         saved = {row.notification_type: row for row in NotificationTypePreference.objects.filter(user=user)}
         result: dict[str, dict[str, bool]] = {}
-        for notification_type in NotificationType.values:
+        for notification_type in types_for(user):
             row = saved.get(notification_type)
             if row is None:
                 result[notification_type] = dict(defaults)

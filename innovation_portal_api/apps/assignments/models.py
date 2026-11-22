@@ -16,8 +16,19 @@ class SpecialistInvitationStatus(models.TextChoices):
 
 
 class ReviewPanel(UUIDModel, TimeStampedModel):
+    """A staff team (R-48, 3.21), for example "Agribusiness panel". A workflow step can give its work to a team."""
+
     name = models.CharField(max_length=255)
-    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, related_name="review_panels")
+    description = models.CharField(max_length=300, blank=True, default="")
+    program = models.ForeignKey("programs.Program", on_delete=models.CASCADE, null=True, blank=True, related_name="review_panels", help_text="Empty: any challenge.")
+    members = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="review_panels")
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Assignment(UUIDModel, TimeStampedModel):
