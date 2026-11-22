@@ -3,7 +3,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("programs", "0021_r48_eligibility_stages"),
+        ("programs", "0022_r50_invite_decline"),
     ]
 
     operations = [

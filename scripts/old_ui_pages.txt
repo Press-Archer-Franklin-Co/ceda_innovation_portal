@@ -23,32 +23,8 @@ admin/src/pages/content/HackathonContentEditor.jsx
 admin/src/pages/content/WinnersManager.jsx
 admin/src/pages/reports/FormAnswers.jsx
 admin/src/pages/settings/Settings.jsx
-public/src/pages/About.tsx
-public/src/pages/Guidelines.tsx
-public/src/pages/PrivacyPolicy.tsx
-public/src/pages/TermsOfUse.tsx
-public/src/pages/TermsOfAgreement.tsx
-public/src/pages/FAQ.tsx
-public/src/pages/NotFound.tsx
-public/src/pages/JudgeInvite.tsx
-public/src/pages/SpecialistInvite.tsx
-public/src/pages/Profile.tsx
-public/src/pages/Security.tsx
-public/src/pages/SubmissionDetail.tsx
-public/src/pages/DocumentPage.tsx
-public/src/pages/Suggestions.tsx
-public/src/pages/Skills.tsx
 # Added when the guard was first set up (U8): also still in the old look.
 # Sign-in, sign-up, password and MFA pages and the staff login: U7 replaces them.
 admin/src/components/brand/CedaInnovationHubLogo.jsx
 public/src/pages/VerifyEmail.tsx
 public/src/pages/AuthCallback.tsx
-# Parts of the Security page (listed above).
-public/src/components/security/LinkedProviders.tsx
-public/src/components/security/MfaManagement.tsx
-public/src/components/security/PasswordManagement.tsx
-public/src/components/security/RecommendedActions.tsx
-# Not routed any more; fix/d3-public-figma deletes them.
-public/src/pages/Dashboard.tsx
-public/src/components/challenges/ChallengeSpotlight.tsx
-public/src/components/challenges/Countdown.tsx

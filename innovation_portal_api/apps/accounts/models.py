@@ -280,3 +280,16 @@ class AuthPolicy(models.Model):
     def __str__(self) -> str:
         return f"Second step: {self.second_step}"
 
+
+
+class AccountSession(UUIDModel, TimeStampedModel):
+    """R-51 (2.9): one place a person is signed in. Every refresh token of a sign-in carries its key ("sid")."""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="account_sessions")
+    key = models.UUIDField(unique=True, db_index=True)
+    device = models.CharField(max_length=120, blank=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ("-last_seen_at", "-created_at")

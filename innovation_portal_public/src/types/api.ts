@@ -62,6 +62,7 @@ export interface UserSummary {
 
 export interface AuthenticatedUser extends UserSummary {
   email_verified: boolean
+  phone_verified?: boolean
   primary_auth_method: string
   mfa_enabled?: boolean
   mfa_method?: string

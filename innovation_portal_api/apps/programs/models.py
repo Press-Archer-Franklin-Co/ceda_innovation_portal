@@ -212,6 +212,9 @@ class ChallengeJudge(UUIDModel, TimeStampedModel):
     invited_at = models.DateTimeField(null=True, blank=True)
     accepted_at = models.DateTimeField(null=True, blank=True)
     last_reminded_at = models.DateTimeField(null=True, blank=True)
+    # R-50 (1.15): the invitee said no from the link.
+    declined_at = models.DateTimeField(null=True, blank=True)
+    decline_reason = models.CharField(max_length=500, blank=True, default="")
 
     class Meta:
         ordering = ("created_at",)
