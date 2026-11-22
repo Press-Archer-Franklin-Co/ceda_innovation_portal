@@ -1,4 +1,4 @@
-"""What may be sent to Anthropic (C3 privacy rule).
+"""What may be sent to the AI service (C3 privacy rule).
 
 Only the text a feature needs is sent. These answers are always left out:
 - field types that carry personal details: email, phone, Omang ID, date (often a birth date),

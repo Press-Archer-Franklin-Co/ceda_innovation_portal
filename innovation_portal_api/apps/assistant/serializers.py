@@ -112,7 +112,7 @@ class ReorderSerializer(serializers.Serializer):
 
 
 class RouteSerializer(serializers.Serializer):
-    provider = serializers.ChoiceField(choices=(("anthropic", "Claude"), ("openai", "OpenAI"), ("openai_compatible", "Other service")), required=False)
+    provider = serializers.ChoiceField(choices=(("openai_compatible", "Any AI service"), ("anthropic", "Anthropic"), ("openai", "OpenAI")), required=False)
     connection = serializers.UUIDField(required=False, allow_null=True)
     model = serializers.CharField(max_length=80, required=False, allow_blank=True)
 
