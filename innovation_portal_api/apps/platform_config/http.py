@@ -12,8 +12,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode, urljoin, urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener, urlopen
 
 DEFAULT_TIMEOUT = 10
 
@@ -75,3 +75,53 @@ def request(
     except ValueError:
         body = None
     return HttpResult(status=status, body=body, text=text[:2000], elapsed_ms=elapsed_ms, headers=response_headers)
+
+
+# --------------------------------------------------------------------------------------
+# Binary downloads (C2: files people send on WhatsApp)
+# --------------------------------------------------------------------------------------
+
+
+@dataclass
+class DownloadResult:
+    ok: bool
+    content: bytes = b""
+    content_type: str = ""
+    status: int = 0
+    error: str = ""
+    too_big: bool = False
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):  # noqa: D401 - urllib hook
+        return None
+
+
+def download(url: str, *, headers: dict[str, str] | None = None, max_bytes: int, timeout: int = 8, max_redirects: int = 3) -> DownloadResult:
+    """GET a file, following redirects ourselves so the Authorization header is dropped when the
+    host changes (a provider's media link often redirects to signed storage that refuses it).
+    Stops reading past ``max_bytes`` and reports ``too_big``."""
+    opener = build_opener(_NoRedirect)
+    current, current_headers = url, {"User-Agent": "ceda-innovation-portal", **(headers or {})}
+    for _ in range(max_redirects + 1):
+        try:
+            response = opener.open(Request(current, headers=current_headers, method="GET"), timeout=timeout)
+        except HTTPError as exc:
+            if exc.code in (301, 302, 303, 307, 308) and exc.headers.get("Location"):
+                target = urljoin(current, exc.headers["Location"])
+                if urlparse(target).netloc != urlparse(current).netloc:
+                    current_headers = {k: v for k, v in current_headers.items() if k.lower() != "authorization"}
+                current = target
+                continue
+            return DownloadResult(False, status=exc.code, error=f"The provider answered with HTTP {exc.code}.")
+        except (URLError, TimeoutError, OSError, ValueError) as exc:
+            return DownloadResult(False, error=f"Could not reach the provider: {getattr(exc, 'reason', exc)}")
+        with response:
+            declared = response.headers.get("Content-Length")
+            if declared and declared.isdigit() and int(declared) > max_bytes:
+                return DownloadResult(False, status=response.status, too_big=True, error="The file is larger than allowed.")
+            content = response.read(max_bytes + 1)
+            if len(content) > max_bytes:
+                return DownloadResult(False, status=response.status, too_big=True, error="The file is larger than allowed.")
+            return DownloadResult(True, content=content, content_type=(response.headers.get("Content-Type") or "").split(";")[0].strip(), status=response.status)
+    return DownloadResult(False, error="Too many redirects.")

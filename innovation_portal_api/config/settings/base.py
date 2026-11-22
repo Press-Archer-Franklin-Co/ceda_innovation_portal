@@ -167,6 +167,8 @@ LOGGING = {
         "security.authorization": {"handlers": ["console"], "level": "INFO", "propagate": False},
         # C2: refused USSD and WhatsApp webhooks (security.webhook_rejected).
         "security.webhook": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # C2 prompt 10: one line per WhatsApp message and per failed send. No bodies, no full numbers.
+        "apps.channels.whatsapp": {"handlers": ["console"], "level": "INFO", "propagate": False},
     },
 }
 

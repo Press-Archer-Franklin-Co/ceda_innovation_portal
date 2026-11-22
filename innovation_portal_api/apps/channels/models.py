@@ -99,6 +99,8 @@ class JourneyNode(UUIDModel, TimeStampedModel):
         LANGUAGE = "language", "Language"
         HANDOFF = "handoff", "Talk to a person"
         END = "end", "End"
+        FILE = "file", "Ask for a file"
+        SUBMIT = "submit", "Send the idea"
 
     journey = models.ForeignKey(Journey, on_delete=models.CASCADE, related_name="nodes")
     key = models.SlugField(max_length=40, help_text="Short id, unique in the journey. Edges point at it.")
@@ -177,6 +179,8 @@ class JourneySessionStep(models.Model):
     node_key = models.CharField(max_length=40)
     node_type = models.CharField(max_length=20)
     input = models.CharField(max_length=300, blank=True)
+    provider_message_id = models.CharField(max_length=80, blank=True, db_index=True, help_text="The provider's id for the message answered here (WhatsApp).")
+    attachment_count = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:

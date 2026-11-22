@@ -411,6 +411,7 @@ class SimulateView(_ChannelsAdminView):
             restart=data.get("restart", False),
             as_registered=data.get("as_registered", False),
             use_draft=data.get("version", "draft") == "draft",
+            attachment=data.get("attachment"),
         )
         session.refresh_from_db()
         draft = None
@@ -468,5 +469,8 @@ class WhatsAppWebhookView(APIView):
 
     def post(self, request, token):
         raw_body = request._request.body  # read before parsing, for the signature check
-        handled = WhatsAppWebhookService.handle(token=token, request=request, raw_body=raw_body)
+        handled, provider = WhatsAppWebhookService.handle(token=token, request=request, raw_body=raw_body)
+        answer = provider.webhook_response()
+        if answer:  # Twilio reads the answer as TwiML
+            return HttpResponse(answer[0], content_type=answer[1])
         return api_success(data={"handled": handled}, message="Received.")

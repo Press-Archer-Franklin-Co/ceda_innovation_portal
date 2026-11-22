@@ -70,8 +70,8 @@ def save_draft(*, settings: dict, variables: dict, phone: str, user, channel: st
                 for field_key, variable in (settings.get("fields") or {}).items()
                 if variables.get(variable) not in (None, "")
             }
+            name = str(variables.get(settings.get("name_variable") or "name") or variables.get("profile_name") or "").strip()
             if user is None and phone and settings.get("create_account", True):
-                name = str(variables.get(settings.get("name_variable") or "name") or "").strip()
                 first, _, last = name.partition(" ")
                 user, _ = OTPService.user_for_verified_target(
                     target_type=LoginCode.TargetType.PHONE, target=phone, source=f"{channel}_journey", first_name=first[:150], last_name=last[:150]
@@ -90,7 +90,8 @@ def save_draft(*, settings: dict, variables: dict, phone: str, user, channel: st
                     channel=IntakeChannel.USSD if channel == "ussd" else IntakeChannel.WHATSAPP,
                     title=title,
                     draft_data={},
-                    metadata={"journey_session": session_id, "simulation": simulation},
+                    # quick_start: like the web quick start, a General ideas draft may be sent with the basics.
+                    metadata={"journey_session": session_id, "simulation": simulation, "quick_start": True},
                 )
                 if user is None:
                     # The operator vouches for the number the request came from.
@@ -231,3 +232,107 @@ def subscribe(*, settings: dict, phone: str, lang: str) -> bool:
     except Exception:
         logger.exception("Journey could not subscribe %s", mask_phone(phone))
         return False
+
+
+# --------------------------------------------------------------------------------------
+# Files people send (prompt 10)
+# --------------------------------------------------------------------------------------
+
+EXTENSION_FOR_TYPE = {
+    "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png", "image/gif": ".gif",
+    "application/pdf": ".pdf",
+    "application/msword": ".doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    "application/vnd.ms-excel": ".xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+    "application/vnd.ms-powerpoint": ".ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+    "application/zip": ".zip", "text/csv": ".csv", "text/plain": ".txt",
+}
+
+
+def extension_for(content_type: str) -> str:
+    return EXTENSION_FOR_TYPE.get((content_type or "").split(";")[0].strip().lower(), "")
+
+
+def save_file(*, draft_id: str, field_key: str, content: bytes, content_type: str, user, phone: str, message_id: str = ""):
+    """Save a file sent on WhatsApp on the idea draft, through the same checks, storage and audit
+    as a web upload. Returns (document or None, error code: wrong_type, failed)."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from apps.documents.serializers import SubmissionDocumentSerializer
+    from apps.documents.services import DocumentService
+    from apps.submissions.models import ApplicationDraft
+
+    draft = ApplicationDraft.objects.filter(id=draft_id, status=ApplicationDraft.STATUS_DRAFT).first()
+    if draft is None:
+        return None, "failed"
+    extension = extension_for(content_type)
+    if not extension:
+        return None, "wrong_type"
+    upload = SimpleUploadedFile(f"whatsapp-{(message_id or 'file')[-12:]}{extension}", content, content_type=content_type)
+    serializer = SubmissionDocumentSerializer(data={"field_key": field_key or "", "file": upload})
+    if not serializer.is_valid():
+        return None, "wrong_type" if "file" in serializer.errors else "failed"
+    try:
+        document = DocumentService.create_document(serializer=serializer, actor=user, application_draft=draft, upload=upload)
+    except Exception:
+        logger.exception("Journey could not save a file for %s", mask_phone(phone))
+        return None, "failed"
+    document.metadata = {**(document.metadata or {}), "channel": "whatsapp", "provider_message_id": message_id}
+    document.save(update_fields=["metadata", "updated_at"])
+    return document, ""
+
+
+# --------------------------------------------------------------------------------------
+# Send the idea (prompt 10)
+# --------------------------------------------------------------------------------------
+
+
+def submit_draft(*, draft_id: str, user, name: str, consent: bool, phone: str, channel: str, simulation: bool):
+    """Send the session's draft. Returns (reference or "", error code: closed, invalid, failed).
+
+    A simulator run checks everything but does not send: test runs never create real ideas.
+    """
+    from rest_framework.exceptions import PermissionDenied, ValidationError
+
+    from apps.audit.services import AuditService
+    from apps.programs.access import ProgramAccessService
+    from apps.submissions.draft_services import ApplicationDraftService
+    from apps.submissions.models import ApplicationDraft
+
+    draft = ApplicationDraft.objects.select_related("program").filter(id=draft_id, status=ApplicationDraft.STATUS_DRAFT).first()
+    if draft is None:
+        return "", "failed"
+    actor = draft.innovator
+    if not draft.program.is_submission_open():
+        return "", "closed"
+    if simulation:
+        try:
+            ProgramAccessService.assert_can_enter(draft.program, actor)
+        except Exception:
+            return "", "closed"
+        return f"TEST-{draft.reference_number}", ""
+    try:
+        with transaction.atomic():
+            submission = ApplicationDraftService.submit_draft(
+                draft=draft, actor=actor, require_consent=False, consent=consent, guest_name=name[:255] if actor is None else "",
+            )
+    except PermissionDenied:
+        return "", "closed"
+    except ValidationError as exc:
+        detail = str(getattr(exc, "detail", exc))
+        logger.info("Journey could not send a draft for %s: %s", mask_phone(phone), detail[:200])
+        return "", "closed" if "closed" in detail or "not open" in detail else "invalid"
+    except Exception:
+        logger.exception("Journey could not send a draft for %s", mask_phone(phone))
+        return "", "failed"
+    submission.refresh_from_db()
+    AuditService.log_raw_action(
+        actor=actor,
+        action_type="channel_submission_created",
+        target_model="Submission",
+        target_id=str(submission.id),
+        metadata={"channel": channel, "phone": mask_phone(phone), "draft_id": str(draft.id), "reference": submission.reference_number},
+    )
+    return submission.reference_number, ""
