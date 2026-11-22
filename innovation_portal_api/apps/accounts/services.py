@@ -101,6 +101,7 @@ class RoleService:
         role_codes: list[str],
         actor: User | None = None,
         reason: str = "admin_role_update",
+        notify: bool = True,
     ) -> User:
         if not role_codes:
             raise ValueError("At least one role is required.")
@@ -144,6 +145,8 @@ class RoleService:
             actor=actor or user,
             action_type="user_role_updated",
             target=user,
+            before_state={"roles": sorted(previous_role_codes)},
+            after_state={"roles": sorted(next_role_codes)},
             metadata={
                 "roles": role_codes,
                 "added_roles": sorted(next_role_codes - previous_role_codes),
@@ -152,7 +155,7 @@ class RoleService:
                 "reason": reason,
             },
         )
-        if user.email:
+        if user.email and notify:
             try:
                 EmailNotificationService.send_role_change_email(
                     user=user,
@@ -215,6 +218,9 @@ class AuthTokenService:
         from apps.accounts.sessions import start
 
         refresh["sid"] = start(user)  # R-51: where this person is signed in
+        # U9 (3.23): Last sign-in, and the end of "Invited".
+        user.last_login = timezone.now()
+        User.objects.filter(pk=user.pk).update(last_login=user.last_login)
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),

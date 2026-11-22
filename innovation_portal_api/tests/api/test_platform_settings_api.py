@@ -180,7 +180,8 @@ class SecretHandlingTests(PlatformSettingsTestBase):
         self.assertNotIn(ENTRA_SECRET, json.dumps(row.last_test_result))
         for response in (detail, listing):
             self.assertNotIn(ENTRA_SECRET, response.content.decode())
-        self.assertEqual(detail.json()["data"]["secrets"]["client_secret"], {"is_set": True, "last4": "9xQa"})
+        # U9: keys are write-only, not even the last four characters come back.
+        self.assertEqual(detail.json()["data"]["secrets"]["client_secret"], {"is_set": True, "last4": ""})
         for entry in AuditLog.objects.all():
             self.assertNotIn(ENTRA_SECRET, json.dumps([entry.metadata, entry.before_state, entry.after_state]))
         for message in logs:
