@@ -98,6 +98,9 @@ class WorkflowStep(UUIDModel, TimeStampedModel):
     minimum_evaluations = models.PositiveIntegerField(default=0)
     evaluation_round = models.ForeignKey("evaluation.EvaluationRound", on_delete=models.SET_NULL, null=True, blank=True, related_name="workflow_steps")
     is_active = models.BooleanField(default=True)
+    # R-48 (3.21): step panel settings with no column of their own: who_has_it, share_out, duties,
+    # reminder_after_days, next_steps. See apps/workflow/builder.py.
+    settings_json = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ("order",)
