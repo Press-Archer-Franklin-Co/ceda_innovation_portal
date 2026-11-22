@@ -47,6 +47,9 @@ class User(UUIDModel, TimeStampedModel, AbstractBaseUser, PermissionsMixin):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     phone_number = models.CharField(max_length=30, blank=True)
+    # U9 (3.23): set when an administrator invites the person; "Invited" until their first sign-in.
+    invited_at = models.DateTimeField(null=True, blank=True)
+    invited_by = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     email_verified = models.BooleanField(default=False)
     phone_verified = models.BooleanField(default=False)
     primary_auth_method = models.CharField(

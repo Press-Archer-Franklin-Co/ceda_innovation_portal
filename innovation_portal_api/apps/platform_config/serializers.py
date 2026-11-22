@@ -14,11 +14,31 @@ def _person(user):
 class FeatureFlagSerializer(serializers.ModelSerializer):
     group_label = serializers.CharField(source="get_group_display", read_only=True)
     updated_by = serializers.SerializerMethodField()
+    # U9 (3.26): the service this feature needs, and whether it still needs setting up.
+    needs_setup = serializers.SerializerMethodField()
+    service = serializers.SerializerMethodField()
 
     class Meta:
         model = FeatureFlag
-        fields = ("key", "label", "description", "group", "group_label", "enabled", "is_public", "coming_soon", "updated_by", "updated_at")
+        fields = ("key", "label", "description", "group", "group_label", "enabled", "is_public", "coming_soon", "needs_setup", "service", "updated_by", "updated_at")
         read_only_fields = fields
+
+    def _states(self):
+        from apps.platform_config import service_status
+
+        if "_service_states" not in self.context:
+            self.context["_service_states"] = service_status.states()
+        return self.context["_service_states"]
+
+    def get_needs_setup(self, obj):
+        from apps.platform_config import service_status
+
+        return service_status.needs_setup(obj.key, self._states())
+
+    def get_service(self, obj):
+        from apps.platform_config import service_status
+
+        return service_status.feature_service(obj.key, self._states())
 
     def get_updated_by(self, obj):
         return _person(obj.updated_by)

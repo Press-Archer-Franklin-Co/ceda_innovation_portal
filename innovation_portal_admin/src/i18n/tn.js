@@ -11,6 +11,7 @@ import { conversationsTn } from './conversations'
 import { reviewTn } from './review'
 import { contentBTn } from './contentB'
 import { brandTn } from './brand'
+import { guideTn } from './guide'
 import { channelsTn } from './channels'
 
 const tn = {
@@ -153,6 +154,7 @@ const tn = {
   ...reviewTn,
   ...contentBTn,
   ...brandTn,
+  ...guideTn,
   ...channelsTn,
   ...challengesTn,
   ...rolesTn,

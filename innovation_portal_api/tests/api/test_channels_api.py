@@ -342,7 +342,9 @@ class WhatsAppWebhookTests(ChannelsTestCase):
         return connection
 
     def meta_payload(self, text="hi", sender="26771234567"):
-        return {"entry": [{"changes": [{"value": {"contacts": [{"wa_id": sender, "profile": {"name": "Neo"}}], "messages": [{"from": sender, "id": "wamid.1", "type": "text", "text": {"body": text}}]}}]}]}
+        # Each message has its own id: a repeated id is a duplicate and is handled once.
+        self.wamid = getattr(self, "wamid", 0) + 1
+        return {"entry": [{"changes": [{"value": {"contacts": [{"wa_id": sender, "profile": {"name": "Neo"}}], "messages": [{"from": sender, "id": f"wamid.{self.wamid}", "type": "text", "text": {"body": text}}]}}]}]}
 
     def post_signed(self, token, payload, secret=WHATSAPP_SECRET):
         body = json.dumps(payload).encode()
@@ -661,7 +663,7 @@ class BuilderSupportTests(ChannelsTestCase):
         from apps.channels.node_schema import defaults_for
 
         types = data(self.client.get(f"{BASE}/node-types/"))
-        self.assertEqual({t["type"] for t in types}, {"menu", "message", "question", "save_draft", "lookup", "condition", "subscribe", "language", "handoff", "end"})
+        self.assertEqual({t["type"] for t in types}, {"menu", "message", "question", "save_draft", "lookup", "condition", "subscribe", "language", "handoff", "end", "file", "submit"})
         for item in types:
             self.assertIn("next", item, item["type"])
             self.assertIn("text", item, item["type"])

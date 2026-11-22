@@ -38,6 +38,8 @@ from apps.accounts.views import (
     UserRoleUpdateView,
 )
 
+from apps.accounts.user_admin_views import UserDeactivateView, UserInviteView, UserReactivateView  # noqa: E402
+
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
     path("login/", LoginView.as_view(), name="login"),
@@ -76,6 +78,9 @@ urlpatterns = [
     path("social/linked-accounts/", LinkedSocialAccountsView.as_view(), name="social-linked-accounts"),
     path("social/<str:provider>/link/", SocialAccountLinkView.as_view(), name="social-account-link"),
     path("users/", UserListView.as_view(), name="user-list"),
+    path("users/invite/", UserInviteView.as_view(), name="user-invite"),
+    path("users/<uuid:user_id>/deactivate/", UserDeactivateView.as_view(), name="user-deactivate"),
+    path("users/<uuid:user_id>/reactivate/", UserReactivateView.as_view(), name="user-reactivate"),
     path("users/<uuid:user_id>/role/", UserRoleUpdateView.as_view(), name="user-role-update"),
     path("users/<uuid:user_id>/resend-verification/", AdminResendVerificationView.as_view(), name="admin-resend-verification"),
 ]

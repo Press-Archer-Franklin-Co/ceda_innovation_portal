@@ -10,6 +10,7 @@ import { BootStep } from '../components/ui/BrandLoader'
 import { boot } from '../lib/boot'
 import { useMediaQuery } from '../lib/useMediaQuery'
 import { MENU } from '../lib/motion/brand'
+import NeedHelp from '../components/guide/NeedHelp'
 
 // The staff shell. Desktop: the menu is open or a 72px icon rail, remembered on this device (U12). Phone: the
 // menu is a drawer over the page. The menu moves the content's left edge itself while it animates
@@ -84,6 +85,8 @@ export default function AppLayout() {
             </main>
           )}
         </div>
+        {/* 3.40: the Need help? guide, bottom right on every staff page. */}
+        <NeedHelp />
       </div>
     </LayoutContext.Provider>
   )

@@ -174,7 +174,7 @@ export default function ReviewQueue() {
   )
 
   const filterRow = (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t('review.filters')}>
+    <div data-guide="review.filters" className="flex flex-wrap items-center gap-2" role="group" aria-label={t('review.filters')}>
       {chip(filters.mine, queue.data && filters.mine ? t('review.mineCount', { n: rows.length }) : t('review.mine'), () => update({ mine: filters.mine ? 'false' : '', id: '' }))}
       {menuChip(programName ?? t('ideas.filter.allChallenges'), Boolean(filters.program),
         [{ key: '', label: t('ideas.filter.allChallenges'), onSelect: () => update({ program: '', id: '' }) }, ...programList.map((p) => ({ key: p.id, label: p.title, onSelect: () => update({ program: p.id, id: '' }) }))],
@@ -210,6 +210,7 @@ export default function ReviewQueue() {
       onRetry={queue.refetch}
       retrying={queue.isFetching}
       onRowClick={(r) => update({ id: r.id })}
+      rowGuide="review.open"
       selected={selectedId ? [selectedId] : []}
       emptyIcon={Inbox}
       emptyTitle={t('review.emptyTitle')}

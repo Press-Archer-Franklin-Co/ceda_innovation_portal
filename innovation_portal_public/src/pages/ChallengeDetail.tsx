@@ -72,7 +72,7 @@ function ApplyCard({ c, enterTo }: { c: Detail; enterTo: string }) {
         {open ? t('chd.closesAt', { when: longDate(c.closes_at, lang) }) : c.status === 'upcoming' ? t('chd.opensAt', { when: longDate(c.opens_at, lang) }) : t('chd.closedAt', { when: formatDate(c.closes_at, lang) })}
       </p>
       {open && (
-        <Link to={enterTo} className={buttonClasses({ block: true })}>
+        <Link data-guide="challenge.enter" to={enterTo} className={buttonClasses({ block: true })}>
           {t('chd.enter')}
           <ArrowRight size={18} aria-hidden />
         </Link>
@@ -362,7 +362,7 @@ export default function ChallengeDetail() {
             <p className="text-d-label text-text truncate">{t('chd.closesAt', { when: formatDate(c.closes_at, lang) })}</p>
             <DaysLeft days={c.days_left} className="mt-1" />
           </div>
-          <Link to={enterTo} className={buttonClasses({ size: 'sm' })}>{t('chd.enter')}</Link>
+          <Link data-guide="challenge.enter" to={enterTo} className={buttonClasses({ size: 'sm' })}>{t('chd.enter')}</Link>
         </div>
       )}
     </>

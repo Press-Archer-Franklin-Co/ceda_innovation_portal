@@ -6,9 +6,9 @@ import FeaturesTab from './FeaturesTab'
 import IntegrationTab from './IntegrationTab'
 
 const TABS = [
-  { key: 'features', label: 'Features' },
-  { key: 'sso', label: 'Single sign-on' },
-  { key: 'sms', label: 'SMS' },
+  { key: 'features', label: 'Features', guide: 'integrations.features' },
+  { key: 'sso', label: 'Single sign-on', guide: 'integrations.sso' },
+  { key: 'sms', label: 'SMS', guide: 'integrations.sms' },
 ]
 
 export default function PlatformSettings() {

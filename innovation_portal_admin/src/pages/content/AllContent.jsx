@@ -118,7 +118,7 @@ function AllContentTable() {
         actions={
           <DropdownMenu
             label={t('all.new')}
-            trigger={(props) => <Button {...props} icon={<Plus size={16} aria-hidden />}>{t('all.new')}</Button>}
+            trigger={(props) => <Button {...props} data-guide="content.new" icon={<Plus size={16} aria-hidden />}>{t('all.new')}</Button>}
             items={NEW_TYPES.map((n) => ({ key: n.type, label: t(`all.newType.${n.type}`), onSelect: () => navigate(n.href) }))}
           />
         }
@@ -142,6 +142,7 @@ function AllContentTable() {
         onRetry={() => all.refetch()}
         retrying={all.isFetching && all.isError}
         onRowClick={(r) => navigate(r.href)}
+        rowGuide="content.open"
         pageSize={PAGE_SIZE}
         page={page}
         total={total}

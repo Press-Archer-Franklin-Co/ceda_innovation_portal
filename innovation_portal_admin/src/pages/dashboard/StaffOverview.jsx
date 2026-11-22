@@ -108,7 +108,7 @@ function QueueCard({ className }) {
           <h2 id="queue-title" className="font-heading text-[14px] font-bold text-text">{t('dash.queue.title')}</h2>
           <p className="text-[12px] text-muted">{t('dash.queue.subtitle')}</p>
         </div>
-        <Link to={can('entries.review') ? '/review' : '/assignments'} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>{t('dash.queue.open')} <ArrowRight size={14} aria-hidden /></Link>
+        <Link data-guide="dashboard.queue" to={can('entries.review') ? '/review' : '/assignments'} className={buttonClasses({ variant: 'ghost', size: 'sm' })}>{t('dash.queue.open')} <ArrowRight size={14} aria-hidden /></Link>
       </header>
       {query.isLoading ? (
         <div className="flex flex-col gap-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 rounded-control" />)}</div>
@@ -165,7 +165,7 @@ export default function StaffOverview() {
       <PageHeader
         title={t('dash.title')}
         subtitle={period ? t('dash.subtitle', { period: t('dash.f.period', { from: day(period.from, lang), to: day(period.to, lang) }) }) : undefined}
-        actions={<Link to={{ pathname: '/reports', search: new URLSearchParams(filters).toString() }} className={buttonClasses({ variant: 'secondary', size: 'sm' })}><BarChart3 size={14} aria-hidden /> {t('dash.toReports')}</Link>}
+        actions={<Link data-guide="dashboard.reports" to={{ pathname: '/reports', search: new URLSearchParams(filters).toString() }} className={buttonClasses({ variant: 'secondary', size: 'sm' })}><BarChart3 size={14} aria-hidden /> {t('dash.toReports')}</Link>}
       />
       <FilterRow filters={filters} onChange={set} onClear={clear} updating={kpis.isPlaceholderData && kpis.isFetching} />
       <Kpis query={kpis} />

@@ -119,6 +119,10 @@ def public_status(language: str = "en") -> dict:
         "welcome": text_for(config.welcome, language),
         "away": text_for(config.away, language),
         "ask_rating": config.ask_rating,
+        # U9 (3.28): opening hours for the bubble ("We answer Mon to Fri, 07:30 to 16:30"). Never who answers or saved replies.
+        "hours": {day: [{"opens": window.get("opens"), "closes": window.get("closes")} for window in (config.hours or {}).get(day, []) if isinstance(window, dict)] for day in DAYS},
+        "holidays": sorted(day for day in (config.holidays or []) if day >= timezone.localdate().isoformat())[:20],
+        "timezone": str(timezone.get_current_timezone()),
     }
 
 

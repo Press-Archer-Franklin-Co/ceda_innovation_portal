@@ -238,6 +238,9 @@ class AuthenticatedUserSerializer(serializers.ModelSerializer):
 
 class UserSummarySerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
+    # U9 (3.23)
+    status = serializers.SerializerMethodField()
+    invited_at = serializers.DateTimeField(read_only=True)
     primary_role = serializers.SerializerMethodField()
     primary_role_source = serializers.SerializerMethodField()
     primary_auth_method = serializers.CharField(read_only=True)
@@ -264,7 +267,14 @@ class UserSummarySerializer(serializers.ModelSerializer):
             "roles",
             "created_at",
             "last_login",
+            "status",
+            "invited_at",
         )
+
+    def get_status(self, obj):
+        from apps.accounts.user_admin import status_of
+
+        return status_of(obj)
 
     def get_roles(self, obj):
         return list(obj.roles.filter(user_roles__is_active=True).values_list("code", flat=True))
