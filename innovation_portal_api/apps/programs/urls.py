@@ -2,6 +2,7 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from apps.programs.challenge_views import JudgingSettingsView, PublicChallengeDetailView, PublicChallengeListView, SetupStatusView
+from apps.programs.stage_views import ProgramStageDetailView, ProgramStagesView
 from apps.programs.entry_views import (
     ChallengeEligibilityRulesView,
     ChallengeEligibilityView,
@@ -44,6 +45,8 @@ urlpatterns = [
     path("<uuid:program_id>/results/publish/", PublishChallengeResultsView.as_view(), name="program-results-publish"),
     path("<uuid:program_id>/setup-status/", SetupStatusView.as_view(), name="program-setup-status"),
     path("<uuid:program_id>/judging/", JudgingSettingsView.as_view(), name="program-judging"),
+    path("<uuid:program_id>/stages/", ProgramStagesView.as_view(), name="program-stages"),
+    path("<uuid:program_id>/stages/<uuid:step_id>/", ProgramStageDetailView.as_view(), name="program-stage-detail"),
 ] + router.urls + [
     path("form-sections/<uuid:pk>/", FormSectionDetailView.as_view(), name="form-section-detail"),
     path("form-sections/<uuid:section_id>/fields/", FormSectionFieldListCreateView.as_view(), name="form-section-fields"),

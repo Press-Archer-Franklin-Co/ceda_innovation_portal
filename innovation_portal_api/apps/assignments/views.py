@@ -143,7 +143,7 @@ class ReviewerQueueView(generics.ListAPIView):
         completed = self.request.query_params.get("completed") == "true"
 
         queryset = Submission.objects.select_related(
-            "workflow_instance__current_step"
+            "workflow_instance__current_step", "program"
         ).prefetch_related("assignments__assignee").filter(workflow_instance__isnull=False)
         queryset = self._apply_filters(queryset)
 
@@ -214,6 +214,31 @@ class ReviewerQueueView(generics.ListAPIView):
     def list(self, request, *args, **kwargs):
         serializer = self.get_serializer(self.get_queryset(), many=True)
         return api_success(data=serializer.data)
+
+
+class ReviewerQueueCountsView(ReviewerQueueView):
+    """R-55: the chip counts for the queue (3.3). Same filters as the queue."""
+
+    @extend_schema(tags=["Assignments"], summary="Review queue counts (3.3)", description="{all, mine, overdue}: overdue counts your own queue (mine) past its due date.")
+    def get(self, request, *args, **kwargs):
+        from django.http import QueryDict
+
+        def count(**extra):
+            params = QueryDict(mutable=True)
+            params.update(request.query_params)
+            for key in ("mine", "overdue"):
+                params.pop(key, None)
+            for key, value in extra.items():
+                params[key] = value
+            request._request.GET = params
+            return len(self.get_queryset())
+
+        original = request._request.GET
+        try:
+            data = {"all": count(), "mine": count(mine="true"), "overdue": count(mine="true", overdue="true")}
+        finally:
+            request._request.GET = original
+        return api_success(data=data)
 
 
 class ReviewerQueueStatsView(generics.GenericAPIView):

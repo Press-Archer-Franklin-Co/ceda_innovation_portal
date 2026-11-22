@@ -110,6 +110,31 @@ class JudgingTests(R42Base):
         self.assertTrue(csv["Content-Type"].startswith("text/csv"))
         self.assertIn("Impact,50.0,5.0,2.0,3.5,3.0,no", csv.content.decode())
 
+    def test_overview_counts_judges_across_cycles_of_one_step(self):
+        """R-47: each submit may close its own cycle; both judges still count."""
+        from apps.evaluation.models import ReviewCycle, ScoreSheet
+
+        self.mark(self.kabo, self.entries[0], [5, 4])  # 90
+        self.mark(self.expert, self.entries[0], [2, 4])  # 60
+        first = ScoreSheet.objects.get(submission=self.entries[0], judge=self.kabo, is_final=True)
+        second = ScoreSheet.objects.get(submission=self.entries[0], judge=self.expert, is_final=True)
+        old = first.review_cycle
+        old.status = ReviewCycle.STATUS_COMPLETED
+        old.save(update_fields=["status"])
+        newer = ReviewCycle.objects.create(
+            submission=self.entries[0], workflow_step=old.workflow_step, stage_config=old.stage_config, cycle_number=old.cycle_number + 1
+        )
+        ScoreSheet.objects.filter(pk=second.pk).update(review_cycle=newer)
+        overview = data(self.as_user(self.officer).get(f"/api/evaluations/{self.entries[0].id}/scores-overview/"))
+        self.assertEqual((overview["judges_scored"], overview["judges_assigned"], overview["average"]), (2, 2, 75.0))
+        impact = next(item for item in overview["criteria"] if item["name"] == "Impact")
+        self.assertEqual((impact["scores"], impact["flagged"]), ([{"judge": 1, "score": 5.0}, {"judge": 2, "score": 2.0}], True))
+
+        # A cancelled round does not count.
+        ReviewCycle.objects.filter(pk=old.pk).update(status=ReviewCycle.STATUS_CANCELLED)
+        overview = data(self.client.get(f"/api/evaluations/{self.entries[0].id}/scores-overview/"))
+        self.assertEqual(overview["judges_scored"], 1)
+
     def test_threshold_is_a_judging_setting(self):
         settings = data(self.as_user(self.officer).get(f"/api/programs/{self.program.id}/judging/"))
         self.assertEqual(settings["disagreement_threshold"], 2.0)
