@@ -12,6 +12,10 @@ class AuditLog(UUIDModel, TimeStampedModel):
     before_state = models.JSONField(default=dict, blank=True)
     after_state = models.JSONField(default=dict, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
+    # U9 (3.29): where the change came from and a readable name for the item, kept at the time of the change.
+    ip_address = models.CharField(max_length=60, blank=True, default="", help_text="Masked: the last two parts are hidden (102.65.x.x).")
+    device = models.CharField(max_length=120, blank=True, default="")
+    item_label = models.CharField(max_length=255, blank=True, default="")
 
     class Meta:
         indexes = [models.Index(fields=["target_model", "target_id", "created_at"])]
