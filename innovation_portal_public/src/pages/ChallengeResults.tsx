@@ -12,8 +12,9 @@ import { formatDate } from '../lib/dates'
 import { challengeEntryService, type ChallengeResults as Results, type Winner } from '../services/challengeEntry.service'
 
 // U10 screen 1.10 Challenge results (Figma 107:794 website, 107:1028 phone). GET /api/programs/public/{slug}/results/.
-// ① Winners first, with what they won. ② Shortlisted ideas follow, idea title only (Nshathisi, 22 Nov: shortlisted
-// people are not named in public). ③ "How we judged" repeats the criteria and weights. Never scores, judges or notes.
+// ① Winners first, with what they won. ② Shortlisted ideas follow. Names show for both unless the challenge turns
+// "Show names on the results page" off; then the API sends idea titles only. ③ "How we judged" repeats the criteria
+// and weights. Never scores, judges or notes.
 // Before results are published the page says when they are planned.
 
 export default function ChallengeResults() {
@@ -71,7 +72,10 @@ export default function ChallengeResults() {
                 <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
                   {r.shortlisted.map((s, i) => (
                     <li key={`${s.title}-${i}`} className="flex items-center justify-between gap-3 rounded-card border border-border bg-surface px-4 py-4">
-                      <span className="min-w-0 text-d-label text-text break-words">{s.title}</span>
+                      <span className="min-w-0 flex flex-col">
+                        <span className="text-d-label text-text break-words">{s.title}</span>
+                        {(s.name || s.district) && <span className="text-d-cap text-muted">{[s.name, s.district].filter(Boolean).join(' · ')}</span>}
+                      </span>
                       <Badge status="shortlisted" className="shrink-0" />
                     </li>
                   ))}

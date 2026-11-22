@@ -175,6 +175,10 @@ class ChallengeEligibilityRulesView(APIView):
         return api_success(data=entry.staff_eligibility(program))
 
 
+class PublishResultsSerializer(serializers.Serializer):
+    show_names = serializers.BooleanField(required=False)
+
+
 class PublishChallengeResultsView(APIView):
     permission_classes = [HasCapability.of("challenges.manage")]
 
@@ -182,13 +186,16 @@ class PublishChallengeResultsView(APIView):
         tags=["Programs"],
         summary="Publish the challenge's results now (1.10)",
         description="Winners picked by hand are published as they are; otherwise the automatic ranking runs now. "
-        "{published, published_at, hold_reason}. 400 still_open before the challenge closes.",
-        request=None,
+        "Body (optional): {show_names: bool} sets \"Show names on the results page\" (on by default; off shows idea titles only). "
+        "{published, published_at, hold_reason, show_names}. 400 still_open before the challenge closes.",
+        request=PublishResultsSerializer,
         responses=OpenApiTypes.OBJECT,
     )
     def post(self, request, program_id):
         program = get_object_or_404(Program, id=program_id)
-        return api_success(data=entry.publish_results(program, actor=request.user))
+        body = PublishResultsSerializer(data=request.data or {})
+        body.is_valid(raise_exception=True)
+        return api_success(data=entry.publish_results(program, actor=request.user, show_names=body.validated_data.get("show_names")))
 
 
 # R-53 (3.6 Challenge status) ---------------------------------------------------------------------------------------
