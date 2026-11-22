@@ -11,7 +11,7 @@ import { CONTROL_HEIGHT, controlClasses, useField } from './fieldContext'
  * options: [{ value, label, keywords?, disabled? }]. Search box is on for more than 8 options.
  * U0 extends this (async options, MultiSelect). Never a raw <select>.
  */
-export function SelectControl({ options, value, onChange, placeholder, searchable, disabled, invalid, name, className, 'aria-label': ariaLabel }) {
+export function SelectControl({ options, value, onChange, placeholder, searchable, disabled, invalid, name, className, 'aria-label': ariaLabel, 'data-guide': guide }) {
   const t = useT()
   const field = useField()
   const auto = useId().replace(/:/g, '')
@@ -107,6 +107,7 @@ export function SelectControl({ options, value, onChange, placeholder, searchabl
   return (
     <div ref={rootRef} className={cn('relative', className)}>
       <button
+        data-guide={guide}
         ref={buttonRef}
         id={buttonId}
         type="button"

@@ -48,6 +48,7 @@ export default function Tabs({ tabs: allTabs = [], active, onChange, variant = '
             id={`${prefix}-tab-${tab.key}`}
             role="tab"
             type="button"
+            data-guide={tab.guide}
             aria-selected={selected}
             aria-controls={`${prefix}-panel-${tab.key}`}
             tabIndex={selected ? 0 : -1}

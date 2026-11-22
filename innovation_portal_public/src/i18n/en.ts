@@ -6,6 +6,7 @@ import { pagesEn } from './pages'
 import { policiesEn } from './policies'
 import { a11yEn } from './a11y'
 import { statusEn } from './status'
+import { guideEn } from './guide'
 import { inviteEn } from './invite'
 import { accountEn } from './account'
 import { challengeEntryEn } from './challengeEntry'
@@ -437,6 +438,7 @@ const en = {
   ...policiesEn,
   ...a11yEn,
   ...statusEn,
+  ...guideEn,
   ...inviteEn,
   ...accountEn,
   ...challengeEntryEn,

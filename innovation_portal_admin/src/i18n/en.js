@@ -10,6 +10,7 @@ import { programmesEn } from './programmes'
 import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 import { contentBEn } from './contentB'
+import { guideEn } from './guide'
 import { channelsEn } from './channels'
 
 const en = {
@@ -151,6 +152,7 @@ const en = {
   ...conversationsEn,
   ...reviewEn,
   ...contentBEn,
+  ...guideEn,
   ...channelsEn,
   ...challengesEn,
   ...rolesEn,

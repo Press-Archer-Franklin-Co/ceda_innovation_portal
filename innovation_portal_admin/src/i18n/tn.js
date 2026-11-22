@@ -10,6 +10,7 @@ import { programmesTn } from './programmes'
 import { conversationsTn } from './conversations'
 import { reviewTn } from './review'
 import { contentBTn } from './contentB'
+import { guideTn } from './guide'
 import { channelsTn } from './channels'
 
 const tn = {
@@ -151,6 +152,7 @@ const tn = {
   ...conversationsTn,
   ...reviewTn,
   ...contentBTn,
+  ...guideTn,
   ...channelsTn,
   ...challengesTn,
   ...rolesTn,

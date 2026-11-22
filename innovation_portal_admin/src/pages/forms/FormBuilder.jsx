@@ -289,11 +289,11 @@ export default function FormBuilder() {
                 ))}
               </div>
             )}
-            <Button variant="secondary" size="sm" onClick={() => setPreviewing((p) => !p)}>
+            <Button data-guide="formBuilder.preview" variant="secondary" size="sm" onClick={() => setPreviewing((p) => !p)}>
               {previewing ? <Pencil size={14} aria-hidden /> : <Eye size={14} aria-hidden />}
               {previewing ? t('builder.edit') : t('builder.preview')}
             </Button>
-            <Button size="sm" onClick={onPublish} loading={publish.isPending} disabled={archived}>{t('builder.publish')}</Button>
+            <Button data-guide="formBuilder.publish" size="sm" onClick={onPublish} loading={publish.isPending} disabled={archived}>{t('builder.publish')}</Button>
           </div>
         }
       />

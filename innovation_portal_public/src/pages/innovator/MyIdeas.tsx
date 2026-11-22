@@ -76,7 +76,7 @@ export default function MyIdeas() {
           )}
         </div>
         {/* TODO(U2): the quick start on the home page; the old submit page until then. */}
-        <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'md' })}>
+        <Link data-guide="myIdeas.new" to={SUBMIT_PATH} className={buttonClasses({ variant: 'primary', size: 'md' })}>
           <Plus size={18} aria-hidden />
           {t('ideas.new')}
         </Link>

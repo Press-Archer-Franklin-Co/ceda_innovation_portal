@@ -122,7 +122,7 @@ function RolesTab() {
           <h2 className="font-heading text-[15px] font-bold text-text">{t('roles.matrix')}</h2>
           <p className="text-[12px] text-muted">{t('roles.matrixHint')}</p>
         </div>
-        <Button variant="secondary" icon={<Plus size={15} aria-hidden />} onClick={() => setDialog('new')}>{t('roles.newRole')}</Button>
+        <Button data-guide="roles.create" variant="secondary" icon={<Plus size={15} aria-hidden />} onClick={() => setDialog('new')}>{t('roles.newRole')}</Button>
       </div>
 
       <div className="max-w-full overflow-x-auto rounded-card border border-border bg-surface">
