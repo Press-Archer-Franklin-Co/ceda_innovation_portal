@@ -138,6 +138,20 @@ class MyIdeasPagingTests(TrackingBase):
         self.assertEqual(data(self.client.get("/api/me/ideas/"))["count"], 0)
 
 
+class SeedDemoIdeasTests(TrackingBase):
+    def test_sixty_ideas_page_and_a_second_run_adds_nothing(self):
+        from django.core.management import call_command
+
+        call_command("seed_demo_ideas", email=self.innovator.email, count=60, verbosity=0)
+        call_command("seed_demo_ideas", email=self.innovator.email, count=60, verbosity=0)
+        self.client.force_authenticate(self.innovator)
+        page = data(self.client.get("/api/me/ideas/?page=6"))
+        self.assertEqual((page["count"], page["pages"], len(page["results"])), (60, 6, 10))
+        real = self.submit()
+        call_command("seed_demo_ideas", email=self.innovator.email, clear=True, verbosity=0)
+        self.assertEqual(list(Submission.objects.filter(innovator=self.innovator)), [real])
+
+
 class DocumentsAndOwnershipTests(TrackingBase):
     def upload(self, sub, name="costing.xlsx", user=None, **extra):
         self.client.force_authenticate(user or self.innovator)
