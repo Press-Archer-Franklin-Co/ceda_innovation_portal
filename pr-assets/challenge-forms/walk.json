@@ -1,0 +1,44 @@
+{
+ "not-ready-1440": {
+  "soon": 1,
+  "enter": 0,
+  "overflow": 0
+ },
+ "ready-1440": {
+  "enter": 1,
+  "overflow": 0
+ },
+ "not-ready-390": {
+  "soon": 1,
+  "enter": 0,
+  "overflow": 0
+ },
+ "ready-390": {
+  "enter": 1,
+  "overflow": 0
+ },
+ "enter-not-ready-1440": 1,
+ "form-1440": {
+  "url": "/challenges/youth-digital-hackathon/entry/d7f2fe34-3d43-4166-9d6a-bab3157ab01b",
+  "not_ready_text": false,
+  "overflow": 0
+ },
+ "enter-not-ready-390": 1,
+ "form-390": {
+  "url": "/challenges/youth-digital-hackathon/entry/d7f2fe34-3d43-4166-9d6a-bab3157ab01b",
+  "not_ready_text": false,
+  "overflow": 0
+ },
+ "forms-1440": {
+  "tag": 2,
+  "setting": 1,
+  "overflow": 0
+ },
+ "forms-390": {
+  "tag": 2,
+  "setting": 1,
+  "overflow": 0
+ },
+ "banner-small-label": 1,
+ "problems": []
+}
