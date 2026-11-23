@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.analytics.views import (
+    ChatReportView,
     ExportCreateView,
     ExportDetailView,
     ExportDownloadView,
@@ -31,6 +32,7 @@ urlpatterns = [
     path("sources/", SourcesView.as_view(), name="analytics-sources"),
     path("sectors/", SectorsView.as_view(), name="analytics-sectors"),
     path("inclusion/", InclusionView.as_view(), name="analytics-inclusion"),
+    path("chat/", ChatReportView.as_view(), name="analytics-chat"),
     path("exports/", ExportCreateView.as_view(), name="analytics-exports"),
     path("exports/<uuid:export_id>/", ExportDetailView.as_view(), name="analytics-export-detail"),
     path("exports/<uuid:export_id>/download/", ExportDownloadView.as_view(), name="analytics-export-download"),

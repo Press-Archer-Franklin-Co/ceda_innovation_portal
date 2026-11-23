@@ -118,10 +118,37 @@ class InclusionView(_DashboardView):
     report = "inclusion"
 
 
+@extend_schema(
+    tags=B7_TAGS,
+    summary="Live chat report",
+    description="Online chat statistics, also while the live_chat switch is off. Filters: from, to (Gaborone dates, default the last 30 days, up to 366 days), channel. "
+    "Answer: {totals: {started, answered, not_answered, outside_hours, escalated, closed, open_now}, first_reply_minutes: {median, average, within_5_min_pct}, "
+    "chat_length_minutes: {median}, satisfaction: {average, rated, by_score: {1..5}}, by_channel: [{channel, started, answered}], per_day: [{date, started, answered}], "
+    "busiest_hours: [{weekday: 0 is Monday, hour, started}] in Gaborone time, agents: [{id, name, handled, median_first_reply_minutes, average_satisfaction, open_now}], "
+    "live_chat_on, filters}. Times are whole minutes; null means no data, never 0. answered: a staff member replied. not_answered: no staff reply and closed, escalated "
+    "or waiting longer than the escalation time. outside_hours: started while chat was closed (judged against today's opening hours). First reply counts from the start of "
+    "the chat; a chat started outside hours counts from the next opening time, so night chats do not distort it. open_now counts chats open at this moment, whenever they "
+    "started. Never contains contact names, phones or emails.",
+    parameters=[
+        OpenApiParameter("from", OpenApiTypes.DATE),
+        OpenApiParameter("to", OpenApiTypes.DATE),
+        OpenApiParameter("channel", OpenApiTypes.STR, enum=["web", "whatsapp", "ussd", "ai"]),
+    ],
+    responses=OpenApiTypes.OBJECT,
+)
+class ChatReportView(APIView):
+    permission_classes = [_HasCapability.of("analytics.view")]
+
+    def get(self, request):
+        from apps.analytics.chat_report import chat_report, parse_filters
+
+        return api_success(data=chat_report(parse_filters(request.query_params), request.user))
+
+
 class ExportRequestSerializer(drf_serializers.Serializer):
-    report = drf_serializers.ChoiceField(choices=["kpis", "series", "pipeline", "funnel", "sources", "sectors", "inclusion", "all"])
+    report = drf_serializers.ChoiceField(choices=["kpis", "series", "pipeline", "funnel", "sources", "sectors", "inclusion", "all", "chat"])
     format = drf_serializers.ChoiceField(choices=["csv", "pdf"])
-    filters = drf_serializers.DictField(required=False, help_text="{from, to, program, sector, district, channel}")
+    filters = drf_serializers.DictField(required=False, help_text="{from, to, program, sector, district, channel}. For report chat: {from, to, channel: web|whatsapp|ussd|ai}, and analytics.view is needed too.")
 
 
 def _export_payload(export, request) -> dict:
