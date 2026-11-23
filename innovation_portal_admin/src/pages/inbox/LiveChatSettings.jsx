@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
@@ -13,6 +14,8 @@ import ErrorState from '../../components/ui/ErrorState'
 import { FormPageSkeleton } from '../../components/ui/PageSkeleton'
 import { useToast } from '../../components/ui/toast'
 import { useT, useI18n } from '../../i18n/context'
+import { useAuth } from '../../lib/auth/AuthContext'
+import { buttonClasses } from '../../components/ui/buttonClasses'
 import { cn } from '../../lib/cn'
 import { liveChatSettingsApi } from '../../lib/api/inbox'
 import { users } from '../../lib/api/endpoints'
@@ -42,6 +45,7 @@ const rowsOf = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 
 export default function LiveChatSettings() {
   const t = useT()
+  const { can } = useAuth()
   const { lang } = useI18n()
   const toast = useToast()
   const qc = useQueryClient()
@@ -116,7 +120,7 @@ export default function LiveChatSettings() {
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('chatset.crumb')}</span>}
         title={t('chatset.title')}
         subtitle={t('chatset.subtitle')}
-        actions={<Button onClick={save} loading={busy}>{t('common.save')}</Button>}
+        actions={<>{can('analytics.view') && <Link to="/reports?tab=chat" className={buttonClasses({ variant: 'secondary', size: 'sm' })}>{t('chatset.seeReport')}</Link>}<Button onClick={save} loading={busy}>{t('common.save')}</Button></>}
       />
 
       <section className="flex flex-col gap-2 rounded-card bg-surface2 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
