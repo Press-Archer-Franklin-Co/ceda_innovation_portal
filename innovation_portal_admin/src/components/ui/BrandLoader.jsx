@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useT } from '../../i18n/context'
 import { BrandLockupSvg } from './Logo'
 import ErrorState from './ErrorState'
-import { LOADER, clamp, easeProgress, flashScale, loaderState, rayLine, realProgress } from '../../lib/motion/brand'
+import { LOADER, easeProgress, flashScale, loaderAfterStartup, loaderPlan, loaderState, rayLine, realProgress } from '../../lib/motion/brand'
 
 // The idea bulb loader (U12, from the approved lab). The bulb's round top glows with real start-up progress
-// (lib/boot) and pulses faster as it fills. When start-up ends, the first load of a browser session bursts into
-// light and the CEDA logo comes out of it; later loads only fade the bulb. A failed step shows ErrorState with
-// Retry instead, so the bulb never pulses forever. Animates transform, opacity and filter only (SVG attributes
+// (lib/boot) and pulses faster as it fills. When start-up ends the glow ramps to full in 280ms and the bulb bursts
+// into light with the CEDA logo coming out of it, on every full page load: the full timing the first time in a
+// browser session, a shorter one after. A failed step shows ErrorState with Retry, so it never pulses forever. Animates transform, opacity and filter only (SVG attributes
 // for the glow inside the bulb). Reduced motion: no pulse, burst or rays, a 150ms cross-fade.
 
 const GLASS = 'M60 10 A46 46 0 0 1 92.5 88.5 C86 96 80 103 79 118 L41 118 C40 103 34 96 27.5 88.5 A46 46 0 0 1 60 10 Z'
@@ -61,7 +61,7 @@ function writeSeen() {
   try {
     sessionStorage.setItem(LOADER.sessionKey, '1')
   } catch {
-    /* private mode: the burst may play again next time */
+    /* private mode: the full timing may play again next time */
   }
 }
 
@@ -75,8 +75,8 @@ const setBusy = (busy) => {
 }
 
 /**
- * boot: the start-up store (lib/boot). intro: force the full burst (styleguide Replay); default: only on the
- * first load of the session. onDone: called once the loader is gone. quiet: no loader at all (previews).
+ * boot: the start-up store (lib/boot). intro: true forces the full timing, false the short one (styleguide);
+ * default: full on the first load of the session. onDone: called once the loader is gone. quiet: no loader at all (previews).
  */
 export default function BrandLoader({ boot, intro, reduced: reducedProp, onDone, contained = false, quiet = false }) {
   const t = useT()
@@ -89,12 +89,14 @@ export default function BrandLoader({ boot, intro, reduced: reducedProp, onDone,
 
   useEffect(() => {
     const reduced = reducedProp ?? prefersReduced()
-    const fullBurst = intro ?? !readSeen()
+    // Every full page load ends on the logo: the full burst the first time in a browser session, a short one after.
+    const plan = loaderPlan(reduced, !(intro ?? !readSeen()))
     const dark = isDark()
     let shown = 0
     let last = null
     let start = null
     let endAt = null // ms (from start) when start-up finished
+    let endGlow = 0 // the shown progress at that moment: the quick ramp starts from here
     let frame = 0
     let stopped = false
     const busy = (v) => { if (!contained) setBusy(v) }
@@ -137,10 +139,12 @@ export default function BrandLoader({ boot, intro, reduced: reducedProp, onDone,
       const dt = last == null ? 16 : now - last
       last = now
       const s = boot.state()
-      shown = easeProgress(shown, realProgress(s.done, s.total), dt)
-      if (s.finished && shown >= realProgress(s.done, s.total) - 0.001 && endAt == null) {
+      if (endAt == null) shown = easeProgress(shown, realProgress(s.done, s.total), dt)
+      // Start-up finished: stop waiting for the eased glow, so a fast load bursts at once.
+      if (s.finished && endAt == null) {
         endAt = el
-        if (fullBurst) writeSeen()
+        endGlow = shown
+        writeSeen()
       }
       const after = endAt == null ? 0 : el - endAt
       const root = rootRef.current
@@ -150,26 +154,13 @@ export default function BrandLoader({ boot, intro, reduced: reducedProp, onDone,
       const cx = W / 2
       const cy = H / 2 - (W < 640 ? 37.6 : 51.3)
 
-      if (!fullBurst) {
-        // A later load this session: the bulb only, then a short fade. No burst.
-        const st = loaderState(shown, el / 1000, 0, reduced, { dark })
-        paintBulb(st)
-        if (endAt != null) {
-          const fade = clamp(after / LOADER.quickFadeMs)
-          if (root) root.style.opacity = String(1 - fade)
-          if (fade >= 1) return finish()
-        }
-        frame = requestAnimationFrame(apply)
-        return
-      }
-
-      const burstMs = reduced ? LOADER.reducedMs : LOADER.burstMs
-      const b = endAt == null ? 0 : clamp(after / burstMs)
-      const st = loaderState(shown, el / 1000, b, reduced, { dark })
+      // Loading: the glow follows real progress and pulses. After start-up: a quick ramp, then the burst, the
+      // logo, and the fade (loaderAfterStartup).
+      const end = endAt == null ? null : loaderAfterStartup(after, endGlow, plan)
+      const st = loaderState(end ? end.progress : shown, el / 1000, end ? end.burst : 0, reduced, { dark, still: end != null })
       paintBulb(st)
       paintBurst(st, cx, cy, W, H)
-      const fadeMs = reduced ? LOADER.reducedMs : LOADER.fadeMs
-      const out = endAt == null ? 0 : clamp((after - burstMs - LOADER.holdMs) / fadeMs)
+      const out = end ? end.out : 0
       if (root) root.style.opacity = String(1 - out)
       if (out >= 1) return finish()
       frame = requestAnimationFrame(apply)

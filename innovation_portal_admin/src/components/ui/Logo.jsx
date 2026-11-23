@@ -1,8 +1,6 @@
 import { forwardRef } from 'react'
 import { cn } from '../../lib/cn'
 import markUrl from '../../assets/brand/ceda-mark.svg'
-import compactUrl from '../../assets/brand/ceda-logo-compact.svg'
-import compactDarkUrl from '../../assets/brand/ceda-logo-compact-on-dark.svg'
 import lockupUrl from '../../assets/brand/ceda-logo.svg'
 import lockupDarkUrl from '../../assets/brand/ceda-logo-on-dark.svg'
 import { LOCKUP_VIEWBOX, MARK_PATHS, MARK_TRANSFORM, TAGLINE, WORD_PATHS } from './brandPaths'
@@ -12,9 +10,6 @@ import { LOCKUP_VIEWBOX, MARK_PATHS, MARK_TRANSFORM, TAGLINE, WORD_PATHS } from 
 // keeps its four colours. Words are CEDA brown on light grounds and white on brown or dark grounds.
 
 export const LOCKUP_ALT = 'CEDA. Finance, Develop, Sustain.'
-// The compact logo (mark over CEDA) is 1600 x 860; the mark is 442.8 of that height.
-const COMPACT_RATIO = 860 / 1600
-const MARK_SHARE = 442.8 / 860
 
 /** The CEDA mark alone. Width follows height (240 × 123). */
 export function CedaMark({ height = 27, className, label }) {
@@ -31,11 +26,14 @@ export function CedaMark({ height = 27, className, label }) {
   )
 }
 
-/** The word CEDA alone, as the logo draws it (thin strokes, currentColor). For places where it moves apart from the mark. */
+/**
+ * The word CEDA alone, as the logo draws it (thin strokes, currentColor). The letter shapes never change; below
+ * 120px wide the strokes are a little heavier (40 instead of 30) so the thin letters stay crisp.
+ */
 export function CedaWord({ width = 96, className }) {
   return (
     <svg viewBox="0 520 1600 340" width={width} height={(width * 340) / 1600} aria-hidden className={cn('block overflow-visible', className)}>
-      <g fill="none" stroke="currentColor" strokeWidth="30" strokeMiterlimit="10">
+      <g fill="none" stroke="currentColor" strokeWidth={width >= 120 ? 30 : 40} strokeMiterlimit="10">
         {WORD_PATHS.map((d) => <path key={d} d={d} />)}
       </g>
     </svg>
@@ -43,33 +41,22 @@ export function CedaWord({ width = 96, className }) {
 }
 
 /**
- * Logo (Theme = Light | Dark), for headers and menus: the compact CEDA logo (mark over CEDA), a rule, then
- * "Innovation / Ideas Portal". The mark is about 27px tall.
+ * Logo (Theme = Light | Dark), for headers and menus (Figma header logo, about 44px tall): the mark (27px) over
+ * the word CEDA (60px wide, about as wide as the mark), a rule, then "Innovation / Ideas Portal". The word is CEDA
+ * brown on light grounds and white on dark grounds or in dark mode (the brand-text token).
  */
 export default function Logo({ theme = 'light', className, subtitle = 'Ideas Portal' }) {
   const dark = theme === 'dark'
-  const markHeight = 27
-  const height = markHeight / MARK_SHARE
   return (
     <span
       className={cn('inline-flex items-center gap-3', dark && 'bg-banner rounded-control p-2', className)}
       role="img"
       aria-label={`CEDA Innovation ${subtitle}`}
     >
-      {/* On a light ground the brown-word file; in dark mode (or on brown, theme="dark") the white-word file. */}
-      {!dark && (
-        <img src={compactUrl} alt="" aria-hidden height={Math.round(height)} width={Math.round(height / COMPACT_RATIO)} className="block shrink-0 brand-on-light" draggable={false} data-logo="compact" />
-      )}
-      <img
-        src={compactDarkUrl}
-        alt=""
-        aria-hidden
-        height={Math.round(height)}
-        width={Math.round(height / COMPACT_RATIO)}
-        className={cn('block shrink-0', !dark && 'brand-on-dark')}
-        draggable={false}
-        data-logo="compact-on-dark"
-      />
+      <span aria-hidden className="flex shrink-0 flex-col items-center gap-1" data-logo="mark-word">
+        <CedaMark height={27} />
+        <CedaWord width={60} className={dark ? 'text-on-banner' : 'text-brand-text'} />
+      </span>
       <span aria-hidden className={cn('w-px h-[34px]', dark ? 'bg-banner-muted' : 'bg-border')} />
       <span className="flex flex-col whitespace-nowrap" aria-hidden>
         <span className={cn('font-heading font-semibold text-[15px] leading-[22px]', dark ? 'text-on-banner' : 'text-text')}>Innovation</span>

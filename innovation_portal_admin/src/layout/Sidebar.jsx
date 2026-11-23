@@ -233,9 +233,9 @@ export default function Sidebar({ previewUser } = {}) {
               <span ref={ref('dimSun')} className="absolute inset-0 sidebar-dim-mark"><CedaMark height={27} /></span>
               <span ref={ref('sun')} className="absolute inset-0"><CedaMark height={27} label="CEDA" /></span>
             </div>
-            <div ref={ref('word')} className="mt-[5px] text-on-banner"><CedaWord width={96} /></div>
+            <div ref={ref('word')} className="mt-1 ml-[22px] flex w-[52px] justify-center text-on-banner"><CedaWord width={60} /></div>
           </div>
-          <div ref={ref('side')} aria-hidden className="absolute left-[124px] top-[24px] flex items-center gap-3 whitespace-nowrap">
+          <div ref={ref('side')} aria-hidden className="absolute left-[106px] top-[24px] flex items-center gap-3 whitespace-nowrap">
             <span className="block w-px h-[34px] -ml-[13px] bg-banner-muted/35" />
             <span>
               <span className="block font-heading font-semibold text-[15px] leading-[22px] text-on-banner">Innovation</span>

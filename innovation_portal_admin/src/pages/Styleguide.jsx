@@ -398,16 +398,23 @@ export default function Styleguide() {
 /** The loader with a pretend start-up of three steps, so it can be watched again. */
 function LoaderPreview() {
   const [run, setRun] = useState(0)
+  // first: the first load of a session (full timing); later: the short one. fast: start-up done at once.
+  const [mode, setMode] = useState({ first: true, fast: false })
   const boot = useMemo(() => createBoot(['me', 'config', 'page'], { timeoutMs: 0 }), [run]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const ids = [700, 1500, 2300].map((ms, i) => setTimeout(() => boot.done(boot.steps[i]), ms))
+    const ids = (mode.fast ? boot.steps.map(() => 0) : [700, 1500, 2300]).map((ms, i) => setTimeout(() => boot.done(boot.steps[i]), ms))
     return () => ids.forEach(clearTimeout)
-  }, [boot])
+  }, [boot]) // eslint-disable-line react-hooks/exhaustive-deps
+  const play = (first, fast) => { setMode({ first, fast }); setRun((n) => n + 1) }
   return (
     <div>
-      <Button size="sm" onClick={() => setRun((n) => n + 1)}>Replay</Button>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={() => play(true, false)}>Replay: first load, slow</Button>
+        <Button size="sm" variant="secondary" onClick={() => play(true, true)}>First load, fast</Button>
+        <Button size="sm" variant="secondary" onClick={() => play(false, true)}>Later load, fast</Button>
+      </div>
       <div className="relative mt-3 h-[480px] rounded-card border border-border overflow-hidden" style={{ transform: 'translateZ(0)' }}>
-        <BrandLoader key={run} boot={boot} intro contained />
+        <BrandLoader key={run} boot={boot} intro={mode.first} contained />
       </div>
     </div>
   )

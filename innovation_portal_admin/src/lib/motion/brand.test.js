@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  LOADER, MENU, easeProgress, glowLevel, loaderEndMs, loaderState, menuDuration, menuLook, menuRest, menuState, rayLine,
+  LOADER, MENU, easeProgress, glowLevel, loaderAfterStartup, loaderEndMs, loaderPlan, loaderState, menuDuration, menuLook, menuRest, menuState, rayLine,
   realProgress, rowColour, rowLight, seek, turnRound,
 } from './brand'
 
@@ -67,7 +67,8 @@ describe('idea bulb loader', () => {
     expect(mid.word.scaleX).toBe(1)
     expect(LOADER.reducedMs).toBe(150)
     expect(loaderEndMs(true)).toBe(150 + 700 + 150)
-    expect(loaderEndMs(false)).toBe(1600 + 700 + 320)
+    expect(loaderEndMs(false)).toBe(280 + 1600 + 700 + 320)
+    expect(loaderEndMs(false, true)).toBe(280 + 1000 + 400 + 250)
   })
 
   it('sends 16 rays in the four mark colours', () => {
@@ -149,5 +150,60 @@ describe('lit staff menu', () => {
     const look = menuLook(menuState('open', 0.3), 800, true)
     expect(look.sunY).toBe(0)
     expect(look.masked).toBe(false)
+  })
+})
+
+describe('the loader always ends on the logo (U12b)', () => {
+  // The logo fully drawn: mark, word and all three tagline words.
+  const logoShown = (s) => s.mark.opacity === 1 && s.word.opacity === 1 && s.tagline.every((w) => w.opacity === 1)
+  // Just before the fade starts: after the ramp, the burst and the hold.
+  const beforeFade = (p) => p.chargeMs + p.burstMs + p.holdMs - 1
+
+  it('start-up done at 0ms: the burst begins by 280ms and the full logo shows before the fade', () => {
+    const plan = loaderPlan(false)
+    expect(loaderAfterStartup(279, 0, plan).burst).toBe(0)
+    expect(loaderAfterStartup(281, 0, plan).burst).toBeGreaterThan(0)
+    const at = loaderAfterStartup(beforeFade(plan), 0, plan)
+    expect(at.out).toBe(0)
+    expect(logoShown(loaderState(at.progress, 9, at.burst, false))).toBe(true)
+  })
+
+  it('the glow ramps from where it was to full in 280ms', () => {
+    const plan = loaderPlan(false)
+    expect(loaderAfterStartup(0, 0.3, plan).progress).toBeCloseTo(0.3, 6)
+    expect(loaderAfterStartup(140, 0.3, plan).progress).toBeGreaterThan(0.3)
+    expect(loaderAfterStartup(280, 0.3, plan).progress).toBe(1)
+  })
+
+  it('a later load in the session: the short version, still on the logo before the fade', () => {
+    const plan = loaderPlan(false, true)
+    expect(plan).toEqual({ chargeMs: 280, burstMs: 1000, holdMs: 400, fadeMs: 250 })
+    const at = loaderAfterStartup(beforeFade(plan), 0.5, plan)
+    expect(at.out).toBe(0)
+    expect(logoShown(loaderState(at.progress, 4, at.burst, false))).toBe(true)
+    expect(loaderAfterStartup(loaderEndMs(false, true), 0.5, plan).out).toBe(1)
+  })
+
+  it('no pulse once start-up has finished', () => {
+    const plan = loaderPlan(false)
+    for (const after of [0, 100, 200]) {
+      const at = loaderAfterStartup(after, 0.4, plan)
+      const glows = [0.1, 0.37, 0.71, 1.3].map((sec) => loaderState(at.progress, sec, at.burst, false, { still: true }).glow)
+      expect(new Set(glows).size).toBe(1)
+    }
+    // While loading it does pulse.
+    expect(loaderState(0.4, 0.1, 0, false).glow).not.toBe(loaderState(0.4, 0.37, 0, false).glow)
+  })
+
+  it('reduced motion: no ramp, the logo shows, no rays, on every load', () => {
+    for (const repeat of [false, true]) {
+      const plan = loaderPlan(true, repeat)
+      expect(plan).toEqual({ chargeMs: 0, burstMs: 150, holdMs: 700, fadeMs: 150 })
+      const at = loaderAfterStartup(beforeFade(plan), 0, plan)
+      const s = loaderState(at.progress, 2, at.burst, true)
+      expect(logoShown(s)).toBe(true)
+      expect(s.rays.opacity).toBe(0)
+      expect(s.flash.opacity).toBe(0)
+    }
   })
 })

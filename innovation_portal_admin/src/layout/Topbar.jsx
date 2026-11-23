@@ -163,7 +163,7 @@ export default function Topbar() {
           <span className="relative block w-10 h-[21px] overflow-hidden">
             <span data-top-sun className="absolute inset-0 block"><CedaMark height={20.5} /></span>
           </span>
-          <CedaWord width={56} />
+          <CedaWord width={44} />
         </Link>
       )}
 

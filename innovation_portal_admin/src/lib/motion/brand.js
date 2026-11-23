@@ -24,16 +24,41 @@ export const LOADER = {
   holdMs: 700, // the logo stays
   fadeMs: 320, // then the loader fades out
   reducedMs: 150, // reduced motion: one cross-fade
-  quickDelayMs: 400, // later loads in a session: show the bulb only after this
-  quickFadeMs: 150, // ... and fade it, no burst
-  stepMs: 450, // the glow eases to each finished step over this long
+  quickChargeMs: 280, // when start-up ends: the glow ramps to full this fast (no pulse), then the burst
+  repeat: { burstMs: 1000, holdMs: 400, fadeMs: 250 }, // later loads in a session: the same burst, shorter
+  stepMs: 450, // while loading, the glow eases to each finished step over this long
   rays: 16,
   sessionKey: 'ceda.intro.seen',
 }
 
-/** Total time from the end of loading to the loader being gone. */
-export function loaderEndMs(reduced) {
-  return reduced ? LOADER.reducedMs + LOADER.holdMs + LOADER.reducedMs : LOADER.burstMs + LOADER.holdMs + LOADER.fadeMs
+/**
+ * The timing once start-up has finished. Every full page load ends on the logo: the first in a browser session
+ * plays the full burst, later ones a shorter one. Reduced motion: a 150ms cross-fade to the logo, hold, 150ms out.
+ */
+export function loaderPlan(reduced, repeat = false) {
+  if (reduced) return { chargeMs: 0, burstMs: LOADER.reducedMs, holdMs: LOADER.holdMs, fadeMs: LOADER.reducedMs }
+  const t = repeat ? LOADER.repeat : LOADER
+  return { chargeMs: LOADER.quickChargeMs, burstMs: t.burstMs, holdMs: t.holdMs, fadeMs: t.fadeMs }
+}
+
+/** Total time from the end of start-up to the loader being gone. */
+export function loaderEndMs(reduced, repeat = false) {
+  const p = loaderPlan(reduced, repeat)
+  return p.chargeMs + p.burstMs + p.holdMs + p.fadeMs
+}
+
+/**
+ * Where the loader is, afterMs after start-up finished. The glow ramps from where it was (fromProgress) to full
+ * over chargeMs (eOut3, no pulse), then the burst runs 0..1, the logo holds, and the loader fades out (out 0..1).
+ */
+export function loaderAfterStartup(afterMs, fromProgress, plan) {
+  const after = Math.max(0, afterMs)
+  const charge = plan.chargeMs > 0 ? clamp(after / plan.chargeMs) : 1
+  return {
+    progress: lerp(clamp(fromProgress), 1, eOut3(charge)),
+    burst: clamp((after - plan.chargeMs) / plan.burstMs),
+    out: clamp((after - plan.chargeMs - plan.burstMs - plan.holdMs) / plan.fadeMs),
+  }
 }
 
 /** Real progress: finished steps over all steps. Never more than what is done. */
@@ -61,13 +86,14 @@ export function glowLevel(progress, timeSeconds, reduced) {
 
 /**
  * Everything the loader shows at one moment.
- * progress 0..1 (shown progress), timeSeconds drives the pulse, burst 0..1 (0 = not started).
+ * progress 0..1 (shown progress), timeSeconds drives the pulse (none when still), burst 0..1 (0 = not started).
  * Tagline: three steps (FINANCE with its dot, DEVELOP with its dot, SUSTAIN), 0.08 apart.
  */
-export function loaderState(progress, timeSeconds, burst, reduced, { dark = false } = {}) {
+export function loaderState(progress, timeSeconds, burst, reduced, { dark = false, still = false } = {}) {
   const R = !!reduced
   const b = clamp(burst)
-  let g = glowLevel(progress, timeSeconds, R)
+  // still: start-up is done, so the bulb never pulses again.
+  let g = glowLevel(progress, timeSeconds, R || still)
   const charge = R ? 0 : eSine(seg(b, 0, 0.12))
   g = Math.min(1.25, g + charge * 0.5)
   const bulbOut = R ? seg(b, 0, 0.4) : eSine(seg(b, 0.12, 0.3))
