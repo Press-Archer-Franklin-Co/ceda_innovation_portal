@@ -2,6 +2,7 @@ import { type ReactNode, type RefObject, useCallback, useEffect, useState } from
 import { createPortal } from 'react-dom'
 import clsx from 'clsx'
 import { useGenie } from '../../lib/motion/useGenie'
+import { useOverlay } from '../../lib/overlays'
 import { useFocusTrap } from './useFocusTrap'
 
 /**
@@ -28,6 +29,7 @@ export default function Drawer({
   const [settled, setSettled] = useState(false)
   const onOpened = useCallback(() => setSettled(true), [])
   const { mounted, panelRef, backdropRef } = useGenie(open, triggerRef, { onOpened })
+  useOverlay(mounted) // the Need help? button hides while this is open
 
   useEffect(() => { if (!open) setSettled(false) }, [open])
   useEffect(() => {

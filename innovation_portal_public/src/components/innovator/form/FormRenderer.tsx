@@ -33,9 +33,11 @@ export interface FormRendererProps {
   errors?: Record<string, FieldError>
   /** Preview mode: nothing uploads and nothing is sent. */
   preview?: boolean
+  /** "Respond to changes": the questions the officer flagged. Only these can change; they are highlighted. */
+  flagged?: ReadonlySet<string>
 }
 
-export default function FormRenderer({ step, answers, onChange, lang, errors = {}, preview = false }: FormRendererProps) {
+export default function FormRenderer({ step, answers, onChange, lang, errors = {}, preview = false, flagged }: FormRendererProps) {
   return (
     <div className="flex flex-col gap-6">
       {step.rows.map((row) => {
@@ -46,11 +48,12 @@ export default function FormRenderer({ step, answers, onChange, lang, errors = {
             {fields.map((field) => (
               <div
                 key={field.key}
-                className={clsx('min-w-0', WIDTH_SPAN[field.width] ?? WIDTH_SPAN.full)}
+                id={flagged ? `field-${field.key}` : undefined}
+                className={clsx('min-w-0 scroll-mt-40', WIDTH_SPAN[field.width] ?? WIDTH_SPAN.full)}
                 // Need help guide (2.14): each question can be ringed; its label is sent, never the answer.
                 {...(field.type === 'heading' || field.type === 'paragraph' ? {} : { 'data-guide': `idea.field.${field.key}`, 'data-guide-kind': 'field', 'data-guide-label': pick(field.label as MaybeBilingual, lang) })}
               >
-                <FieldBlock field={field} answers={answers} onChange={onChange} lang={lang} error={errors[field.key]} preview={preview} />
+                <FieldBlock field={field} answers={answers} onChange={onChange} lang={lang} error={errors[field.key]} preview={preview} locked={Boolean(flagged) && !flagged?.has(field.key)} flagged={Boolean(flagged?.has(field.key))} />
               </div>
             ))}
           </div>
@@ -94,9 +97,13 @@ interface FieldBlockProps {
   lang: Lang
   error?: FieldError
   preview: boolean
+  /** Shown with its answer but cannot change (respond to changes: not flagged). */
+  locked?: boolean
+  /** The officer asked to change this one. */
+  flagged?: boolean
 }
 
-function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlockProps) {
+function FieldBlock({ field, answers, onChange, lang, error, preview, locked = false, flagged = false }: FieldBlockProps) {
   const { t } = useI18n()
   const errorText = useErrorText(error)
   const text = (value: unknown) => pick(value as MaybeBilingual, lang)
@@ -104,7 +111,7 @@ function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlo
   const hint = text(field.help_text) || undefined
   const placeholder = text(field.placeholder) || undefined
   const required = isRequired(field, answers)
-  const disabled = !isEnabled(field, answers)
+  const disabled = locked || !isEnabled(field, answers)
   const value = answers[field.key]
   const set = (next: unknown) => onChange(field.key, next)
 
@@ -120,7 +127,12 @@ function FieldBlock({ field, answers, onChange, lang, error, preview }: FieldBlo
   ) : null
 
   const wrap = (children: ReactNode) =>
-    field.is_challenge_question ? (
+    flagged ? (
+      <div className="rounded-card border-2 border-amber bg-warning-soft p-4">
+        <Tag tone="orange" className="mb-2">{t('chg.flagged')}</Tag>
+        {children}
+      </div>
+    ) : field.is_challenge_question ? (
       <div className="rounded-card border border-accent/40 bg-accent-soft/40 p-4">
         {badge}
         {children}

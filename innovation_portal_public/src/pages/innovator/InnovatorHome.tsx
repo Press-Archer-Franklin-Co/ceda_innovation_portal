@@ -11,6 +11,7 @@ import ChallengeCard from '../../components/innovator/ChallengeCard'
 import StageBar from '../../components/innovator/StageBar'
 import { ideaStatusWord } from '../../components/innovator/ideaStatus'
 import { firstName, formatShortDate, relativeTime } from '../../components/innovator/format'
+import { draftLink, ideaLink } from '../../components/innovator/links'
 import { ideaLink } from '../../components/innovator/links'
 import { knownMessages, messageView } from '../../components/innovator/homeMessages'
 import { useAuth } from '../../context/AuthContext'
@@ -128,7 +129,7 @@ function Banner({ name, next, active, messages }: { name: string; next: NextActi
   } else if (next?.type === 'finish_draft') {
     headline = active ? t('home.headlineMoving') : t('home.headlineNone')
     body = t('home.nextFinish', { title: next.title, percent: next.percent_complete })
-    primary = { to: `/my-ideas/draft/${next.idea_id}`, label: t('home.continueIdea') }
+    primary = { to: draftLink(next.idea_id, next.program), label: t('home.continueIdea') }
   } else if (next?.type === 'complete_profile') {
     headline = active ? t('home.headlineMoving') : t('home.headlineNone')
     body = t('home.nextProfile', { percent: next.percent_complete })

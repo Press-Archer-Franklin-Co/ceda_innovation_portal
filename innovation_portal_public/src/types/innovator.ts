@@ -182,7 +182,8 @@ export interface IdeaItem {
   reference: string
   title: string
   sector: SectorRef | null
-  program: { id: string; title: string; is_general_intake: boolean }
+  /** slug: a challenge draft opens at /challenges/{slug}/entry/{id}. */
+  program: { id: string; title: string; slug?: string; is_general_intake: boolean }
   stage: string
   /** The raw status ("draft" for drafts), R-16. */
   status: string
@@ -277,6 +278,9 @@ export interface ReturnedForChanges {
   items: ReturnItem[]
   answers: Record<string, unknown>
   fields: FormField[]
+  /** The form as it was sent, with every answer: "Respond to changes" shows it whole. */
+  form: PublishedForm | null
+  sent_answers: Record<string, unknown>
 }
 
 export interface IdeaTracking {
@@ -314,6 +318,7 @@ export type NextAction =
       title: string
       detail: string
       percent_complete: number
+      program?: { id: string; title: string; slug?: string; is_general_intake: boolean }
     }
   | { type: 'complete_profile'; detail: string; percent_complete: number }
 
