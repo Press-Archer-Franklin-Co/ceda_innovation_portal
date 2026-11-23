@@ -11,6 +11,7 @@ import { a11yTn } from './a11y'
 import { statusTn } from './status'
 import { brandTn } from './brand'
 import { guideTn } from './guide'
+import { previewTn } from './preview'
 import { aiHelperTn } from './aiHelper'
 import { inviteTn } from './invite'
 import { accountTn } from './account'
@@ -466,6 +467,7 @@ const tn: Record<StringKey, string> = {
   ...statusTn,
   ...brandTn,
   ...guideTn,
+  ...previewTn,
   ...aiHelperTn,
   ...inviteTn,
   ...accountTn,

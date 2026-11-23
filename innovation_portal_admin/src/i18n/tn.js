@@ -18,6 +18,7 @@ import { platformSettingsTn } from './platformSettings'
 import { contentBTn } from './contentB'
 import { brandTn } from './brand'
 import { guideTn } from './guide'
+import { previewTn } from './preview'
 import { channelsTn } from './channels'
 
 const tn = {
@@ -165,6 +166,7 @@ const tn = {
   ...contentBTn,
   ...brandTn,
   ...guideTn,
+  ...previewTn,
   ...channelsTn,
   ...challengesTn,
   ...rolesTn,

@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
-import { Download, FileText, Plus } from 'lucide-react'
+import { Download, Eye, FileText, Plus } from 'lucide-react'
 import Button from '../../ui/Button'
 import Card from '../../ui/Card'
+import { useDocumentPreview } from '../../ui/useDocumentPreview'
 import { useI18n } from '../../../i18n'
 import { documentsService } from '../../../services/documents.service'
 import { formatDate } from '../format'
@@ -23,6 +24,7 @@ export default function DocumentsCard({ ideaId, documents, canAdd, onChanged }: 
   const replacing = useRef<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const preview = useDocumentPreview()
 
   const pick = (replaceId?: string) => {
     replacing.current = replaceId
@@ -82,6 +84,16 @@ export default function DocumentsCard({ ideaId, documents, canAdd, onChanged }: 
                   {canAdd && (
                     <button type="button" onClick={() => pick(doc.id)} aria-label={t('trk.replaceName', { name: doc.name })} className="text-d-label-s text-muted hover:text-text hover:underline">{t('trk.replace')}</button>
                   )}
+                  {doc.download_url.startsWith('/api/') && (
+                    <button
+                      type="button"
+                      aria-label={t('preview.openName', { name: doc.name })}
+                      onClick={(e) => preview.show(e, { name: doc.name, mime: doc.mime_type, load: (signal) => documentsService.previewBlob(doc.id, signal), download: () => documentsService.downloadDocument(doc.id, doc.name) })}
+                      className="inline-flex items-center gap-1 text-d-label-s text-primary hover:underline"
+                    >
+                      <Eye size={15} aria-hidden />{t('preview.open')}
+                    </button>
+                  )}
                   <button type="button" onClick={() => download(doc)} aria-label={t('trk.downloadName', { name: doc.name })} className="inline-flex items-center gap-1 text-d-label-s text-primary hover:underline">
                     <Download size={15} aria-hidden />{t('trk.download')}
                   </button>
@@ -105,6 +117,7 @@ export default function DocumentsCard({ ideaId, documents, canAdd, onChanged }: 
         </ul>
       )}
       <p className="mt-1 text-d-cap text-muted">{t('trk.docsNote')}</p>
+      {preview.element}
     </Card>
   )
 }

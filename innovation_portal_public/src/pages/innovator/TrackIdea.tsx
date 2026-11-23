@@ -13,6 +13,8 @@ import FeedbackByStage from '../../components/innovator/tracking/FeedbackByStage
 import ReturnedCard from '../../components/innovator/tracking/ReturnedCard'
 import ShortlistedCard from '../../components/innovator/tracking/ShortlistedCard'
 import { answerFiles, answerText, isFile } from '../../components/innovator/answers'
+import { useDocumentPreview } from '../../components/ui/useDocumentPreview'
+import { isWebUrl, urlFile } from '../../lib/documentPreview'
 import { formatDate, formatShortDate } from '../../components/innovator/format'
 import { statusWord } from '../../components/innovator/ideaStatus'
 import { usePageTitle } from '../../lib/usePageTitle'
@@ -24,6 +26,7 @@ import type { IdeaTracking, SubmissionAnswer, TimelineStage, TrackedIdea } from 
 export default function TrackIdea() {
   const { id = '' } = useParams()
   const { t, lang } = useI18n()
+  const preview = useDocumentPreview()
   const { hash, state: routeState } = useLocation()
   const settings = useShellSettings()
   const [idea, setIdea] = useState<TrackedIdea | null>(null)
@@ -148,7 +151,9 @@ export default function TrackIdea() {
                         {answerFiles(answer.value).map((file, i) => (
                           <li key={file.id ?? i} className="flex items-center gap-1.5">
                             <Paperclip size={14} aria-hidden className="shrink-0 text-muted" />
-                            {file.url ? <a href={file.url} target="_blank" rel="noreferrer" className="text-primary underline underline-offset-2 hover:no-underline">{file.name}</a> : <span>{file.name}</span>}
+                            {file.url && isWebUrl(file.url) ? (
+                              <button type="button" aria-label={t('preview.openName', { name: file.name })} onClick={(e) => preview.show(e, urlFile({ name: file.name, url: file.url as string }))} className="min-w-0 break-words rounded text-left text-primary underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{file.name}</button>
+                            ) : <span>{file.name}</span>}
                           </li>
                         ))}
                       </ul>
@@ -159,6 +164,7 @@ export default function TrackIdea() {
                 </div>
               ))}
             </dl>
+            {preview.element}
           </Card>
           {settings.ussd_code && (
             <Card tone="soft" padding="md">

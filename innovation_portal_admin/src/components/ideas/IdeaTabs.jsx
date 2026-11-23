@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, ExternalLink, FileText, MessageCircle, StickyNote } from 'lucide-react'
+import { Download, ExternalLink, FileText, MessageCircle, StickyNote, Eye } from 'lucide-react'
 import Button from '../ui/Button'
 import Tabs from '../ui/Tabs'
 import Textarea from '../ui/Textarea'
@@ -16,6 +16,9 @@ import { useToast } from '../ui/toast'
 import { useT } from '../../i18n/context'
 import { ideaApi } from '../../lib/api/ideas'
 import { downloadDocument } from '../../lib/documentDownload'
+import { documents as documentsApi } from '../../lib/api/endpoints'
+import { isWebUrl, urlFile } from '../../lib/documentPreview'
+import { useDocumentPreview } from '../ui/useDocumentPreview'
 import { relativeTime } from '../../lib/forms/format'
 
 // The tab panels of 3.16 (Figma 103:843): Answers, Documents, Messages, Notes (staff only), History, Related.
@@ -32,6 +35,13 @@ function answerText(value, t) {
 
 const when = (value) => (value ? new Date(value).toLocaleString('en-BW', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '')
 
+/** A file answer from the form ({filename, url}): its files, or nothing when this answer is not files. */
+function answerFiles(value) {
+  if (!Array.isArray(value) || !value.length) return []
+  const files = value.filter((v) => v && typeof v === 'object' && isWebUrl(v.url) && (v.filename || v.original_filename || v.name))
+  return files.length === value.length ? files.map((v) => ({ name: v.filename || v.original_filename || v.name, url: v.url, mime: v.mime_type })) : []
+}
+
 function Rows({ n = 3 }) {
   return <div aria-hidden className="flex flex-col gap-3">{Array.from({ length: n }).map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
 }
@@ -42,6 +52,7 @@ export function AnswersTab({ summary }) {
   const own = summary.language === 'tn' ? 'tn' : 'en'
   const hasOther = summary.answers.some((g) => g.items.some((i) => i.value_other_language))
   const [lang, setLang] = useState(own)
+  const preview = useDocumentPreview()
   const showOther = hasOther && lang !== own
   const groups = summary.answers.filter((g) => g.items.length)
   if (!groups.length) return <EmptyState compact title={t('ideas.noAnswers')} />
@@ -67,11 +78,22 @@ export function AnswersTab({ summary }) {
           <dl className="flex flex-col">
             {g.items.map((item) => {
               const value = answerText(showOther && item.value_other_language ? item.value_other_language : item.value, t)
+              const files = answerFiles(item.value)
               return (
                 <div key={item.key} className="border-b border-border py-4">
                   <dt className="text-[12px] font-bold text-muted">{item.label}</dt>
                   <dd className="mt-1 whitespace-pre-line break-words text-[15px] leading-6 text-text">
-                    {value == null ? <span className="text-muted">{t('ideas.notAnswered')}</span> : value}
+                    {files.length ? (
+                      <ul className="flex flex-col gap-1">
+                        {files.map((file) => (
+                          <li key={file.url}>
+                            <button type="button" aria-label={t('preview.openName', { name: file.name })} onClick={(e) => preview.show(e, urlFile(file))} className="inline-flex max-w-full items-center gap-1.5 rounded text-left text-primary underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                              <Eye size={15} aria-hidden className="shrink-0" /><span className="min-w-0 break-words">{file.name}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : value == null ? <span className="text-muted">{t('ideas.notAnswered')}</span> : value}
                   </dd>
                 </div>
               )
@@ -79,6 +101,7 @@ export function AnswersTab({ summary }) {
           </dl>
         </section>
       ))}
+      {preview.element}
     </div>
   )
 }
@@ -87,11 +110,13 @@ export function DocumentsTab({ id }) {
   const t = useT()
   const toast = useToast()
   const docs = useQuery({ queryKey: ['ideas', id, 'documents'], queryFn: () => ideaApi.documents(id) })
+  const preview = useDocumentPreview()
   if (docs.isLoading) return <Rows />
   if (docs.isError) return <ErrorState compact title={t('ideas.docsError')} message={docs.error?.message} onRetry={docs.refetch} />
   const list = asList(docs.data)
   if (!list.length) return <EmptyState compact icon={FileText} title={t('ideas.noDocs')} />
   return (
+    <>
     <ul className="flex flex-col divide-y divide-border rounded-card border border-border">
       {list.map((d) => (
         <li key={d.id} className="flex items-center gap-3 px-4 py-3">
@@ -105,17 +130,34 @@ export function DocumentsTab({ id }) {
               <ExternalLink size={14} aria-hidden />{t('ideas.openLink')}
             </a>
           ) : (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => downloadDocument(d).catch((err) => toast.show({ tone: 'error', title: t('ideas.downloadError'), body: err?.message }))}
-            >
-              <Download size={14} aria-hidden />{t('ideas.download')}
-            </Button>
+            <span className="flex shrink-0 items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={t('preview.openName', { name: d.original_filename || t('ideas.document') })}
+                onClick={(e) => preview.show(e, {
+                  name: d.original_filename || d.field_key || t('ideas.document'),
+                  mime: d.mime_type,
+                  load: () => documentsApi.downloadBlob(d.id, { inline: true }),
+                  download: () => downloadDocument(d),
+                })}
+              >
+                <Eye size={14} aria-hidden />{t('preview.open')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => downloadDocument(d).catch((err) => toast.show({ tone: 'error', title: t('ideas.downloadError'), body: err?.message }))}
+              >
+                <Download size={14} aria-hidden />{t('ideas.download')}
+              </Button>
+            </span>
           )}
         </li>
       ))}
     </ul>
+    {preview.element}
+    </>
   )
 }
 

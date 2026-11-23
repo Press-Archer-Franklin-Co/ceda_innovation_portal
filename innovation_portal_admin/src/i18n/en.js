@@ -18,6 +18,7 @@ import { platformSettingsEn } from './platformSettings'
 import { contentBEn } from './contentB'
 import { brandEn } from './brand'
 import { guideEn } from './guide'
+import { previewEn } from './preview'
 import { channelsEn } from './channels'
 
 const en = {
@@ -165,6 +166,7 @@ const en = {
   ...contentBEn,
   ...brandEn,
   ...guideEn,
+  ...previewEn,
   ...channelsEn,
   ...challengesEn,
   ...rolesEn,

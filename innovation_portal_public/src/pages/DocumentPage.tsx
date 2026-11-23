@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, ExternalLink, FileText } from 'lucide-react'
 import Button from '../components/ui/Button'
+import { useDocumentPreview } from '../components/ui/useDocumentPreview'
 import Skeleton from '../components/ui/Skeleton'
 import { useI18n } from '../i18n'
 import { usePageTitle } from '../lib/usePageTitle'
@@ -19,6 +20,7 @@ export default function DocumentPage() {
   const [loadError, setLoadError] = useState('')
   const [downloading, setDownloading] = useState(false)
   const [downloadError, setDownloadError] = useState(false)
+  const preview = useDocumentPreview()
   usePageTitle(doc?.original_filename || t('docPage.title'))
 
   const load = useCallback(async () => {
@@ -67,7 +69,10 @@ export default function DocumentPage() {
             </h1>
             {doc.availability === 'available' && (
               <div className="flex flex-col gap-2 items-start">
-                <Button onClick={download} loading={downloading}>{t('docPage.download')}</Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={download} loading={downloading}>{t('docPage.download')}</Button>
+                  <Button variant="secondary" onClick={(e) => preview.show(e, { name: doc.original_filename || t('docPage.title'), mime: doc.mime_type, load: (signal) => documentsService.previewBlob(doc.id, signal), download: () => documentsService.downloadDocument(doc.id, doc.original_filename) })}>{t('preview.open')}</Button>
+                </div>
                 {downloadError && <p role="alert" className="text-d-cap text-danger">{t('docPage.downloadError')}</p>}
               </div>
             )}
@@ -80,6 +85,7 @@ export default function DocumentPage() {
           </>
         )}
       </section>
+      {preview.element}
     </div>
   )
 }

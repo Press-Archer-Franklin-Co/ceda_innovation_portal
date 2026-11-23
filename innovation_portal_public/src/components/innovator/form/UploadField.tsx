@@ -1,6 +1,8 @@
 import { useId, useRef, useState } from 'react'
-import { FileText, ImagePlus, Paperclip, X } from 'lucide-react'
+import { Eye, FileText, ImagePlus, Paperclip, X } from 'lucide-react'
 import Button from '../../ui/Button'
+import { useDocumentPreview } from '../../ui/useDocumentPreview'
+import { isWebUrl, urlFile } from '../../../lib/documentPreview'
 import { useI18n } from '../../../i18n'
 import { mediaService } from '../../../services/media.service'
 
@@ -39,6 +41,7 @@ export default function UploadField({ label, hint, error, required, media, value
   const files = uploadedFiles(value)
   const [progress, setProgress] = useState<number | null>(null)
   const [failed, setFailed] = useState<string | null>(null)
+  const preview = useDocumentPreview()
 
   async function upload(list: FileList | null) {
     if (!list || list.length === 0) return
@@ -77,6 +80,16 @@ export default function UploadField({ label, hint, error, required, media, value
                 <FileText size={20} aria-hidden className="text-muted shrink-0" />
               )}
               <span className="min-w-0 flex-1 truncate text-d-body-s text-text">{file.filename}</span>
+              {isWebUrl(file.url) && (
+                <button
+                  type="button"
+                  onClick={(e) => preview.show(e, urlFile({ name: file.filename, url: file.url }))}
+                  aria-label={t('preview.openName', { name: file.filename })}
+                  className="flex h-11 w-11 items-center justify-center rounded-control text-muted hover:bg-surface2 hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <Eye size={18} aria-hidden />
+                </button>
+              )}
               {!disabled && (
                 <button
                   type="button"
@@ -92,6 +105,7 @@ export default function UploadField({ label, hint, error, required, media, value
         </ul>
       )}
 
+      {preview.element}
       <input
         ref={inputRef}
         id={`${id}-input`}

@@ -33,6 +33,12 @@ export const documentsService = {
     return data
   },
 
+  /** The file's bytes for the in-app preview: the same access-checked route as Download. */
+  async previewBlob(documentId: string, signal?: AbortSignal): Promise<Blob> {
+    const { data } = await api.get<Blob>(`/documents/${documentId}/download/`, { params: { disposition: 'inline' }, responseType: 'blob', timeout: 120000, signal })
+    return data
+  },
+
   async downloadDocument(documentId: string, filename?: string): Promise<void> {
     const { data } = await api.get<Blob>(`/documents/${documentId}/download/`, { responseType: 'blob', timeout: 120000 })
     const url = URL.createObjectURL(data)

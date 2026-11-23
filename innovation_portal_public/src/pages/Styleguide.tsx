@@ -9,6 +9,7 @@ import { Checkbox, Radio, RadioGroup, Toggle } from '../components/ui/Choice'
 import Card from '../components/ui/Card'
 import Tabs from '../components/ui/Tabs'
 import Modal from '../components/ui/Modal'
+import { useDocumentPreview } from '../components/ui/useDocumentPreview'
 import { ToastCard, useToast } from '../components/ui/Toast'
 import Avatar from '../components/ui/Avatar'
 import EmptyState, { ErrorState, ForbiddenState } from '../components/ui/EmptyState'
@@ -29,6 +30,22 @@ import { STATUS_VALUES } from '../lib/status'
 
 // Dev-only page (/styleguide). Every shared component and state, labelled with its Figma frame on
 // Foundations (https://www.figma.com/design/dzLeXDnM9ldZEurtYDcIh2). Sample text here is for display only.
+
+function PreviewSamples() {
+  const preview = useDocumentPreview()
+  const sample = (name: string, mime: string, body: () => Blob | Promise<Blob>) => ({ name, mime, load: async () => body(), download: async () => undefined })
+  const pixel = () => fetch('data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=').then((r) => r.blob())
+  const pdf = () => new Blob(['%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 300 200]/Parent 2 0 R>>endobj\ntrailer<</Root 1 0 R>>'], { type: 'application/pdf' })
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('sample.pdf', 'application/pdf', pdf))}>PDF</Button>
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('sample.gif', 'image/gif', pixel))}>Image</Button>
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('budget.xlsx', 'application/vnd.ms-excel', pdf))}>Other type</Button>
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('broken.pdf', 'application/pdf', () => Promise.reject(new Error('failed'))))}>Fails to load</Button>
+      {preview.element}
+    </div>
+  )
+}
 
 function Section({ figma, title, children }: { figma: string; title: string; children: ReactNode }) {
   return (
@@ -251,6 +268,10 @@ export default function Styleguide() {
           <Card tone="soft"><p className="text-d-h4 font-heading">Soft</p><p className="text-d-body-s text-muted">Cream panel.</p></Card>
           <Card tone="banner" hover><p className="text-d-h4 font-heading">Banner</p><p className="text-d-body-s text-banner-muted">Chocolate feature card.</p></Card>
         </div>
+      </Section>
+
+      <Section figma="Shared · gap fill" title="DocumentPreview (PDF, image, other type, error)">
+        <PreviewSamples />
       </Section>
 
       <Section figma="Components › Modal and confirm dialog · Genie motion" title="Modal and ConfirmDialog (genie from the button)">

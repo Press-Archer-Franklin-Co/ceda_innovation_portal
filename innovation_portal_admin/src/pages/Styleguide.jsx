@@ -10,6 +10,7 @@ import { Checkbox, Radio, RadioGroup, Toggle } from '../components/ui/Choice'
 import Card from '../components/ui/Card'
 import Tabs from '../components/ui/Tabs'
 import Modal from '../components/ui/Modal'
+import { useDocumentPreview } from '../components/ui/useDocumentPreview'
 import { ToastCard } from '../components/ui/ToastProvider'
 import { useToast } from '../components/ui/toast'
 import Avatar from '../components/ui/Avatar'
@@ -42,6 +43,22 @@ import { missingTranslations, useI18n } from '../i18n/context'
 
 // Dev-only page (/staff/styleguide, no sign-in). Every shared component and state, labelled with its
 // Figma frame on Foundations (https://www.figma.com/design/dzLeXDnM9ldZEurtYDcIh2). Sample text is for display only.
+
+function PreviewSamples() {
+  const preview = useDocumentPreview()
+  const sample = (name, mime, body) => ({ name, mime, load: async () => body(), download: async () => undefined })
+  const pixel = () => fetch('data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=').then((r) => r.blob())
+  const pdf = () => new Blob(['%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj 3 0 obj<</Type/Page/MediaBox[0 0 300 200]/Parent 2 0 R>>endobj\ntrailer<</Root 1 0 R>>'], { type: 'application/pdf' })
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('sample.pdf', 'application/pdf', pdf))}>PDF</Button>
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('sample.gif', 'image/gif', pixel))}>Image</Button>
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('budget.xlsx', 'application/vnd.ms-excel', pdf))}>Other type</Button>
+      <Button variant="secondary" onClick={(e) => preview.show(e, sample('broken.pdf', 'application/pdf', () => Promise.reject(new Error('failed'))))}>Fails to load</Button>
+      {preview.element}
+    </div>
+  )
+}
 
 function Section({ figma, title, children }) {
   return (
@@ -119,6 +136,10 @@ export default function Styleguide() {
           }
         />
         <p className="text-d-cap text-muted">Setswana keys missing: {missing.length === 0 ? 'none' : missing.join(', ')}</p>
+
+        <Section figma="Shared · gap fill" title="DocumentPreview (PDF, image, other type, error)">
+          <PreviewSamples />
+        </Section>
 
         <Section figma="PageHeader" title="Many actions wrap on a phone (R-24)">
           <div id="sg-pageheader-many" className="rounded-card border border-border p-4">
