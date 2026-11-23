@@ -271,3 +271,9 @@
 }
 .guide-ring-pulse { animation: guide-ring-pulse 1.6s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .guide-ring-pulse { animation: none; } }
+
+/* EditorWorkspace (builders): from 1024px the page does not scroll; the canvas and the panel scroll on their own. */
+@media (min-width: 1024px) {
+  main:has(> div > [data-editor-workspace]) { overflow: hidden; }
+  main:has(> div > [data-editor-workspace]) > div { height: 100%; }
+}

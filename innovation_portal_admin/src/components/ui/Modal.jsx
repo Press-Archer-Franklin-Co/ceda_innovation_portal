@@ -19,8 +19,9 @@ const SIZE_MAP = {
  * Opens with the genie out of triggerRef and closes back into it (ceda-genie-motion).
  * Esc closes, focus is trapped once it has opened and returns to the trigger. Bottom sheet on phone.
  * Props: open, onClose, title, description, size sm|md|lg|xl, footer, triggerRef, closeOnBackdrop, alert.
+ * sheet: stays a bottom sheet at every width (EditorWorkspace's panel below 1024px).
  */
-export default function Modal({ open, onClose, title, description, size = 'md', footer, children, closeOnBackdrop = true, alert = false, bodyClassName, triggerRef }) {
+export default function Modal({ open, onClose, title, description, size = 'md', footer, children, closeOnBackdrop = true, alert = false, bodyClassName, triggerRef, sheet = false }) {
   const t = useT()
   const id = useId().replace(/:/g, '')
   const [settled, setSettled] = useState(false)
@@ -46,7 +47,7 @@ export default function Modal({ open, onClose, title, description, size = 'md', 
   return createPortal(
     <>
     <div ref={backdropRef} className="fixed inset-0 z-50 bg-scrim/45" style={{ opacity: 0 }} aria-hidden onClick={closeOnBackdrop ? onClose : undefined} />
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 pointer-events-none">
+    <div className={cn('fixed inset-0 z-50 flex items-end justify-center pointer-events-none', !sheet && 'sm:items-center sm:p-4')}>
       <div
         ref={panelRef}
         role={alert ? 'alertdialog' : 'dialog'}
@@ -56,8 +57,8 @@ export default function Modal({ open, onClose, title, description, size = 'md', 
         tabIndex={-1}
         className={cn(
           'pointer-events-auto relative w-full bg-surface shadow-pop flex flex-col overflow-hidden focus:outline-none',
-          'rounded-t-card sm:rounded-card max-h-[92vh] sm:max-h-[90vh]',
-          SIZE_MAP[size] ?? SIZE_MAP.md,
+          sheet ? 'rounded-t-card max-h-[85vh]' : 'rounded-t-card sm:rounded-card max-h-[92vh] sm:max-h-[90vh]',
+          !sheet && (SIZE_MAP[size] ?? SIZE_MAP.md),
         )}
       >
         <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-2 2xl:px-6 2xl:pt-6 flex-shrink-0">

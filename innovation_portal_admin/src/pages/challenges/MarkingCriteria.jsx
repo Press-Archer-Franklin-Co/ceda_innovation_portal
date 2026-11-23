@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../../components/ui/PageHeader'
+import EditorWorkspace from '../../components/ui/EditorWorkspace'
 import Button from '../../components/ui/Button'
 import { SelectControl } from '../../components/ui/Select'
 import EmptyState from '../../components/ui/EmptyState'
@@ -59,8 +60,7 @@ export default function MarkingCriteria() {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
+  const header = (
       <PageHeader
         back={<Link to="/programs" className="text-[12px] text-muted hover:text-text hover:underline">{t('mc.crumb')}</Link>}
         title={t('mc.title')}
@@ -80,20 +80,34 @@ export default function MarkingCriteria() {
           </div>
         }
       />
-      {error && <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-[13px] text-danger">{String(error)}</p>}
-      {!programId ? (
-        <EmptyState title={t('mc.noChallenge')} framed />
-      ) : judging.isError ? (
-        <ErrorState title={t('mc.loadError')} message={judging.error?.message} onRetry={judging.refetch} framed />
-      ) : !value ? (
-        <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_280px]">
+  )
+  const notices = error ? <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-[13px] text-danger">{String(error)}</p> : null
+
+  // One workspace with no panel until there is a rubric to show.
+  if (!programId || judging.isError || !value) {
+    return (
+      <EditorWorkspace header={header} notices={notices} noPanel>
+        {!programId ? (
+          <EmptyState title={t('mc.noChallenge')} framed />
+        ) : judging.isError ? (
+          <ErrorState title={t('mc.loadError')} message={judging.error?.message} onRetry={judging.refetch} framed />
+        ) : (
           <Skeleton className="h-[420px] rounded-card" />
-          <Skeleton className="h-[420px] rounded-card" />
-          <Skeleton className="hidden h-[420px] rounded-card xl:block" />
-        </div>
-      ) : (
-        <JudgingEditor value={value} onChange={setValue} />
-      )}
-    </div>
+        )}
+      </EditorWorkspace>
+    )
+  }
+
+  return (
+    <EditorWorkspace
+      header={header}
+      notices={notices}
+      side={<div className="lg:w-[240px] xl:w-[260px]"><JudgingEditor variant="library" value={value} onChange={setValue} /></div>}
+      panel={<JudgingEditor variant="previews" value={value} onChange={setValue} />}
+      panelLabel={t('mc.previewPublic')}
+      phonePanel="inline"
+    >
+      <JudgingEditor variant="rubric" value={value} onChange={setValue} />
+    </EditorWorkspace>
   )
 }
