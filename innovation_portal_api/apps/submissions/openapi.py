@@ -71,6 +71,14 @@ class MySummarySerializer(serializers.Serializer):
     active_idea = IdeaItemSerializer(allow_null=True)
     next_action = NextActionSerializer(allow_null=True)
     unread_notifications = serializers.IntegerField()
+    messages = serializers.ListField(
+        child=serializers.DictField(),
+        help_text=(
+            "2.1 home messages, most urgent first: changes_requested {note, officer, fix_by}, question "
+            "{officer_first_name, excerpt, reply_by}, draft {percent_complete}, shortlisted {challenge}, stage_moved "
+            "{status, stage}, event {challenge, event_date}. Each has type, idea_id, kind, reference, title and at."
+        ),
+    )
 
 
 class LinkRefSerializer(serializers.Serializer):

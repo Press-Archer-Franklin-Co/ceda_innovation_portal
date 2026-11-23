@@ -56,3 +56,10 @@ export function daysUntil(value: string | null | undefined, now = Date.now()): n
 export function firstName(full: string | null | undefined): string {
   return (full ?? '').trim().split(/\s+/)[0] ?? ''
 }
+
+/** "Tue 2 Dec, 14:00" in Gaborone time, whatever the device's clock says (events and pitch sessions). */
+export function formatGaboroneDateTime(value: string | null | undefined, lang: Lang): string {
+  const date = toDate(value)
+  if (!date) return ''
+  return date.toLocaleString(LOCALE[lang], { timeZone: 'Africa/Gaborone', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
+}

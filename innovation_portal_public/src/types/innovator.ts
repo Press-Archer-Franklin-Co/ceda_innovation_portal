@@ -283,6 +283,16 @@ export interface IdeaTracking {
   documents: IdeaDocument[]
   can_add_documents: boolean
   returned: ReturnedForChanges | null
+  /** Prompt 41 (not on main yet): the pitch session for a shortlisted idea, or null when none is set. */
+  pitch_session?: PitchSession | null
+}
+
+export interface PitchSession {
+  starts_at: string
+  format?: 'in_person' | 'online' | string
+  place?: string
+  link?: string
+  instructions?: string
 }
 
 export type NextAction =
@@ -309,7 +319,18 @@ export interface MySummary {
   active_idea: IdeaItem | null
   next_action: NextAction | null
   unread_notifications: number
+  /** 2.1 home messages, most urgent first (23 Nov). Older APIs leave it out. */
+  messages?: HomeMessage[]
 }
+
+interface HomeMessageBase { idea_id: string; kind: 'draft' | 'submission'; reference: string; title: string; at: string | null }
+export type HomeMessage =
+  | (HomeMessageBase & { type: 'changes_requested'; note: string; officer: string; fix_by: string | null })
+  | (HomeMessageBase & { type: 'question'; officer_first_name: string; excerpt: string; reply_by: string | null })
+  | (HomeMessageBase & { type: 'draft'; percent_complete: number })
+  | (HomeMessageBase & { type: 'shortlisted'; challenge: string | null })
+  | (HomeMessageBase & { type: 'stage_moved'; status: string; stage: string })
+  | (HomeMessageBase & { type: 'event'; challenge: string; event_date: string })
 
 /** What a notification or update is about: {type, id, slug}, null where not set. */
 export interface UpdateLink {

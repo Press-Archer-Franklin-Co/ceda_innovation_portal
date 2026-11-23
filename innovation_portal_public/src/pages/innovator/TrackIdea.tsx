@@ -11,6 +11,7 @@ import MessageThread from '../../components/innovator/MessageThread'
 import DocumentsCard from '../../components/innovator/tracking/DocumentsCard'
 import FeedbackByStage from '../../components/innovator/tracking/FeedbackByStage'
 import ReturnedCard from '../../components/innovator/tracking/ReturnedCard'
+import ShortlistedCard from '../../components/innovator/tracking/ShortlistedCard'
 import { answerFiles, answerText, isFile } from '../../components/innovator/answers'
 import { formatDate, formatShortDate } from '../../components/innovator/format'
 import { statusWord } from '../../components/innovator/ideaStatus'
@@ -84,7 +85,7 @@ export default function TrackIdea() {
 
   return (
     <div className="bg-bg">
-      <section className="border-b border-border">
+      <section className="border-b border-border bg-surface2">
         <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
           <div className="flex flex-wrap gap-2">
             {tracking?.returned ? <Tag tone="blue">{t('trk.returnedTitle')}</Tag> : <Tag tone={word.tone}>{t(word.key)}</Tag>}
@@ -119,6 +120,7 @@ export default function TrackIdea() {
               }}
             />
           )}
+          {word.key === 'status.shortlisted' && <ShortlistedCard session={tracking?.pitch_session} />}
           <MessageThread ideaId={idea.id} />
           {trackingFailed ? (
             <ErrorState title={t('trk.feedbackError')} onRetry={loadTracking} />
