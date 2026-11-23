@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
+import { Check, Lightbulb, MessageCircle, Sparkles, Star } from 'lucide-react'
 import clsx from 'clsx'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -14,7 +14,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useShellSettings } from '../../components/layout/shellData'
 import EntryBand from '../../components/challenges/EntryBand'
 import FormRenderer from '../../components/innovator/form/FormRenderer'
-import AiHelperPanel from '../../components/innovator/form/AiHelperPanel'
+import AiHelperPanel, { useCheckMyIdea } from '../../components/innovator/form/AiHelperPanel'
 import { showAnswer } from '../../components/innovator/form/showAnswer'
 import {
   type Answers, type FieldProblem, answersToSend, checkStep,
@@ -56,6 +56,8 @@ export default function IdeaForm() {
   const navigate = useNavigate()
   const toast = useToast()
   const settings = useShellSettings()
+  // 2.13: Check my idea opens from the AI helper panel or from beside Next.
+  const checkMyIdea = useCheckMyIdea()
 
   // 2.10: the challenge's name and closing date for the header.
   const challenge = useAsync(() => (slug ? challengeEntryService.status(slug) : Promise.resolve(null)), [slug, lang]).data?.challenge ?? null
@@ -416,6 +418,12 @@ export default function IdeaForm() {
                 {draft.send_now_allowed && stepIndex < reviewIndex - 1 && (
                   <Button variant="ghost" onClick={onSendNow} disabled={busy}>{t('form.sendNow')}</Button>
                 )}
+                {/* 2.13 pin 1: Check my idea beside Next, only while the AI helper is on. It opens the same review as the panel. */}
+                {checkMyIdea.available && (
+                  <Button data-guide="idea.check" variant="secondary" icon={<Star size={18} aria-hidden />} onClick={(e) => checkMyIdea.openFrom(e.currentTarget)} disabled={busy}>
+                    {t('ai.check')}
+                  </Button>
+                )}
                 <Button data-guide="idea.next" onClick={onContinue} loading={busy} arrow>
                   {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
                 </Button>
@@ -431,6 +439,7 @@ export default function IdeaForm() {
             steps={steps}
             stepIndex={stepIndex}
             answers={answers}
+            check={checkMyIdea}
             onShowField={(index, key) => {
               if (index !== stepIndex) goTo(index)
               window.setTimeout(() => {
