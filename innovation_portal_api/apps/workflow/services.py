@@ -1900,6 +1900,9 @@ class WorkflowRuntimeService:
         step = instance.current_step
         no_criteria = step.requires_evaluation and not WorkflowRuntimeService._step_has_criteria(step)
         effective_actions = list(step.actions_allowed)
+        # "request_info" on a step is the officer's "Ask for changes" (3.16): it returns the idea to the innovator.
+        if "request_info" in effective_actions and WorkflowActionLog.ACTION_RETURN not in effective_actions:
+            effective_actions.append(WorkflowActionLog.ACTION_RETURN)
         if no_criteria and action in (WorkflowActionLog.ACTION_APPROVE, WorkflowActionLog.ACTION_REJECT, WorkflowActionLog.ACTION_RETURN):
             effective_actions = effective_actions + [WorkflowActionLog.ACTION_APPROVE, WorkflowActionLog.ACTION_REJECT, WorkflowActionLog.ACTION_RETURN]
         if action not in effective_actions:
