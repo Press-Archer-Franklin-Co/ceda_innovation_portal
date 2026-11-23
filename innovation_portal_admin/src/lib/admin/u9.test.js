@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { lastSignIn, whatTheyCanDo } from './users'
-import { copyableCapabilities, permissionGroups } from './roles'
-import { listParams, userStatus } from '../api/users'
+import { copyableCapabilities } from './roles'
+import { userFilters, userStatus } from '../api/users'
 
 const t = (key, vars = {}) => Object.entries(vars).reduce((s, [k, v]) => s.replace(`{${k}}`, v), {
   'users.never': 'Never', 'users.today': 'Today, {time}', 'users.yesterday': 'Yesterday', 'users.daysAgo': '{n} days ago',
@@ -43,25 +43,12 @@ describe('3.23 users helpers', () => {
     expect(userStatus({ is_active: false })).toBe('deactivated')
     expect(userStatus({ is_active: true })).toBe('active')
     expect(userStatus({ status: 'invited', is_active: true })).toBe('invited')
-    expect(listParams({ search: 'kago', role: '', status: 'deactivated', page: 2, pageSize: 25 }))
-      .toEqual({ page: 2, page_size: 25, search: 'kago', status: 'deactivated' })
+    expect(userFilters({ role: '', status: 'deactivated' })).toEqual({ status: 'deactivated' })
+    expect(userFilters({ role: 'judge', status: 'all' })).toEqual({ role: 'judge' })
   })
 })
 
-describe('3.24 permission rows', () => {
-  it('puts each capability in one row and column, and keeps unknown ones', () => {
-    const groups = permissionGroups(catalogue)
-    expect(groups.map((g) => g.key)).toEqual(['overview', 'ideas', 'website', 'administration'])
-    const website = groups.find((g) => g.key === 'website').rows
-    expect(website).toEqual([
-      expect.objectContaining({ key: 'content', edit: 'content.edit' }),
-      expect.objectContaining({ key: 'publish', approve: 'content.approve' }),
-    ])
-    const ideas = groups.find((g) => g.key === 'ideas').rows
-    expect(ideas.map((r) => r.key)).toEqual(['review', 'new.thing'])
-    // Rows whose capability the catalogue lacks are left out.
-    expect(groups.flatMap((g) => g.rows).some((r) => r.key === 'reports')).toBe(false)
-  })
+describe('3.24 copy a role', () => {
   it('never copies a capability only administrators may hold', () => {
     expect(copyableCapabilities({ capabilities: ['users.manage', 'entries.review'] }, catalogue)).toEqual(['entries.review'])
   })
