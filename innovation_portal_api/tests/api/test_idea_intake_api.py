@@ -236,10 +236,16 @@ class IdeaIntakeApiTests(TestCase):
         self.assertFalse(Submission.objects.exists())
         self.assertFalse(ConsentRecord.objects.exists())
 
-    def test_guest_submit_needs_a_verified_phone(self):
+    def test_guest_submit_needs_a_way_to_reach_them_and_a_code_only_when_switched_on(self):
+        # 23 Nov (Nshathisi): a guest may send without an account with an email or a phone; with neither, refused.
         draft_id, token = self.quick_start()
         self.fill_all_steps(draft_id, token)
         response = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "create_account": False})
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(error_code(response), "contact_required")
+        # "Confirm a guest's phone or email with a code" on: an unconfirmed phone is refused as before.
+        set_features(self, guest_contact_code=True)
+        response = self.as_guest("post", f"/api/drafts/{draft_id}/submit/", token, {"consent": True, "create_account": False, "phone": PHONE})
         self.assertEqual(response.status_code, 400)
         self.assertEqual(error_code(response), "phone_verification_required")
 

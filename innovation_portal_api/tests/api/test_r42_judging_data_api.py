@@ -171,7 +171,7 @@ class StaffListTests(R42Base):
         top = listing["results"][0]
         self.assertEqual(top["id"], str(self.entries[0].id))
         self.assertEqual((top["score"], top["channel"], top["district"]["name"]), (90.0, "whatsapp", "Maun"))
-        self.assertEqual(top["innovator"], {"name": "E0 Ntrant", "initials": "EN"})
+        self.assertEqual(top["innovator"], {"name": "E0 Ntrant", "initials": "EN", "is_guest": False, "contact": None})
         self.assertIsNone(listing["results"][1]["score"])
         self.assertEqual(listing["results"][1]["stage_label"], "Shortlisted")
 
@@ -191,6 +191,16 @@ class StaffListTests(R42Base):
         for bad in ({"view": "x"}, {"ordering": "reference"}, {"stage": "x"}, {"submitted_from": "21/11"}):
             self.assertEqual(self.client.get("/api/submissions/staff-list/", bad).status_code, 400, bad)
         self.assertEqual(self.as_user(self.kabo).get("/api/submissions/staff-list/").status_code, 403)
+
+    def test_a_guest_entry_shows_how_to_reach_them(self):
+        # Sent without an account (23 Nov): the officer sees the guest's email, or phone when there is no email.
+        common = {"program": self.program, "innovator": None, "is_guest": True, "submission_type": self.entries[0].submission_type,
+                  "current_status": self.entries[0].current_status, "submitted_at": timezone.now()}
+        by_email = Submission.objects.create(title="Guest by email", reference_number="CEDA-IP-2026-90001", guest_name="Neo Guest", guest_email="neo@example.co.bw", guest_phone="+26771234567", **common)
+        by_phone = Submission.objects.create(title="Guest by phone", reference_number="CEDA-IP-2026-90002", guest_name="Kago Guest", guest_phone="+26772345678", **common)
+        rows = {row["id"]: row["innovator"] for row in data(self.as_user(self.officer).get("/api/submissions/staff-list/", {"search": "Guest"}))["results"]}
+        self.assertEqual(rows[str(by_email.id)], {"name": "Neo Guest", "initials": "NG", "is_guest": True, "contact": "neo@example.co.bw"})
+        self.assertEqual(rows[str(by_phone.id)]["contact"], "+26772345678")
 
     def test_saved_views_for_the_list(self):
         body = {"name": "WhatsApp in Maun", "scope": "submissions", "filters": {"view": "channels", "district": "r42-maun", "search": "solar"}}

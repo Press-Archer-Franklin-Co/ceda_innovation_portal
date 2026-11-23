@@ -155,7 +155,16 @@ export default function Submissions() {
     {
       key: 'innovator',
       label: t('ideas.col.innovator'),
-      render: (v) => (v?.name ? <span className="flex min-w-0 items-center gap-2"><Avatar name={v.name} size="xs" decorative /><span className="truncate">{v.name}</span></span> : EMPTY_CELL),
+      render: (v) => (v?.name ? (
+        <span className="flex min-w-0 items-center gap-2">
+          <Avatar name={v.name} size="xs" decorative />
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">{v.name}</span>
+            {/* A guest (no account): how to reach them. */}
+            {v.is_guest && <span className="truncate text-[12px] text-muted">{v.contact ? t('ideas.guestContact', { contact: v.contact }) : t('ideas.guest')}</span>}
+          </span>
+        </span>
+      ) : EMPTY_CELL),
     },
     { key: 'program', label: t('ideas.col.challenge'), render: (v) => v?.title ?? EMPTY_CELL, hideOnPhone: true },
     { key: 'channel', label: t('ideas.col.channel'), render: (v) => <ChannelLabel channel={v} />, hideOnPhone: true },

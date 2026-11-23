@@ -126,6 +126,41 @@ def claim_guest_records(user, phone: str, *, source: str, actor=None) -> dict:
     return counts
 
 
+@transaction.atomic
+def email_proved(user, email: str, *, source: str, actor=None) -> dict:
+    """23 Nov: someone proved ``email`` (a code or the verification link). Guest ideas sent with that email, and guest
+    drafts whose email was confirmed with a code, join their account, the same way as for a phone."""
+    from apps.submissions.intake import _mask_email
+    from apps.submissions.models import ApplicationDraft, Submission
+
+    email = (email or "").strip().lower()
+    counts = {"drafts": 0, "submissions": 0, "skipped_drafts": 0}
+    if not email or user is None:
+        return counts
+    claimed = []
+    for draft in ApplicationDraft.objects.select_for_update().filter(innovator__isnull=True, guest_email__iexact=email, guest_email_verified_at__isnull=False):
+        busy = (
+            not draft.is_general_idea
+            and draft.status == ApplicationDraft.STATUS_DRAFT
+            and ApplicationDraft.objects.filter(innovator=user, program=draft.program, status=ApplicationDraft.STATUS_DRAFT).exists()
+        )
+        if busy:
+            counts["skipped_drafts"] += 1
+            continue
+        draft.innovator = user
+        draft.save(update_fields=["innovator", "updated_at"])
+        counts["drafts"] += 1
+        claimed.append(draft)
+    for submission in Submission.objects.select_for_update().filter(innovator__isnull=True, guest_email__iexact=email):
+        submission.innovator = user
+        submission.save(update_fields=["innovator", "updated_at"])
+        counts["submissions"] += 1
+        claimed.append(submission)
+    for record in claimed:
+        AuditService.log_action(actor=actor or user, action_type="guest_records_claimed", target=record, after_state={"innovator": str(user.id)}, metadata={"email": _mask_email(email), "source": source, "counts": counts})
+    return counts
+
+
 # Joining two accounts of the same person -------------------------------------------------------------------------
 
 

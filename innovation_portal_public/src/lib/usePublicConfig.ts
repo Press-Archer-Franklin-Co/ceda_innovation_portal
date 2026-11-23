@@ -48,6 +48,11 @@ export const basicsOnlyFrom = (config: Pick<PublicConfig, 'features'> | null | u
   config?.features?.quick_start_basics_only !== false
 
 /** Tests only. */
+/** "Confirm a guest's phone or email with a code before they send" (23 Nov), off unless switched on. */
+export function useGuestContactCode(): boolean {
+  return usePublicConfig()?.features?.guest_contact_code === true
+}
+
 export function resetPublicConfigCache() {
   cached = null
   pending = null

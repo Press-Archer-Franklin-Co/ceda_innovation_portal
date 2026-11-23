@@ -117,6 +117,9 @@ export const ideasEn = {
   'ideas.innovator': 'Innovator',
   'ideas.message': 'Message',
   'ideas.phone': 'Phone',
+  'ideas.email': 'Email',
+  'ideas.guest': 'Sent without an account',
+  'ideas.guestContact': 'No account · {contact}',
   'ideas.otherIdeas': 'Other ideas',
   'ideas.otherIdeasValue': '{n} ({shortlisted} shortlisted)',
   'ideas.language': 'Language',
@@ -425,6 +428,9 @@ export const ideasTn = {
   'ideas.innovator': 'Moitlhami', // TODO tn-review
   'ideas.message': 'Molaetsa', // TODO tn-review
   'ideas.phone': 'Mogala', // TODO tn-review
+  'ideas.email': 'Imeile', // TODO tn-review
+  'ideas.guest': 'E rometswe kwa ntle ga akhaonto', // TODO tn-review
+  'ideas.guestContact': 'Ga go na akhaonto · {contact}', // TODO tn-review
   'ideas.otherIdeas': 'Dikakanyo tse dingwe', // TODO tn-review
   'ideas.otherIdeasValue': '{n} ({shortlisted} di tlhophilwe)', // TODO tn-review
   'ideas.language': 'Puo', // TODO tn-review

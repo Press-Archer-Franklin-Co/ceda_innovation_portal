@@ -288,6 +288,10 @@ class VerifyEmailView(generics.GenericAPIView):
         user = token.user
         user.email_verified = True
         user.save(update_fields=["email_verified"])
+        if user.email:
+            from apps.accounts.phone_accounts import email_proved
+
+            email_proved(user, user.email, source="email_verification", actor=user)
         from apps.accounts.auth_identity_service import AuthIdentityService
 
         tokens = AuthIdentityService.finalize_local_login(user=user)

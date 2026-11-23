@@ -33,6 +33,7 @@ from apps.submissions.intake import (
 from apps.submissions.models import ApplicationDraft
 from apps.submissions.serializers import (
     ApplicationDraftSerializer,
+    DraftEmailVerifySerializer,
     DraftPhoneVerifySerializer,
     DraftStepSerializer,
     DraftSubmitSerializer,
@@ -42,7 +43,7 @@ from apps.submissions.serializers import (
 )
 
 # Actions a guest may use with the X-Draft-Token header instead of signing in.
-GUEST_ACTIONS = frozenset({"retrieve", "update", "partial_update", "steps", "submit", "verify_phone"})
+GUEST_ACTIONS = frozenset({"retrieve", "update", "partial_update", "steps", "submit", "verify_phone", "verify_email"})
 
 DRAFT_TOKEN_PARAMETER = OpenApiParameter(
     name=DRAFT_TOKEN_HEADER,
@@ -214,6 +215,17 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
         draft = GuestDraftService.verify_phone(draft=draft, phone=serializer.validated_data["phone"], code=serializer.validated_data["code"])
         return api_success(data=ApplicationDraftSerializer(draft, context={"request": request}).data)
 
+    @extend_schema(tags=["Drafts"], summary="Confirm a guest's email with a sign-in code, without creating an account", request=DraftEmailVerifySerializer, parameters=[DRAFT_TOKEN_PARAMETER], responses=docs.DRAFT)
+    @action(detail=True, methods=["post"], url_path="verify-email")
+    def verify_email(self, request, pk=None):
+        draft = self.get_object()
+        if draft.innovator_id:
+            raise PermissionDenied({"code": "not_a_guest_draft", "detail": "This idea already belongs to an account."})
+        serializer = DraftEmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        draft = GuestDraftService.verify_email(draft=draft, email=serializer.validated_data["email"], code=serializer.validated_data["code"])
+        return api_success(data=ApplicationDraftSerializer(draft, context={"request": request}).data)
+
     # One step at a time ------------------------------------------------------
 
     @extend_schema(tags=["Drafts"], summary="Save and check one step of the form (screen 2.3)", request=DraftStepSerializer, parameters=[DRAFT_TOKEN_PARAMETER], responses=docs.STEP)
@@ -253,6 +265,7 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
             last_name=serializer.validated_data.get("last_name", ""),
             district=serializer.validated_data.get("district"),
             email=serializer.validated_data.get("email", ""),
+            phone=serializer.validated_data.get("phone", ""),
             ip_address=client_ip(request),
         )
         payload = IdeaSubmitService.response_payload(outcome, lang=resolve_request_language(request))

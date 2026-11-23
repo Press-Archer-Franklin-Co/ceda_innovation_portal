@@ -126,7 +126,10 @@ class CommunicationService:
             # No email address (guest or phone-only account): send the reference by SMS.
             track_url = f"{getattr(settings, 'PUBLIC_BASE_URL', '').rstrip('/')}/track/{submission.reference_number}"
             body = f"CEDA: we received your idea \"{submission.title}\". Your reference is {submission.reference_number}. Track it at {track_url}"
-            log = CommunicationService.send_submission_text(submission, body=body, subject="Submission received")
+            # Texts go out only while "SMS messages" is on (23 Nov: an email copy needs no switch).
+            from apps.platform_config.flags import is_enabled
+
+            log = CommunicationService.send_submission_text(submission, body=body, subject="Submission received") if is_enabled("sms_messages") else None
             if not submission.innovator_id and submission.guest_email:
                 # R-22: a guest who gave an email also gets the confirmation there.
                 email_log = CommunicationService.send_guest_email(submission, subject="We received your idea", body=body)

@@ -195,6 +195,21 @@ class DraftSubmitSerializer(serializers.Serializer):
     last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     district = serializers.CharField(required=False, allow_blank=True, max_length=80, help_text="Reference district id or slug (R-22).")
     email = serializers.EmailField(required=False, allow_blank=True, help_text="Optional: also gets the confirmation copy (R-22).")
+    phone = serializers.CharField(
+        required=False, allow_blank=True, max_length=32,
+        help_text="A guest's mobile number. A guest without an account gives an email, a phone, or both (contact_required otherwise).",
+    )
+
+    def validate_phone(self, value):
+        from apps.core.phone import try_normalize_phone
+
+        value = (value or "").strip()
+        if not value:
+            return ""
+        normalized = try_normalize_phone(value)
+        if not normalized:
+            raise serializers.ValidationError("Enter a mobile number like 71 234 567.")
+        return normalized
 
     def validate_district(self, value):
         from apps.reference.models import District
@@ -218,6 +233,11 @@ class DraftSubmitSerializer(serializers.Serializer):
 
 class DraftStepSerializer(serializers.Serializer):
     answers = serializers.DictField(child=serializers.JSONField(), allow_empty=True)
+
+
+class DraftEmailVerifySerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    code = serializers.RegexField(r"^\d{4,8}$", error_messages={"invalid": "Enter the code from the email."})
 
 
 class DraftPhoneVerifySerializer(serializers.Serializer):

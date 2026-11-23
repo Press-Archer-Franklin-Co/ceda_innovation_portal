@@ -58,6 +58,49 @@ export const resumeStorage = {
   },
 }
 
+/** 23 Nov: how a guest (no account) can be reached, typed on 1.2 and sent with the idea. Kept across a refresh. */
+export interface GuestContact {
+  name: string
+  email: string
+  phone: string
+}
+const GUEST_CONTACT_KEY = 'ceda_guest_contact'
+
+export const guestContactStorage = {
+  get(): GuestContact | null {
+    try {
+      const raw = localStorage.getItem(GUEST_CONTACT_KEY)
+      return raw ? (JSON.parse(raw) as GuestContact) : null
+    } catch {
+      return null
+    }
+  },
+  set(contact: GuestContact) {
+    try {
+      localStorage.setItem(GUEST_CONTACT_KEY, JSON.stringify(contact))
+    } catch {
+      // Private mode: the contact stays for this page view only.
+    }
+  },
+  clear() {
+    try {
+      localStorage.removeItem(GUEST_CONTACT_KEY)
+    } catch {
+      // Nothing stored.
+    }
+  },
+}
+
+/** One of email or phone is enough; an email must look like one, a phone needs at least 7 digits. */
+export function guestContactProblem(contact: Pick<GuestContact, 'email' | 'phone'>): 'none' | 'email' | 'phone' | null {
+  const email = contact.email.trim()
+  const phone = contact.phone.trim()
+  if (!email && !phone) return 'none'
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return 'email'
+  if (phone && phone.replace(/\D/g, '').length < 7) return 'phone'
+  return null
+}
+
 function tokenHeaders(token?: string) {
   return token ? { headers: { [DRAFT_TOKEN_HEADER]: token } } : undefined
 }
@@ -100,6 +143,11 @@ export const intakeService = {
   /** Guest path: prove the phone without signing in. */
   async verifyPhone(id: string, token: string, phone: string, code: string): Promise<IntakeDraft> {
     const { data } = await api.post<Envelope<IntakeDraft>>(`/drafts/${id}/verify-phone/`, { phone, code }, tokenHeaders(token))
+    return unwrapData(data)
+  },
+
+  async verifyEmail(id: string, token: string, email: string, code: string): Promise<IntakeDraft> {
+    const { data } = await api.post<Envelope<IntakeDraft>>(`/drafts/${id}/verify-email/`, { email, code }, tokenHeaders(token))
     return unwrapData(data)
   },
 

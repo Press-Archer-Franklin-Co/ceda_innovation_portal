@@ -26,6 +26,7 @@ from apps.audit.services import AuditService
 from apps.core.i18n import get_text
 from apps.core.constants import CommunicationChannel, CommunicationStatus, ProgramStatus, ProgramTypeCode, SubmissionType
 from apps.core.phone import mask_phone
+from apps.platform_config.flags import is_enabled
 from apps.programs.general_idea import FORM_NOT_READY, GeneralIdeaProgram, form_ready
 from apps.submissions.draft_services import ApplicationDraftService
 from apps.submissions.models import ApplicationDraft, Submission
@@ -161,6 +162,22 @@ class GuestDraftService:
         draft.guest_phone_verified_at = timezone.now()
         draft.save(update_fields=["guest_phone", "guest_phone_verified_at", "updated_at"])
         AuditService.log_action(actor=None, action_type="guest_draft_phone_verified", target=draft, metadata={"phone": mask_phone(phone)})
+        return draft
+
+
+    @staticmethod
+    @transaction.atomic
+    def verify_email(*, draft: ApplicationDraft, email: str, code: str) -> ApplicationDraft:
+        """Mark the guest's email as proved with a code from POST /api/auth/otp/request/. No account is made."""
+        from apps.accounts.models import LoginCode
+        from apps.accounts.otp_services import OTPService
+
+        email = email.strip().lower()
+        OTPService.check_code_or_raise(target_type=LoginCode.TargetType.EMAIL, target=email, code=code)
+        draft.guest_email = email
+        draft.guest_email_verified_at = timezone.now()
+        draft.save(update_fields=["guest_email", "guest_email_verified_at", "updated_at"])
+        AuditService.log_action(actor=None, action_type="guest_draft_email_verified", target=draft, metadata={"email": _mask_email(email)})
         return draft
 
 
@@ -336,6 +353,7 @@ class IdeaSubmitService:
         last_name: str = "",
         district=None,
         email: str = "",
+        phone: str = "",
         ip_address: str | None = None,
     ) -> SubmitOutcome:
         """Submit as the owner (user owns the draft) or as a guest holding the resume token (user None)."""
@@ -350,10 +368,24 @@ class IdeaSubmitService:
                 if consent is not True:
                     # Same check as in submit_draft, before any account is made.
                     raise ValidationError({"consent": {"code": "consent_required", "detail": "Please agree to the terms before sending your idea."}})
-                if not draft.guest_phone or not draft.guest_phone_verified_at:
+                # 23 Nov: a guest gives at least one way to reach them, an email or a phone (one is enough).
+                phone = (phone or draft.guest_phone or "").strip()
+                email = (email or "").strip().lower()
+                if not phone and not email:
+                    raise ValidationError({"code": "contact_required", "detail": "Give us an email or a phone number so we can reach you."})
+                phone_proved = bool(phone and draft.guest_phone == phone and draft.guest_phone_verified_at)
+                email_proved = bool(email and (draft.guest_email or "").lower() == email and draft.guest_email_verified_at)
+                # A code is needed only to make an account, or when "Confirm a guest's phone or email with a code" is on.
+                if (create_account or is_enabled("guest_contact_code")) and not (phone_proved or email_proved):
                     raise ValidationError(
                         {"code": "phone_verification_required", "detail": "Confirm your phone number with the code we sent before sending your idea."}
+                        if phone
+                        else {"code": "email_verification_required", "detail": "Confirm your email with the code we sent before sending your idea."}
                     )
+                if phone != draft.guest_phone:
+                    draft.guest_phone, draft.guest_phone_verified_at = phone, None
+                draft.guest_email = email
+                draft.save(update_fields=["guest_phone", "guest_phone_verified_at", "guest_email", "updated_at"])
                 first_name, last_name = (first_name or "").strip()[:150], (last_name or "").strip()[:150]
                 if first_name or last_name:
                     name = " ".join(part for part in (first_name, last_name) if part)
@@ -364,8 +396,8 @@ class IdeaSubmitService:
                     else:
                         first, _, last = guest_name.partition(" ")
                     user, account_created = OTPService.user_for_verified_target(
-                        target_type=LoginCode.TargetType.PHONE,
-                        target=draft.guest_phone,
+                        target_type=LoginCode.TargetType.PHONE if phone_proved else LoginCode.TargetType.EMAIL,
+                        target=draft.guest_phone if phone_proved else email,
                         source="idea_quick_start",
                         first_name=first,
                         last_name=last,
@@ -419,6 +451,8 @@ class IdeaSubmitService:
             "title": submission.title,
             "sector": sector_payload(submission.sector, lang),
             "is_guest": submission.is_guest,
+            # 1.4 "We'll contact you on ...": what this guest gave (only the person holding the draft's token sees it).
+            "contact": {"email": submission.guest_email, "phone": submission.guest_phone} if submission.is_guest else None,
             "next_steps": outcome.next_steps,
             "copy_sent_to": outcome.copy_sent_to,
             "account": account,

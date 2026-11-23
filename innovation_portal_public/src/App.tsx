@@ -156,6 +156,8 @@ function AppRoutes() {
         <Route path="/challenges/:slug/enter" element={<ChallengeEnter />} />
         <Route path="/challenges/:slug/results" element={<ChallengeResults />} />
         <Route path="/submit"      element={<Submit />} />
+        {/* 23 Nov: the full General idea form for a guest (resume token on this device); sends without an account. */}
+        <Route path="/submit/draft/:id" element={<IdeaForm guest />} />
         <Route path="/innovate"    element={<InnovateRedirect />} />
         {/* Old pages nothing links to any more (D3): sent somewhere useful instead. */}
         <Route path="/suggestions" element={<Navigate to="/faq" replace />} />

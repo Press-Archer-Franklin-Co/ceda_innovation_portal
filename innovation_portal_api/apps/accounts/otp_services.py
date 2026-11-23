@@ -378,6 +378,10 @@ class OTPService:
             from apps.accounts.phone_accounts import phone_proved
 
             phone_proved(user, target, source=source, actor=user)
+        else:
+            from apps.accounts.phone_accounts import email_proved
+
+            email_proved(user, target, source=source, actor=user)
         return user, created
 
     @staticmethod
