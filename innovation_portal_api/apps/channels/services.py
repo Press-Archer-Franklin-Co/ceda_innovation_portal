@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
+from datetime import timedelta
 import random
 import re
 
-from django.db import transaction
+from django.db import connection as db_connection, transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
@@ -15,9 +17,11 @@ from apps.audit.services import AuditService
 from apps.channels.engine import JourneyRunner, Screen, build_graph_from_nodes
 from apps.channels.models import Channel, ChannelConnection, Journey, JourneyNode, JourneySession, JourneySessionStep, JourneyVersion
 from apps.channels.nodes import TYPE_KEYS, check_graph, errors_only
+from apps.channels.way_out import norm
 from apps.core.phone import InvalidPhoneNumber, mask_phone, normalize_phone
 from apps.platform_config.flags import is_enabled
 from apps.platform_config.models import IntegrationConnection
+from apps.platform_config.providers.whatsapp import DEFAULT_HANDOVER_WAIT_MINUTES
 
 logger = logging.getLogger(__name__)
 security_logger = logging.getLogger("security.webhook")
@@ -451,10 +455,29 @@ class SessionService:
         return session, screen
 
     @staticmethod
+    def _channel_options(session: JourneySession) -> tuple[bool, dict]:
+        """(can this session show buttons, the connection's way-out words)."""
+        if session.channel != Channel.WHATSAPP:
+            return False, {}
+        link = session.connection
+        if link is None:  # the simulator shows WhatsApp buttons
+            return True, {}
+        config = link.connection.config or {}
+        words = {name: config[name] for name in ("menu_words", "cancel_words", "greeting_words") if isinstance(config.get(name), list)}
+        provider = _provider(link)
+        interactive = bool(getattr(provider, "supports_interactive", False))
+        if link.connection.provider == "whatsapp_twilio":
+            interactive = config.get("interactive_mode", "buttons") == "buttons"
+        return interactive, words
+
+    @staticmethod
     def _runner(session: JourneySession, graph: dict, **extra) -> JourneyRunner:
+        interactive, words = SessionService._channel_options(session)
         return JourneyRunner(
             graph,
             session.state,
+            interactive=interactive,
+            words=words,
             channel=session.channel,
             phone=session.phone,
             user=session.user,
@@ -658,37 +681,140 @@ class WhatsAppWebhookService:
                 for item in message.media
             ]
             try:
+                # One message at a time per phone: replies go out in order, one for each message.
                 with transaction.atomic():
-                    session = SessionService.find_active(channel=Channel.WHATSAPP, external_id=phone, channel_connection=channel_connection)
-                    restart = (message.text or "").strip().lower() in provider.restart_words()
-                    if session is not None and restart:
-                        SessionService.cancel(session)
-                        session, outcome = None, "restarted"
-                    if session is None:
-                        session, screen = SessionService.start(
-                            channel=Channel.WHATSAPP, journey=journey, external_id=phone, phone=phone, channel_connection=channel_connection,
-                            initial_vars={"profile_name": message.name}, message_id=message.message_id,
-                        )
-                        outcome = outcome if outcome == "restarted" else "started"
-                        if media:
-                            screen.text = f"{provider.reply_text('file_not_expected', session.language)}\n{screen.text}"
+                    _lock_phone(channel_connection.id, phone)
+                    conversation = WhatsAppHandover.open_for(phone)
+                    if conversation is not None:
+                        # A person is talking to an officer: everything goes to the Inbox, no journey and no bot.
+                        node_type, outcome = "inbox", "to_inbox"
+                        waiting_note = WhatsAppHandover.receive(conversation, provider=provider, message=message, phone=phone, connection=channel_connection)
+                        if waiting_note:
+                            WhatsAppOutbound.send_screen(provider, phone, Screen(text=waiting_note, end=False, lang=conversation.language))
                     else:
-                        lang = session.language or lang
-                        screen = SessionService.answer(
-                            session=session, text=message.text, media=media, message_id=message.message_id,
-                            file_note=provider.reply_text("file_not_expected", lang),
-                        )
-                    node_type = screen.node_type
+                        session = SessionService.find_active(channel=Channel.WHATSAPP, external_id=phone, channel_connection=channel_connection)
+                        restart = norm(message.text) in {norm(word) for word in provider.restart_words()}
+                        if session is not None and restart:
+                            SessionService.cancel(session)
+                            session, outcome = None, "restarted"
+                        if session is None:
+                            session, screen = SessionService.start(
+                                channel=Channel.WHATSAPP, journey=journey, external_id=phone, phone=phone, channel_connection=channel_connection,
+                                initial_vars={"profile_name": message.name}, message_id=message.message_id,
+                            )
+                            outcome = outcome if outcome == "restarted" else "started"
+                            if media:
+                                screen.text = f"{provider.reply_text('file_not_expected', session.language)}\n{screen.text}"
+                        else:
+                            lang = session.language or lang
+                            screen = SessionService.answer(
+                                session=session, text=message.text, media=media, message_id=message.message_id,
+                                file_note=provider.reply_text("file_not_expected", lang),
+                            )
+                        node_type = screen.node_type
+                        WhatsAppOutbound.send_screen(provider, phone, screen)
             except Exception:
                 logger.exception("WhatsApp session failed on connection %s", channel_connection.id)
-                screen, outcome = Screen(text=provider.reply_text("error", lang), end=True), "error"
-            WhatsAppOutbound.send_screen(provider, phone, screen)
+                outcome = "error"
+                WhatsAppOutbound.send_screen(provider, phone, Screen(text=provider.reply_text("error", lang), end=True, lang=lang))
             handled += 1
             whatsapp_logger.info(
                 "whatsapp inbound connection=%s phone=%s sid=%s node=%s outcome=%s choice=%s files=%d ms=%d",
                 channel_connection.id, mask_phone(phone), message.message_id, node_type, outcome, getattr(message, "choice_source", "text"), len(media), int((time.monotonic() - started) * 1000),
             )
         return handled, provider
+
+
+def _lock_phone(connection_id, phone: str) -> None:
+    """Hold messages from one phone in line until this transaction ends (PostgreSQL)."""
+    if db_connection.vendor != "postgresql":
+        return
+    digest = hashlib.sha256(f"channels:{connection_id}:{phone}".encode()).digest()
+    with db_connection.cursor() as cursor:
+        cursor.execute("SELECT pg_advisory_xact_lock(%s)", [int.from_bytes(digest[:8], "big", signed=True)])
+
+
+class WhatsAppHandover:
+    """While a hand-over conversation is open, the person's messages go into it (prompt 33)."""
+
+    MAX_FILE_BYTES = 10 * 1024 * 1024
+    FILE_FAILED = "[A file was sent but could not be saved.]"
+
+    @staticmethod
+    def open_for(phone: str):
+        from apps.conversations.models import Conversation
+        from apps.conversations.services import OPEN
+
+        return (
+            Conversation.objects.select_for_update(of=("self",))
+            .filter(channel=Conversation.Channel.WHATSAPP, contact_phone=phone, status__in=OPEN)
+            .order_by("-created_at")
+            .first()
+        )
+
+    @staticmethod
+    def _save_file(item, *, provider, message_id: str, user):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from apps.channels.actions import extension_for
+        from apps.media_library.services import MediaService
+
+        fetched = provider.fetch_media(item, max_bytes=WhatsAppHandover.MAX_FILE_BYTES)
+        if not fetched.ok:
+            return None
+        content_type = fetched.content_type or item.content_type
+        extension = extension_for(content_type)
+        if not extension:
+            return None
+        upload = SimpleUploadedFile(f"whatsapp-{(message_id or 'file')[-12:]}{extension}", fetched.content, content_type=content_type)
+        try:
+            with transaction.atomic():
+                return MediaService.create_asset(actor=user, upload=upload)
+        except Exception:
+            logger.warning("A WhatsApp file for the Inbox could not be saved", exc_info=True)
+            return None
+
+    @staticmethod
+    def receive(conversation, *, provider, message, phone: str, connection) -> str:
+        """Put the message in the Inbox. Returns the once-only "officer will reply" text, or ""."""
+        from django.core.cache import cache
+
+        from apps.conversations.models import ConversationMessage
+        from apps.conversations.services import _add, person_message
+
+        user = conversation.contact_user
+        assets, failed = [], 0
+        for item in message.media:
+            asset = WhatsAppHandover._save_file(item, provider=provider, message_id=message.message_id, user=user)
+            if asset is None:
+                failed += 1
+            else:
+                assets.append(asset)
+        lines = [(message.shown_text or message.text or "").strip()]
+        if failed:
+            lines.append(WhatsAppHandover.FILE_FAILED)
+        body = "\n".join(line for line in lines if line)
+        if body or assets:
+            person_message(conversation, body, user=user, attachments=assets or None)
+        JourneySession.objects.filter(
+            pk__in=JourneySession.objects.filter(channel=Channel.WHATSAPP, phone=phone, is_simulation=False).order_by("-last_activity_at").values("pk")[:1]
+        ).update(last_inbound_at=timezone.now())
+        config = connection.connection.config or {}
+        try:
+            minutes = float(config.get("handover_wait_minutes", DEFAULT_HANDOVER_WAIT_MINUTES))
+        except (TypeError, ValueError):
+            minutes = DEFAULT_HANDOVER_WAIT_MINUTES
+        if minutes <= 0:
+            return ""
+        last_staff = conversation.messages.filter(author_role=ConversationMessage.Author.STAFF, is_internal=False).order_by("-created_at").first()
+        since = last_staff.created_at if last_staff else conversation.created_at
+        if timezone.now() - since < timedelta(minutes=minutes):
+            return ""
+        if not cache.add(f"channels:wa-soon:{conversation.id}:{last_staff.id if last_staff else 'none'}", 1, 24 * 3600):
+            return ""
+        text = provider.reply_text("officer_soon", conversation.language or "en")
+        _add(conversation, role=ConversationMessage.Author.SYSTEM, body=f"Sent to the person: {text}", internal=True)
+        return text
 
 
 class WhatsAppOutbound:

@@ -80,6 +80,7 @@ def _file_types():
 FILE_TYPES = _file_types()
 
 TEXT = {"label": "Text", "label_tn": "Mafoko"}
+WAY_OUT = _f("way_out", "boolean", "Offer Main menu and Save and stop on this step", "Neela Lenane le legolo le Boloka o emise mo kgatong e", default=True)
 
 NODE_SETTINGS: dict[str, dict] = {
     "menu": {
@@ -108,6 +109,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("choices", "choices", "Choices", "Dikgetho", max_ussd=8, max_whatsapp=10, show_if={"field": "answer_type", "in": ["choice"]}),
             _f("error_text", "bilingual", "Message when the answer is not right", "Molaetsa fa karabo e sa siama", optional=True),
             _f("sensitive", "boolean", "Sensitive answer (not written to the session log)", "Karabo e e botlhokwa (ga e kwalwe mo rekotong)", default=False),
+            WAY_OUT,
         ],
     },
     "save_draft": {
@@ -175,6 +177,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("too_big_text", "bilingual", "Reply for a file that is too big", "Karabo ya faele e kgolo thata", default={"en": "That file is too big. Send a smaller one.", "tn": "Faele eo e kgolo thata. Romela e potlana."}),
             _f("needed_text", "bilingual", "Reply when a file is needed", "Karabo fa faele e tlhokega", default={"en": "Please send a file to go on.", "tn": "Tsweetswee romela faele go tswelela."}),
             _f("failed_text", "bilingual", "Reply when the file could not be saved", "Karabo fa faele e sa kgona go bolokwa", default={"en": "We could not save that file. Please try again.", "tn": "Ga re a kgona go boloka faele eo. Tsweetswee leka gape."}),
+            WAY_OUT,
         ],
     },
     "submit": {
@@ -190,6 +193,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("error_text", "bilingual", "Message when it cannot be sent", "Molaetsa fa e sa kgone go romelwa", default={"en": "We could not send your idea right now. It is saved; please try again later.", "tn": "Ga re a kgona go romela kakanyo ya gago jaanong. E bolokilwe; tsweetswee leka gape moragonyana."}),
             _f("success_next", "node", "When it is sent, go to", "Fa e rometswe, ya kwa", optional=True),
             _f("error_next", "node", "If it cannot be sent, go to", "Fa e sa kgone go romelwa, ya kwa", optional=True),
+            _f("way_out", "boolean", "Understand menu, cancel and greeting words on this step", "Tlhaloganya mafoko a lenane, go emisa le go dumedisa mo kgatong e", default=True),
         ],
     },
     # Whole idea in WhatsApp (feat/whatsapp-full-flow).
@@ -219,6 +223,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("done_text", "bilingual", "Message after the last question", "Molaetsa morago ga potso ya bofelo", optional=True),
             _f("website_text", "bilingual", "Message for questions to finish on the website ({fields}, {link})", "Molaetsa wa dipotso tse di fediwang mo webosaeteng", default={"en": "Finish these on the website: {fields}. {link}", "tn": "Fetsa tse mo webosaeteng: {fields}. {link}"}),
             _f("error_next", "node", "If the idea cannot be started, go to", "Fa kakanyo e sa kgone go simololwa, ya kwa", optional=True),
+            WAY_OUT,
         ],
     },
     "my_ideas": {

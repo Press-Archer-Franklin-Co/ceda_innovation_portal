@@ -139,7 +139,7 @@ export default function ChatPanel({ type, id, row, onChanged }) {
           ) : chat.messages.length === 0 ? (
             <p className="py-10 text-center text-[13px] text-muted">{t('inbox.noMessages')}</p>
           ) : (
-            <ChatThread messages={chat.messages} personName={name} typing={chat.typing} seenAt={chat.seenAt} />
+            <ChatThread messages={chat.messages} personName={name} typing={chat.typing} seenAt={chat.seenAt} channel={channel} handedOverBy={c?.handed_over_by} />
           )}
         </div>
 
