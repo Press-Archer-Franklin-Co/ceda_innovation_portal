@@ -318,6 +318,13 @@ function Stopped({ status }: { status: EntryStatus }) {
           <p>{t('ent.limitBody', { count: status.max_entries ?? status.entries_used })}</p>
         </StopCard>
       )
+    case 'not_ready':
+      return (
+        <StopCard icon={Clock} tone="warning" title={t('chd.openSoon')}
+          actions={<><Link to={`/challenges/${c.slug}`} className={buttonClasses({})}>{t('ent.backToChallenge')}</Link><Link to={status.general_idea_url || '/submit'} className={buttonClasses({ variant: 'secondary' })}>{t('ent.generalIdea')}</Link></>}>
+          <p>{t('chd.openSoonBody')}</p>
+        </StopCard>
+      )
     case 'not_open':
       return (
         <StopCard icon={Clock} tone="warning" title={t('ent.notOpenTitle', { when: formatDate(c.opens_at, lang) })}

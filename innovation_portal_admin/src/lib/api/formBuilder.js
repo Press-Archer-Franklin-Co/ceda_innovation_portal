@@ -103,6 +103,9 @@ export const forms = {
   create:      (body)          => client.post('/api/forms/', body),
   duplicate:   (id)            => client.post(`/api/forms/${id}/duplicate/`, {}),
   archive:     (id)            => client.post(`/api/forms/${id}/archive/`, {}),
+  /** Prompt 31: the general idea form (one setting). */
+  generalIdeas:    ()          => client.get('/api/forms/general-ideas/'),
+  setGeneralIdeas: (formId)    => client.put('/api/forms/general-ideas/', { form_id: formId }),
   exportCsv:   (id)            => client.getBlob(`/api/forms/${id}/responses/export/`, { format: 'csv' }),
 
   /** @returns {Promise<FormDraft>} */

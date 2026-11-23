@@ -47,6 +47,8 @@ export interface ChallengeCard {
   cover_url?: string | null
   has_results?: boolean
   results_url?: string | null
+  /** Prompt 31: the challenge's form is published, so Enter can lead to it. */
+  form_ready?: boolean
 }
 
 export type ChallengeStatus = 'open' | 'upcoming' | 'closed'

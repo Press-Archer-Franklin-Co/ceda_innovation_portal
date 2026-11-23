@@ -83,6 +83,7 @@ export const challengesEn = {
   'cb.formCard': 'Entry form: {name} (version {n})',
   'cb.formFacts': '{steps} steps · {questions} questions · {challenge} challenge questions',
   'cb.formNotPublished': 'Not published yet',
+  'cb.formPublishFirst': 'People can enter only once this form is published. Open the form and publish it, then publish the challenge.',
   'cb.changeForm': 'Change form',
   'cb.pickForm': 'Choose a published form',
   'cb.attach': 'Use this form',
@@ -239,6 +240,7 @@ export const challengesTn = {
   'cb.formCard': 'Foromo ya go tsenela: {name} (kgatiso {n})',
   'cb.formFacts': 'Dikarolo di le {steps} · dipotso di le {questions} · dipotso tsa kgwetlho di le {challenge}',
   'cb.formNotPublished': 'Ga e ise e phasaladiwe',
+  'cb.formPublishFirst': 'Batho ba ka tsenela fela fa foromo e e phasaladitswe. Bula foromo o e phasalatse, morago o phasalatse kgwetlho.', // TODO tn-review
   'cb.changeForm': 'Fetola foromo',
   'cb.pickForm': 'Tlhopha foromo e e phasaladitsweng',
   'cb.attach': 'Dirisa foromo e',
