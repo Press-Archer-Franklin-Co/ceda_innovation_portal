@@ -76,8 +76,8 @@ class CopilotTestCase(AssistantTestCase):
         self.addCleanup(patcher.stop)
         return fake
 
-    def add_connection(self, *, provider, model, environment="test", name=None, base_url=""):
-        config = {"model": model, "environment": environment, "timeout_seconds": 30}
+    def add_connection(self, *, provider, model, environment="test", name=None, base_url="", prices=None):
+        config = {"model": model, "environment": environment, "timeout_seconds": 30, **(prices or {})}
         if base_url:
             config["base_url"] = base_url
         connection = IntegrationConnection.objects.create(
@@ -131,19 +131,20 @@ class ProviderTests(CopilotTestCase):
         self.assertEqual(gpt.base_urls[-1], "https://ai.example.co.bw/v1")
         self.assertIn("max_tokens", gpt.calls[-1])
         record = UsageRecord.objects.get(provider="openai_compatible")
-        self.assertEqual(record.cost_usd, Decimal("0"))  # no price for this model: tokens kept, cost 0
+        self.assertIsNone(record.cost_usd)  # no prices on this connection: tokens kept, cost not set
+        self.assertEqual((record.input_tokens, record.output_tokens), (1000, 300))
 
     def test_test_and_live_keys_switch_in_the_console(self):
         claude = self.fake(message(HELP_ANSWER))
         self.switch_on(guests=True)  # a test-key Claude connection
-        live = self.add_connection(provider="anthropic", model="claude-sonnet-5-5", environment="live", name="Claude live")
+        live = self.add_connection(provider="anthropic", model="model-b", environment="live", name="AI service live")
         self.client.post(f"{BASE}/help/", {"question": "How do I start?"}, format="json")
-        self.assertEqual(claude.calls[-1]["model"], "claude-opus-5-5")
+        self.assertEqual(claude.calls[-1]["model"], "model-a")
         self.as_user(self.admin)
         self.assertEqual(self.client.patch(f"{BASE}/admin/settings/", {"keys_in_use": "live"}, format="json").status_code, 200)
         self.client.force_authenticate(None)
         self.client.post(f"{BASE}/help/", {"question": "How do I start?"}, format="json")
-        self.assertEqual(claude.calls[-1]["model"], "claude-sonnet-5-5")
+        self.assertEqual(claude.calls[-1]["model"], "model-b")
         self.assertEqual(UsageRecord.objects.filter(ok=True).latest("created_at").connection_id, live.pk)
         # No live key at all: hidden, never falls back to a test key.
         IntegrationConnection.objects.filter(pk=live.pk).update(is_active=False)
@@ -152,7 +153,7 @@ class ProviderTests(CopilotTestCase):
     def test_several_ai_connections_can_be_active(self):
         self.switch_on()
         self.add_connection(provider="openai", model="gpt-5")
-        self.add_connection(provider="anthropic", model="claude-haiku-5-5", environment="live")
+        self.add_connection(provider="anthropic", model="model-c", environment="live")
         self.assertEqual(IntegrationConnection.objects.filter(kind="ai", is_active=True).count(), 3)
 
     def test_each_failure_reason_hides_the_feature_and_is_recorded(self):
@@ -163,7 +164,7 @@ class ProviderTests(CopilotTestCase):
             (http_error(anthropic.RateLimitError, 429), "busy"),
             (anthropic.APIConnectionError(request=request), "unreachable"),
             (message({}, stop_reason="refusal"), "refused"),
-            (SimpleNamespace(content=[SimpleNamespace(type="text", text="not json")], usage=None, stop_reason="end_turn", model="claude-opus-5-5"), "bad_output"),
+            (SimpleNamespace(content=[SimpleNamespace(type="text", text="not json")], usage=None, stop_reason="end_turn", model="model-a"), "bad_output"),
         ]
         self.switch_on()
         self.as_user(self.innovator)
@@ -190,7 +191,7 @@ class ProviderTests(CopilotTestCase):
         self.fake(message(DRAFT_ANSWER))
         self.fake_openai(completion(HINTS_ANSWER))
         self.switch_on()
-        gpt = self.add_connection(provider="openai", model="gpt-5")
+        gpt = self.add_connection(provider="openai", model="gpt-5", prices={"price_input": 1.25, "price_output": 10, "price_cached": 0.125})
         self.settings_row(routes={"hints": {"connection": str(gpt.pk)}})
         self.as_user(self.innovator)
         self.draft_check(self.draft(self.innovator))
@@ -200,7 +201,7 @@ class ProviderTests(CopilotTestCase):
         rows = {(row["feature"], row["provider"]): row for row in data(self.client.get(f"{BASE}/admin/usage/"))["rows"]}
         self.assertEqual(rows[("draft_check", "anthropic")]["calls"], 1)
         self.assertEqual(rows[("hints", "openai")]["calls"], 1)
-        # gpt-5: 1000 x $1.25 + 200 x $0.125 + 300 x $10 per million tokens.
+        # The connection's prices: 1000 x $1.25 + 200 x $0.125 + 300 x $10 per million tokens.
         self.assertEqual(rows[("hints", "openai")]["cost_usd"], "0.00")
         self.assertEqual(UsageRecord.objects.get(provider="openai").cost_usd, Decimal("0.004275"))
 
@@ -485,3 +486,80 @@ class StatusTests(CopilotTestCase):
         self.switch_on()
         self.assertEqual(data(self.client.get(f"{BASE}/status/"))["setup"]["state"], "ready")
 
+
+
+# -- fix/ai-services-open: any vendor, no default model, prices on the connection ----------------------
+
+
+class OpenVendorTests(CopilotTestCase):
+    def test_any_ai_service_is_listed_first(self):
+        self.as_user(self.admin)
+        providers = data(self.client.get("/api/platform/providers/?kind=ai"))
+        self.assertEqual([p["key"] for p in providers], ["openai_compatible", "anthropic", "openai"])
+        self.assertEqual(providers[0]["label"], "Any AI service (OpenAI-compatible address)")
+        self.assertIn("Ollama", providers[0]["description"])
+        for provider in providers:
+            model = next(field for field in provider["fields"] if field["name"] == "model")
+            self.assertEqual((model["type"], model["default"]), ("text", None))
+
+    def test_a_made_up_compatible_service_goes_from_add_to_test_to_activate_and_answers(self):
+        gpt = self.fake_openai(completion(DRAFT_ANSWER, model="made-up-model-7b"))
+        self.switch_on()  # the switch and the settings row; then only the new service is used
+        IntegrationConnection.objects.filter(kind="ai").delete()
+        self.as_user(self.admin)
+        created = self.client.post(
+            "/api/platform/integrations/",
+            {"kind": "ai", "provider": "openai_compatible", "name": "Local AI", "config": {"base_url": "https://ai.example.invalid/v1", "model": "made-up-model-7b", "environment": "test"}, "secrets": {"api_key": API_KEY}},
+            format="json",
+        )
+        self.assertEqual(created.status_code, 201, created.content)
+        self.assertNotIn(API_KEY, created.content.decode())
+        connection_id = data(created)["id"]
+        report = data(self.client.post(f"/api/platform/integrations/{connection_id}/test/", {}, format="json"))["result"]
+        self.assertTrue(report["ok"], report)
+        self.assertEqual(self.client.post(f"/api/platform/integrations/{connection_id}/activate/", {}, format="json").status_code, 200)
+        self.assertEqual(gpt.base_urls[-1], "https://ai.example.invalid/v1")
+        self.as_user(self.innovator)
+        result = data(self.draft_check(self.draft(self.innovator)))
+        self.assertTrue(result["available"], result)
+        self.assertEqual(gpt.calls[-1]["model"], "made-up-model-7b")
+        self.assertIsNone(UsageRecord.objects.filter(feature="draft_check").get().cost_usd)  # no prices typed: cost not set
+
+    def test_a_connection_without_a_model_fails_validation(self):
+        self.as_user(self.admin)
+        for provider in ("openai_compatible", "anthropic", "openai"):
+            with self.subTest(provider=provider):
+                config = {"environment": "test", **({"base_url": "https://ai.example.invalid/v1"} if provider == "openai_compatible" else {})}
+                response = self.client.post("/api/platform/integrations/", {"kind": "ai", "provider": provider, "name": "No model", "config": config, "secrets": {"api_key": API_KEY}}, format="json")
+                self.assertEqual(response.status_code, 400, response.content)
+                self.assertIn("Enter the model name your service gives you.", json.dumps(response.json()))
+
+    def test_no_vendor_or_model_is_fixed_in_code(self):
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[2]
+        files = [root / "config/settings/base.py", root / "apps/platform_config/providers/ai.py", root / "apps/assistant/gateway.py", *sorted((root / "apps/assistant/providers").glob("*.py"))]
+        for path in files:
+            text = path.read_text(encoding="utf-8")
+            with self.subTest(path=path.name):
+                for name in ("claude-", "gpt-", "DEFAULT_MODEL", "ASSISTANT_MODEL_PRICES"):
+                    self.assertNotIn(name, text)
+
+    def test_the_limit_counts_only_priced_calls(self):
+        self.fake(message(DRAFT_ANSWER))
+        self.switch_on(limit=0.01, prices=None)
+        self.as_user(self.innovator)
+        draft = self.draft(self.innovator)
+        for _ in range(3):  # unpriced calls never reach the limit
+            self.assertTrue(data(self.draft_check(draft))["available"])
+        self.assertEqual(UsageRecord.objects.filter(cost_usd__isnull=True, ok=True).count(), 3)
+        self.as_user(self.admin)
+        report = data(self.client.get(f"{BASE}/admin/usage/"))
+        self.assertEqual((report["month"]["spend_usd"], report["month"]["unpriced_calls"]), ("0.00", 3))
+        self.assertIsNone(report["rows"][0]["cost_usd"])
+        self.assertIn(",not set", self.client.get(f"{BASE}/admin/usage/?download=csv").content.decode())
+        # With prices on the connection, the same calls are counted and stop at the limit.
+        IntegrationConnection.objects.filter(kind="ai").update(config={"model": "model-a", "environment": "test", "price_input": 4, "price_output": 20})
+        self.as_user(self.innovator)
+        self.assertTrue(data(self.draft_check(draft))["available"])  # $0.0148 > $0.01
+        self.assertEqual(data(self.draft_check(draft)), {"available": False})

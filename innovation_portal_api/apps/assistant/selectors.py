@@ -137,6 +137,7 @@ def usage_rows() -> list[dict]:
             tokens_in=Coalesce(Sum("input_tokens"), 0) + Coalesce(Sum("cache_read_tokens"), 0) + Coalesce(Sum("cache_write_tokens"), 0),
             tokens_out=Coalesce(Sum("output_tokens"), 0),
             cost=Sum("cost_usd"),
+            unpriced=Count("id", filter=Q(ok=True, cost_usd__isnull=True)),
         )
         .order_by("feature", "provider")
     )
@@ -148,7 +149,9 @@ def usage_rows() -> list[dict]:
             "failed": row["failed"],
             "tokens_in": row["tokens_in"],
             "tokens_out": row["tokens_out"],
-            "cost_usd": str((row["cost"] or Decimal("0")).quantize(Decimal("0.01"))),
+            # None means "not set": no call in this row has prices. unpriced_calls counts the calls without a price.
+            "cost_usd": None if row["cost"] is None else str(row["cost"].quantize(Decimal("0.01"))),
+            "unpriced_calls": row["unpriced"],
         }
         for row in rows
         if row["calls"] or row["failed"]
@@ -162,6 +165,8 @@ def usage_report() -> dict:
     return {
         "month": {
             "from": gateway.month_start().date().isoformat(),
+            # Only priced calls count toward spend and the limit.
+            "unpriced_calls": UsageRecord.objects.filter(created_at__gte=gateway.month_start(), ok=True, cost_usd__isnull=True).count(),
             "spend_usd": str(spend.quantize(Decimal("0.01"))),
             "limit_usd": str(limit),
             "left_usd": str(max(limit - spend, Decimal("0")).quantize(Decimal("0.01"))),
@@ -180,7 +185,7 @@ def usage_csv() -> str:
     writer = csv.writer(out)
     writer.writerow(["Feature", "Service", "Calls", "Failed", "Tokens in", "Tokens out", "Cost (US dollars)"])
     for row in usage_rows():
-        writer.writerow([FEATURE_LABELS.get(row["feature"], (row["feature"],))[0], row["provider"] or "none", row["calls"], row["failed"], row["tokens_in"], row["tokens_out"], row["cost_usd"]])
+        writer.writerow([FEATURE_LABELS.get(row["feature"], (row["feature"],))[0], row["provider"] or "none", row["calls"], row["failed"], row["tokens_in"], row["tokens_out"], "not set" if row["cost_usd"] is None else row["cost_usd"]])
     return out.getvalue()
 
 
@@ -239,6 +244,7 @@ def overview(language: str = "en") -> dict:
                 "is_active": row.is_active,
                 "status": row.status,
                 "key_ending": _key_hint(row),
+                "prices_set": gateway.prices_from(row.config or {}) is not None,
                 "last_tested_at": row.last_tested_at.isoformat() if row.last_tested_at else None,
                 "last_test_ok": bool((row.last_test_result or {}).get("ok")) if row.last_test_result else None,
                 "used_by": sorted(feature for feature, route in routes.items() if route and route["connection"] == str(row.pk)),
