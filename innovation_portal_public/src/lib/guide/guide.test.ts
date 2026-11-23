@@ -113,6 +113,19 @@ describe('language and switches', () => {
     expect(guideAvailability({ status: { features: { guide: true } }, config: { features: { ai_helper: false } } }).guide).toBe(false)
   })
 
+  it('shows guests the guide only when the admin allows it', () => {
+    const status = { features: { guide: true } }
+    expect(guideAvailability({ status, config: {}, signedIn: false }).guide).toBe(false)
+    expect(guideAvailability({ status, config: { assistant: { guide_for_guests: false } }, signedIn: false }).guide).toBe(false)
+    expect(guideAvailability({ status, config: { assistant: { guide_for_guests: true } }, signedIn: false }).guide).toBe(true)
+    expect(guideAvailability({ status, config: {}, signedIn: true }).guide).toBe(true)
+  })
+
+  it('marks an answer from a helper that is off', () => {
+    expect(normaliseGuide({ available: false }).unavailable).toBe(true)
+    expect(normaliseGuide({ available: true, answer: 'Yes' }).unavailable).toBe(false)
+  })
+
   it('builds the request from the contract', () => {
     const body = guideRequest({ app: 'staff', route: '/staff/workflows', pageTitle: '  Workflows ', language: 'tn', question: ' How? ', targets: [], menu: [] })
     expect(body).toEqual({ app: 'staff', route: '/staff/workflows', page_title: 'Workflows', language: 'tn', question: 'How?', targets: [], menu: [], done_step_ids: [] })

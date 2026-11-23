@@ -130,6 +130,18 @@ describe('Need help guide', () => {
     expect(probe.open).toBe(false)
   })
 
+  it('helper off: says so at once and offers Talk to a person', async () => {
+    const { askGuide } = await import('../../lib/guide/api')
+    askGuide.mockResolvedValueOnce({ ...answer, steps: [], unavailable: true })
+    await mount({ onTalk: vi.fn() })
+    await act(async () => { probe.setOpen(true) })
+    await act(async () => { await probe.ask('How do I create a workflow?') })
+    const panel = document.querySelector('#need-help-guide')
+    expect(probe.status).toBe('failed')
+    expect(panel?.textContent).toContain("The guide can't answer right now.")
+    expect([...panel.querySelectorAll('button')].some((b) => b.textContent === 'Talk to a person')).toBe(true)
+  })
+
   it('Escape ends the guide', async () => {
     await mount()
     await act(async () => { probe.setOpen(true) })
