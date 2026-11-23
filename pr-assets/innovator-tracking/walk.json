@@ -1,0 +1,32 @@
+{
+ "list-1440": {
+  "cards": 10,
+  "overflow": 0
+ },
+ "page3-after-reload": 1,
+ "search": {
+  "url": "/my-ideas?q=DEMO-0007",
+  "cards": 1
+ },
+ "list-390": {
+  "cards": 10,
+  "overflow": 0
+ },
+ "phone-more": 20,
+ "track-1440": 0,
+ "track-390": 0,
+ "dialog-390": 0,
+ "returned-390": 0,
+ "returned": {
+  "banner": 1,
+  "items": 2
+ },
+ "refused": 1,
+ "resent": {
+  "note": 1,
+  "banner_left": 0
+ },
+ "answers_stay_in_order": true,
+ "download": "quote.pdf",
+ "problems": []
+}
