@@ -49,8 +49,8 @@ function ConnectionRow({ connection, providerLabel, onManage }) {
   const environment = connection.config?.environment === 'live' ? 'live' : 'test'
   const state = connection.is_active ? 'active' : 'testing'
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-3">
-      <div className="min-w-0 flex-1">
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
+      <div className="min-w-0 flex-1 basis-full sm:basis-0">
         <p className="truncate text-[14px] font-semibold text-text">{connection.name}</p>
         <p className="truncate text-[12px] text-muted">{[providerLabel, connection.config?.model].filter(Boolean).join(' · ')}</p>
       </div>
