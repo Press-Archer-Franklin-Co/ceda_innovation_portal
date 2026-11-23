@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ChevronDown, Layers } from 'lucide-react'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
+import Textarea from '../ui/Textarea'
 import Select from '../ui/Select'
 import Tag from '../ui/Tag'
 import Skeleton from '../ui/Skeleton'
@@ -42,6 +43,30 @@ function draftOf(stage) {
     kind: stage.moves_on?.kind ?? 'officer',
     pass_mark: stage.moves_on?.pass_mark == null ? '' : String(Number(stage.moves_on.pass_mark)),
     notify_applicants: !!stage.notify_applicants,
+    // Pitch session (23 Nov): starts_at_local is already Gaborone time; the API reads a time without a zone as Gaborone time.
+    pitch_on: Boolean(stage.pitch),
+    pitch_when: stage.pitch?.starts_at_local ? stage.pitch.starts_at_local.slice(0, 16) : '',
+    pitch_minutes: stage.pitch?.duration_minutes ? String(stage.pitch.duration_minutes) : '',
+    pitch_format: stage.pitch?.format ?? 'in_person',
+    pitch_place_en: stage.pitch?.place?.en ?? '',
+    pitch_place_tn: stage.pitch?.place?.tn ?? '',
+    pitch_link: stage.pitch?.meeting_link ?? '',
+    pitch_text_en: stage.pitch?.instructions?.en ?? '',
+    pitch_text_tn: stage.pitch?.instructions?.tn ?? '',
+  }
+}
+
+function pitchBody(draft, stage) {
+  if (!draft.pitch_on) return stage.pitch ? { pitch: null } : {}
+  return {
+    pitch: {
+      starts_at: draft.pitch_when,
+      duration_minutes: draft.pitch_minutes === '' ? null : Number(draft.pitch_minutes),
+      format: draft.pitch_format,
+      place: { en: draft.pitch_place_en, tn: draft.pitch_place_tn },
+      meeting_link: draft.pitch_link,
+      instructions: { en: draft.pitch_text_en, tn: draft.pitch_text_tn },
+    },
   }
 }
 
@@ -63,6 +88,7 @@ function StageCard({ stage, programId, entryForm, open, onToggle, formOptions })
     setError('')
     if (draft.opens_at && draft.closes_at && new Date(draft.closes_at) <= new Date(draft.opens_at)) { setError(t('stg.datesError')); return }
     if (draft.kind === 'panel_score' && draft.pass_mark !== '' && (Number(draft.pass_mark) < 0 || Number(draft.pass_mark) > 100)) { setError(t('stg.passMarkError')); return }
+    if (draft.pitch_on && !draft.pitch_when) { setError(t('pitch.needWhen')); return }
     setBusy(true)
     try {
       const body = {
@@ -72,6 +98,7 @@ function StageCard({ stage, programId, entryForm, open, onToggle, formOptions })
         moves_on: { kind: draft.kind, ...(draft.kind === 'panel_score' ? { pass_mark: draft.pass_mark === '' ? null : Number(draft.pass_mark) } : {}) },
         notify_applicants: draft.notify_applicants,
         ...(first ? {} : { form: draft.form || null }),
+        ...pitchBody(draft, stage),
       }
       await client.patch(`/api/programs/${programId}/stages/${stage.step_id}/`, body)
       qc.invalidateQueries({ queryKey: ['programs', programId, 'stages'] })
@@ -107,6 +134,7 @@ function StageCard({ stage, programId, entryForm, open, onToggle, formOptions })
           <span className="flex w-full flex-wrap gap-x-4 pl-10 text-[12px] text-muted">
             <span>{stage.takes_part === 'shortlisted' ? t('stg.takes.shortlisted') : first ? t('stg.everyone') : stage.reviewers_label || t('stg.takes.all')}</span>
             <span>{t(`stg.moves.${stage.moves_on?.kind ?? 'officer'}`, { mark: stage.moves_on?.pass_mark == null ? '' : Number(stage.moves_on.pass_mark) })}</span>
+            {stage.pitch && <span>{t('pitch.summary', { date: day(stage.pitch.starts_at), time: stage.pitch.time })}</span>}
           </span>
         )}
       </button>
@@ -132,6 +160,26 @@ function StageCard({ stage, programId, entryForm, open, onToggle, formOptions })
             )}
           </div>
           <Toggle className="sm:col-span-2" label={t('stg.notify')} checked={draft.notify_applicants} onChange={(v) => set({ notify_applicants: v })} />
+          <Toggle className="sm:col-span-2" label={t('pitch.on')} description={t('pitch.onHint')} checked={draft.pitch_on} onChange={(v) => set({ pitch_on: v })} />
+          {draft.pitch_on && (
+            <>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                <Input type="datetime-local" label={t('pitch.when')} value={draft.pitch_when} onChange={(e) => set({ pitch_when: e.target.value })} />
+                <Input type="number" min="5" max="600" label={t('pitch.minutes')} optional value={draft.pitch_minutes} onChange={(e) => set({ pitch_minutes: e.target.value })} className="w-[96px]" />
+              </div>
+              <Select label={t('pitch.format')} options={['in_person', 'online'].map((v) => ({ value: v, label: t(`pitch.format.${v}`) }))} value={draft.pitch_format} onChange={(v) => set({ pitch_format: v })} />
+              {draft.pitch_format === 'online' ? (
+                <Input type="url" className="sm:col-span-2" label={t('pitch.link')} placeholder="https://" value={draft.pitch_link} onChange={(e) => set({ pitch_link: e.target.value })} />
+              ) : (
+                <>
+                  <Input label={t('pitch.place')} value={draft.pitch_place_en} maxLength={300} onChange={(e) => set({ pitch_place_en: e.target.value })} />
+                  <Input label={t('pitch.placeTn')} optional value={draft.pitch_place_tn} maxLength={300} onChange={(e) => set({ pitch_place_tn: e.target.value })} />
+                </>
+              )}
+              <Textarea label={t('pitch.instructions')} optional rows={2} maxLength={1500} value={draft.pitch_text_en} onChange={(e) => set({ pitch_text_en: e.target.value })} />
+              <Textarea label={t('pitch.instructionsTn')} optional rows={2} maxLength={1500} value={draft.pitch_text_tn} onChange={(e) => set({ pitch_text_tn: e.target.value })} />
+            </>
+          )}
           {error && <p role="alert" className="text-[13px] font-bold text-danger sm:col-span-2">{error}</p>}
           <div className="flex gap-2 sm:col-span-2">
             <Button size="sm" onClick={save} loading={busy}>{t('stg.save')}</Button>

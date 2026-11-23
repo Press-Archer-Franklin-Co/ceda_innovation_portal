@@ -272,6 +272,43 @@ class PanelFeedbackSerializer(serializers.Serializer):
     work_on = serializers.ListField(child=serializers.CharField(max_length=300, allow_blank=True), max_length=6, default=list)
 
 
+class EntryPitchSessionView(APIView):
+    """23 Nov: one idea's own pitch session, when staff choose it over the stage's session."""
+
+    permission_classes = [HasCapability.of("challenges.manage")]
+
+    @extend_schema(
+        tags=["Programs"],
+        summary="One idea's pitch session",
+        description="GET answers {shortlisted, own: the idea's own session or null, shown: the session the innovator sees or null}. "
+        "PUT {starts_at, duration_minutes?, format: in_person|online, place {en, tn}, meeting_link, instructions {en, tn}} sets the idea's own "
+        "session and tells the person; DELETE removes it (the stage's session, if any, applies again). Times are stored in UTC and shown in "
+        "Gaborone time.",
+        request=OpenApiTypes.OBJECT,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request, program_id, submission_id):
+        from apps.programs import pitch
+
+        submission = get_object_or_404(get_object_or_404(Program, id=program_id).submissions, id=submission_id)
+        own = getattr(submission, "pitch_session", None) if hasattr(submission, "pitch_session") else None
+        return api_success(data={"shortlisted": pitch.is_shortlisted(submission), "own": pitch.payload(own, staff=True), "shown": pitch.payload(pitch.session_for(submission), staff=True)})
+
+    def put(self, request, program_id, submission_id):
+        from apps.programs import pitch
+
+        submission = get_object_or_404(get_object_or_404(Program, id=program_id).submissions, id=submission_id)
+        session = pitch.save_for_idea(submission, request.data, actor=request.user)
+        return api_success(data=pitch.payload(session, staff=True), message="Pitch session saved.")
+
+    def delete(self, request, program_id, submission_id):
+        from apps.programs import pitch
+
+        submission = get_object_or_404(get_object_or_404(Program, id=program_id).submissions, id=submission_id)
+        pitch.save_for_idea(submission, None, actor=request.user)
+        return api_success(data=None, message="Pitch session removed.")
+
+
 class EntryPanelFeedbackView(APIView):
     permission_classes = [HasCapability.of("challenges.manage")]
 
