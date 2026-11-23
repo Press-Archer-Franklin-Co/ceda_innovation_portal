@@ -1,6 +1,7 @@
 // English strings for UI chrome. Content text arrives translated from the API.
 // Keys are grouped by area. Every key here must also exist in tn.ts.
 import { innovatorEn } from './innovator'
+import { innovatorHomeEn } from './innovatorHome'
 import { trackingEn } from './tracking'
 import { signInEn } from './signin'
 import { pagesEn } from './pages'
@@ -9,6 +10,7 @@ import { a11yEn } from './a11y'
 import { statusEn } from './status'
 import { brandEn } from './brand'
 import { guideEn } from './guide'
+import { aiHelperEn } from './aiHelper'
 import { inviteEn } from './invite'
 import { accountEn } from './account'
 import { challengeEntryEn } from './challengeEntry'
@@ -445,6 +447,7 @@ const en = {
   'tabs.news': 'News',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorEn,
+  ...innovatorHomeEn,
   ...trackingEn,
   ...signInEn,
   ...pagesEn,
@@ -453,6 +456,7 @@ const en = {
   ...statusEn,
   ...brandEn,
   ...guideEn,
+  ...aiHelperEn,
   ...inviteEn,
   ...accountEn,
   ...challengeEntryEn,

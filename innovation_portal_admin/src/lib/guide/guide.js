@@ -127,6 +127,7 @@ export function normaliseGuide(data) {
     steps,
     sources: Array.isArray(data?.sources) ? data.sources.filter((s) => s && s.title) : [],
     handoff: Boolean(data?.handoff_suggested),
+    unavailable: data?.available === false, // the helper is off or not set up: offer a person at once
   }
 }
 
@@ -168,8 +169,9 @@ export function questionLanguage(question, pageLang) {
  * Which parts show. guide: the AI guide (status features.guide, and not switched off in public config);
  * chat: live chat (public site). The one "Need help?" button shows when either is on.
  */
-export function guideAvailability({ status, config, chat = false }) {
-  const guide = Boolean(status?.features?.guide) && config?.features?.ai_helper !== false
+export function guideAvailability({ status, config, chat = false, signedIn = true }) {
+  const forThisPerson = signedIn || config?.assistant?.guide_for_guests === true // guests only when the admin allows it
+  const guide = Boolean(status?.features?.guide) && config?.features?.ai_helper !== false && forThisPerson
   return { guide, chat: Boolean(chat), button: guide || Boolean(chat) }
 }
 

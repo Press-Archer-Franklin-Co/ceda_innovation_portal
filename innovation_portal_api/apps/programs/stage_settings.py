@@ -61,6 +61,12 @@ def _form(form) -> dict | None:
     return {"id": str(form.id), "title": form.title, "version": latest.number if latest else None}
 
 
+def _pitch(setting) -> dict | None:
+    from apps.programs.pitch import payload
+
+    return payload(getattr(setting, "pitch_session", None), staff=True)
+
+
 def stage_payload(step, setting, program, order: int) -> dict:
     if setting is None:
         moves_on = _default_moves_on(step, program)
@@ -75,6 +81,7 @@ def stage_payload(step, setting, program, order: int) -> dict:
             "moves_on": moves_on,
             "notify_applicants": True,
             "reviewers_label": reviewers_label(step),
+            "pitch": None,
         }
     moves_on = {"kind": setting.moves_on}
     if setting.moves_on == "panel_score":
@@ -90,6 +97,7 @@ def stage_payload(step, setting, program, order: int) -> dict:
         "moves_on": moves_on,
         "notify_applicants": setting.notify_applicants,
         "reviewers_label": reviewers_label(step),
+        "pitch": _pitch(setting),
     }
 
 
@@ -105,7 +113,7 @@ def stages(program) -> dict:
 
 @transaction.atomic
 def update_stage(program, step_id, data: dict, *, actor) -> dict:
-    """PATCH one stage: form, opens_at, closes_at, takes_part, moves_on, notify_applicants."""
+    """PATCH one stage: form, opens_at, closes_at, takes_part, moves_on, notify_applicants, pitch."""
     from apps.programs.models import ProgramStage, SubmissionForm
 
     workflow = workflow_for(program)
@@ -147,6 +155,12 @@ def update_stage(program, step_id, data: dict, *, actor) -> dict:
         else:
             setting.pass_mark = None
     setting.save()
+    if "pitch" in data:
+        # Pitch session for this stage (date, time, place or link, instructions); null clears it. Audited there.
+        from apps.programs.pitch import save_for_stage
+
+        save_for_stage(program, setting, data["pitch"], actor=actor)
+        setting.refresh_from_db()
     after = stage_payload(step, setting, program, 0)
     AuditService.log_action(actor=actor, action_type="challenge_stage_updated", target=program, before_state=before, after_state=after, metadata={"step_id": str(step.id)})
     order = next(index for index, item in enumerate(_steps(workflow), start=1) if item.id == step.id)

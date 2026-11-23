@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from apps.channels import actions
 from apps.channels.actions import pick
+from apps.channels.ai_guidance import AIGuidanceMixin
 from apps.channels.form_steps import FormQuestionsMixin
 from apps.channels.my_ideas import MyIdeasMixin
 from apps.channels.way_out import SKIP, WayOutMixin, norm
@@ -134,7 +135,7 @@ def fill(template: str, variables: dict) -> str:
     return re.sub(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", replace, template)
 
 
-class JourneyRunner(WayOutMixin, FormQuestionsMixin, MyIdeasMixin):
+class JourneyRunner(WayOutMixin, AIGuidanceMixin, FormQuestionsMixin, MyIdeasMixin):
     """Walk a journey graph for one person.
 
     ``context`` carries what the runner needs from outside: ``channel`` (ussd, whatsapp),
@@ -218,7 +219,11 @@ class JourneyRunner(WayOutMixin, FormQuestionsMixin, MyIdeasMixin):
         if node is None:
             return self.start()
         text = (text or "").strip()
-        out = self._way_out(node, text)
+        out = self._ai_pending(node, text) if node["type"] == "form_questions" else None
+        if out is None:
+            out = self._way_out(node, text)
+        if out is None:
+            out = self._ai_help(node, text)
         if out is not None:
             return out
         if text == SKIP:
@@ -449,8 +454,11 @@ class JourneyRunner(WayOutMixin, FormQuestionsMixin, MyIdeasMixin):
             counts[node["key"]] = count
             self.logged_steps.append((node["key"], "file", lowered[:300], len(self.media)))
             self._say("person", f"[{len(self.media)} file(s)]")
+            reading = self._ai_documents(node, self._saved_documents)
+            if reading:
+                notes.append(reading)
             if count >= max_files:
-                return self._advance(node.get("next") or "", prefix=[n for n in notes[-1:] if n])
+                return self._advance(node.get("next") or "", prefix=[n for n in notes[-2:] if n] if reading else [n for n in notes[-1:] if n])
             return self._show(node, [], error="\n".join(dict.fromkeys(n for n in notes if n)))
         if lowered and (lowered in self._words(settings.get("skip_words")) or lowered in self._words(settings.get("done_words"))):
             if required and count == 0:
@@ -468,6 +476,7 @@ class JourneyRunner(WayOutMixin, FormQuestionsMixin, MyIdeasMixin):
         max_mb = float(settings.get("max_mb") or 10)
         allowed = {str(x).lower().lstrip(".") for x in (settings.get("allowed_types") or [])}
         notes: list[str] = []
+        self._saved_documents = []
         for item in self.media:
             if count >= max_files:
                 break
@@ -496,6 +505,8 @@ class JourneyRunner(WayOutMixin, FormQuestionsMixin, MyIdeasMixin):
                 if document is None:
                     notes.append(self.t(settings.get("wrong_type_text" if error == "wrong_type" else "failed_text")) or self.default("broken"))
                     continue
+                if getattr(document, "pk", None):
+                    self._saved_documents.append(str(document.pk))
             count += 1
             notes.append(self.t(settings.get("received_text")))
         return count, notes

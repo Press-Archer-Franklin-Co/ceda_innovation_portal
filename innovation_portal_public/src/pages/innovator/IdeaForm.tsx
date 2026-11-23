@@ -14,6 +14,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useShellSettings } from '../../components/layout/shellData'
 import EntryBand from '../../components/challenges/EntryBand'
 import FormRenderer from '../../components/innovator/form/FormRenderer'
+import AiHelperPanel from '../../components/innovator/form/AiHelperPanel'
 import { showAnswer } from '../../components/innovator/form/showAnswer'
 import {
   type Answers, type FieldProblem, answersToSend, checkStep,
@@ -412,7 +413,22 @@ export default function IdeaForm() {
           </div>
         </section>
 
-        <aside className="flex flex-col gap-4">
+        {/* 2.13: the AI helper sits on top and the right column stays in view, with its own scroll, while the form scrolls. */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-[128px] lg:max-h-[calc(100vh-152px)] lg:self-start lg:overflow-y-auto lg:overscroll-contain">
+          <AiHelperPanel
+            draftId={id}
+            steps={steps}
+            stepIndex={stepIndex}
+            answers={answers}
+            onShowField={(index, key) => {
+              if (index !== stepIndex) goTo(index)
+              window.setTimeout(() => {
+                const box = document.querySelector<HTMLElement>(`[data-guide="idea.field.${CSS.escape(key)}"]`)
+                box?.scrollIntoView({ block: 'center' })
+                box?.querySelector<HTMLElement>('input, textarea, select, button')?.focus({ preventScroll: true })
+              }, 50)
+            }}
+          >
           {!onReview && similar.length > 0 && (
             <section className={clsx('rounded-card p-6', slug ? 'bg-info-soft' : 'bg-surface2')}>
               <p className={clsx('flex items-center gap-2 font-heading text-d-h5', slug ? 'text-info' : 'text-text')}>
@@ -451,6 +467,7 @@ export default function IdeaForm() {
               {t('form.voiceNote', { number: settings.whatsapp_number })}
             </p>
           )}
+          </AiHelperPanel>
         </aside>
       </div>
     </div>

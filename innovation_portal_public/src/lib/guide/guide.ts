@@ -18,7 +18,7 @@ export type TargetKind = 'button' | 'field' | 'menu' | 'tab' | 'link'
 export interface GuideTarget { id: string; label: string; kind: TargetKind }
 export interface MenuLink { path: string; label: string }
 export interface GuideStep { id: string; text: string; targetId: string | null; route: string | null; doneWhen: { type: DoneType; targetId: string | null; route: string | null } }
-export interface GuideAnswer { answer: string; language: 'en' | 'tn'; steps: GuideStep[]; sources: { type?: string; id?: string; title: string }[]; handoff: boolean }
+export interface GuideAnswer { answer: string; language: 'en' | 'tn'; steps: GuideStep[]; sources: { type?: string; id?: string; title: string }[]; handoff: boolean; unavailable: boolean }
 export type GuideEvent = { type: 'click' | 'input'; targetId: string } | { type: 'route'; path: string }
 
 export const DONE_TYPES: DoneType[] = ['click', 'route', 'input', 'none']
@@ -139,6 +139,7 @@ export function normaliseGuide(data: any): GuideAnswer {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sources: Array.isArray(data?.sources) ? data.sources.filter((s: any) => s && s.title) : [],
     handoff: Boolean(data?.handoff_suggested),
+    unavailable: data?.available === false, // the helper is off or not set up: offer a person at once
   }
 }
 
@@ -181,8 +182,9 @@ export function questionLanguage(question: string, pageLang: string): 'en' | 'tn
  * chat: live chat (public site). The one "Need help?" button shows when either is on.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function guideAvailability({ status, config, chat = false }: { status: any; config: any; chat?: boolean }) {
-  const guide = Boolean(status?.features?.guide) && config?.features?.ai_helper !== false
+export function guideAvailability({ status, config, chat = false, signedIn = true }: { status: any; config: any; chat?: boolean; signedIn?: boolean }) {
+  const forThisPerson = signedIn || config?.assistant?.guide_for_guests === true // guests only when the admin allows it
+  const guide = Boolean(status?.features?.guide) && config?.features?.ai_helper !== false && forThisPerson
   return { guide, chat: Boolean(chat), button: guide || Boolean(chat) }
 }
 

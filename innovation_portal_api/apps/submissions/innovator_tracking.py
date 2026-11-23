@@ -333,7 +333,14 @@ def tracking(user, idea_id, lang: str = "en") -> dict:
         "documents": documents(submission),
         "can_add_documents": not finished,
         "returned": returned_payload(submission, lang),
+        **_pitch(submission, lang),
     }
+
+
+def _pitch(submission, lang: str) -> dict:
+    from apps.programs.pitch import innovator_fields
+
+    return innovator_fields(submission, lang)
 
 
 # 3.16 Send back for changes and 2.4b Fix and resend ---------------------------------------------------------------

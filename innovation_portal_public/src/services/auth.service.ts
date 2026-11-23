@@ -33,6 +33,8 @@ export interface SocialProvider {
 
 export interface PublicConfig {
   features: Record<string, boolean>
+  /** Which AI helper parts are on for everyone; guide_for_guests: guests may use the guide. */
+  assistant?: Record<string, boolean>
   sign_in: {
     password: boolean
     code: boolean
