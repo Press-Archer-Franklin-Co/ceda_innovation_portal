@@ -147,9 +147,9 @@ export default function Forms() {
       {list.isError ? (
         <ErrorState title={t('forms.loadError')} message={list.error?.message} onRetry={list.refetch} framed />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy={list.isFetching || undefined}>
+        <div className="grid gap-[14px] sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4" aria-busy={list.isFetching || undefined}>
           {list.isLoading
-            ? [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[166px] rounded-card" />)
+            ? [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[72px] rounded-card sm:h-[166px]" />)
             : results.map((form) => <FormCard key={form.id} form={form} actions={actionsFor(form)} />)}
         </div>
       )}

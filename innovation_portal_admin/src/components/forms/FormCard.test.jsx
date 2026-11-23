@@ -26,6 +26,19 @@ const card = (f = form) => {
   return div
 }
 
+// What shows at a width: drop what Tailwind hides there (jsdom applies no media queries).
+function shown(el, width) {
+  const copy = el.cloneNode(true)
+  for (const node of [...copy.querySelectorAll('*')]) {
+    const c = node.getAttribute('class')?.split(/\s+/) ?? []
+    const hidden = width === 'phone'
+      ? c.includes('hidden')
+      : c.includes('sm:hidden')
+    if (hidden || c.includes('sr-only')) node.remove()
+  }
+  return copy.textContent
+}
+
 describe('FormCard (3.4)', () => {
   it('shows the facts from the frame', () => {
     const text = card().textContent
@@ -36,7 +49,7 @@ describe('FormCard (3.4)', () => {
 
   it('has the document icon tile and no sketch of the layout', () => {
     const el = card()
-    expect(el.querySelector('.bg-accent-soft svg.stroke-accent')).not.toBeNull()
+    expect(el.querySelector('.sm\\:bg-accent-soft svg.sm\\:stroke-accent')).not.toBeNull()
     expect(el.querySelector('.grid-cols-4')).toBeNull()
     expect(el.querySelector('.bg-border')).toBeNull()
     expect(el.querySelector('img')).toBeNull()
@@ -54,5 +67,24 @@ describe('FormCard (3.4)', () => {
     expect(text).toContain('–')
     expect(text).toContain('No answers yet')
     expect(text).not.toContain('steps')
+  })
+
+  it('below 640px is the short row: name, status and answers only', () => {
+    const text = shown(card(), 'phone')
+    for (const fact of ['Youth Agri-Innovation entry', 'Published', '312 answers']) expect(text).toContain(fact)
+    for (const gone of ['Youth Agri-Innovation 2026', 'EN · TN', '12 questions', 'edited']) expect(text).not.toContain(gone)
+    expect(shown(card({ ...form, answer_count: 0 }), 'phone')).toContain('No answers yet')
+  })
+
+  it('the phone row keeps the whole-row link and the menu, with the neutral tile', () => {
+    const el = card()
+    expect(el.querySelector('a[href="/forms/f1"]').className).toContain('after:inset-0')
+    expect(el.querySelector('button[aria-haspopup="menu"]').closest('.hidden')).toBeNull()
+    expect(el.querySelector('span.h-10.w-10.bg-surface2 svg.stroke-muted')).not.toBeNull()
+  })
+
+  it('from 640px keeps every fact of the card', () => {
+    const text = shown(card(), 'desktop')
+    for (const fact of ['Youth Agri-Innovation 2026', 'Published', 'EN · TN', '312 answers', '12 questions · 2 steps']) expect(text).toContain(fact)
   })
 })
