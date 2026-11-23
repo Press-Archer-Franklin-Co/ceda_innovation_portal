@@ -3,7 +3,7 @@ import { act } from 'react-dom/test-utils'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { I18nProvider } from '../../../i18n'
-import AiHelperPanel from './AiHelperPanel'
+import AiHelperPanel, { useCheckMyIdea } from './AiHelperPanel'
 import type { FormField, FormStep } from '../../../types/innovator'
 
 // 2.13: the AI helper panel beside the idea form.
@@ -86,6 +86,22 @@ const textarea = () => document.querySelector('textarea')!
 const type = (el: HTMLTextAreaElement, text: string) => {
   el.value = text
   el.dispatchEvent(new Event('input', { bubbles: true }))
+}
+
+// A second Check my idea button elsewhere on the page (beside Next), sharing the panel's review.
+function WithNextButton({ answers }: { answers: Record<string, unknown> }) {
+  const check = useCheckMyIdea()
+  return (
+    <I18nProvider>
+      <section aria-labelledby="step-heading">
+        <textarea name="problem" defaultValue={String(answers.problem ?? '')} />
+        {check.available && <button type="button" id="beside-next" onClick={(e) => check.openFrom(e.currentTarget)}>Check my idea</button>}
+      </section>
+      <AiHelperPanel draftId="d1" steps={steps} stepIndex={0} answers={answers} onShowField={onShowField} check={check}>
+        <p>Tips for this step</p>
+      </AiHelperPanel>
+    </I18nProvider>
+  )
 }
 
 describe('AiHelperPanel', () => {
@@ -186,5 +202,23 @@ describe('AiHelperPanel', () => {
     expect(dialog.textContent).toContain('0 of 1 parts strong')
     expect(dialog.textContent).toContain('Name your first 3 shops.')
     expect(dialog.textContent).toContain('Your answers are not shared or used to train AI.')
+  })
+
+  it('the button beside Next shows only while the helper is on, and opens the same review', async () => {
+    api.status.mockResolvedValueOnce({ available: false, features: {} })
+    host = document.createElement('div')
+    document.body.appendChild(host)
+    root = createRoot(host)
+    await act(async () => root!.render(<WithNextButton answers={{ problem: 'Mopane worms spoil in open bags.' }} />))
+    await flush()
+    expect(document.querySelector('#beside-next')).toBeNull()
+    act(() => root!.unmount())
+    root = createRoot(host)
+    await act(async () => root!.render(<WithNextButton answers={{ problem: 'Mopane worms spoil in open bags.' }} />))
+    await flush()
+    await act(async () => (document.querySelector('#beside-next') as HTMLButtonElement).click())
+    await flush()
+    expect(document.querySelector('[role="dialog"]')?.textContent).toContain('Name your first 3 shops.')
+    expect(api.draftCheck).toHaveBeenCalledTimes(1)
   })
 })
