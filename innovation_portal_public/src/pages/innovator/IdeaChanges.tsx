@@ -19,7 +19,7 @@ import type { FormField, FormStep, IdeaTracking, ReturnedForChanges, TrackedIdea
  * "Respond to changes" (/my-ideas/:id/changes): one of the three modes of an idea, next to viewing a sent idea
  * (/my-ideas/:id, read only) and editing an unfinished draft (/my-ideas/draft/:id).
  * The form as it was sent, with every answer. The officer's notes are pinned at the top; only the questions they
- * flagged can change, and they are highlighted. "Send changes" goes through the workflow from #103
+ * flagged can change, and they are highlighted. "Send changes" goes through the workflow from PR 103
  * (POST /api/me/ideas/{id}/resend/): the idea returns to the same stage and the officer is told.
  */
 export default function IdeaChanges() {
