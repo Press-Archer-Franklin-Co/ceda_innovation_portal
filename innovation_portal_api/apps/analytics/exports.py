@@ -9,10 +9,15 @@ import json
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.analytics.dashboard import REPORTS, parse_filters
 from apps.analytics.models import AnalyticsExport
+
+
+def _safe_cell(value):
+    """Stops a spreadsheet from running a name such as =SUM(...) as a formula."""
+    return f"'{value}" if isinstance(value, str) and value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
 
 
 def _rows(name: str, data: dict) -> list[list]:
@@ -25,19 +30,26 @@ def _rows(name: str, data: dict) -> list[list]:
                 walk(f"{prefix}.{key}" if prefix else key, item)
         elif isinstance(value, list):
             for index, item in enumerate(value):
-                label = item.get("code") or item.get("slug") or item.get("channel") or item.get("period_start") if isinstance(item, dict) else None
+                label = item.get("code") or item.get("slug") or item.get("channel") or item.get("period_start") or item.get("date") if isinstance(item, dict) else None
                 walk(f"{prefix}.{label or index}", item)
         else:
-            rows.append([name, prefix, "" if value is None else value])
+            rows.append([name, prefix, "" if value is None else _safe_cell(value)])
 
     walk("", data)
     return rows
 
 
 def build(export: AnalyticsExport) -> tuple[bytes, str]:
-    filters = parse_filters(export.filters or {})
-    names = list(REPORTS) if export.report == "all" else [export.report]
-    results = {name: REPORTS[name](filters, export.requested_by) for name in names}
+    if export.report == "chat":
+        # Not in dashboard.REPORTS: it has its own filters and permission, and "all" stays the dashboard numbers.
+        from apps.analytics.chat_report import chat_report, parse_filters as parse_chat_filters
+
+        filters = parse_chat_filters(export.filters or {})
+        results = {"chat": chat_report(filters, export.requested_by)}
+    else:
+        filters = parse_filters(export.filters or {})
+        names = list(REPORTS) if export.report == "all" else [export.report]
+        results = {name: REPORTS[name](filters, export.requested_by) for name in names}
     rows = [row for name, data in results.items() for row in _rows(name, data)]
     stamp = timezone.localtime().strftime("%Y%m%d-%H%M")
     if export.format == "csv":
@@ -51,7 +63,8 @@ def build(export: AnalyticsExport) -> tuple[bytes, str]:
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "CEDA Innovation Portal: dashboard numbers", new_x="LMARGIN", new_y="NEXT")
+    heading = "live chat report" if export.report == "chat" else "dashboard numbers"
+    pdf.cell(0, 10, f"CEDA Innovation Portal: {heading}", new_x="LMARGIN", new_y="NEXT")
     pdf.set_font("Helvetica", "", 9)
     pdf.multi_cell(0, 5, f"Made {timezone.localtime():%d %b %Y %H:%M}. Filters: {json.dumps(filters.as_dict())}", new_x="LMARGIN", new_y="NEXT")
     current = None
@@ -72,7 +85,15 @@ def request_export(*, user, report: str, fmt: str, filters: dict) -> AnalyticsEx
         raise ValidationError({"report": f"Use one of: {', '.join(AnalyticsExport.REPORTS)}."})
     if fmt not in AnalyticsExport.FORMATS:
         raise ValidationError({"format": "Use csv or pdf."})
-    parse_filters(filters or {})  # refuse bad filters now, not in the job
+    if report == "chat":
+        from apps.analytics.chat_report import parse_filters as parse_chat_filters
+        from apps.core.capabilities import user_has
+
+        if not user_has(user, "analytics.view"):  # the same permission as reading the report
+            raise PermissionDenied("You cannot see the chat report.")
+        parse_chat_filters(filters or {})
+    else:
+        parse_filters(filters or {})  # refuse bad filters now, not in the job
     export = AnalyticsExport.objects.create(requested_by=user, report=report, format=fmt, filters=filters or {})
     transaction.on_commit(lambda: _queue(export.id))
     return export

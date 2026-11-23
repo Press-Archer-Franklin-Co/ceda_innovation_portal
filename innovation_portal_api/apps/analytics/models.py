@@ -13,7 +13,7 @@ class AnalyticsExport(UUIDModel, TimeStampedModel):
         READY = "ready", "Ready"
         FAILED = "failed", "Failed"
 
-    REPORTS = ("kpis", "series", "pipeline", "funnel", "sources", "sectors", "inclusion", "all")
+    REPORTS = ("kpis", "series", "pipeline", "funnel", "sources", "sectors", "inclusion", "all", "chat")
     FORMATS = ("csv", "pdf")
 
     requested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="analytics_exports")
