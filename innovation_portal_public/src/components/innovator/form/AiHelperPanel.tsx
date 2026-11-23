@@ -166,7 +166,6 @@ export default function AiHelperPanel({
       seen.current.add(file.id)
       if (!first && docsOn && helper === 'on') review(file)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadIds, step?.code, helper, docsOn])
 
   useEffect(() => () => Object.values(docControllers.current).forEach((c) => c.abort()), [])
