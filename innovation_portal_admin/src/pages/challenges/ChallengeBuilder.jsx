@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, FileText, Plus, Trash2, X } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
+import EditorWorkspace from '../../components/ui/EditorWorkspace'
 import Button from '../../components/ui/Button'
 import Input, { InputControl } from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
@@ -359,7 +360,8 @@ function EditChallenge({ id }) {
   const publicUrl = p.slug ? `${window.location.origin}/challenges/${p.slug}` : null
 
   return (
-    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
+    <EditorWorkspace
+      header={
       <PageHeader
         back={
           <span className="text-[12px] text-muted">
@@ -376,9 +378,9 @@ function EditChallenge({ id }) {
           </div>
         }
       />
-
-      <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[220px_minmax(0,1fr)] 2xl:grid-cols-[240px_minmax(0,1fr)]">
-        <nav aria-label={t('cbs.sections')} className="min-w-0">
+      }
+      side={
+        <nav aria-label={t('cbs.sections')} className="min-w-0 lg:w-[220px] 2xl:w-[240px]">
           <ul className="relative flex gap-1 overflow-x-auto lg:flex-col">
             {SECTIONS.map((key) => {
               const current = key === section
@@ -402,7 +404,9 @@ function EditChallenge({ id }) {
             })}
           </ul>
         </nav>
-
+      }
+      noPanel
+    >
         <div className="flex min-w-0 flex-col gap-[14px]">
           {error && <p role="alert" className="rounded-control bg-danger-soft px-3 py-2 text-[13px] text-danger">{error}</p>}
           {section === 'basics' && (
@@ -428,8 +432,7 @@ function EditChallenge({ id }) {
           {section === 'workflow' && <WorkflowSection program={p} />}
           {section === 'publish' && <PublishSection program={p} programId={id} done={done} />}
         </div>
-      </div>
-    </div>
+    </EditorWorkspace>
   )
 }
 
