@@ -48,19 +48,16 @@ export interface DocumentReview {
 
 const DRAFT_CHECK_TIMEOUT_MS = 45000
 
-let statusPromise: Promise<HelperStatus | null> | null = null
-
 export const assistantService = {
-  /** Which helper parts are on for this person. null when it cannot be read (the panel then stays as it was). */
+  /**
+   * Which helper parts are on for this person. null when it cannot be read (the panel then stays as it was).
+   * Asked each time the form opens and never kept: a guest who signs in gets a different answer.
+   */
   status(): Promise<HelperStatus | null> {
-    statusPromise ??= api
+    return api
       .get('/assistant/status/')
       .then(({ data }) => unwrapData<HelperStatus>(data))
-      .catch(() => {
-        statusPromise = null
-        return null
-      })
-    return statusPromise
+      .catch(() => null)
   },
 
   /** Coaching on one step of the draft. answers: this step's unsaved answers (they win over the saved draft). */
@@ -74,11 +71,6 @@ export const assistantService = {
     const { data } = await api.post(`/assistant/documents/${documentId}/review/`, { lang }, { signal, timeout: DRAFT_CHECK_TIMEOUT_MS })
     return unwrapData<DocumentReview>(data)
   },
-}
-
-/** For tests: forget the cached status. */
-export function resetHelperStatus() {
-  statusPromise = null
 }
 
 export const isCancel = (error: unknown) => axios.isCancel(error) || (error instanceof DOMException && error.name === 'AbortError')
