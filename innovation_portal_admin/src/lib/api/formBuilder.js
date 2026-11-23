@@ -24,7 +24,7 @@ import { client } from './client'
  * @property {number} step_count
  * @property {string[]} languages
  * @property {string} updated_at
- * @property {FieldWidth[][]} layout_preview  Widths of the first rows, for the card picture.
+ * @property {FieldWidth[][]} layout_preview  Widths of the first rows. The API still sends it; the list no longer draws it.
  *
  * @typedef {Object} FormList
  * @property {FormListItem[]} results
