@@ -15,6 +15,7 @@ import { Toggle } from '../../components/ui/Choice'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
+import { useTrigger } from '../../components/ui/useTrigger'
 import { cn } from '../../lib/cn'
 import { PERMISSION_COLUMNS, copyableCapabilities, describeChanges, locksFrom, matrixChanges, permissionGroups, pickText, toggleCell } from '../../lib/admin/roles'
 import { useMediaQuery } from '../../lib/useMediaQuery'
@@ -27,7 +28,7 @@ const apiMessage = (err) => {
   return typeof first === 'string' ? first : err?.message ?? ''
 }
 
-function RoleDialog({ role, onClose }) {
+function RoleDialog({ role, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const act = useRoleAction()
@@ -48,7 +49,7 @@ function RoleDialog({ role, onClose }) {
     }
   }
   return (
-    <Modal open onClose={onClose} title={role?.id ? t('roles.editTitle') : t('roles.newTitle')} size="md"
+    <Modal open onClose={onClose} triggerRef={triggerRef} title={role?.id ? t('roles.editTitle') : t('roles.newTitle')} size="md"
       footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={save} loading={act.isPending}>{role?.id ? t('roles.saveRole') : t('roles.create')}</Button></>}>
       <div className="flex flex-col gap-3">
         {builtIn && <p className="rounded-control bg-surface2 px-3 py-2 text-[12px] text-muted">{t('roles.builtInNote')}</p>}
@@ -68,6 +69,7 @@ const GROUP_LABEL = { website: 'roles.u9.group.website', administration: 'roles.
 
 /** 3.24 ① roles down the side with their people; ② what the chosen role can do, in plain words. */
 function RolesView() {
+  const roleTrigger = useTrigger()
   const t = useT()
   const { lang } = useI18n()
   const toast = useToast()
@@ -180,7 +182,7 @@ function RolesView() {
           <h2 id="role-panel-title" className="truncate text-[13px] font-bold text-text">{t('roles.u9.whatTheyCanDo', { name: pickText(selected.name, lang) })}</h2>
           {wide && (
             <DropdownMenu label={t('roles.actions', { name: pickText(selected.name, lang) })} align="start" items={[
-              { key: 'edit', label: builtIn ? t('roles.u9.describe') : t('roles.rename'), onSelect: () => setDialog(selected) },
+              { key: 'edit', label: builtIn ? t('roles.u9.describe') : t('roles.rename'), onSelect: () => { roleTrigger.ref.current = null; setDialog(selected) } },
               { key: 'retire', label: selected.is_active ? t('roles.retire') : t('roles.restore'), hidden: builtIn, onSelect: () => act.mutateAsync({ action: 'update', id: selected.id, value: { is_active: !selected.is_active } }).catch((e) => toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })) },
               { key: 'delete', label: t('roles.delete'), danger: true, hidden: builtIn, onSelect: () => remove(selected) },
             ]} trigger={(props) => <button type="button" {...props} className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted hover:bg-surface hover:text-text"><MoreHorizontal size={15} aria-hidden /><span className="sr-only">{t('roles.actions', { name: pickText(selected.name, lang) })}</span></button>} />
@@ -255,7 +257,7 @@ function RolesView() {
           <p className="flex items-center gap-2 rounded-control bg-surface2 px-3 py-2.5 text-[12px] text-text"><Info size={14} aria-hidden className="shrink-0 text-muted" />{t('roles.u9.phoneNote')}</p>
         </div>
       )}
-      {dialog && <RoleDialog key={dialog === 'new' ? 'new' : dialog.id} role={dialog === 'new' ? null : dialog} onClose={() => setDialog(null)} />}
+      {dialog && <RoleDialog key={dialog === 'new' ? 'new' : dialog.id} role={dialog === 'new' ? null : dialog} onClose={() => setDialog(null)} triggerRef={roleTrigger.ref} />}
     </>
   )
 }
@@ -353,6 +355,7 @@ function ApprovalsTab() {
 
 /** 3.24 Roles and permissions (Figma 111:1585, 111:2052). Needs settings.manage; the API refuses everyone else. */
 export default function RolesPermissions() {
+  const newRole = useTrigger()
   const t = useT()
   const wide = useMediaQuery('(min-width: 768px)')
   const [params, setParams] = useSearchParams()
@@ -364,14 +367,14 @@ export default function RolesPermissions() {
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('roles.title')}</span>}
         title={t('roles.u9.title')}
         subtitle={t('roles.u9.subtitle')}
-        actions={wide && tab === 'roles' ? <Button data-guide="roles.create" onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
+        actions={wide && tab === 'roles' ? <Button ref={newRole.ref} data-guide="roles.create" onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
       />
       {wide && (
         <Tabs tabs={[{ key: 'roles', label: t('roles.tabRoles') }, { key: 'approvals', label: t('roles.u9.tabSteps') }]} active={tab}
           onChange={(key) => setParams(key === 'roles' ? {} : { tab: key }, { replace: true })} label={t('roles.title')} className="mb-4" />
       )}
       <Fragment key={tab}>{tab === 'roles' || !wide ? <RolesView /> : <ApprovalsTab />}</Fragment>
-      {dialog && <RoleDialog role={null} onClose={() => setDialog(false)} />}
+      {dialog && <RoleDialog role={null} onClose={() => setDialog(false)} triggerRef={newRole.ref} />}
     </div>
   )
 }

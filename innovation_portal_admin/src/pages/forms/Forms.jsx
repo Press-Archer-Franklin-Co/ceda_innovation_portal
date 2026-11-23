@@ -17,6 +17,7 @@ import { useT } from '../../i18n/context'
 import { forms as formsApi } from '../../lib/api/formBuilder'
 import { formKeys, useArchiveForm, useDuplicateForm } from '../../lib/queries/forms'
 import { useTabParam } from '../../lib/useTabParam'
+import { useTrigger } from '../../components/ui/useTrigger'
 
 const TABS = [
   { key: 'all', label: 'forms.tabAll', status: undefined, count: 'all' },
@@ -31,7 +32,8 @@ export default function Forms() {
   const navigate = useNavigate()
   const confirm = useConfirm()
   const toast = useToast()
-  const createRef = useRef(null)
+  // The wizard opens out of the control that was used: the header button or the "Create form" card.
+  const create = useTrigger()
   const [creating, setCreating] = useState(false)
   const [query, setQuery] = useState('')
   const [search, setSearch] = useState('')
@@ -114,7 +116,7 @@ export default function Forms() {
         title={t('forms.title')}
         subtitle={t('forms.subtitle')}
         actions={
-          <Button ref={createRef} data-guide="forms.create" onClick={() => setCreating(true)}>
+          <Button ref={create.ref} data-guide="forms.create" onClick={(e) => { create.from(e); setCreating(true) }}>
             <Plus size={16} aria-hidden />
             {t('forms.create')}
           </Button>
@@ -148,7 +150,7 @@ export default function Forms() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy={list.isFetching || undefined}>
           <button
             type="button"
-            onClick={() => setCreating(true)}
+            onClick={(e) => { create.from(e); setCreating(true) }}
             className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-border bg-surface p-4 text-center hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
@@ -167,7 +169,7 @@ export default function Forms() {
         <EmptyState title={search ? t('forms.emptySearch', { query: search }) : t('forms.empty')} compact />
       )}
 
-      <CreateFormWizard open={creating} onClose={() => setCreating(false)} triggerRef={createRef} />
+      <CreateFormWizard open={creating} onClose={() => setCreating(false)} triggerRef={create.ref} />
     </div>
   )
 }

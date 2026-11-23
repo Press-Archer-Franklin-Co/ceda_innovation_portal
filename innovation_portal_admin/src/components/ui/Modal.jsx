@@ -19,6 +19,7 @@ const SIZE_MAP = {
  * Opens with the genie out of triggerRef and closes back into it (ceda-genie-motion).
  * Esc closes, focus is trapped once it has opened and returns to the trigger. Bottom sheet on phone.
  * Props: open, onClose, title, description, size sm|md|lg|xl, footer, triggerRef, closeOnBackdrop, alert.
+ * routeOpened: nothing is clicked to open it (a route, a timer, after a save); it scales in from the centre.
  */
 export default function Modal({ open, onClose, title, description, size = 'md', footer, children, closeOnBackdrop = true, alert = false, bodyClassName, triggerRef }) {
   const t = useT()

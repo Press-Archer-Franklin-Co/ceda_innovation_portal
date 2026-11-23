@@ -10,6 +10,7 @@ import { useConfirm } from '../ui/confirm'
 import { ConnectionStatusTag } from './tags'
 import { useActivateConnection, useDeactivateConnection, useDeleteConnection, useRotateWebhook, useTestConnection } from '../../lib/queries/channels'
 import { useT } from '../../i18n/context'
+import { useTrigger } from '../ui/useTrigger'
 import { cn } from '../../lib/cn'
 
 export function CopyValue({ label, value, mono = true }) {
@@ -67,13 +68,14 @@ export function TestResult({ result }) {
   )
 }
 
-function WhatsAppTestDialog({ open, onClose, onRun, running }) {
+function WhatsAppTestDialog({ open, onClose, onRun, running, triggerRef }) {
   const t = useT()
   const [phone, setPhone] = useState('')
   return (
     <Modal
       open={open}
       onClose={onClose}
+      triggerRef={triggerRef}
       title={t('ch.conn.testTitle')}
       description={t('ch.conn.testBody')}
       footer={
@@ -89,6 +91,7 @@ function WhatsAppTestDialog({ open, onClose, onRun, running }) {
 }
 
 export default function ConnectionCard({ connection, onEdit }) {
+  const testTrigger = useTrigger()
   const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
@@ -203,14 +206,14 @@ export default function ConnectionCard({ connection, onEdit }) {
         <TestResult result={shown} />
 
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" variant="secondary" icon={<Play size={14} />} loading={test.isPending} onClick={startTest}>{t('ch.conn.test')}</Button>
+          <Button ref={testTrigger.ref} size="sm" variant="secondary" icon={<Play size={14} />} loading={test.isPending} onClick={startTest}>{t('ch.conn.test')}</Button>
           {connection.status === 'tested' && <Button size="sm" icon={<Power size={14} />} loading={activate.isPending} onClick={doActivate}>{t('ch.conn.activate')}</Button>}
           {connection.status === 'off' && shown?.ok && <Button size="sm" icon={<Power size={14} />} loading={activate.isPending} onClick={doActivate}>{t('ch.conn.activate')}</Button>}
           {connection.is_active && <Button size="sm" variant="ghost" icon={<PowerOff size={14} />} loading={deactivate.isPending} onClick={doDeactivate}>{t('ch.conn.turnOff')}</Button>}
           {connection.status === 'waiting' && <Button size="sm" icon={<Pencil size={14} />} onClick={() => onEdit(connection)}>{t('ch.conn.enterDetails')}</Button>}
         </div>
       </div>
-      <WhatsAppTestDialog open={testing} onClose={() => setTesting(false)} onRun={runTest} running={test.isPending} />
+      <WhatsAppTestDialog open={testing} onClose={() => setTesting(false)} onRun={runTest} running={test.isPending} triggerRef={testTrigger.ref} />
     </SectionCard>
   )
 }
