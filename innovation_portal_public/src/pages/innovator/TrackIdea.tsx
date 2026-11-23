@@ -15,6 +15,7 @@ import ShortlistedCard from '../../components/innovator/tracking/ShortlistedCard
 import { answerFiles, answerText, isFile } from '../../components/innovator/answers'
 import { formatDate, formatShortDate } from '../../components/innovator/format'
 import { statusWord } from '../../components/innovator/ideaStatus'
+import { usePageTitle } from '../../lib/usePageTitle'
 import { useI18n } from '../../i18n'
 import { innovatorService } from '../../services/innovator.service'
 import type { IdeaTracking, SubmissionAnswer, TimelineStage, TrackedIdea } from '../../types/innovator'
@@ -23,13 +24,15 @@ import type { IdeaTracking, SubmissionAnswer, TimelineStage, TrackedIdea } from 
 export default function TrackIdea() {
   const { id = '' } = useParams()
   const { t, lang } = useI18n()
-  const { hash } = useLocation()
+  const { hash, state: routeState } = useLocation()
   const settings = useShellSettings()
   const [idea, setIdea] = useState<TrackedIdea | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'not_found'>('loading')
   const [tracking, setTracking] = useState<IdeaTracking | null>(null)
+  usePageTitle(idea ? `${idea.title} · ${t('mode.sent')}` : t('mode.sent'))
   const [trackingFailed, setTrackingFailed] = useState(false)
-  const [resent, setResent] = useState(false)
+  // "Send changes" on the changes page comes back here with resent set.
+  const [resent] = useState(Boolean((routeState as { resent?: boolean } | null)?.resent))
 
   const loadTracking = useCallback(async () => {
     setTrackingFailed(false)
@@ -87,6 +90,7 @@ export default function TrackIdea() {
     <div className="bg-bg">
       <section className="border-b border-border bg-surface2">
         <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
+          <p className="text-d-over uppercase font-heading text-muted mb-2">{t('mode.sent')}</p>
           <div className="flex flex-wrap gap-2">
             {tracking?.returned ? <Tag tone="blue">{t('trk.returnedTitle')}</Tag> : <Tag tone={word.tone}>{t(word.key)}</Tag>}
             {program && <Tag tone="neutral">{program}</Tag>}
@@ -109,18 +113,9 @@ export default function TrackIdea() {
         <div className="flex min-w-0 flex-col gap-6">
           {resent && <p role="status" className="rounded-control bg-success-soft px-4 py-3 text-d-body-s text-success">{t('trk.resent')}</p>}
           {tracking?.returned && (
-            <ReturnedCard
-              ideaId={idea.id}
-              returned={tracking.returned}
-              onChanged={loadTracking}
-              onResent={(next) => {
-                setTracking(next)
-                setResent(true)
-                innovatorService.trackedIdea(id).then(setIdea).catch(() => undefined)
-              }}
-            />
+            <ReturnedCard ideaId={idea.id} returned={tracking.returned} />
           )}
-          {word.key === 'status.shortlisted' && <ShortlistedCard session={tracking?.pitch_session} />}
+          <ShortlistedCard shortlisted={tracking?.shortlisted ?? word.key === 'status.shortlisted'} session={tracking?.pitch_session} />
           <MessageThread ideaId={idea.id} />
           {trackingFailed ? (
             <ErrorState title={t('trk.feedbackError')} onRetry={loadTracking} />

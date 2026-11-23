@@ -34,6 +34,7 @@ const InnovatorHome = lazy(() => import('./pages/innovator/InnovatorHome'))
 const MyIdeas = lazy(() => import('./pages/innovator/MyIdeas'))
 const TrackIdea = lazy(() => import('./pages/innovator/TrackIdea'))
 const IdeaForm = lazy(() => import('./pages/innovator/IdeaForm'))
+const IdeaChanges = lazy(() => import('./pages/innovator/IdeaChanges'))
 const Notifications = lazy(() => import('./pages/innovator/Notifications'))
 const PreviewForm = lazy(() => import('./pages/innovator/PreviewForm'))
 const PreviewHome = lazy(() => import('./pages/PreviewHome'))
@@ -181,6 +182,7 @@ function AppRoutes() {
           <Route path="/my-ideas/draft/:id" element={<IdeaForm />} />
           <Route path="/challenges/:slug/entry/:id" element={<IdeaForm />} />
           <Route path="/challenges/:slug/my-result" element={<MyResult />} />
+          <Route path="/my-ideas/:id/changes" element={<IdeaChanges />} />
           <Route path="/my-ideas/:id"       element={<TrackIdea />} />
           <Route path="/notifications"      element={<Notifications />} />
           <Route path="/submissions/:id"    element={<SubmissionRedirect />} />

@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Check, Lightbulb, MessageCircle, Sparkles } from 'lucide-react'
 import clsx from 'clsx'
 import Button from '../../components/ui/Button'
@@ -20,6 +20,7 @@ import {
   type Answers, type FieldProblem, answersToSend, checkStep,
   isLayoutField, isVisible, stepFields,
 } from '../../components/innovator/form/logic'
+import { usePageTitle } from '../../lib/usePageTitle'
 import { useI18n } from '../../i18n'
 import { formsService } from '../../services/forms.service'
 import { type GuestContact, guestContactProblem, guestContactStorage, intakeService, resumeStorage } from '../../services/intake.service'
@@ -70,7 +71,8 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [forms, setForms] = useState<Partial<Record<Lang, PublishedForm>>>({})
   const [answers, setAnswers] = useState<Answers>({})
-  const [stepIndex, setStepIndex] = useState(0)
+  /** The step the person moved to on this visit; until then the draft's saved step (no jump on open). */
+  const [chosenStep, setChosenStep] = useState<number | null>(null)
   const [errors, setErrors] = useState<Record<string, FieldProblem | string[] | string>>({})
   const [save, setSave] = useState<SaveState>({ kind: 'idle' })
   const [now, setNow] = useState(Date.now())
@@ -114,6 +116,7 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   }, [loadDraft])
 
   const draft = load.kind === 'ready' ? load.draft : null
+  usePageTitle(draft ? `${draft.title} · ${t('mode.draft')}` : t('mode.draft'))
 
   // A challenge entry opened from My ideas uses the challenge's own address (2.10).
   const entrySlug = !guest && !slug && draft && !draft.program_detail?.is_general_intake ? draft.program_detail?.slug : null
@@ -135,18 +138,18 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   }, [draft?.form_id, lang, forms, form])
 
   const steps = useMemo(() => (form?.steps ?? []).filter((step) => step.is_active !== false), [form])
+
+  // Open at the step the person was last on. Worked out before the first draw, so the form never shows step 1
+  // and then jumps (the reopening "glitch").
+  const savedStep = useMemo(() => {
+    if (!draft || steps.length === 0) return 0
+    const found = steps.findIndex((s) => s.code === (askedStep || draft.current_section_code))
+    return found >= 0 ? found : 0
+  }, [draft, steps, askedStep])
+  const stepIndex = chosenStep ?? savedStep
   const reviewIndex = steps.length
   const onReview = stepIndex === reviewIndex
   const step: FormStep | undefined = steps[stepIndex]
-
-  // Start at the step the person was last on.
-  const startedAt = useRef(false)
-  useEffect(() => {
-    if (startedAt.current || !draft || steps.length === 0) return
-    startedAt.current = true
-    const found = steps.findIndex((s) => s.code === (askedStep || draft.current_section_code))
-    setStepIndex(found >= 0 ? found : 0)
-  }, [draft, steps, askedStep])
 
   // ── Save ─────────────────────────────────────────────────────────────────
   const saveStep = useCallback(
@@ -221,7 +224,10 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   // ── Moving between steps ─────────────────────────────────────────────────
   function goTo(index: number) {
     setErrors({})
-    setStepIndex(index)
+    setChosenStep(index)
+    // Remember where the person is, so reopening the draft lands here even if they type nothing on this step.
+    const target = steps[index]
+    if (target) intakeService.saveStep(id, target.code, answersToSend(target, answersRef.current)).catch(() => undefined)
     window.scrollTo({ top: 0 })
     window.setTimeout(() => headingRef.current?.focus(), 0)
   }
@@ -328,6 +334,10 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
       </Page>
     )
   }
+  if (load.kind === 'sent' && load.submissionId) {
+    // A sent idea is never edited here: it opens read only on its page (and "Respond to changes" from there).
+    return <Navigate to={`/my-ideas/${load.submissionId}`} replace />
+  }
   if (load.kind === 'sent') {
     return (
       <Page>
@@ -368,6 +378,7 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
         <div className="mx-auto max-w-[1200px] px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-5">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
+              <p className="text-d-over uppercase font-heading text-muted mb-1">{t('mode.draft')}</p>
               <h1 className="font-heading text-d-h3 text-text break-words">{draft.title}</h1>
               {programLabel && <Tag tone="neutral" className="mt-2">{programLabel}</Tag>}
             </div>

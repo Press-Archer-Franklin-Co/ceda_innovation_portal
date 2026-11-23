@@ -179,6 +179,9 @@ export interface OpenQuestion {
 }
 
 export interface IdeaItem {
+  /** Prompt 39: on every idea; drafts are always false and null. */
+  shortlisted?: boolean
+  pitch_session?: PitchSession | null
   id: string
   kind: 'draft' | 'submission'
   channel?: 'web' | 'whatsapp' | 'ussd' | 'office'
@@ -186,7 +189,8 @@ export interface IdeaItem {
   reference: string
   title: string
   sector: SectorRef | null
-  program: { id: string; title: string; is_general_intake: boolean }
+  /** slug: a challenge draft opens at /challenges/{slug}/entry/{id}. */
+  program: { id: string; title: string; slug?: string; is_general_intake: boolean }
   stage: string
   /** The raw status ("draft" for drafts), R-16. */
   status: string
@@ -281,6 +285,9 @@ export interface ReturnedForChanges {
   items: ReturnItem[]
   answers: Record<string, unknown>
   fields: FormField[]
+  /** The form as it was sent, with every answer: "Respond to changes" shows it whole. */
+  form: PublishedForm | null
+  sent_answers: Record<string, unknown>
 }
 
 export interface IdeaTracking {
@@ -289,16 +296,27 @@ export interface IdeaTracking {
   documents: IdeaDocument[]
   can_add_documents: boolean
   returned: ReturnedForChanges | null
-  /** Prompt 41 (not on main yet): the pitch session for a shortlisted idea, or null when none is set. */
+  shortlisted?: boolean
   pitch_session?: PitchSession | null
 }
 
+/** Prompt 39 (PR 113): a pitch session as the innovator API sends it. Null when staff have not set one. */
 export interface PitchSession {
   starts_at: string
-  format?: 'in_person' | 'online' | string
-  place?: string
-  link?: string
-  instructions?: string
+  starts_at_local: string
+  timezone: string
+  /** Gaborone date and time, ready to show. */
+  date: string
+  time: string
+  duration_minutes: number | null
+  format: 'in_person' | 'online' | string
+  /** In the asked language, English when there is no Setswana. "" when online. */
+  place: string
+  /** "" when in person. */
+  meeting_link: string
+  instructions: string
+  set_for: 'stage' | 'idea' | string
+  updated_at: string
 }
 
 export type NextAction =
@@ -318,6 +336,7 @@ export type NextAction =
       title: string
       detail: string
       percent_complete: number
+      program?: { id: string; title: string; slug?: string; is_general_intake: boolean }
     }
   | { type: 'complete_profile'; detail: string; percent_complete: number }
 
@@ -334,7 +353,7 @@ export type HomeMessage =
   | (HomeMessageBase & { type: 'changes_requested'; note: string; officer: string; fix_by: string | null })
   | (HomeMessageBase & { type: 'question'; officer_first_name: string; excerpt: string; reply_by: string | null })
   | (HomeMessageBase & { type: 'draft'; percent_complete: number })
-  | (HomeMessageBase & { type: 'shortlisted'; challenge: string | null })
+  | (HomeMessageBase & { type: 'shortlisted'; challenge: string | null; pitch_session?: PitchSession | null })
   | (HomeMessageBase & { type: 'stage_moved'; status: string; stage: string })
   | (HomeMessageBase & { type: 'event'; challenge: string; event_date: string })
 

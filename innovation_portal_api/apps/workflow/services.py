@@ -2080,6 +2080,7 @@ class WorkflowRuntimeService:
         instance.due_at = WorkflowRuntimeService._compute_due_at(target_step)
         instance.save(update_fields=["current_step", "status", "due_at", "updated_at"])
         WorkflowRuntimeService._sync_submission(submission, status_value=target_step.submission_status, locked=True)
+        WorkflowRuntimeService._announce_step(submission, target_step, previous_status, actor)
         WorkflowRuntimeService._create_step_tasks(instance, step=target_step, actor=actor)
         if previous_reviewers:
             from apps.assignments.services import AssignmentService  # noqa: PLC0415
@@ -2184,6 +2185,13 @@ class WorkflowRuntimeService:
             except Exception:
                 continue
         return restored
+
+    @staticmethod
+    def _announce_step(submission: Submission, step, previous_status: str, actor=None):
+        """Every step move tells the innovator once (apps.programs.step_notice), when the step's switch is on."""
+        from apps.programs.step_notice import on_step_entered
+
+        on_step_entered(submission, step, previous_status, actor=actor)
 
     @staticmethod
     def _sync_submission(submission: Submission, *, status_value: str, locked: bool):
@@ -2374,6 +2382,7 @@ class WorkflowRuntimeService:
                     instance.save(update_fields=["current_step", "due_at", "updated_at"])
                     prev = submission.current_status
                     WorkflowRuntimeService._sync_submission(submission, status_value=next_step.submission_status, locked=True)
+                    WorkflowRuntimeService._announce_step(submission, next_step, prev, actor)
                     WorkflowRuntimeService._clear_stale_step_assignments(instance=instance, submission=submission, step=next_step)
                     WorkflowRuntimeService._create_step_tasks(instance, step=next_step, actor=actor)
                     WorkflowRuntimeService._ensure_timed_evaluation_cycle(submission, next_step)
@@ -2527,7 +2536,9 @@ class WorkflowRuntimeService:
                 instance.status = WorkflowInstance.STATUS_IN_PROGRESS
                 instance.due_at = WorkflowRuntimeService._compute_due_at(next_step)
                 instance.save(update_fields=["current_step", "status", "due_at", "updated_at"])
+                status_before_move = submission.current_status
                 WorkflowRuntimeService._sync_submission(submission, status_value=next_step.submission_status, locked=True)
+                WorkflowRuntimeService._announce_step(submission, next_step, status_before_move, actor)
                 WorkflowRuntimeService._clear_stale_step_assignments(instance=instance, submission=submission, step=next_step)
                 WorkflowRuntimeService._restore_previous_step_assignees(instance=instance, submission=submission, step=next_step, actor=actor)
                 WorkflowRuntimeService._create_step_tasks(instance, step=next_step, actor=actor)
@@ -2649,6 +2660,7 @@ class WorkflowRuntimeService:
             instance.due_at = WorkflowRuntimeService._compute_due_at(next_step)
             instance.save(update_fields=["current_step", "status", "due_at", "updated_at"])
             WorkflowRuntimeService._sync_submission(submission, status_value=next_step.submission_status, locked=True)
+            WorkflowRuntimeService._announce_step(submission, next_step, previous_status, actor)
             WorkflowRuntimeService._clear_stale_step_assignments(instance=instance, submission=submission, step=next_step)
             WorkflowRuntimeService._create_step_tasks(instance, step=next_step, actor=actor)
             WorkflowRuntimeService._ensure_timed_evaluation_cycle(submission, next_step)

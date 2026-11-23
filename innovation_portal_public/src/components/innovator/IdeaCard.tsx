@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import clsx from 'clsx'
-import { MessageCircle } from 'lucide-react'
+import { CalendarClock, MessageCircle } from 'lucide-react'
 import { buttonClasses } from '../ui/Button'
 import Tag from '../ui/Tag'
 import { useI18n } from '../../i18n'
@@ -8,7 +8,7 @@ import type { StringKey } from '../../i18n'
 import type { IdeaItem } from '../../types/innovator'
 import StageBar from './StageBar'
 import { ideaStatusWord } from './ideaStatus'
-import { formatDate, formatShortDate, relativeTime } from './format'
+import { formatDate, formatPitchWhen, formatShortDate, relativeTime } from './format'
 import { ideaLink } from './links'
 
 const CHANNEL_WORDS: Record<string, StringKey> = {
@@ -63,6 +63,12 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
         </Link>
       </h3>
       {item.kind === 'submission' && <StageBar stages={item.stages} className="mt-4" />}
+      {item.shortlisted && item.pitch_session && (
+        <p className="mt-3 flex items-center gap-2 text-d-body-s text-text">
+          <CalendarClock size={16} aria-hidden className="shrink-0 text-muted" />
+          {t('short.cardLine', { date: formatPitchWhen(item.pitch_session, lang) })}
+        </p>
+      )}
       {needsAction && (
         <p className="mt-4 flex items-start gap-2 rounded-control bg-accent-soft px-3 py-2.5 text-d-body-s text-text">
           <MessageCircle size={18} aria-hidden className="mt-0.5 shrink-0 text-accent-ink" />

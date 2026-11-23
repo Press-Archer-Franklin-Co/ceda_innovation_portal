@@ -125,6 +125,11 @@ class JourneyListCreateView(_ChannelsAdminView):
         queryset = JourneySelector.all()
         if request.query_params.get("channel"):
             queryset = queryset.filter(channel__in=[request.query_params["channel"], "both"])
+        archived = request.query_params.get("archived")
+        if archived in ("1", "true"):
+            queryset = queryset.filter(is_archived=True)
+        elif archived != "all":
+            queryset = queryset.filter(is_archived=False)  # archived flows only when asked for
         return api_success(data=JourneyListSerializer(queryset, many=True).data)
 
     def post(self, request):

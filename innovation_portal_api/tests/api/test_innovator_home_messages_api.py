@@ -87,3 +87,35 @@ class HomeMessagesApiTests(DashboardFixtureMixin, TestCase):
         other = make_user("someone.else@example.com")
         self.client.force_authenticate(other)
         self.assertEqual(self.messages(), [])
+
+
+class HomeShortlistedPitchTests(DashboardFixtureMixin, TestCase):
+    """23 Nov (prompt 39): the home's shortlisted message carries the pitch session, or null, never a made-up date."""
+
+    def shortlisted(self):
+        sub = self.submission("Shortlisted idea", SubmissionStatus.SHORTLISTED)
+        SubmissionStatusHistory.objects.create(submission=sub, from_status="under_review", to_status="shortlisted")
+        return sub
+
+    def message(self, lang="en"):
+        return next(m for m in self.client.get(f"/api/me/summary/?lang={lang}").json()["data"]["messages"] if m["type"] == "shortlisted")
+
+    def test_no_session_is_null(self):
+        self.shortlisted()
+        self.assertIsNone(self.message()["pitch_session"])
+
+    def test_session_in_gaborone_time_and_the_persons_language(self):
+        from django.db import transaction
+
+        from apps.programs.pitch import save_for_idea
+
+        sub = self.shortlisted()
+        with transaction.atomic():
+            save_for_idea(sub, {
+                "starts_at": "2026-11-28T09:00:00+02:00", "duration_minutes": 20, "format": "in_person",
+                "place": {"en": "CEDA House, Gaborone", "tn": "Ntlo ya CEDA, Gaborone"},
+                "instructions": {"en": "Bring a 5-slide deck.", "tn": "Tlisa ditsebe di le 5."},
+            }, actor=self.owner)
+        en = self.message()["pitch_session"]
+        self.assertEqual((en["date"], en["time"], en["format"], en["place"]), ("2026-11-28", "09:00", "in_person", "CEDA House, Gaborone"))
+        self.assertEqual(self.message("tn")["pitch_session"]["place"], "Ntlo ya CEDA, Gaborone")
