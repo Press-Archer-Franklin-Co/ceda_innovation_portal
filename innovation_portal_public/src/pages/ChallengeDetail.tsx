@@ -427,6 +427,16 @@ export default function ChallengeDetail() {
           <Link data-guide="challenge.enter" to={enterTo} className={buttonClasses({ size: 'sm' })}>{t('chd.enter')}</Link>
         </div>
       )}
+      {/* Phone, form not published yet: the same bar says so, with no Enter button. */}
+      {c.status === 'open' && c.form_ready === false && (
+        <div role="status" className="lg:hidden fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 bg-bg border-t border-border px-5 py-3 flex items-center gap-3 shadow-[0_-6px_20px_rgba(46,26,15,0.08)]">
+          <div className="flex-1 min-w-0">
+            <p className="text-d-label text-text">{t('chd.openSoon')}</p>
+            <p className="mt-1 text-d-cap text-muted truncate">{t('chd.closesAt', { when: formatDate(c.closes_at, lang) })}</p>
+          </div>
+          <Link to="/submit" className={buttonClasses({ size: 'sm', variant: 'secondary' })}>{t('ent.generalIdea')}</Link>
+        </div>
+      )}
     </>
   )
 }
