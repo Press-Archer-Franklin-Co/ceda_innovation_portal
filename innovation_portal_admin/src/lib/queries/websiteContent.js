@@ -52,6 +52,11 @@ export function useApprovals(status) {
   return useQuery({ queryKey: contentKeys.approvals(status), queryFn: async () => list(await approvals.list(status)) })
 }
 
+/** 3.25: one request with Live now and Proposed (compare). */
+export function useApproval(id) {
+  return useQuery({ queryKey: [...contentKeys.approvals('one'), id], queryFn: () => approvals.get(id), enabled: Boolean(id) })
+}
+
 export function useDecideApproval() {
   const qc = useQueryClient()
   return useMutation({

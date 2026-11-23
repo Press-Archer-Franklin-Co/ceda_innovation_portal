@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronUp, ChevronDown, ChevronsUpDown, AlertCircle, RefreshCw } from 'lucide-react'
 import { cn } from '../../lib/cn'
@@ -16,6 +16,7 @@ import Skeleton from './Skeleton'
  *   link: makes that cell a real <Link> (keyboard, open in new tab). The whole row still opens on click.
  * States: skeleton rows while loading (columns stay), a message row when empty, an error row with Retry.
  * Phone (below md): a stacked card list with the same fields in the same order.
+ * Expandable row (optional): expandedId opens renderExpanded(row) under the row with that id (audit log Before / After).
  * Paging: pageSize pages the rows in the browser. For server paging pass page, total, onPageChange
  * (and sort + onSortChange), or use ServerTable.
  */
@@ -49,6 +50,8 @@ export default function DataTable({
   sort: sortProp,
   onSortChange,
   skeletonRows = 6,
+  expandedId,
+  renderExpanded,
 }) {
   const t = useT()
   const [localSort, setLocalSort] = useState({ key: null, dir: 'asc' })
@@ -189,8 +192,9 @@ export default function DataTable({
               </tr>
             ) : (
               rows.map((row, i) => (
+                <Fragment key={row.id ?? i}>
                 <tr
-                  key={row.id ?? i}
+                  aria-expanded={renderExpanded ? expandedId === row.id : undefined}
                   data-guide={rowGuide}
                   onClick={(e) => onRowClick?.(row, e)}
                   className={cn(
@@ -210,6 +214,12 @@ export default function DataTable({
                     </td>
                   ))}
                 </tr>
+                {renderExpanded && expandedId === row.id && (
+                  <tr className="bg-surface2/70">
+                    <td colSpan={span} className="px-4 pb-4 pt-1">{renderExpanded(row)}</td>
+                  </tr>
+                )}
+                </Fragment>
               ))
             )}
           </tbody>
@@ -247,6 +257,7 @@ export default function DataTable({
                     <span className={cn('min-w-0', j > 0 && 'text-right text-text')}>{cellContent(col, row)}</span>
                   </div>
                 ))}
+                {renderExpanded && expandedId === row.id && <div className="mt-2 border-t border-border pt-2">{renderExpanded(row)}</div>}
               </li>
             ))}
           </ul>

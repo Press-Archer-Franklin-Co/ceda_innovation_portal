@@ -68,11 +68,9 @@ const LeadershipList = lazy(() => import('./pages/content/LeadershipManager'))
 const LeadershipCardEditor = lazy(() => import('./pages/content/LeadershipManager').then((m) => ({ default: m.LeadershipCardEditor })))
 const FaqList = lazy(() => import('./pages/content/FaqManager'))
 const FaqEditor = lazy(() => import('./pages/content/FaqManager').then((m) => ({ default: m.FaqEditor })))
-const History = lazy(() => import('./pages/history/History'))
 
 // Dev-only component gallery; not part of the production bundle.
 const Styleguide = import.meta.env.DEV ? lazy(() => import('./pages/Styleguide')) : null
-const HistorySnapshot = lazy(() => import('./pages/history/HistorySnapshot'))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -136,8 +134,9 @@ export default function App() {
                 <Route path="/tasks"           element={<Navigate to="/assignments" replace />} />
                 <Route path="/tasks/:id"       element={<WorkItemRedirect />} />
 
-                <Route path="/history" element={<ErrorBoundary><History /></ErrorBoundary>} />
-                <Route path="/history/:id" element={<ErrorBoundary><HistorySnapshot /></ErrorBoundary>} />
+                {/* U9 (3.29): the old History pages are the audit log now; each item keeps its own History tab. */}
+                <Route path="/history" element={<Navigate to="/audit" replace />} />
+                <Route path="/history/:id" element={<Navigate to="/audit" replace />} />
 
                 <Route element={<CapabilityRoute need="entries.score" />}>
                   <Route path="/judging"       element={<ErrorBoundary><Judging /></ErrorBoundary>} />
