@@ -34,6 +34,8 @@ from apps.submissions.models import ApplicationDraft, Submission, SubmissionResp
 API_KEY = "sk-ant-test-key-QQ77"
 BASE = "/api/assistant"
 GUIDANCE = "Always ask how the idea creates jobs in Botswana"
+# Prices are typed on each connection in the console; tests use these made-up ones.
+PRICES = {"price_input": 4, "price_output": 20, "price_cached": 0.2}
 
 DRAFT_ANSWER = {
     "language": "en",
@@ -64,7 +66,7 @@ def data(response):
     return response.json()["data"]
 
 
-def message(payload: dict, *, usage=None, stop_reason="end_turn", model="claude-opus-5-5"):
+def message(payload: dict, *, usage=None, stop_reason="end_turn", model="model-a"):
     return SimpleNamespace(
         content=[SimpleNamespace(type="thinking", thinking=""), SimpleNamespace(type="text", text=json.dumps(payload))],
         usage=usage or SimpleNamespace(input_tokens=1000, output_tokens=500, cache_read_input_tokens=2000, cache_creation_input_tokens=100),
@@ -139,13 +141,13 @@ class AssistantTestCase(TestCase):
             RoleService.assign_roles(user, list(roles))
         return user
 
-    def connect(self, *, limit=50, guests=False, provider="anthropic", model="claude-opus-5-5", environment="test", name="Claude", **switches):
+    def connect(self, *, limit=50, guests=False, provider="anthropic", model="model-a", environment="test", name="AI service", prices=PRICES, **switches):
         """An active AI connection plus the 3.34b settings. feature_x=False switches feature x off."""
         connection = IntegrationConnection.objects.create(
             kind="ai",
             provider=provider,
             name=name,
-            config={"model": model, "environment": environment, "timeout_seconds": 30},
+            config={"model": model, "environment": environment, "timeout_seconds": 30, **(prices or {})},
             secrets_encrypted=encrypt_secrets({"api_key": API_KEY}),
             status=IntegrationConnection.Status.ACTIVE,
             is_active=True,
@@ -236,7 +238,7 @@ class HiddenWhenOffTests(AssistantTestCase):
     def test_monthly_limit_reached_hides_everything_and_is_recorded(self):
         fake = self.fake(message(HINTS_ANSWER))
         self.switch_on(limit=1)
-        UsageRecord.objects.create(feature="hints", model="claude-opus-5-5", cost_usd=Decimal("1.00"))
+        UsageRecord.objects.create(feature="hints", model="model-a", cost_usd=Decimal("1.00"))
         self.assert_everything_hidden(fake)
         self.assertTrue(UsageRecord.objects.filter(outcome="limit_reached").exists())
 
@@ -626,8 +628,10 @@ class UsageTests(AssistantTestCase):
         record = UsageRecord.objects.get(outcome="ok")
         self.assertEqual((record.feature, record.user, record.input_tokens, record.output_tokens, record.cache_read_tokens, record.cache_write_tokens), ("draft_check", self.innovator, 1000, 500, 2000, 100))
         # 1000 x $4 + 500 x $20 + 2000 x $0.20 + 100 x $5, per million tokens.
-        self.assertEqual(record.cost_usd, Decimal("0.014900"))
-        self.assertEqual(cost_usd("claude-opus-5-5", input_tokens=1000, output_tokens=500, cache_read=2000, cache_write=100), Decimal("0.0149"))
+        # 1000 x $4 + 500 x $20 + 2000 x $0.20 (cached) + 100 x $4 (cache writes at the input price), per million tokens.
+        self.assertEqual(record.cost_usd, Decimal("0.014800"))
+        self.assertEqual(cost_usd(gateway.prices_from(PRICES), input_tokens=1000, output_tokens=500, cache_read=2000, cache_write=100), Decimal("0.0148"))
+        self.assertIsNone(cost_usd(gateway.prices_from({"price_input": 4}), input_tokens=1, output_tokens=1, cache_read=0, cache_write=0))
         audit = AuditLog.objects.get(action_type="assistant_call")
         self.assertEqual(audit.actor, self.innovator)
         self.assertEqual(audit.metadata["feature"], "draft_check")
@@ -750,13 +754,13 @@ class AdminTests(AssistantTestCase):
 
 class ConnectionTests(AssistantTestCase):
     def test_add_test_and_activate_with_the_key_never_returned(self):
-        fake = self.fake(message({}, model="claude-opus-5-5"))
+        fake = self.fake(message({}, model="model-a"))
         self.as_user(self.admin)
         providers = data(self.client.get("/api/platform/providers/?kind=ai"))
         self.assertEqual(sorted(p["key"] for p in providers), ["anthropic", "openai", "openai_compatible"])
         response = self.client.post(
             "/api/platform/integrations/",
-            {"kind": "ai", "provider": "anthropic", "name": "Claude", "config": {"model": "claude-haiku-5-5", "environment": "test"}, "secrets": {"api_key": API_KEY}},
+            {"kind": "ai", "provider": "anthropic", "name": "AI service", "config": {"model": "model-c", "environment": "test"}, "secrets": {"api_key": API_KEY}},
             format="json",
         )
         self.assertEqual(response.status_code, 201, response.content)
@@ -765,7 +769,7 @@ class ConnectionTests(AssistantTestCase):
         report = data(self.client.post(f"/api/platform/integrations/{connection_id}/test/", {}, format="json"))["result"]
         self.assertTrue(report["ok"], report)
         self.assertIn("Connected", json.dumps(report))
-        self.assertEqual(fake.last["model"], "claude-haiku-5-5")
+        self.assertEqual(fake.last["model"], "model-c")
         self.assertEqual(self.client.post(f"/api/platform/integrations/{connection_id}/activate/", {}, format="json").status_code, 200)
         self.assertNotIn(API_KEY, self.client.get(f"/api/platform/integrations/{connection_id}/").content.decode())
         self.assertEqual(UsageRecord.objects.get().feature, "connection_test")
@@ -783,7 +787,7 @@ class ConnectionTests(AssistantTestCase):
         self.as_user(self.admin)
         response = self.client.post(
             "/api/platform/integrations/",
-            {"kind": "ai", "provider": "anthropic", "name": "Claude", "config": {"model": "gpt-4", "timeout_seconds": 500}, "secrets": {"api_key": API_KEY}},
+            {"kind": "ai", "provider": "anthropic", "name": "AI service", "config": {"model": "gpt-4", "timeout_seconds": 500}, "secrets": {"api_key": API_KEY}},
             format="json",
         )
         self.assertEqual(response.status_code, 400)

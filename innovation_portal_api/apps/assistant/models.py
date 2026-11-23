@@ -89,7 +89,7 @@ class ManualScreenshot(UUIDModel, TimeStampedModel):
 
 
 class UsageRecord(UUIDModel, TimeStampedModel):
-    """One call to Claude (or one call that was skipped), for the usage report and the monthly limit."""
+    """One call to the AI service (or one call that was skipped), for the usage report and the monthly limit."""
 
     feature = models.CharField(max_length=30, choices=Feature.choices, db_index=True)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
@@ -104,7 +104,9 @@ class UsageRecord(UUIDModel, TimeStampedModel):
     output_tokens = models.PositiveIntegerField(default=0)
     cache_read_tokens = models.PositiveIntegerField(default=0)
     cache_write_tokens = models.PositiveIntegerField(default=0)
-    cost_usd = models.DecimalField(max_digits=10, decimal_places=6, default=0)
+    cost_usd = models.DecimalField(
+        max_digits=10, decimal_places=6, null=True, blank=True, help_text="Empty when the connection has no prices (cost not set)."
+    )
     duration_ms = models.PositiveIntegerField(default=0)
     request_id = models.CharField(max_length=80, blank=True)
 

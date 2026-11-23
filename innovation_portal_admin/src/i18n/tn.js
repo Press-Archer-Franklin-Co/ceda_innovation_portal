@@ -1,4 +1,5 @@
 // Setswana strings for staff console chrome. First draft: needs review by a Setswana speaker at CEDA.
+import { aiServicesTn } from './aiServices'
 import { challengesTn } from './challenges'
 import { rolesTn } from './roles'
 import { contentTn } from './content'
@@ -165,6 +166,7 @@ const tn = {
   ...contentTn,
   ...dashboardTn,
   ...u7Tn,
+  ...aiServicesTn,
 }
 
 export default tn

@@ -14,7 +14,6 @@ import time
 from dataclasses import dataclass
 from decimal import Decimal
 
-from django.conf import settings as django_settings
 from django.core.cache import cache
 from django.db.models import Sum
 from django.utils import timezone
@@ -39,6 +38,7 @@ class Route:
     provider_key: str
     environment: str
     provider: AIProvider
+    prices: dict | None = None
 
     @property
     def model(self) -> str:
@@ -48,22 +48,34 @@ class Route:
 # -- money -------------------------------------------------------------------------------------
 
 
-def price_for(model: str) -> dict | None:
-    return (getattr(django_settings, "ASSISTANT_MODEL_PRICES", {}) or {}).get(model)
+def prices_from(config: dict) -> dict | None:
+    """The connection's prices per million tokens (US dollars), or None when input or output is not set.
+
+    Prices are typed in the console on each AI connection; nothing is fixed in code. Cached input
+    defaults to the input price when blank; cache writes are charged at the input price.
+    """
+    def number(key):
+        value = (config or {}).get(key)
+        if value in (None, ""):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    price_in, price_out = number("price_input"), number("price_output")
+    if price_in is None or price_out is None:
+        return None
+    cached = number("price_cached")
+    return {"input": price_in, "output": price_out, "cache_read": price_in if cached is None else cached, "cache_write": price_in}
 
 
-def cost_usd(model: str, *, input_tokens: int, output_tokens: int, cache_read: int, cache_write: int) -> Decimal:
-    """Cost of one call. A model with no price costs 0 and logs a warning once a day; it never fails."""
-    price = price_for(model)
-    if price is None:
-        if model and cache.add(f"assistant:no-price:{model}", True, 24 * 3600):
-            logger.warning("assistant.no_price model=%s (tokens recorded, cost 0)", model)
-        return Decimal("0")
+def cost_usd(prices: dict | None, *, input_tokens: int, output_tokens: int, cache_read: int, cache_write: int) -> Decimal | None:
+    """Cost of one call, or None ("not set") when the connection has no prices. Never fails."""
+    if prices is None:
+        return None
     total = (
-        input_tokens * price.get("input", 0)
-        + output_tokens * price.get("output", 0)
-        + cache_read * price.get("cache_read", 0)
-        + cache_write * price.get("cache_write", 0)
+        input_tokens * prices["input"] + output_tokens * prices["output"] + cache_read * prices["cache_read"] + cache_write * prices["cache_write"]
     ) / 1_000_000
     return Decimal(str(round(total, 6)))
 
@@ -74,6 +86,7 @@ def month_start():
 
 
 def month_spend() -> Decimal:
+    """Spend this month. Only priced calls count; calls without prices are not money we know."""
     total = UsageRecord.objects.filter(created_at__gte=month_start()).aggregate(total=Sum("cost_usd"))["total"]
     return total or Decimal("0")
 
@@ -100,7 +113,7 @@ def _route_for(connection, model: str = "") -> Route | None:
     provider = build_provider(connection.provider, config=config, api_key=secrets.get("api_key", ""), model=model)
     if provider is None:
         return None
-    return Route(str(connection.pk), connection.name, connection.provider, config.get("environment", "test"), provider)
+    return Route(str(connection.pk), connection.name, connection.provider, config.get("environment", "test"), provider, prices_from(config))
 
 
 def resolve_route(feature: str, assistant_settings: AssistantSettings | None = None) -> Route | None:
@@ -216,7 +229,7 @@ def record(*, feature, user, route: Route | None, outcome: str, detail: str = ""
         ok=outcome == "ok",
         outcome=outcome,
         error_detail=(detail or "")[:300],
-        cost_usd=cost_usd(model, input_tokens=tokens["input_tokens"], output_tokens=tokens["output_tokens"], cache_read=tokens["cache_read_tokens"], cache_write=tokens["cache_write_tokens"]),
+        cost_usd=cost_usd(route.prices if route else None, input_tokens=tokens["input_tokens"], output_tokens=tokens["output_tokens"], cache_read=tokens["cache_read_tokens"], cache_write=tokens["cache_write_tokens"]),
         duration_ms=int((time.monotonic() - started) * 1000) if started else 0,
         request_id=(result.request_id if result else "")[:80],
         **tokens,
@@ -226,7 +239,7 @@ def record(*, feature, user, route: Route | None, outcome: str, detail: str = ""
         action_type="assistant_call",
         target_model="UsageRecord",
         target_id=str(usage.pk),
-        metadata={"feature": str(feature), "provider": usage.provider, "model": usage.model, "outcome": outcome, "cost_usd": str(usage.cost_usd), "target": target},
+        metadata={"feature": str(feature), "provider": usage.provider, "model": usage.model, "outcome": outcome, "cost_usd": "not set" if usage.cost_usd is None else str(usage.cost_usd), "target": target},
     )
     return usage
 
@@ -255,6 +268,6 @@ def check_connection(*, provider_key: str, config: dict, api_key: str) -> tuple[
         result = AIResult(model=getattr(provider, "last_model", "") or provider.settings.model)
         result.input_tokens = int(getattr(usage, "input_tokens", getattr(usage, "prompt_tokens", 0)) or 0)
         result.output_tokens = int(getattr(usage, "output_tokens", getattr(usage, "completion_tokens", 0)) or 0)
-        route = Route("", "", provider_key, config.get("environment", "test"), provider)
+        route = Route("", "", provider_key, config.get("environment", "test"), provider, prices_from(config))
         record(feature=Feature.CONNECTION_TEST, user=None, route=route, outcome="ok", result=result)
     return ok, detail

@@ -23,6 +23,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
   const { t, lang } = useI18n()
   const word = ideaStatusWord(item)
   const needsAction = item.state === 'needs_action'
+  const returned = item.status === 'returned'
   const href = ideaLink(item)
   const sector = item.sector?.name
 
@@ -38,7 +39,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
     action = item.has_feedback ? t('ideas.readFeedback') : t('ideas.open')
   } else {
     meta = [item.submitted_at ? t('ideas.sent', { date: formatShortDate(item.submitted_at, lang) }) : '', sector].filter(Boolean).join(' · ')
-    action = needsAction ? t('ideas.reply') : t('ideas.open')
+    action = returned ? t('trk.fixResend') : needsAction ? t('ideas.reply') : t('ideas.open')
   }
 
   const channelKey = CHANNEL_WORDS[item.channel ?? '']
@@ -72,7 +73,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <span className="text-d-cap text-muted">{[meta, channelKey ? t(channelKey) : ''].filter(Boolean).join(' · ')}</span>
-        <Link data-guide="myIdeas.open" to={needsAction ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm' })}>
+        <Link data-guide="myIdeas.open" to={needsAction && !returned ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm' })}>
           {action}
         </Link>
       </div>

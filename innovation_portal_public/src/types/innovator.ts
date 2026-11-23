@@ -205,6 +205,84 @@ export interface IdeasList {
   filter: IdeasFilter
   counts: Record<IdeasFilter, number>
   results: IdeaItem[]
+  count: number
+  page: number
+  page_size: number
+  pages: number
+  sort: IdeasSort
+  q: string
+  program: string
+  programs: { id: string; title: string; is_general_intake: boolean }[]
+}
+
+export type IdeasSort = 'newest' | 'oldest' | 'name'
+
+export interface IdeasQuery {
+  filter?: IdeasFilter
+  q?: string
+  program?: string
+  sort?: IdeasSort
+  page?: number
+  page_size?: number
+  lang?: Lang
+}
+
+/** 2.4 Feedback by stage: only what staff shared. */
+export interface StageFeedback {
+  code: string
+  name: string
+  decision: 'received' | 'passed' | 'not_taken_forward' | 'returned' | 'resent' | 'in_progress'
+  comment: string
+  by: string
+  by_you: boolean
+  automatic: boolean
+  at: string | null
+}
+
+export interface IdeaDocumentVersion {
+  id: string
+  name: string
+  size_bytes: number
+  mime_type: string
+  version: number
+  sent_at: string | null
+  download_url: string
+  field_key: string
+  by_you: boolean
+}
+
+export interface IdeaDocument extends IdeaDocumentVersion {
+  older_versions: IdeaDocumentVersion[]
+}
+
+/** 2.4b: one thing the officer asked to change. */
+export interface ReturnItem {
+  id: string
+  kind: 'answer' | 'document'
+  field_key: string
+  field_label: string
+  label: string
+  done: boolean
+}
+
+export interface ReturnedForChanges {
+  id: string
+  reason: string
+  fix_by: string | null
+  requested_by: string
+  requested_at: string
+  stage: string
+  items: ReturnItem[]
+  answers: Record<string, unknown>
+  fields: FormField[]
+}
+
+export interface IdeaTracking {
+  id: string
+  feedback_by_stage: StageFeedback[]
+  documents: IdeaDocument[]
+  can_add_documents: boolean
+  returned: ReturnedForChanges | null
 }
 
 export type NextAction =

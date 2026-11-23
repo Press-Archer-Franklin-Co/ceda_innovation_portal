@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiExample, extend_schema, extend_schema_view
+from drf_spectacular.types import OpenApiTypes
 from django.utils import timezone
 
 from apps.submissions.openapi import TRACKING as TRACKING_DOC
@@ -344,6 +345,30 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         )
         submission.refresh_from_db()
         return api_success(data={"submission": self.get_serializer(submission).data, "workflow_status": instance.status})
+
+    @action(detail=True, methods=["get", "post"], url_path="send-back")
+    @extend_schema(
+        tags=["Submissions"],
+        summary="Ask for changes: return the idea with a reason, a fix-by date and what to change (3.16, 2.4b)",
+        description="POST {reason, fix_by?: YYYY-MM-DD, items: [{kind: answer|document, field_key, label}]}. Uses the step's "
+        "request info (return) action, so the same people can do it. GET answers the open request and the questions it can point at: "
+        "{open: {...} | null, questions: [{field_key, label, kind}]}.",
+        request=OpenApiTypes.OBJECT,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def send_back(self, request, pk=None):
+        from apps.submissions import innovator_tracking as tracking
+
+        submission = self.get_object()
+        if request.method == "GET":
+            questions = [
+                {"field_key": key, "label": label or key, "kind": "document" if kind in tracking.FILE_TYPES else "answer"}
+                for key, label, kind in submission.responses.order_by("created_at").values_list("field_key_snapshot", "field_label_snapshot", "field_type_snapshot")
+                if key and kind not in ("heading", "paragraph")
+            ]
+            return api_success(data={"open": tracking.returned_payload(submission), "questions": questions})
+        ret = tracking.send_back(submission, actor=request.user, reason=request.data.get("reason", ""), fix_by=request.data.get("fix_by"), items=request.data.get("items"))
+        return api_success(data={"id": str(ret.id), "status": ret.status, "workflow_status": "returned"}, status_code=201)
 
     @action(detail=True, methods=["post"], url_path="workflow-action/force-advance", permission_classes=[IsOfficerOrAdmin])
     @extend_schema(tags=["Workflow"], summary="Force advance workflow to the next step with audit trail")

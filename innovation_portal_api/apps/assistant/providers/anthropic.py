@@ -1,9 +1,8 @@
 """Claude through the official Anthropic Python SDK (2.x).
 
-Behaviour carried over from C3's client.py: adaptive thinking (never budget_tokens), the
-stable system part marked for prompt caching, structured output with a JSON schema, retries
-when Claude is busy inside one time limit, and the server-side refusal fallback for Opus
-and Sonnet.
+Adaptive thinking (never budget_tokens), the stable system part marked for prompt caching,
+structured output with a JSON schema, and retries when the service is busy inside one time limit.
+No model is named in code: the model comes from the connection. A refused answer hides the feature.
 """
 
 from __future__ import annotations
@@ -17,9 +16,6 @@ import anthropic
 from apps.assistant.providers.base import AIFile, AIProvider, AIResult, AssistantUnavailable, SystemPart, parse_json
 
 BUSY_RETRIES = 2
-REFUSAL_FALLBACK_BETA = "server-side-fallback-2026-07-01"
-# Haiku has no server-side refusal fallback.
-MODELS_WITH_FALLBACK = {"claude-opus-5-5", "claude-sonnet-5-5"}
 
 
 def make_sdk_client(*, api_key: str, timeout: float) -> anthropic.Anthropic:
@@ -42,7 +38,7 @@ def _file_block(item: AIFile) -> dict:
 
 class AnthropicProvider(AIProvider):
     key = "anthropic"
-    label = "Claude (Anthropic)"
+    label = "Anthropic (Claude)"
     supports_files = True
     supports_json_schema = True
 
@@ -81,7 +77,7 @@ class AnthropicProvider(AIProvider):
         result.cache_read_tokens = int(getattr(usage, "cache_read_input_tokens", 0) or 0)
         result.cache_write_tokens = int(getattr(usage, "cache_creation_input_tokens", 0) or 0)
         if stop_reason == "refusal":
-            raise _with_usage(AssistantUnavailable("refused", "Claude declined to answer this request."), result)
+            raise _with_usage(AssistantUnavailable("refused", "The AI service declined to answer this request."), result)
         if stop_reason == "max_tokens":
             raise _with_usage(AssistantUnavailable("bad_output", "The answer was too long and was cut off."), result)
         result.text = next((block.text for block in response.content if getattr(block, "type", "") == "text"), "")
@@ -98,30 +94,28 @@ class AnthropicProvider(AIProvider):
         while True:
             remaining = deadline - time.monotonic()
             if remaining <= 1:
-                raise AssistantUnavailable("timeout", "Claude did not answer within the time limit.")
+                raise AssistantUnavailable("timeout", "The AI service did not answer within the time limit.")
             try:
                 client = make_sdk_client(api_key=self.settings.api_key, timeout=remaining)
-                if request["model"] in MODELS_WITH_FALLBACK:
-                    return client.beta.messages.create(betas=[REFUSAL_FALLBACK_BETA], fallbacks="default", **request)
                 return client.messages.create(**request)
             except anthropic.APITimeoutError:
-                raise AssistantUnavailable("timeout", "Claude did not answer within the time limit.") from None
+                raise AssistantUnavailable("timeout", "The AI service did not answer within the time limit.") from None
             except (anthropic.OverloadedError, anthropic.RateLimitError, anthropic.InternalServerError, anthropic.APIConnectionError) as exc:
                 attempt += 1
                 wait = min(2**attempt + random.uniform(0, 0.5), 8)
                 if attempt > BUSY_RETRIES or time.monotonic() + wait >= deadline - 1:
                     if isinstance(exc, anthropic.APIConnectionError):
-                        raise AssistantUnavailable("unreachable", "The server could not reach Claude.") from None
-                    raise AssistantUnavailable("busy", "Claude was busy or rate limited.") from None
+                        raise AssistantUnavailable("unreachable", "The server could not reach the AI service.") from None
+                    raise AssistantUnavailable("busy", "The AI service was busy or rate limited.") from None
                 time.sleep(wait)
             except anthropic.AuthenticationError:
-                raise AssistantUnavailable("key_refused", "Claude refused the API key.") from None
+                raise AssistantUnavailable("key_refused", "The AI service refused the API key.") from None
             except anthropic.PermissionDeniedError:
                 raise AssistantUnavailable("key_refused", f"This API key may not use {request['model']}.") from None
             except anthropic.APIStatusError as exc:
-                raise AssistantUnavailable("bad_output", f"Claude answered with HTTP {exc.status_code}.") from None
+                raise AssistantUnavailable("bad_output", f"The AI service answered with HTTP {exc.status_code}.") from None
             except anthropic.AnthropicError:
-                raise AssistantUnavailable("unreachable", "The Claude SDK reported an error.") from None
+                raise AssistantUnavailable("unreachable", "The AI service SDK reported an error.") from None
 
     def check(self) -> tuple[bool, str]:
         model = self.settings.model
@@ -131,19 +125,19 @@ class AnthropicProvider(AIProvider):
                 model=model, max_tokens=256, output_config={"effort": "low"}, messages=[{"role": "user", "content": "Reply with the word ready."}]
             )
         except anthropic.AuthenticationError:
-            return False, "Claude refused the API key. Check it was copied in full."
+            return False, "The AI service refused the API key. Check it was copied in full."
         except anthropic.PermissionDeniedError:
             return False, f"This API key may not use {model}."
         except anthropic.NotFoundError:
-            return False, f"Claude does not know the model {model}."
+            return False, f"The AI service does not know the model {model}."
         except anthropic.RateLimitError:
-            return False, "Anthropic says too many requests, or the account has no credit left."
+            return False, "The AI service says too many requests, or the account has no credit left."
         except anthropic.APITimeoutError:
-            return False, "Claude did not answer in time. Try again, or raise the time limit."
+            return False, "The AI service did not answer in time. Try again, or raise the time limit."
         except anthropic.APIConnectionError:
-            return False, "The server could not reach Claude. Check the server's internet access."
+            return False, "The server could not reach the AI service. Check the server's internet access."
         except anthropic.APIStatusError as exc:
-            return False, f"Claude answered with HTTP {exc.status_code}."
+            return False, f"The AI service answered with HTTP {exc.status_code}."
         except Exception as exc:  # the report must never break
             return False, f"Unexpected error: {exc.__class__.__name__}."
         self.last_usage = getattr(response, "usage", None)

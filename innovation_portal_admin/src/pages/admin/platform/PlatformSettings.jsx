@@ -20,13 +20,14 @@ import { cn } from '../../../lib/cn'
 import { siteSettings } from '../../../lib/api/websiteContent'
 import { useFeatureFlags, useSetFeatureFlag, useSetSignInSettings, useSignInSettings } from '../../../lib/queries/platform'
 import { CODE_SERVICES, usePlatformServices } from '../../../lib/api/platformServices'
+import AiServicesTab from './AiServicesTab'
 
 // 3.26 Platform settings (Figma 122:1475 website, 122:1833 phone). ① Tabs keep settings short. ② Sign-in: one page
 // for everyone; the owner picks the second step. A one-time code needs SMS, WhatsApp or email active in Integrations.
 // ③ Feature switches: a feature that needs a key shows "Needs setup" and stays hidden on the site until its
 // connection is active. ④ Demo: Test accounts on the sign-in page. Every change is written to the audit log (API).
 
-const TABS = ['general', 'signin', 'languages']
+const TABS = ['general', 'signin', 'languages', 'ai']
 const SIGN_IN_GROUP = 'sign_in'
 const DEMO_FLAG = 'demo_logins'
 
@@ -246,6 +247,7 @@ export default function PlatformSettings() {
     { key: 'general', label: t('ps.tab.general') },
     { key: 'signin', label: t('ps.tab.signIn'), guide: 'integrations.features' },
     { key: 'languages', label: t('ps.tab.languages') },
+    { key: 'ai', label: t('ps.tab.ai'), guide: 'integrations.ai' },
   ], [t])
   return (
     <div>
@@ -259,6 +261,7 @@ export default function PlatformSettings() {
       {tab === 'general' && <GeneralTab />}
       {tab === 'signin' && <SignInTab />}
       {tab === 'languages' && <LanguagesTab />}
+      {tab === 'ai' && <AiServicesTab />}
     </div>
   )
 }

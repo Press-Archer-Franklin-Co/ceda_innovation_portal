@@ -2,6 +2,7 @@
 // First draft: needs review by a Setswana speaker at CEDA before launch.
 import type { StringKey } from './en'
 import { innovatorTn } from './innovator'
+import { trackingTn } from './tracking'
 import { signInTn } from './signin'
 import { pagesTn } from './pages'
 import { policiesTn } from './policies'
@@ -440,6 +441,7 @@ const tn: Record<StringKey, string> = {
   'tabs.news': 'Dikgang',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorTn,
+  ...trackingTn,
   ...signInTn,
   ...pagesTn,
   ...policiesTn,

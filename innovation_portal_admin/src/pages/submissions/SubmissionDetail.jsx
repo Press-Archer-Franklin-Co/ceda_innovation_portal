@@ -14,6 +14,8 @@ import ErrorState from '../../components/ui/ErrorState'
 import ForbiddenState from '../../components/ui/ForbiddenState'
 import { DetailPageSkeleton } from '../../components/ui/PageSkeleton'
 import { AssignIdeas, MoveIdeas } from '../../components/ideas/IdeaActionDialogs'
+import AskForChanges from '../../components/ideas/AskForChanges'
+import { canSendBack } from '../../lib/ideas/sendBack'
 import { AnswersTab, DocumentsTab, HistoryTab, MessagesTab, NotesTab, RelatedTab } from '../../components/ideas/IdeaTabs'
 import { useT, useI18n } from '../../i18n/context'
 import { useAuth } from '../../lib/auth/AuthContext'
@@ -50,6 +52,7 @@ export default function SubmissionDetail() {
   const moveRef = useRef(null)
   const assignRef = useRef(null)
   const askRef = useRef(null)
+  const askMoreRef = useRef(null)
 
   const summary = useQuery({ queryKey: ['ideas', id, 'summary', lang], queryFn: () => staffSummary(id, lang) })
   const s = summary.data
@@ -106,7 +109,7 @@ export default function SubmissionDetail() {
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={s.status} />
-            <Button variant="secondary" onClick={ask}>{t('ideas.askMore')}</Button>
+            <Button ref={askMoreRef} variant="secondary" onClick={() => (canSendBack(s) ? setDialog('changes') : ask())}>{t('ideas.askMore')}</Button>
             <span className="hidden lg:inline-flex">{moveButton}</span>
             <DropdownMenu
               label={t('ideas.moreActions')}
@@ -194,6 +197,7 @@ export default function SubmissionDetail() {
       )}
 
       <MoveIdeas open={dialog === 'move'} onClose={() => setDialog(null)} triggerRef={moveRef} ids={[id]} />
+      <AskForChanges open={dialog === 'changes'} onClose={() => setDialog(null)} triggerRef={askMoreRef} id={id} onJustMessage={ask} />
       <AssignIdeas open={dialog === 'assign'} onClose={() => setDialog(null)} triggerRef={assignRef} ids={[id]} />
     </div>
   )

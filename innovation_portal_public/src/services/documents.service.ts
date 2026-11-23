@@ -15,6 +15,19 @@ export const documentsService = {
     return data
   },
 
+  /** 2.4: a new file on a sent idea. `replaceId` keeps the old file as an earlier version. */
+  async uploadIdeaDocument(ideaId: string, file: File, options: { fieldKey?: string; replaceId?: string } = {}): Promise<void> {
+    const formData = new FormData()
+    if (options.fieldKey) formData.append('field_key', options.fieldKey)
+    if (options.replaceId) formData.append('replace_document_id', options.replaceId)
+    formData.append('document_type', 'file')
+    formData.append('file', file)
+    await api.post(`/documents/submissions/${ideaId}/documents/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120000,
+    })
+  },
+
   async getDocument(documentId: string): Promise<SubmissionDocument> {
     const { data } = await api.get<SubmissionDocument>(`/documents/${documentId}/`)
     return data
