@@ -51,6 +51,10 @@ FORM_TEXT = {
     "website": {"en": "Finish these on the website: {fields}. {link}", "tn": "Fetsa tse mo webosaeteng: {fields}. {link}"},
     "finish_on_web": {"en": "Your idea is saved. Finish the part above on the website to send it.", "tn": "Kakanyo ya gago e bolokilwe. Fetsa karolo e e fa godimo mo webosaeteng go e romela."},
     "no_form": {"en": "This challenge has no questions to answer here.", "tn": "Kgaisano e ga e na dipotso tse di arabiwang fano."},
+    # Prompt 37: a question the person's profile already answers is shown to confirm, not asked.
+    "confirm": {"en": "From your profile: {value}. Is that right?", "tn": "Go tswa mo porofaeleng ya gago: {value}. A go siame?"},
+    "keep": {"en": "Yes, use it", "tn": "Ee, e dirise"},
+    "change": {"en": "Change it", "tn": "E fetole"},
 }
 
 DEFAULT_BACK_WORDS = {"en": "back", "tn": "morago"}
@@ -322,6 +326,10 @@ class FormQuestionsMixin:
                 pos += 1
                 continue
             fq["pos"], fq["current"], fq["force"], fq["files"] = pos, key, "", 0
+            known = self._fq_known(field, values) if key != force else None
+            if known is not None:
+                fq["confirm"], fq["confirm_value"] = key, known
+                return self._fq_confirm(node, field, known, prefix)
             return self._fq_show(node, field, prefix, required=state["required"])
         return self._fq_leave(node, prefix)
 
@@ -338,6 +346,36 @@ class FormQuestionsMixin:
             parts.append(template.replace("{fields}", ", ".join(website)).replace("{link}", link).strip())
         self.logged_steps.append((node["key"], "form_questions", ""))
         return self._advance(node.get("next") or "", prefix=parts)
+
+    def _fq_known(self, field: dict, values: dict):
+        """The answer the person's own profile gives this question (signed-in, real drafts only), or None."""
+        from apps.programs.profile_prefill import prefill
+
+        if self.state.get("sim_draft") or not self.state.get("draft_id"):
+            return None
+        from apps.submissions.models import ApplicationDraft
+
+        draft = ApplicationDraft.objects.filter(id=self.state["draft_id"]).select_related("innovator").first()
+        if draft is None or draft.innovator is None:
+            return None
+        found = prefill([field], draft.innovator, values).get(field.get("key") or "")
+        return found["value"] if found else None
+
+    def _fq_display(self, field: dict, value) -> str:
+        from apps.programs.profile_prefill import display
+
+        return display(field, value)
+
+    def _fq_confirm(self, node: dict, field: dict, value, prefix: list[str], error: str = ""):
+        from apps.channels.engine import Choice, Screen
+
+        body = "\n".join([field.get("label") or field.get("key") or "", self._fq_text("confirm").replace("{value}", self._fq_display(field, value))])
+        self.state["node"] = node["key"]
+        text = "\n".join(part for part in [*prefix, error, body] if part)
+        choices = [Choice("1", self._fq_text("keep")), Choice("2", self._fq_text("change"))]
+        screen = Screen(text=text, end=False, node_key=node["key"], node_type="form_questions", choices=choices, expects="choice", node_title=node.get("title") or "", lang=self.lang)
+        self._say("bot", screen.ussd_text() if self.channel == "ussd" else screen.text)
+        return screen
 
     def _fq_choices(self, field: dict) -> list:
         from apps.channels.engine import Choice
@@ -469,6 +507,17 @@ class FormQuestionsMixin:
         key = field.get("key") or ""
         values = self._answers()
         required = self._fq_state(field, values)["required"]
+        if fq.get("confirm") == key:
+            index = self._choose(text, 2, [self._fq_text("keep"), self._fq_text("change")])
+            if index is None:
+                return self._fq_confirm(node, field, fq.get("confirm_value"), [], error=self.default("invalid_choice"))
+            self._record_answer(node, text)
+            known = fq.pop("confirm_value", None)
+            fq.pop("confirm", None)
+            if index == 1 and self._store_answer(key, known, settings.get("title_field") or "title"):
+                return self._fq_advance(node, key)
+            # "Change it": ask the question as usual.
+            return self._fq_show(node, field, [], required=required)
         # BACK: the previous question.
         if lowered in self._fq_words(settings, "back_words", DEFAULT_BACK_WORDS) and not self.media:
             history = fq.get("history") or []

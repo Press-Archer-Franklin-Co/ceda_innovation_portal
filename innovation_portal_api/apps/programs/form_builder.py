@@ -22,6 +22,7 @@ from rest_framework.exceptions import ValidationError
 from apps.audit.services import AuditService
 from apps.core.constants import CHOICE_FIELD_TYPES, LAYOUT_FIELD_TYPES, SubmissionFormFieldType
 from apps.programs.condition_services import FormConditionService
+from apps.programs.profile_prefill import NONE as PROFILE_NONE, PROFILE_FIELDS
 from apps.programs.form_schema import (
     DEFAULT_LANGUAGE,
     FIELD_DATA_KEYS,
@@ -281,6 +282,12 @@ class FormDocumentService:
             field.field_type = field_doc["type"]
             field.required = bool(field_doc.get("required", False)) and field_doc["type"] not in LAYOUT_FIELD_TYPES
             field.is_challenge_question = bool(field_doc.get("is_challenge_question", False))
+            if "profile_field" in field_doc:
+                chosen = str(field_doc.get("profile_field") or "").strip()
+                if chosen and chosen not in (*PROFILE_FIELDS, PROFILE_NONE):
+                    text_errors.append({"path": f"fields.{field.key}.profile_field", "message": "Choose a profile field from the list."})
+                else:
+                    field.profile_field = chosen
             field.width = field_doc.get("width") or FieldWidth.FULL
             field.row = row_index
             field.ordering = ordering_by_section[counter_key]

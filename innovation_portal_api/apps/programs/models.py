@@ -441,6 +441,12 @@ class SubmissionFormField(UUIDModel, TimeStampedModel):
     width = models.CharField(max_length=20, choices=FieldWidth.choices, default=FieldWidth.FULL)
     row = models.PositiveIntegerField(default=1, help_text="Row within the section; fields in one row sit side by side, left to right by ordering.")
     is_challenge_question = models.BooleanField(default=False, help_text="Asked only for this challenge (shows the Challenge question badge).")
+    profile_field = models.CharField(
+        max_length=30,
+        blank=True,
+        help_text="Fill from the signed-in person's profile (prompt 37): first_name, last_name, full_name, phone, email, district, "
+        "organisation, gender, age_group or omang. Empty: by field type (phone, email, district, Omang ID). \"none\": never.",
+    )
     translations = models.JSONField(default=dict, blank=True, help_text='{"tn": {"label": "...", "help_text": "...", "placeholder": "..."}}')
 
     TRANSLATABLE = ("label", "help_text", "placeholder")

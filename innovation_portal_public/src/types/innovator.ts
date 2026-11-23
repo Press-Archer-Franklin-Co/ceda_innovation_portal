@@ -108,6 +108,8 @@ export interface IntakeDraft {
   form_id: string | null
   /** Latest published version; null if the form was never published. */
   form_version_id: string | null
+  /** Prompt 37: questions the owner's profile fills, not answered yet and shown now. */
+  profile_prefill?: Record<string, { value: unknown; source: string; display: string }>
   /** True when the idea may be sent before every required question is answered ("Send now, finish later", R-23). */
   send_now_allowed?: boolean
 }

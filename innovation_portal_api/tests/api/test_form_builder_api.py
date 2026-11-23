@@ -34,6 +34,7 @@ def field(key, label, type_="text", **extra):
         "placeholder": text(""),
         "required": False,
         "is_challenge_question": False,
+        "profile_field": "",
         "width": "full",
         "is_active": True,
         "link_url": "",

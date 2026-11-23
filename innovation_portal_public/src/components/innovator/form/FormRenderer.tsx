@@ -33,9 +33,12 @@ export interface FormRendererProps {
   errors?: Record<string, FieldError>
   /** Preview mode: nothing uploads and nothing is sent. */
   preview?: boolean
+  /** Prompt 37: questions filled from the person's profile (key to the answer as they read it). Shown with Edit. */
+  fromProfile?: Readonly<Record<string, string>>
+  onEditProfile?: (key: string) => void
 }
 
-export default function FormRenderer({ step, answers, onChange, lang, errors = {}, preview = false }: FormRendererProps) {
+export default function FormRenderer({ step, answers, onChange, lang, errors = {}, preview = false, fromProfile, onEditProfile }: FormRendererProps) {
   return (
     <div className="flex flex-col gap-6">
       {step.rows.map((row) => {
@@ -50,12 +53,33 @@ export default function FormRenderer({ step, answers, onChange, lang, errors = {
                 // Need help guide (2.14): each question can be ringed; its label is sent, never the answer.
                 {...(field.type === 'heading' || field.type === 'paragraph' ? {} : { 'data-guide': `idea.field.${field.key}`, 'data-guide-kind': 'field', 'data-guide-label': pick(field.label as MaybeBilingual, lang) })}
               >
-                <FieldBlock field={field} answers={answers} onChange={onChange} lang={lang} error={errors[field.key]} preview={preview} />
+                {fromProfile && field.key in fromProfile && onEditProfile ? (
+                  <ProfileAnswer label={pick(field.label as MaybeBilingual, lang)} shown={fromProfile[field.key]} onEdit={() => onEditProfile(field.key)} />
+                ) : (
+                  <FieldBlock field={field} answers={answers} onChange={onChange} lang={lang} error={errors[field.key]} preview={preview} />
+                )}
               </div>
             ))}
           </div>
         )
       })}
+    </div>
+  )
+}
+
+/** A question the profile answered: the answer, "From your profile" and Edit (it is not asked again). */
+function ProfileAnswer({ label, shown, onEdit }: { label: string; shown: string; onEdit: () => void }) {
+  const { t } = useI18n()
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-d-label text-text">{label}</p>
+      <div className="flex min-h-[46px] flex-wrap items-center gap-3 rounded-control border border-border bg-surface2 px-4 py-2.5">
+        <span className="min-w-0 flex-1 break-words text-d-body text-text">{shown}</span>
+        <Tag tone="neutral">{t('form.fromProfile')}</Tag>
+        <button type="button" onClick={onEdit} aria-label={t('form.editProfileAnswer', { label })} className="text-d-label text-primary hover:underline rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          {t('form.edit')}
+        </button>
+      </div>
     </div>
   )
 }

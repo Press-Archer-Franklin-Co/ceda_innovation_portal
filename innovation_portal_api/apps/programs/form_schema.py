@@ -92,6 +92,7 @@ def field_document(field) -> dict[str, Any]:
         **_texts(field, FIELD_TEXTS),
         "required": bool(field.required),
         "is_challenge_question": bool(getattr(field, "is_challenge_question", False)),
+        "profile_field": getattr(field, "profile_field", "") or "",
         "width": getattr(field, "width", "full") or "full",
         "is_active": bool(field.is_active),
         "link_url": field.link_url or "",

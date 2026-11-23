@@ -53,6 +53,14 @@ export function uniqueKey(doc, base) {
   return `${root}_${n}`
 }
 
+/**
+ * Prompt 37: "Profile field". Empty fills the people types by themselves (below); "none" never fills.
+ * Same list as the API (apps/programs/profile_prefill.py).
+ */
+export const PROFILE_FIELDS = ['first_name', 'last_name', 'full_name', 'phone', 'email', 'district', 'organisation', 'gender', 'age_group', 'omang']
+export const PROFILE_TYPE_DEFAULTS = { phone: 'phone', email: 'email', district: 'district', omang_id: 'omang' }
+export const PROFILE_NONE = 'none'
+
 /** A new field of `type`, with a working default (two options for choices). */
 export function newField(doc, type, label = { en: '', tn: '' }) {
   const field = {
@@ -64,6 +72,7 @@ export function newField(doc, type, label = { en: '', tn: '' }) {
     required: false,
     width: 'full',
     is_challenge_question: false,
+    profile_field: '',
     is_active: true,
     options: [],
     rules: [],
