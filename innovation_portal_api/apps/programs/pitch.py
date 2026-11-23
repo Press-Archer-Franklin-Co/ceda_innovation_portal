@@ -118,14 +118,23 @@ def session_for(submission):
         return own
     if not is_shortlisted(submission):
         return None
+    stages = PitchSession.objects.filter(program_id=submission.program_id, stage__isnull=False).select_related("stage").order_by("starts_at", "id")
+    return _stage_session(list(stages), _current_step_code(submission))
+
+
+def _current_step_code(submission) -> str | None:
     instance = getattr(submission, "workflow_instance", None)
     step = getattr(instance, "current_step", None) if instance else None
-    stages = PitchSession.objects.filter(program_id=submission.program_id, stage__isnull=False).select_related("stage")
-    if step is not None:
-        current = next((session for session in stages if session.stage.code == step.code), None)
+    return step.code if step is not None else None
+
+
+def _stage_session(stages: list, step_code: str | None):
+    """The stage session a shortlisted idea sees. ``stages`` is sorted by start time, each with its stage loaded."""
+    if step_code is not None:
+        current = next((session for session in stages if session.stage.code == step_code), None)
         if current is not None:
             return current
-    return next((session for session in stages.order_by("starts_at") if session.stage.takes_part == "shortlisted"), None)
+    return next((session for session in stages if session.stage.takes_part == "shortlisted"), None)
 
 
 def innovator_fields(submission, lang: str = "en") -> dict:
@@ -133,6 +142,100 @@ def innovator_fields(submission, lang: str = "en") -> dict:
     shortlisted = is_shortlisted(submission)
     # session_for shows a stage's session only to shortlisted ideas; an idea's own session is meant for that person.
     return {"shortlisted": shortlisted, "pitch_session": payload(session_for(submission), lang)}
+
+
+# Pitch schedule (staff, R-84) ------------------------------------------------------------------------------------
+
+
+SCHEDULE_ORDERINGS = ("name", "-name", "starts_at", "-starts_at")
+SCHEDULE_MAX_PAGE = 100
+
+
+def _person(submission) -> dict:
+    """A display name only: never an email or a phone number."""
+    user = submission.innovator
+    first = (user.first_name or "").strip() if user else ""
+    if submission.team_id:
+        name = submission.team.name
+    elif user:
+        name = user.full_name
+    else:
+        name = (submission.guest_name or "").strip()
+    return {"name": name, "first_name": first or (name.split()[0] if name and not submission.team_id else "")}
+
+
+def _whole(value, default: int, name: str) -> int:
+    try:
+        number = int(value) if value not in (None, "") else default
+    except (TypeError, ValueError):
+        raise ValidationError({name: "Use a whole number."}) from None
+    if number < 1:
+        raise ValidationError({name: "Use a whole number from 1."})
+    return number
+
+
+def schedule(program, params) -> dict:
+    """GET /api/programs/<id>/pitch-schedule/: every shortlisted entry with the session its person sees."""
+    from django.db.models import Exists, OuterRef, Q
+
+    from apps.programs.models import PitchSession
+    from apps.submissions.models import Submission, SubmissionOutcome
+
+    ordering = params.get("ordering") or "name"
+    if ordering not in SCHEDULE_ORDERINGS:
+        raise ValidationError({"ordering": f"Use one of: {', '.join(SCHEDULE_ORDERINGS)}."})
+    page = _whole(params.get("page"), 1, "page")
+    size = min(_whole(params.get("page_size"), 25, "page_size"), SCHEDULE_MAX_PAGE)
+    not_set_only = str(params.get("not_set") or "").lower() in ("true", "1", "yes")
+    search = (params.get("search") or "").strip().casefold()
+
+    # The same rule as is_shortlisted, in one query.
+    outcome = SubmissionOutcome.objects.filter(submission=OuterRef("pk"), is_current=True, outcome_type__in=("shortlisted", "finalist"))
+    entries = (
+        Submission.objects.filter(program=program)
+        .filter(Q(current_status__in=SHORTLISTED) | Exists(outcome))
+        .select_related("innovator", "team", "workflow_instance__current_step")
+    )
+    sessions = list(PitchSession.objects.filter(program=program).select_related("stage").order_by("starts_at", "id"))
+    own = {session.submission_id: session for session in sessions if session.submission_id}
+    stages = [session for session in sessions if session.stage_id]
+    stage_wide = next((session for session in stages if session.stage.takes_part == "shortlisted"), stages[0] if stages else None)
+
+    rows = []
+    for entry in entries:
+        mine = own.get(entry.pk)
+        shown = mine or _stage_session(stages, _current_step_code(entry))
+        rows.append((entry, _person(entry), mine, shown))
+    not_set_count = sum(1 for row in rows if row[3] is None)
+    if search:
+        rows = [row for row in rows if search in row[1]["name"].casefold() or search in (row[0].title or "").casefold() or search in (row[0].reference_number or "").casefold()]
+    if not_set_only:
+        rows = [row for row in rows if row[3] is None]
+
+    rows.sort(key=lambda row: (row[1]["name"].casefold(), row[0].reference_number or ""), reverse=ordering == "-name")
+    if ordering.endswith("starts_at"):
+        # Stable on top of the name order. Entries with no time always come last.
+        rows.sort(key=lambda row: row[3].starts_at.timestamp() if row[3] else 0, reverse=ordering.startswith("-"))
+        rows.sort(key=lambda row: row[3] is None)
+    start = (page - 1) * size
+    return {
+        "count": len(rows),
+        "not_set_count": not_set_count,
+        "page": page,
+        "page_size": size,
+        "stage_session": payload(stage_wide, staff=True),
+        "results": [
+            {
+                "submission_id": str(entry.pk),
+                "reference": entry.reference_number,
+                "title": entry.title,
+                "innovator": person,
+                "own": payload(mine, staff=True),
+                "shown": payload(shown, staff=True),
+            }
+            for entry, person, mine, shown in rows[start : start + size]
+        ],
+    }
 
 
 # Saving (staff) --------------------------------------------------------------------------------------------------
