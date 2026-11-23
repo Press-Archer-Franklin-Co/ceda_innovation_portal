@@ -14,6 +14,7 @@ import ErrorState from '../../components/ui/ErrorState'
 import ForbiddenState from '../../components/ui/ForbiddenState'
 import { DetailPageSkeleton } from '../../components/ui/PageSkeleton'
 import { AssignIdeas, MoveIdeas } from '../../components/ideas/IdeaActionDialogs'
+import PitchTimeCard from '../../components/challenges/PitchTimeCard'
 import AskForChanges from '../../components/ideas/AskForChanges'
 import { canSendBack } from '../../lib/ideas/sendBack'
 import { AnswersTab, DocumentsTab, HistoryTab, MessagesTab, NotesTab, RelatedTab } from '../../components/ideas/IdeaTabs'
@@ -173,6 +174,10 @@ export default function SubmissionDetail() {
               <p className="text-[14px] text-muted">{t('ideas.notAssigned')}</p>
             )}
           </SectionCard>
+
+          {can('challenges.manage') && s.program?.id && (
+            <PitchTimeCard programId={s.program.id} submissionId={id} name={s.innovator?.name || s.title} />
+          )}
 
           <SectionCard
             title={t('ideas.scoresSoFar')}

@@ -34,6 +34,8 @@ import {
   formKeys, useAttachProgramForm, useForms, useProgramJudging, useProgramSetupStatus, useSaveProgramJudging,
 } from '../../lib/queries/forms'
 import { toPayload, total } from '../../lib/challenges/judging'
+import PitchSchedule from '../../components/challenges/PitchSchedule'
+import { useAuth } from '../../lib/auth/AuthContext'
 
 const STEPS = ['details', 'dates', 'support', 'judging', 'form', 'panel']
 const TN_KEYS = ['summary', 'problem_statement', 'support_headline', 'who_can_enter', 'where']
@@ -257,7 +259,7 @@ export default function ChallengeBuilder() {
   return <ChallengeWizard />
 }
 
-const SECTIONS = ['basics', 'eligibility', 'stages', 'judging', 'workflow', 'publish']
+const SECTIONS = ['basics', 'eligibility', 'stages', 'pitch', 'judging', 'workflow', 'publish']
 const EXTRA_DATES = ['screening_start', 'screening_end', 'judging_start', 'judging_end', 'event_date']
 const AUDIENCES = ['both', 'public', 'internal']
 
@@ -306,7 +308,10 @@ function EditChallenge({ id }) {
   const toast = useToast()
   const qc = useQueryClient()
   const [params, setParams] = useSearchParams()
-  const section = SECTIONS.includes(params.get('section')) ? params.get('section') : 'basics'
+  const { can } = useAuth()
+  // The Pitch schedule is only for people the per-idea pitch API allows.
+  const sections = SECTIONS.filter((key) => key !== 'pitch' || can('challenges.manage'))
+  const section = sections.includes(params.get('section')) ? params.get('section') : 'basics'
   const program = useProgram(id)
   const setup = useProgramSetupStatus(id)
   const eligibility = useEligibilityDraft(id)
@@ -382,7 +387,7 @@ function EditChallenge({ id }) {
       side={
         <nav aria-label={t('cbs.sections')} className="min-w-0 lg:w-[220px] 2xl:w-[240px]">
           <ul className="relative flex gap-1 overflow-x-auto lg:flex-col">
-            {SECTIONS.map((key) => {
+            {sections.map((key) => {
               const current = key === section
               return (
                 <li key={key} className="shrink-0">
@@ -423,6 +428,7 @@ function EditChallenge({ id }) {
           )}
           {section === 'eligibility' && <EligibilitySection form={form} set={set} eligibility={eligibility} />}
           {section === 'stages' && <StagesSection program={p} onGoWorkflow={() => goTo('workflow')} />}
+          {section === 'pitch' && <PitchSchedule program={p} />}
           {section === 'judging' && (
             <>
               <Panel><JudgingStep programId={id} onDone={() => goTo('workflow')} /></Panel>
