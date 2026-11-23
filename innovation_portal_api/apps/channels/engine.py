@@ -677,6 +677,15 @@ class JourneyRunner(WayOutMixin, AIGuidanceMixin, FormQuestionsMixin, MyIdeasMix
         except Exception:  # hand-over never breaks the screen
             logger.exception("open_handoff failed for %s", self.channel)
         done = self.t(settings.get("done_text")) or self.default("handoff_done_ussd" if self.channel == "ussd" else "handoff_done_whatsapp")
+        if self.channel == "whatsapp":
+            # Prompt 54: a way back while waiting for an officer.
+            from apps.channels.way_out import MENU, WAY_OUT_TEXT
+
+            done = f"{done}\n{pick(WAY_OUT_TEXT['send_menu'], self.lang)}"
+            screen = self._finish(prefix + [done], outcome="handed_over", node_key=node["key"], node_type="handoff")
+            if self.interactive:
+                screen.choices = [Choice(MENU, pick(WAY_OUT_TEXT["main_menu"], self.lang))]
+            return screen
         # On WhatsApp the chat goes straight to staff, so the note prompt (USSD only) is not shown.
         return self._finish(prefix + [done], outcome="handed_over", node_key=node["key"], node_type="handoff")
 

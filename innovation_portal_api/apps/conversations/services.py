@@ -337,6 +337,30 @@ def close(conversation, *, reason: str, actor) -> Conversation:
     return conversation
 
 
+LEFT_NOTES = {
+    "menu": "The person went back to the menu.",
+    "cancel": "The person stopped the chat.",
+    "ended": "The person ended the chat.",
+}
+
+
+def leave(conversation, *, how: str, user=None) -> Conversation:
+    """The person leaves the chat themselves (prompt 54): it closes as "left by the person", with a note for staff.
+    Nothing is deleted; it stays in the Inbox so the officer sees what happened. how: menu, cancel or ended."""
+    note = LEFT_NOTES.get(how, LEFT_NOTES["ended"])
+    if conversation.status != Conversation.Status.CLOSED:
+        conversation.status = Conversation.Status.CLOSED
+        conversation.closed_at = timezone.now()
+        conversation.closed_reason = f"Left by the person: {note}"[:300]
+        conversation.save(update_fields=["status", "closed_at", "closed_reason", "updated_at"])
+    _add(conversation, role=ConversationMessage.Author.SYSTEM, body=note, internal=True)
+    AuditService.log_action(
+        actor=user, action_type="conversation_left_by_person", target=conversation,
+        metadata={"channel": conversation.channel, "how": how, "by": "account" if user is not None else "guest_or_phone"},
+    )
+    return conversation
+
+
 def reopen(conversation, *, actor) -> Conversation:
     conversation.status = Conversation.Status.ASSIGNED if conversation.assignee_id else Conversation.Status.WAITING
     conversation.closed_at, conversation.closed_reason = None, ""

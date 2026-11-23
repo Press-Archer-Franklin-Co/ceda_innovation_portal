@@ -190,12 +190,12 @@ class HandoverTests(Base):
         self.assertEqual(self.fake.sent()[-1]["Body"], "Hello, how can I help?")
         self.assertEqual(self.replies(), sent_before + 1)
         self.say("I need funding")
-        self.say("menu")  # not a restart while an officer has the chat
+        self.say("Is that possible?")  # prompt 54: menu words now leave the chat, so an ordinary second reply
         with patch("apps.platform_config.http.download", return_value=DownloadResult(ok=True, content=PNG, content_type="image/png", status=200)):
             self.say("", NumMedia="1", MediaUrl0="https://api.twilio.com/media/ME2", MediaContentType0="image/png")
         self.assertEqual(self.replies(), sent_before + 1)  # no bot replies
         person = list(conversation.messages.filter(author_role="person").order_by("created_at"))
-        self.assertEqual([m.body for m in person], ["I need funding", "menu", ""])
+        self.assertEqual([m.body for m in person], ["I need funding", "Is that possible?", ""])
         self.assertEqual(person[2].attachments.count(), 1)
         self.assertFalse(JourneySession.objects.filter(phone=PHONE, status="active").exists())
         inbox.close(conversation, reason="Answered", actor=self.admin)
@@ -208,7 +208,7 @@ class HandoverTests(Base):
         self.say("anyone there?")
         self.assertEqual(self.replies(), before)
         Conversation.objects.filter(pk=conversation.pk).update(created_at=timezone.now() - timedelta(minutes=6))
-        self.say("hello?")
-        self.assertEqual(self.last_text(), "An officer will reply soon.")
+        self.say("are you there?")  # not a greeting: "hello" now asks keep waiting or menu (prompt 54)
+        self.assertEqual(self.last_text(), "An officer will reply soon.\nSend *menu* to go back.")  # prompt 54 adds the way back
         self.say("still there?")
         self.assertEqual(self.replies(), before + 1)

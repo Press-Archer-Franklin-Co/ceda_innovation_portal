@@ -40,9 +40,16 @@ export default function NeedHelp() {
   return (
     <GuideProvider app="public" menuSelector={MENU} onTalk={talk} canTalk={chatOn}>
       <GuideShell buttonClassName={BUTTON} />
-      <HelpBubble fromGuide open={chatOpen} onOpenChange={setChatOpen} onStatus={onStatus} />
+      <GuideChat open={chatOpen} onOpenChange={setChatOpen} onStatus={onStatus} />
     </GuideProvider>
   )
+}
+
+/** The live chat opened from the guide; Back returns to the guide's start view and keeps the chat open. */
+function GuideChat({ open, onOpenChange, onStatus }: { open: boolean; onOpenChange: (open: boolean) => void; onStatus: (on: boolean) => void }) {
+  const g = useGuide()
+  const back = useCallback(() => { g.reset?.(); g.setOpen(true) }, [g])
+  return <HelpBubble fromGuide open={open} onOpenChange={onOpenChange} onStatus={onStatus} onBack={back} />
 }
 
 /** Button, panel or sheet, and spotlight. */

@@ -124,6 +124,16 @@ DEFAULT_REPLIES = {
     "file_not_expected.tn": "Re a leboga. Re amogela difaele fela fa re di kopa.",
     "officer_soon.en": "An officer will reply soon.",
     "officer_soon.tn": "Motlhankedi o tla araba ka bonako.",
+    "handover_back.en": "Send *menu* to go back.",
+    "handover_back.tn": "Romela *menu* go boela morago.",
+    "handover_stopped.en": "Okay, we've stopped. Send *menu* any time to start again.",
+    "handover_stopped.tn": "Go siame, re emisitse. Romela *menu* nako nngwe le nngwe go simolola gape.",
+    "handover_ask.en": "You're waiting for an officer. Keep waiting, or go back to the menu?",
+    "handover_ask.tn": "O emetse motlhankedi. A o tswelela o emetse, kgotsa o boela kwa lenaneng?",
+    "handover_ask_text.en": "Reply 1 to keep waiting, 0 for the main menu.",
+    "handover_ask_text.tn": "Araba 1 go tswelela o emetse, 0 go ya kwa lenaneng le legolo.",
+    "handover_keep.en": "Okay. An officer will reply here.",
+    "handover_keep.tn": "Go siame. Motlhankedi o tla araba fano.",
 }
 DEFAULT_MENU_WORDS = ["menu", "home", "main menu", "start", "gae"]
 DEFAULT_CANCEL_WORDS = ["cancel", "stop", "emisa"]
@@ -146,7 +156,7 @@ SHARED_WHATSAPP_FIELDS = (
         "Standard replies",
         FieldType.MAPPING,
         default=DEFAULT_REPLIES,
-        help_text="Replies the system sends, in English (.en) and Setswana (.tn): error, not_available, file_not_expected, officer_soon.",
+        help_text="Replies the system sends, in English (.en) and Setswana (.tn): error, not_available, file_not_expected, officer_soon, handover_back, handover_stopped, handover_ask, handover_ask_text, handover_keep.",
     ),
 )
 

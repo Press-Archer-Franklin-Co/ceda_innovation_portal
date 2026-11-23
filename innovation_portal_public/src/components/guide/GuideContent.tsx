@@ -5,6 +5,8 @@ import Button from '../ui/Button'
 import { useGuide } from './guideContext'
 import type { GuideStep } from '../../lib/guide/guide'
 import { scrollToTarget } from './guideContext'
+import { chatStore } from '../../services/helpChat.service'
+import { useI18n } from '../../i18n'
 
 // What the guide panel (website) and sheet (phone) show, from 3.40 and 2.14: the question, the numbered steps with
 // a progress bar, Show me and Skip this step, "Ask another question" and "Talk to a person". When the guide
@@ -102,7 +104,17 @@ export function StepActions({ block = false }: { block?: boolean }) {
 
 export function TalkLink({ inline = false }: { inline?: boolean }) {
   const g = useGuide()
+  const { t } = useI18n()
   if (!g.canTalk) return null
+  if (chatStore.get()) {
+    // A chat is still open (the person went Back): take them back to it.
+    return (
+      <button type="button" onClick={g.talk} className={cn('flex items-center gap-2 rounded-control bg-surface2 px-3 py-2 text-left hover:bg-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', inline ? 'text-[13px]' : 'text-[14px] self-stretch')}>
+        <span className="flex-1 text-text">{t('chat.youHaveChat')}</span>
+        <span className="font-bold text-primary">{t('chat.goBackToChat')}</span>
+      </button>
+    )
+  }
   return (
     <button type="button" onClick={g.talk} className={cn('font-bold text-primary hover:underline underline-offset-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', inline ? 'text-[13px]' : 'text-[14px] self-start')}>
       {g.t('guide.talk')}
