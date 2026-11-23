@@ -16,11 +16,10 @@ export function userStatus(user) {
   return user?.is_active === false ? 'deactivated' : 'active'
 }
 
-/** Query params for the list. */
-export function listParams({ search, role, status, page, pageSize }) {
-  const p = { page, page_size: pageSize }
-  if (search) p.search = search
-  if (role) p.role = role
-  if (status) p.status = status
-  return p
+/** The filters ServerTable adds to each request. "all" means no status filter. */
+export function userFilters({ role, status }) {
+  const f = {}
+  if (role) f.role = role
+  if (status && status !== 'all') f.status = status
+  return f
 }
