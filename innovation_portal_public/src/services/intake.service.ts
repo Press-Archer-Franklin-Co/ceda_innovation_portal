@@ -10,6 +10,8 @@ export const DRAFT_TOKEN_HEADER = 'X-Draft-Token'
 
 const RESUME_KEY = 'ceda_resume_token'
 const RESUME_DRAFT_KEY = 'ceda_resume_draft'
+/** Prompt 31 part B: "confirm" while a signed-out visitor is on the phone step, so a refresh reopens it. */
+const RESUME_STAGE_KEY = 'ceda_resume_stage'
 
 /** Keeps the guest draft across a refresh (screens 1.1 and 1.2). */
 export const resumeStorage = {
@@ -30,10 +32,26 @@ export const resumeStorage = {
       // Private mode: the draft still works for this page view.
     }
   },
+  stage(): 'confirm' | null {
+    try {
+      return localStorage.getItem(RESUME_STAGE_KEY) === 'confirm' ? 'confirm' : null
+    } catch {
+      return null
+    }
+  },
+  setStage(stage: 'confirm' | null) {
+    try {
+      if (stage) localStorage.setItem(RESUME_STAGE_KEY, stage)
+      else localStorage.removeItem(RESUME_STAGE_KEY)
+    } catch {
+      // Private mode: a refresh goes back to the card, with the draft kept.
+    }
+  },
   clear() {
     try {
       localStorage.removeItem(RESUME_KEY)
       localStorage.removeItem(RESUME_DRAFT_KEY)
+      localStorage.removeItem(RESUME_STAGE_KEY)
     } catch {
       // Nothing stored.
     }
