@@ -231,8 +231,8 @@ export default function Users() {
   const inviteButton = <Button ref={inviteRef} block={!wide} onClick={() => setDialog({ mode: 'invite' })}>{t('users.invite')}</Button>
   const filterRow = (
     <>
-      <SelectControl options={[{ value: '', label: t('users.allRoles') }, ...roleOptions]} value={role} onChange={(v) => setFilter('role', v)} aria-label={t('users.col.roles')} className="w-[calc(50%-4px)] sm:w-[160px]" />
-      <SelectControl options={[{ value: 'all', label: t('users.allStatus') }, ...statusOptions]} value={status} onChange={(v) => setFilter('status', v === 'active' ? '' : v)} aria-label={t('users.col.status')} className="w-[calc(50%-4px)] sm:w-[150px]" />
+      <SelectControl options={[{ value: '', label: t('users.allRoles') }, ...roleOptions]} value={role} onChange={(v) => setFilter('role', v)} aria-label={t('users.col.roles')} className="w-[calc(50vw-32px)] sm:w-[160px]" />
+      <SelectControl options={[{ value: 'all', label: t('users.allStatus') }, ...statusOptions]} value={status} onChange={(v) => setFilter('status', v === 'active' ? '' : v)} aria-label={t('users.col.status')} className="w-[calc(50vw-32px)] sm:w-[150px]" />
     </>
   )
 
