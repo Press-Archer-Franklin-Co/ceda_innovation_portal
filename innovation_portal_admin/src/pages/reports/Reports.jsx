@@ -17,6 +17,7 @@ import { useTabParam } from '../../lib/useTabParam'
 import { funnelRows, inclusionShares, periodLabel } from '../../lib/analytics/dashboard'
 
 const FormAnswers = lazy(() => import('./FormAnswers'))
+const ChatReport = lazy(() => import('./ChatReport'))
 
 function MonthlyCard({ filters, canExport }) {
   const t = useT()
@@ -134,6 +135,7 @@ export default function Reports() {
   const tabs = [
     { key: 'numbers', label: t('rep.tab.numbers'), hidden: !can('dashboard.view') },
     { key: 'answers', label: t('rep.tab.answers'), hidden: !can('analytics.view') },
+    { key: 'chat', label: t('rep.tab.chat'), hidden: !can('analytics.view') },
   ].filter((tab) => !tab.hidden)
   const [tab, setTab] = useTabParam(tabs)
   const { filters } = useAnalyticsFilters()
@@ -149,6 +151,7 @@ export default function Reports() {
       {tabs.length > 1 && <Tabs tabs={tabs} active={tab} onChange={setTab} label={t('rep.title')} className="mb-3.5" />}
       {tab === 'numbers' && <Numbers />}
       {tab === 'answers' && <Suspense fallback={<PageSkeleton />}><FormAnswers /></Suspense>}
+      {tab === 'chat' && <Suspense fallback={<PageSkeleton />}><ChatReport /></Suspense>}
     </div>
   )
 }

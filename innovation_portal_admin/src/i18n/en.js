@@ -4,6 +4,7 @@ import { challengesEn } from './challenges'
 import { rolesEn } from './roles'
 import { contentEn } from './content'
 import { dashboardEn } from './dashboard'
+import { chatReportEn } from './chatReport'
 import { u7En } from './u7'
 import { formsEn } from './forms'
 import { ideasEn } from './ideas'
@@ -169,6 +170,7 @@ const en = {
   ...rolesEn,
   ...contentEn,
   ...dashboardEn,
+  ...chatReportEn,
   ...u7En,
   ...aiServicesEn,
 }

@@ -4,6 +4,7 @@ import { challengesTn } from './challenges'
 import { rolesTn } from './roles'
 import { contentTn } from './content'
 import { dashboardTn } from './dashboard'
+import { chatReportTn } from './chatReport'
 import { u7Tn } from './u7'
 import { formsTn } from './forms'
 import { ideasTn } from './ideas'
@@ -169,6 +170,7 @@ const tn = {
   ...rolesTn,
   ...contentTn,
   ...dashboardTn,
+  ...chatReportTn,
   ...u7Tn,
   ...aiServicesTn,
 }
