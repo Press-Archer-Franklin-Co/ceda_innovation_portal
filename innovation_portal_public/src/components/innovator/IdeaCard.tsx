@@ -4,11 +4,19 @@ import { MessageCircle } from 'lucide-react'
 import { buttonClasses } from '../ui/Button'
 import Tag from '../ui/Tag'
 import { useI18n } from '../../i18n'
+import type { StringKey } from '../../i18n'
 import type { IdeaItem } from '../../types/innovator'
 import StageBar from './StageBar'
 import { ideaStatusWord } from './ideaStatus'
 import { formatDate, formatShortDate, relativeTime } from './format'
 import { ideaLink } from './links'
+
+const CHANNEL_WORDS: Record<string, StringKey> = {
+  web: 'channel.web',
+  whatsapp: 'channel.whatsapp',
+  ussd: 'channel.ussd',
+  office: 'channel.office',
+}
 
 /** One idea on My ideas (2.2). Cards that need action get the orange outline. */
 export default function IdeaCard({ item }: { item: IdeaItem }) {
@@ -33,6 +41,8 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
     meta = [item.submitted_at ? t('ideas.sent', { date: formatShortDate(item.submitted_at, lang) }) : '', sector].filter(Boolean).join(' · ')
     action = returned ? t('trk.fixResend') : needsAction ? t('ideas.reply') : t('ideas.open')
   }
+
+  const channelKey = CHANNEL_WORDS[item.channel ?? '']
 
   const question = item.open_question?.excerpt
   const officer = item.open_question?.officer_first_name
@@ -62,7 +72,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
         </p>
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <span className="text-d-cap text-muted">{meta}</span>
+        <span className="text-d-cap text-muted">{[meta, channelKey ? t(channelKey) : ''].filter(Boolean).join(' · ')}</span>
         <Link data-guide="myIdeas.open" to={needsAction && !returned ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm' })}>
           {action}
         </Link>

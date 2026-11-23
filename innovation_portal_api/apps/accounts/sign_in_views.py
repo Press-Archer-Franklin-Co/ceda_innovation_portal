@@ -167,6 +167,8 @@ class AuthSignupView(APIView):
         )
         if nxt.get("next") == "signed_in":
             return signed_in_response(request, user, auth_method=User.PrimaryAuthMethod.PASSWORD, next_path=data.get("next"), extra={"created": True})
+        if nxt.get("found_account"):
+            return Response({**nxt, "created": False}, status=status.HTTP_200_OK)
         return Response({**nxt, "created": True}, status=status.HTTP_201_CREATED)
 
 

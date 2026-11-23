@@ -39,7 +39,7 @@ export default function TranslationsPanel({ rows, onText, suggestions, onSuggest
   const missing = total - done
 
   return (
-    <aside aria-label={t('tr.title')} className="flex flex-col gap-3 rounded-card border border-border bg-surface p-[14px] 2xl:p-[18px]">
+    <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-[14px] 2xl:p-[18px]">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-[15px] font-bold text-text">{t('tr.title')}</h2>
         <Tag tone={missing ? 'amber' : 'green'}>{t('tr.count', { done, total })}</Tag>
@@ -55,7 +55,7 @@ export default function TranslationsPanel({ rows, onText, suggestions, onSuggest
       )}
       {suggestOff && <p className="text-[12px] text-muted">{t('settings.suggestOff')}</p>}
 
-      <ul className="flex max-h-[520px] flex-col gap-2 overflow-y-auto pr-1">
+      <ul className="flex flex-col gap-2">
         {rows.map((row) => {
           const tn = row.value?.tn ?? ''
           const suggestion = suggestions[row.key]
@@ -96,6 +96,6 @@ export default function TranslationsPanel({ rows, onText, suggestions, onSuggest
           <Button size="sm" variant="secondary" onClick={() => onRequestReview(role)} loading={reviewing}>{t('tr.send')}</Button>
         </div>
       </div>
-    </aside>
+    </div>
   )
 }

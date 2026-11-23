@@ -11,9 +11,13 @@
  * - When `open` turns false it plays back into the trigger, then unmounts.
  * - Turning round mid-flight reverses from the current shape. No jump.
  * - Reduced motion: a 150ms fade.
+ * - It opens out of triggerRef while that is on screen, else out of the control just pressed (origin.js),
+ *   else it scales in from the centre (scaleFromCentre.js): never a page's own animation, never none.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { genie } from './genie';
+import { isOnScreen, pickOrigin } from './origin';
+import { scaleFromCentre } from './scaleFromCentre';
 
 export function useGenie(open, triggerRef, { small = false, onOpened, onClosed } = {}) {
   const [mounted, setMounted] = useState(open);
@@ -24,7 +28,7 @@ export function useGenie(open, triggerRef, { small = false, onOpened, onClosed }
 
   // Remember where it came from at the moment of opening (the trigger may
   // scroll or re-render later; we close back into the same element).
-  useEffect(() => { if (open) { originRef.current = triggerRef?.current ?? null; setMounted(true); } }, [open, triggerRef]);
+  useEffect(() => { if (open) { originRef.current = pickOrigin(triggerRef?.current ?? null); setMounted(true); } }, [open, triggerRef]);
 
   useLayoutEffect(() => {
     const panel = panelRef.current;
@@ -35,15 +39,19 @@ export function useGenie(open, triggerRef, { small = false, onOpened, onClosed }
     if (open) {
       if (run && run.direction === 'open') return;
       if (run && run.direction === 'close') run.reverse();
-      else runRef.current = genie(panel, origin, { direction: 'open', backdropEl: backdropRef.current, small });
+      else runRef.current = origin
+        ? genie(panel, origin, { direction: 'open', backdropEl: backdropRef.current, small })
+        : scaleFromCentre(panel, { direction: 'open', backdropEl: backdropRef.current });
       runRef.current.finished.then((dir) => {
         if (dir === 'open') { runRef.current = null; onOpened?.(); }
       });
     } else {
       if (run && run.direction === 'open') { run.reverse(); }
-      else if (!run) runRef.current = genie(panel, origin, { direction: 'close', backdropEl: backdropRef.current, small });
+      else if (!run) runRef.current = isOnScreen(origin)
+        ? genie(panel, origin, { direction: 'close', backdropEl: backdropRef.current, small })
+        : scaleFromCentre(panel, { direction: 'close', backdropEl: backdropRef.current });
       runRef.current.finished.then((dir) => {
-        if (dir === 'close') { runRef.current = null; setMounted(false); onClosed?.(); origin?.focus?.(); }
+        if (dir === 'close') { runRef.current = null; setMounted(false); onClosed?.(); if (isOnScreen(origin)) origin.focus?.(); }
       });
     }
   }, [open, mounted, small, onOpened, onClosed]);

@@ -1,6 +1,6 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDown, ArrowUp, Check, ChevronLeft, ChevronRight, Info, Lock, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Info, MoreHorizontal, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
@@ -15,9 +15,11 @@ import { Toggle } from '../../components/ui/Choice'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
+import { useTrigger } from '../../components/ui/useTrigger'
 import { cn } from '../../lib/cn'
-import { PERMISSION_COLUMNS, copyableCapabilities, describeChanges, locksFrom, matrixChanges, permissionGroups, pickText, toggleCell } from '../../lib/admin/roles'
+import { copyableCapabilities, describeChanges, locksFrom, matrixChanges, pickText } from '../../lib/admin/roles'
 import { useMediaQuery } from '../../lib/useMediaQuery'
+import RolePermissionPanel from './RolePermissionPanel'
 import { LANGUAGES, approverFrom, approverValue, flowProblems, flowSentence, fromFlow, moveStep, newStep, toFlowPayload } from '../../lib/admin/approvals'
 import { useAdminRoles, useApprovalFlow, useCapabilityCatalogue, useRoleAction, useRoleLocks, useSaveApprovalFlow } from '../../lib/queries/adminRoles'
 
@@ -27,7 +29,7 @@ const apiMessage = (err) => {
   return typeof first === 'string' ? first : err?.message ?? ''
 }
 
-function RoleDialog({ role, onClose }) {
+function RoleDialog({ role, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const act = useRoleAction()
@@ -48,7 +50,7 @@ function RoleDialog({ role, onClose }) {
     }
   }
   return (
-    <Modal open onClose={onClose} title={role?.id ? t('roles.editTitle') : t('roles.newTitle')} size="md"
+    <Modal open onClose={onClose} triggerRef={triggerRef} title={role?.id ? t('roles.editTitle') : t('roles.newTitle')} size="md"
       footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={save} loading={act.isPending}>{role?.id ? t('roles.saveRole') : t('roles.create')}</Button></>}>
       <div className="flex flex-col gap-3">
         {builtIn && <p className="rounded-control bg-surface2 px-3 py-2 text-[12px] text-muted">{t('roles.builtInNote')}</p>}
@@ -63,11 +65,9 @@ function RoleDialog({ role, onClose }) {
   )
 }
 
-// The frame's area names where they differ from the older matrix.
-const GROUP_LABEL = { website: 'roles.u9.group.website', administration: 'roles.u9.group.admin' }
-
-/** 3.24 ① roles down the side with their people; ② what the chosen role can do, in plain words. */
-function RolesView() {
+/** 3.24 ① roles down the side with their people; ② the chosen role's permissions, one row per group. */
+function RolesView({ dirtyRef, canLeave }) {
+  const roleTrigger = useTrigger()
   const t = useT()
   const { lang } = useI18n()
   const toast = useToast()
@@ -82,57 +82,46 @@ function RolesView() {
   const selected = list.find((r) => String(r.id) === selectedId) ?? (wide ? list[0] : null)
   const lockQueries = useRoleLocks(selected ? [selected] : [])
   const locks = useMemo(() => locksFrom(lockQueries.map((q) => q.data)), [lockQueries])
-  const [draft, setDraft] = useState(null)
   const [dialog, setDialog] = useState(null)
-  useEffect(() => { setDraft(null) }, [roles.data, selected?.id])
 
   if (roles.error?.status === 403 || catalogue.error?.status === 403) return <ForbiddenState title={t('roles.forbidden')} />
   if (roles.isError || catalogue.isError) return <ErrorState title={t('roles.loadError')} onRetry={() => { roles.refetch(); catalogue.refetch() }} />
   if (roles.isLoading || catalogue.isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
-        <Skeleton className="h-72 rounded-card" /><Skeleton className="hidden h-[480px] rounded-card md:block" />
+        <Skeleton className="h-72 rounded-card" /><Skeleton className="hidden h-72 rounded-card md:block" />
       </div>
     )
   }
 
-  const choose = (r) => setParams((p) => { const n = new URLSearchParams(p); if (r) n.set('role', String(r.id)); else n.delete('role'); return n }, { replace: true })
-  const groups = permissionGroups(catalogue.data)
+  const select = (r) => setParams((p) => { const n = new URLSearchParams(p); if (r) n.set('role', String(r.id)); else n.delete('role'); return n }, { replace: true })
+  const choose = async (r) => { if (String(r?.id ?? '') !== String(selected?.id ?? '') && await canLeave()) select(r) }
   const capLabel = (key) => pickText(catalogue.data?.capabilities?.find((c) => c.key === key)?.label, lang) || key
-  const id = selected ? String(selected.id) : ''
-  const saved = selected ? [...(selected.capabilities ?? [])].sort() : []
-  const held = draft ?? saved
-  const builtIn = !!selected?.is_system
-  const editable = wide && selected && !builtIn && selected.is_active
-  const changes = matrixChanges({ [id]: saved }, { [id]: held })
   const peopleText = (r) => (r.people_count === 1 ? t('roles.person') : t('roles.people', { count: r.people_count ?? 0 }))
+  const failed = (e) => toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
 
-  async function save() {
+  async function save(held) {
     const name = pickText(selected.name, lang)
+    const changes = matrixChanges({ [selected.id]: selected.capabilities ?? [] }, { [selected.id]: held })
     const lines = describeChanges(changes, () => name, capLabel, t)
     const body = <>{lines.map((line) => <span key={line} className="mt-1 block text-text">{line}</span>)}<span className="mt-2 block">{t('roles.saveBody')}</span></>
     if (!(await confirm({ title: t('roles.saveTitle'), body, confirmLabel: t('roles.save'), tone: 'primary' }))) return
     try {
       await act.mutateAsync({ action: 'capabilities', id: selected.id, value: held })
       toast.show({ tone: 'success', title: t('roles.saved') })
-    } catch (e) {
-      toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
-    }
+    } catch (e) { failed(e) }
   }
 
   async function copy() {
     const name = t('roles.u9.copyName', { name: pickText(selected.name, lang) })
     try {
       const made = await act.mutateAsync({ action: 'create', value: { name: { en: name, tn: '' }, description: selected.description } })
-      const newId = made?.id ?? made?.role?.id
-      if (newId) {
-        await act.mutateAsync({ action: 'capabilities', id: newId, value: copyableCapabilities(selected, catalogue.data) })
-        choose({ id: newId })
+      if (made?.id) {
+        await act.mutateAsync({ action: 'capabilities', id: made.id, value: copyableCapabilities(selected, catalogue.data) })
+        select({ id: made.id })
       }
       toast.show({ tone: 'success', title: t('roles.u9.copied', { name }) })
-    } catch (e) {
-      toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
-    }
+    } catch (e) { failed(e) }
   }
 
   async function remove(role) {
@@ -140,32 +129,31 @@ function RolesView() {
     try {
       const result = await act.mutateAsync({ action: 'remove', id: role.id })
       toast.show({ tone: 'success', title: result?.result === 'retired' ? t('roles.retiredDone') : t('roles.deleted') })
-      choose(null)
-    } catch (e) {
-      toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })
-    }
+      dirtyRef.current = false
+      select(null)
+    } catch (e) { failed(e) }
   }
 
   const roleList = (
-    <ul className="flex flex-col gap-2" aria-label={t('roles.tabRoles')}>
+    <ul className="flex flex-col gap-1.5" aria-label={t('roles.tabRoles')}>
       {list.map((r) => {
-        const on = selected && String(r.id) === id
+        const on = selected && String(r.id) === String(selected.id)
         return (
           <li key={r.id}>
             <button type="button" onClick={() => choose(r)} aria-current={on ? 'true' : undefined}
               className={cn(
-                'flex w-full items-center justify-between gap-2 rounded-card border bg-surface px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                'flex min-h-[44px] w-full items-center justify-between gap-2 rounded-card border bg-surface px-3 py-1.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                 on ? 'border-primary bg-primary-soft' : 'border-border hover:bg-surface2',
                 !r.is_active && 'opacity-60',
               )}>
               <span className="min-w-0">
-                <span className="block truncate text-[14px] font-semibold text-text">{pickText(r.name, lang)}</span>
-                <span className="block text-[12px] text-muted">
+                <span className="block truncate text-[13px] font-semibold text-text">{pickText(r.name, lang)}</span>
+                <span className="block text-[11px] text-muted">
                   {r.is_system ? t('roles.u9.peopleBuiltIn', { people: peopleText(r) }) : peopleText(r)}
                   {!r.is_active && ` · ${t('roles.retired')}`}
                 </span>
               </span>
-              <ChevronRight size={16} aria-hidden className="shrink-0 text-muted" />
+              <ChevronRight size={15} aria-hidden className="shrink-0 text-muted" />
             </button>
           </li>
         )
@@ -173,78 +161,39 @@ function RolesView() {
     </ul>
   )
 
+  const builtIn = !!selected?.is_system
   const panel = selected && (
-    <section className="overflow-hidden rounded-card border border-border bg-surface" aria-labelledby="role-panel-title">
-      <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,52px)] items-center gap-x-1 bg-surface2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_repeat(3,64px)] sm:px-4">
-        <span className="flex min-w-0 items-center gap-1">
-          <h2 id="role-panel-title" className="truncate text-[13px] font-bold text-text">{t('roles.u9.whatTheyCanDo', { name: pickText(selected.name, lang) })}</h2>
-          {wide && (
-            <DropdownMenu label={t('roles.actions', { name: pickText(selected.name, lang) })} align="start" items={[
-              { key: 'edit', label: builtIn ? t('roles.u9.describe') : t('roles.rename'), onSelect: () => setDialog(selected) },
-              { key: 'retire', label: selected.is_active ? t('roles.retire') : t('roles.restore'), hidden: builtIn, onSelect: () => act.mutateAsync({ action: 'update', id: selected.id, value: { is_active: !selected.is_active } }).catch((e) => toast.show({ tone: 'error', title: t('roles.failed', { message: apiMessage(e) }) })) },
-              { key: 'delete', label: t('roles.delete'), danger: true, hidden: builtIn, onSelect: () => remove(selected) },
-            ]} trigger={(props) => <button type="button" {...props} className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted hover:bg-surface hover:text-text"><MoreHorizontal size={15} aria-hidden /><span className="sr-only">{t('roles.actions', { name: pickText(selected.name, lang) })}</span></button>} />
-          )}
-        </span>
-        {PERMISSION_COLUMNS.map((col) => <span key={col} className="text-center text-[12px] font-semibold text-muted">{t(`roles.u9.${col}`)}</span>)}
-      </div>
-      {groups.map((g) => (
-        <div key={g.key} role="group" aria-labelledby={`grp-${g.key}`}>
-          <p id={`grp-${g.key}`} className="border-t border-border px-3 pb-1.5 pt-3 text-[11px] font-bold uppercase tracking-wide text-muted sm:px-4">{t(GROUP_LABEL[g.key] ?? `roles.group.${g.key}`)}</p>
-          {g.rows.map((row) => {
-            const rowLabel = row.label ? pickText(row.label, lang) : t(`roles.row.${row.key}`)
-            return (
-              <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_repeat(3,52px)] items-center gap-x-1 border-t border-border px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_repeat(3,64px)] sm:px-4">
-                <span className="text-[13px] text-text">{rowLabel}</span>
-                {PERMISSION_COLUMNS.map((col) => {
-                  const key = row[col]
-                  if (!key) return <span key={col} aria-hidden />
-                  const on = held.includes(key)
-                  const reason = locks[id]?.[key]
-                  const changed = on !== saved.includes(key)
-                  return (
-                    <span key={col} className={cn('flex justify-center rounded py-0.5', changed && 'bg-warning-soft')} title={reason ? t('roles.locked', { reason }) : undefined}>
-                      {/* Drawn by hand so a read-only tick keeps the frame's red; a disabled native box turns grey. */}
-                      <span className="relative flex h-4 w-4">
-                        <input type="checkbox" className="peer h-4 w-4 cursor-pointer appearance-none rounded-[4px] border border-border bg-surface checked:border-primary checked:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed" checked={on}
-                          disabled={!editable || reason != null}
-                          aria-label={t('roles.cell', { role: pickText(selected.name, lang), capability: `${rowLabel}: ${t(`roles.u9.${col}`)}` })}
-                          onChange={(e) => setDraft(toggleCell({ [id]: held }, id, key, e.target.checked)[id])} />
-                        <Check size={12} strokeWidth={3} aria-hidden className="pointer-events-none absolute left-0.5 top-0.5 hidden text-white peer-checked:block" />
-                      </span>
-                      {reason != null && editable && <Lock size={10} aria-hidden className="-ml-0.5 -mt-1 text-muted" />}
-                    </span>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
-      ))}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-3 sm:px-4">
-        <span className="text-[12px] text-muted">{!wide ? t('roles.u9.phoneNote') : builtIn ? t('roles.u9.builtInFooter') : t('roles.u9.customFooter')}</span>
-        {wide && (changes.length > 0 ? (
-          <span className="flex gap-2" role="status">
-            <Button variant="ghost" size="sm" onClick={() => setDraft(null)}>{t('roles.discard')}</Button>
-            <Button size="sm" onClick={save} loading={act.isPending}>{t('roles.save')}</Button>
-          </span>
-        ) : (
-          <Button variant="secondary" size="sm" onClick={copy} loading={act.isPending}>{t('roles.u9.copy')}</Button>
-        ))}
-      </div>
-    </section>
+    <RolePermissionPanel
+      key={selected.id}
+      role={selected}
+      catalogue={catalogue.data}
+      locks={locks[String(selected.id)] ?? {}}
+      editable={wide && !builtIn && selected.is_active}
+      wide={wide}
+      saving={act.isPending}
+      onSave={save}
+      onCopy={copy}
+      onDirtyChange={(d) => { dirtyRef.current = d }}
+      menu={wide ? (
+        <DropdownMenu label={t('roles.actions', { name: pickText(selected.name, lang) })} align="start" items={[
+          { key: 'edit', label: builtIn ? t('roles.u9.describe') : t('roles.rename'), onSelect: () => { roleTrigger.ref.current = null; setDialog(selected) } },
+          { key: 'retire', label: selected.is_active ? t('roles.retire') : t('roles.restore'), hidden: builtIn, onSelect: () => act.mutateAsync({ action: 'update', id: selected.id, value: { is_active: !selected.is_active } }).catch(failed) },
+          { key: 'delete', label: t('roles.delete'), danger: true, hidden: builtIn, onSelect: () => remove(selected) },
+        ]} trigger={(props) => <button type="button" {...props} className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted hover:bg-surface hover:text-text"><MoreHorizontal size={15} aria-hidden /><span className="sr-only">{t('roles.actions', { name: pickText(selected.name, lang) })}</span></button>} />
+      ) : null}
+    />
   )
 
   return (
     <>
       {wide ? (
-        <div className="grid items-start gap-4 md:grid-cols-[240px_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="grid items-start gap-4 md:grid-cols-[230px_minmax(0,1fr)] lg:grid-cols-[250px_minmax(0,1fr)]">
           {roleList}
-          {panel}
+          <div className="min-w-0">{panel}</div>
         </div>
       ) : selected ? (
         <div className="flex flex-col gap-3">
-          <button type="button" onClick={() => choose(null)} className="inline-flex items-center gap-1 self-start text-[13px] font-semibold text-primary">
+          <button type="button" onClick={() => select(null)} className="inline-flex min-h-[44px] items-center gap-1 self-start text-[13px] font-semibold text-primary">
             <ChevronLeft size={16} aria-hidden />{t('roles.u9.back')}
           </button>
           {panel}
@@ -255,7 +204,7 @@ function RolesView() {
           <p className="flex items-center gap-2 rounded-control bg-surface2 px-3 py-2.5 text-[12px] text-text"><Info size={14} aria-hidden className="shrink-0 text-muted" />{t('roles.u9.phoneNote')}</p>
         </div>
       )}
-      {dialog && <RoleDialog key={dialog === 'new' ? 'new' : dialog.id} role={dialog === 'new' ? null : dialog} onClose={() => setDialog(null)} />}
+      {dialog && <RoleDialog key={dialog.id} role={dialog} onClose={() => setDialog(null)} triggerRef={roleTrigger.ref} />}
     </>
   )
 }
@@ -353,10 +302,20 @@ function ApprovalsTab() {
 
 /** 3.24 Roles and permissions (Figma 111:1585, 111:2052). Needs settings.manage; the API refuses everyone else. */
 export default function RolesPermissions() {
+  const newRole = useTrigger()
   const t = useT()
   const wide = useMediaQuery('(min-width: 768px)')
   const [params, setParams] = useSearchParams()
   const [dialog, setDialog] = useState(false)
+  const confirm = useConfirm()
+  const dirtyRef = useRef(false)
+  // Moving to another role or tab never drops ticked boxes without asking.
+  const canLeave = async () => {
+    if (!dirtyRef.current) return true
+    const ok = await confirm({ title: t('roles.u9.leaveTitle'), body: t('roles.u9.leaveBody'), confirmLabel: t('roles.u9.leave') })
+    if (ok) dirtyRef.current = false
+    return ok
+  }
   const tab = params.get('tab') === 'approvals' ? 'approvals' : 'roles'
   return (
     <div>
@@ -364,14 +323,14 @@ export default function RolesPermissions() {
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('roles.title')}</span>}
         title={t('roles.u9.title')}
         subtitle={t('roles.u9.subtitle')}
-        actions={wide && tab === 'roles' ? <Button data-guide="roles.create" onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
+        actions={wide && tab === 'roles' ? <Button ref={newRole.ref} data-guide="roles.create" onClick={() => setDialog(true)}>{t('roles.newRole')}</Button> : null}
       />
       {wide && (
         <Tabs tabs={[{ key: 'roles', label: t('roles.tabRoles') }, { key: 'approvals', label: t('roles.u9.tabSteps') }]} active={tab}
-          onChange={(key) => setParams(key === 'roles' ? {} : { tab: key }, { replace: true })} label={t('roles.title')} className="mb-4" />
+          onChange={async (key) => { if (key !== tab && await canLeave()) setParams(key === 'roles' ? {} : { tab: key }, { replace: true }) }} label={t('roles.title')} className="mb-4" />
       )}
-      <Fragment key={tab}>{tab === 'roles' || !wide ? <RolesView /> : <ApprovalsTab />}</Fragment>
-      {dialog && <RoleDialog role={null} onClose={() => setDialog(false)} />}
+      <Fragment key={tab}>{tab === 'roles' || !wide ? <RolesView dirtyRef={dirtyRef} canLeave={canLeave} /> : <ApprovalsTab />}</Fragment>
+      {dialog && <RoleDialog role={null} onClose={() => setDialog(false)} triggerRef={newRole.ref} />}
     </div>
   )
 }

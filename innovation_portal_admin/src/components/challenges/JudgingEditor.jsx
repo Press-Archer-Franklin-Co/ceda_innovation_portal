@@ -21,11 +21,11 @@ const SEGMENT_TONES = ['bg-primary', 'bg-amber', 'bg-info', 'bg-success', 'bg-ac
  * The marking criteria of one challenge. `value` is { criteria, pass_mark, reviewers_per_idea };
  * every change calls onChange with the next value (the page saves it).
  *
- * variant "full" (3.7): library with tick boxes, weights with a split bar, score meanings,
- * comment rule, pass mark and both previews. variant "compact" (3.6 judging step): the
+ * The 3.7 screen places three parts in EditorWorkspace: variant "library" (tick boxes), "rubric" (weights with a
+ * split bar, score meanings, comment rule, pass mark) and "previews". variant "compact" (3.6 judging step): the
  * criteria table, the total, and "Add criterion" from the library.
  */
-export default function JudgingEditor({ value, onChange, variant = 'full' }) {
+export default function JudgingEditor({ value, onChange, variant = 'rubric' }) {
   const t = useT()
   const criteria = value.criteria
   const sum = total(criteria)
@@ -100,10 +100,10 @@ export default function JudgingEditor({ value, onChange, variant = 'full' }) {
     )
   }
 
-  return (
-    <div className="grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_280px]">
-      <LibraryPanel criteria={criteria} onToggle={(item) => set(toggleLibrary(criteria, item))} />
+  if (variant === 'library') return <LibraryPanel criteria={criteria} onToggle={(item) => set(toggleLibrary(criteria, item))} />
+  if (variant === 'previews') return <Previews criteria={criteria} />
 
+  return (
       <div className="flex min-w-0 flex-col gap-4">
         {weightsCard}
         <div className="rounded-card border border-border bg-surface p-[14px]">
@@ -145,9 +145,6 @@ export default function JudgingEditor({ value, onChange, variant = 'full' }) {
           />
         </div>
       </div>
-
-      <Previews criteria={criteria} />
-    </div>
   )
 }
 
@@ -247,7 +244,7 @@ function LibraryPanel({ criteria, onToggle }) {
   }
 
   return (
-    <aside aria-label={t('mc.library')} className="flex flex-col gap-3">
+    <section aria-label={t('mc.library')} className="flex flex-col gap-3">
       <div className="rounded-card border border-border bg-surface p-[14px]">
         <h3 className="text-[14px] font-bold text-text">{t('mc.library')}</h3>
         <p className="mt-1 text-[12px] text-muted">{t('mc.libraryIntro')}</p>
@@ -281,7 +278,7 @@ function LibraryPanel({ criteria, onToggle }) {
         <Lightbulb size={16} aria-hidden className="mt-0.5 shrink-0 text-amber" />
         {t('mc.tip')}
       </p>
-    </aside>
+    </section>
   )
 }
 
@@ -311,7 +308,7 @@ function Previews({ criteria }) {
   const first = criteria.find((c) => c.description) ?? criteria[0]
   const meanings = first ? normaliseMeanings(first.score_meanings) : []
   return (
-    <aside className="flex flex-col gap-4 lg:col-span-2 xl:col-span-1">
+    <div className="flex flex-col gap-4">
       <div className="rounded-card border border-border bg-surface p-[14px]">
         <h3 className="text-[14px] font-bold text-text">{t('mc.previewReviewer')}</h3>
         <p className="text-[12px] text-muted">{t('mc.previewReviewerHint')}</p>
@@ -343,6 +340,6 @@ function Previews({ criteria }) {
           </div>
         )}
       </div>
-    </aside>
+    </div>
   )
 }

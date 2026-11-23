@@ -17,6 +17,20 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Email is optional on the model (phone-only accounts) but still required here.
         extra_kwargs = {"email": {"required": True, "allow_null": False, "allow_blank": False}}
 
+    def validate_phone_number(self, value):
+        """One person, one account: the normal form, and never a number that already has an account."""
+        if not value:
+            return ""
+        from apps.accounts.phone_accounts import accounts_with_phone
+        from apps.core.phone import try_normalize_phone
+
+        phone = try_normalize_phone(value)
+        if not phone:
+            raise serializers.ValidationError("Enter a Botswana phone number.")
+        if accounts_with_phone(phone).exists():
+            raise serializers.ValidationError("This phone number already has an account. Sign in instead.")
+        return phone
+
     def create(self, validated_data):
         password = validated_data.pop("password")
         user = User.objects.create_user(password=password, **validated_data)

@@ -58,7 +58,8 @@ export default function VideoStoryDialog({ post, onClose, onOpenPost }: { post: 
   const cover = data?.cover ?? post?.cover ?? null
 
   return (
-    <Modal open={Boolean(post)} onClose={onClose} size="xl" title={data?.title ?? post?.title} bodyClassName="!px-0 !pt-0 sm:!px-6">
+    // The open story lives in the address (?story=), so it also opens from a shared link; a pressed card is its origin.
+    <Modal open={Boolean(post)} onClose={onClose} routeOpened size="xl" title={data?.title ?? post?.title} bodyClassName="!px-0 !pt-0 sm:!px-6">
       {detail.loading ? (
         <div className="px-5 sm:px-0 space-y-4" aria-hidden>
           <Skeleton className="w-full aspect-video rounded-none sm:rounded-card" />

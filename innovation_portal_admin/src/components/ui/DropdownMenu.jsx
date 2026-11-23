@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { cn } from '../../lib/cn'
 import Popover from './Popover'
+import { rememberOrigin } from '../../lib/motion/origin'
 
 /**
  * Figma Foundations › Dropdown menu. A list of actions that grows out of its button (small genie).
@@ -39,6 +40,8 @@ export default function DropdownMenu({ items = [], label = 'More actions', trigg
 
   const pick = (item) => {
     setOpen(false)
+    // A dialog this item opens comes out of the menu's button (the item itself is about to go).
+    rememberOrigin(triggerRef.current)
     item.onSelect?.()
   }
 

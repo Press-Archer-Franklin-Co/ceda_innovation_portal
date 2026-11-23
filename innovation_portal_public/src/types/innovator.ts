@@ -175,6 +175,7 @@ export interface OpenQuestion {
 export interface IdeaItem {
   id: string
   kind: 'draft' | 'submission'
+  channel?: 'web' | 'whatsapp' | 'ussd' | 'office'
   state: IdeaState
   reference: string
   title: string

@@ -11,13 +11,14 @@ import { useToast } from '../ui/toast'
 import { journeyStatusWords } from './format'
 import { useCreateJourney, useJourneys, useNodeTypes } from '../../lib/queries/channels'
 import { useI18n } from '../../i18n/context'
+import { useTrigger } from '../ui/useTrigger'
 import { cn } from '../../lib/cn'
 import { newNode, typeMap } from './journeyModel'
 
 // Left column of 3.31 (Menus) and 3.31b (Flows); on a phone it is the whole page (Figma 137:1696, 145:2060).
 // A journey set up for both channels shows in both builders.
 
-export function NewJourneyModal({ channel, open, onClose, basePath }) {
+export function NewJourneyModal({ channel, open, onClose, basePath, triggerRef }) {
   const { t } = useI18n()
   const toast = useToast()
   const navigate = useNavigate()
@@ -45,6 +46,7 @@ export function NewJourneyModal({ channel, open, onClose, basePath }) {
     <Modal
       open={open}
       onClose={onClose}
+      triggerRef={triggerRef}
       title={t(channel === 'ussd' ? 'ch.ussd.newTitle' : 'ch.wa.newTitle')}
       description={t(channel === 'ussd' ? 'ch.ussd.newBody' : 'ch.wa.newBody')}
       footer={
@@ -62,6 +64,7 @@ export function NewJourneyModal({ channel, open, onClose, basePath }) {
 }
 
 export default function JourneyList({ channel, activeId, basePath, className }) {
+  const newTrigger = useTrigger()
   const { t } = useI18n()
   const [creating, setCreating] = useState(false)
   const { data, isLoading, isError, error, refetch, isFetching } = useJourneys({ channel })
@@ -102,10 +105,10 @@ export default function JourneyList({ channel, activeId, basePath, className }) 
           })}
         </ul>
       )}
-      <Button variant="link" size="sm" icon={<Plus size={14} />} className="mt-2" onClick={() => setCreating(true)}>
+      <Button ref={newTrigger.ref} variant="link" size="sm" icon={<Plus size={14} />} className="mt-2" onClick={() => setCreating(true)}>
         {t(channel === 'ussd' ? 'ch.ussd.new' : 'ch.wa.new')}
       </Button>
-      <NewJourneyModal channel={channel} open={creating} onClose={() => setCreating(false)} basePath={basePath} />
+      <NewJourneyModal channel={channel} open={creating} onClose={() => setCreating(false)} basePath={basePath} triggerRef={newTrigger.ref} />
     </nav>
   )
 }
