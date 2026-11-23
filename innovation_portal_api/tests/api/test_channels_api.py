@@ -395,7 +395,9 @@ class WhatsAppWebhookTests(ChannelsTestCase):
         kwargs = handoff.call_args.kwargs
         self.assertEqual(kwargs["channel"], "whatsapp")
         self.assertEqual(kwargs["contact"]["phone"], "+26771234567")
-        self.assertTrue(any(item["from"] == "person" and item["text"] == "4" for item in kwargs["transcript"]))
+        # Prompt 33: the Inbox starts with a summary of what the person chose, never the bare "4".
+        self.assertTrue(kwargs["transcript"][0]["text"].startswith("Chose Talk to us on WhatsApp"))
+        self.assertFalse(any(item["text"] == "4" for item in kwargs["transcript"]))
         session = JourneySession.objects.get(channel="whatsapp")
         self.assertEqual((session.status, session.conversation_id), ("handed_over", "conv-9"))
         self.assertNotIn("Tell us in a few words", json.dumps(session.state["transcript"][-1]))
@@ -576,7 +578,7 @@ class NodeTypeTests(ChannelsTestCase):
             ("number", "abc", "12", 12),
             ("date", "tomorrow", "25/12/2026", "2026-12-25"),
             ("yes_no", "maybe", "ee", True),
-            ("text", "", "Hello", "Hello"),
+            ("text", "", "Solar pump", "Solar pump"),
         ]
         for answer_type, bad, good, value in cases:
             r = runner([{"key": "a", "type": "question", "text": {"en": "Q"}, "settings": {"answer_type": answer_type, "variable": "v"}, "next": "e"}, {"key": "e", "type": "end", "text": {"en": "Done"}}])
@@ -588,6 +590,11 @@ class NodeTypeTests(ChannelsTestCase):
         r.start()
         r.answer("2")
         self.assertEqual(r.state["vars"]["v"], "Blue")
+        # Prompt 33: a greeting in the middle of a journey is not an answer.
+        r = runner([{"key": "a", "type": "question", "text": {"en": "Q"}, "settings": {"answer_type": "text", "variable": "v"}, "next": "e"}, {"key": "e", "type": "end", "text": {"en": "Done"}}])
+        r.start()
+        self.assertIn("Carry on or go to the main menu?", r.answer("Hello").text)
+        self.assertNotIn("v", r.state["vars"])
 
     def test_sensitive_answers_are_not_logged(self):
         r = runner([{"key": "a", "type": "question", "text": {"en": "ID number?"}, "settings": {"variable": "omang", "sensitive": True}, "next": "e"}, {"key": "e", "type": "end", "text": {"en": "Done"}}])
