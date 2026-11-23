@@ -284,6 +284,37 @@ def save_file(*, draft_id: str, field_key: str, content: bytes, content_type: st
     return document, ""
 
 
+def delete_draft(*, draft_id: str, user, phone: str, channel: str) -> bool:
+    """Delete an unsent draft the person asked to delete. Only their own, and only a draft."""
+    from django.db.models import Q
+
+    from apps.audit.services import AuditService
+    from apps.submissions.models import ApplicationDraft
+
+    owner = Q(guest_phone=phone, innovator__isnull=True) if phone else Q(pk__isnull=True)
+    if user is not None:
+        owner |= Q(innovator=user)
+    draft = ApplicationDraft.objects.filter(owner, id=draft_id, status=ApplicationDraft.STATUS_DRAFT).first()
+    if draft is None:
+        return False
+    from apps.channels.models import JourneySession
+
+    files = [document.file for document in draft.documents.all() if document.file]
+    reference = draft.reference_number
+    JourneySession.objects.filter(draft=draft).update(draft=None)  # the session log stays, without the idea
+    draft.delete()
+    for stored in files:
+        try:
+            stored.delete(save=False)
+        except Exception:
+            logger.exception("Could not remove a deleted draft's file")
+    AuditService.log_raw_action(
+        actor=user, action_type="channel_draft_deleted", target_model="ApplicationDraft", target_id=str(draft_id),
+        metadata={"channel": channel, "phone": mask_phone(phone), "reference": reference},
+    )
+    return True
+
+
 def check_pretend_submit(*, program_id: str, user):
     """Simulator: would this idea be accepted? Nothing is created. Returns (reference, error)."""
     from apps.programs.access import ProgramAccessService

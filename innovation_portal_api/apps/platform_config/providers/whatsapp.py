@@ -67,6 +67,7 @@ class InboundMessage:
     media: list[MediaItem] = field(default_factory=list)
     # Where the choice came from: "button", "list" or "text" (logged by name only, never the value).
     choice_source: str = "text"
+    shown_text: str = ""  # what the person saw or typed (a button's title, not its id), for the Inbox
 
 
 @dataclass
@@ -79,7 +80,9 @@ class OutboundReply:
 def numbered(text: str, choices: list[Choice]) -> str:
     if not choices:
         return text
-    return text + "\n" + "\n".join(f"{c.id}. {c.title}" for c in choices)
+    numbered_rows = [f"{c.id}. {c.title}" for c in choices if not c.id.startswith("__")]
+    words = [c.title for c in choices if c.id.startswith("__")]  # Main menu, Save and stop, Skip: typed by name
+    return "\n".join([text, *numbered_rows, *([" / ".join(words)] if words else [])])
 
 
 ELLIPSIS = "\u2026"
@@ -119,7 +122,13 @@ DEFAULT_REPLIES = {
     "not_available.tn": "Tirelo e ga e ise e nne teng. Tsweetswee leka gape moragonyana.",
     "file_not_expected.en": "Thank you. We can only take files when we ask for one.",
     "file_not_expected.tn": "Re a leboga. Re amogela difaele fela fa re di kopa.",
+    "officer_soon.en": "An officer will reply soon.",
+    "officer_soon.tn": "Motlhankedi o tla araba ka bonako.",
 }
+DEFAULT_MENU_WORDS = ["menu", "home", "main menu", "start", "gae"]
+DEFAULT_CANCEL_WORDS = ["cancel", "stop", "emisa"]
+DEFAULT_GREETING_WORDS = ["hi", "hey", "hello", "dumela"]
+DEFAULT_HANDOVER_WAIT_MINUTES = 5
 SHARED_WHATSAPP_FIELDS = (
     FieldSpec(
         "restart_words",
@@ -128,12 +137,16 @@ SHARED_WHATSAPP_FIELDS = (
         default=DEFAULT_RESTART_WORDS,
         help_text="When someone sends only one of these words, the journey starts again from the top. One per line.",
     ),
+    FieldSpec("menu_words", "Words for the main menu", FieldType.LIST, default=DEFAULT_MENU_WORDS, help_text="On a question or file step, these go to the main menu. One per line."),
+    FieldSpec("cancel_words", "Words that cancel", FieldType.LIST, default=DEFAULT_CANCEL_WORDS, help_text="On a question or file step, these ask whether to keep or delete the idea. One per line."),
+    FieldSpec("greeting_words", "Greetings", FieldType.LIST, default=DEFAULT_GREETING_WORDS, help_text="In the middle of a journey a greeting is not an answer: the person is asked whether to carry on. One per line."),
+    FieldSpec("handover_wait_minutes", "Minutes before 'An officer will reply soon'", FieldType.NUMBER, default=DEFAULT_HANDOVER_WAIT_MINUTES, help_text="Sent once while a person waits in the Inbox. 0 turns it off."),
     FieldSpec(
         "replies",
         "Standard replies",
         FieldType.MAPPING,
         default=DEFAULT_REPLIES,
-        help_text="Replies the system sends, in English (.en) and Setswana (.tn): error, not_available, file_not_expected.",
+        help_text="Replies the system sends, in English (.en) and Setswana (.tn): error, not_available, file_not_expected, officer_soon.",
     ),
 )
 
@@ -490,6 +503,7 @@ class WhatsAppTwilioProvider(BaseWhatsAppProvider):
             InboundMessage(
                 phone=sender, text=text, message_id=str(get("MessageSid") or ""), name=str(get("ProfileName") or ""),
                 wa_id=str(get("WaId") or ""), media=media, choice_source=source,
+                shown_text=str(get("Body") or get("ButtonText") or get("ListTitle") or ""),
             )
         ]
 

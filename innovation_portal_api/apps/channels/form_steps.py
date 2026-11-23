@@ -22,6 +22,7 @@ from types import SimpleNamespace
 from django.conf import settings as django_settings
 
 from apps.channels.actions import pick
+from apps.channels.way_out import norm
 
 logger = logging.getLogger(__name__)
 
@@ -367,10 +368,13 @@ class FormQuestionsMixin:
         if not required:
             lines.append(self._fq_text("optional"))
         self.state["node"] = node["key"]
+        if error and error in lines:
+            error = ""  # the prompt already says it: show it once
         body = "\n".join(line for line in lines if line)
         text = "\n".join(part for part in [*prefix, error, body] if part)
         screen = Screen(text=text, end=False, node_key=node["key"], node_type="form_questions", choices=choices, expects=expects, node_title=node.get("title") or "", lang=self.lang)
-        self._say("bot", screen.ussd_text() if self.channel == "ussd" else text)
+        self._offer_way_out(screen, node, optional=not required)
+        self._say("bot", screen.ussd_text() if self.channel == "ussd" else screen.text)
         return screen
 
     def _fq_show_programs(self, node: dict, prefix: list[str], error: str = ""):
@@ -444,7 +448,7 @@ class FormQuestionsMixin:
         fq = self.state.get("fq") or {}
         if fq.get("node") != node["key"]:
             return self._enter_form_questions(node, [])
-        lowered = " ".join(text.lower().split())
+        lowered = norm(text)
         if fq.get("choices") is not None and not fq.get("program_id") and not fq.get("current"):
             # Choosing the challenge first.
             ids = fq["choices"]
@@ -517,7 +521,7 @@ class FormQuestionsMixin:
             "failed_text": {"en": "We could not save that file. Please try again.", "tn": "Ga re a kgona go boloka faele eo. Tsweetswee leka gape."},  # TODO tn-review
         }
         fq = self._fq()
-        lowered = " ".join(text.lower().split())
+        lowered = norm(text)
         if self.media:
             count, notes = self._receive_files(file_settings, int(fq.get("files") or 0))
             fq["files"] = count

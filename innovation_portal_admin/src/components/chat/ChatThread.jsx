@@ -14,7 +14,7 @@ function initials(name) {
   return (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join('').toUpperCase()
 }
 
-export default function ChatThread({ messages, personName, typing, loading, seenAt }) {
+export default function ChatThread({ messages, personName, typing, loading, seenAt, channel, handedOverBy }) {
   const t = useT()
   const [showBot, setShowBot] = useState(false)
   const endRef = useRef(null)
@@ -26,7 +26,10 @@ export default function ChatThread({ messages, personName, typing, loading, seen
   }, [last, typing])
 
   // The AI part: everything up to the last bot message, when there is one.
-  const lastBot = messages.map((m) => m.role).lastIndexOf('bot')
+  // Only a real AI helper conversation folds; a WhatsApp or USSD journey's summary stays in view.
+  const aiTalked = handedOverBy === 'ai' || channel === 'ai'
+  const botLabel = aiTalked ? 'inbox.aiHelper' : channel === 'ussd' ? 'inbox.ussdJourney' : channel === 'whatsapp' ? 'inbox.whatsappJourney' : 'inbox.assistant'
+  const lastBot = aiTalked ? messages.map((m) => m.role).lastIndexOf('bot') : -1
   const folded = lastBot >= 0 && !showBot ? messages.slice(0, lastBot + 1) : []
   const shown = folded.length ? messages.slice(lastBot + 1) : messages
   const minutes = folded.length > 1 ? Math.max(1, Math.round((new Date(folded[folded.length - 1].created_at) - new Date(folded[0].created_at)) / 60000)) : 1
@@ -43,7 +46,7 @@ export default function ChatThread({ messages, personName, typing, loading, seen
           </button>
         </li>
       )}
-      {shown.map((m) => <Bubble key={m.id} m={m} personName={personName} seen={Boolean(m.seen_by) || Boolean(seenAt && m.created_at <= seenAt)} />)}
+      {shown.map((m) => <Bubble key={m.id} m={m} personName={personName} botLabel={botLabel} aiTalked={aiTalked} seen={Boolean(m.seen_by) || Boolean(seenAt && m.created_at <= seenAt)} />)}
       {typing && (
         <li className="flex items-center gap-2 text-[12px] text-muted">
           <Avatar name={typing.name || personName || '?'} size="xs" decorative />
@@ -60,7 +63,7 @@ export default function ChatThread({ messages, personName, typing, loading, seen
   )
 }
 
-function Bubble({ m, personName, seen }) {
+function Bubble({ m, personName, seen, botLabel, aiTalked }) {
   const t = useT()
   if (m.role === 'system') {
     return <li className="text-center text-[12px] text-muted">{m.body}</li>
@@ -89,12 +92,12 @@ function Bubble({ m, personName, seen }) {
   return (
     <li className="flex max-w-[80%] items-start gap-2">
       <span aria-hidden className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold', bot ? 'bg-cms-soft text-cms' : 'bg-surface2 text-text')}>
-        {bot ? 'AI' : initials(m.author?.name || personName)}
+        {bot ? (aiTalked ? 'AI' : 'CE') : initials(m.author?.name || personName)}
       </span>
       <div className="rounded-card bg-surface2 px-3.5 py-2.5">
         <p className="whitespace-pre-line break-words text-[14px] text-text">{m.body}</p>
         <Attachments m={m} />
-        <p className="mt-1 text-[11px] text-muted">{[bot ? t('inbox.aiHelper') : null, timeOf(m.created_at)].filter(Boolean).join(' · ')}</p>
+        <p className="mt-1 text-[11px] text-muted">{[bot ? t(botLabel) : null, timeOf(m.created_at)].filter(Boolean).join(' · ')}</p>
       </div>
     </li>
   )

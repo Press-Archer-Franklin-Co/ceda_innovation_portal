@@ -24,6 +24,7 @@ from apps.channels import actions
 from apps.channels.actions import pick
 from apps.channels.form_steps import FormQuestionsMixin
 from apps.channels.my_ideas import MyIdeasMixin
+from apps.channels.way_out import SKIP, WayOutMixin, norm
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,11 @@ DEFAULT_TEXT = {
 }
 
 LANGUAGES = (("en", "English"), ("tn", "Setswana"))
+# TODO tn-review
+HANDOFF_SUMMARY = {
+    "chose": {"en": "Chose {choice} on {channel}", "tn": "O tlhophile {choice} mo {channel}"},
+    "asked": {"en": "Asked for a person on {channel}", "tn": "O kopile motho mo {channel}"},
+}
 
 
 @dataclass
@@ -72,11 +78,15 @@ class Screen:
     outcome: str = ""  # completed, handed_over (set when the session ends)
     node_title: str = ""  # the name staff gave the step (builder and simulator only)
     lang: str = "en"  # the person's language when the screen was made
+    footer: str = ""  # USSD: a last line that is never cut off ("0. Main menu")
 
     def ussd_text(self) -> str:
         body = self.text
         if self.choices:
             body = (body + "\n" if body else "") + "\n".join(f"{c.id}. {c.title}" for c in self.choices)
+        if self.footer:
+            room = USSD_SCREEN_LIMIT - len(self.footer) - 1
+            return f"{body[:room]}\n{self.footer}" if body else self.footer
         return body[:USSD_SCREEN_LIMIT]
 
     def as_dict(self, channel: str) -> dict:
@@ -124,7 +134,7 @@ def fill(template: str, variables: dict) -> str:
     return re.sub(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", replace, template)
 
 
-class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
+class JourneyRunner(WayOutMixin, FormQuestionsMixin, MyIdeasMixin):
     """Walk a journey graph for one person.
 
     ``context`` carries what the runner needs from outside: ``channel`` (ussd, whatsapp),
@@ -151,6 +161,8 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
         # fetch(item, max_bytes) -> MediaResult; None for a channel that cannot carry files.
         self.fetch_media = context.get("fetch_media")
         self.message_id = context.get("message_id", "")
+        self.interactive = bool(context.get("interactive", self.channel == "whatsapp"))  # buttons and lists can be sent
+        self.words = context.get("words") or {}  # menu_words, cancel_words, greeting_words from the connection
 
     # -- helpers ----------------------------------------------------------------
 
@@ -184,7 +196,20 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
     def repeat(self, prefix: list[str] | None = None) -> Screen:
         """Show the current screen again (with a note before it)."""
         node = self._node(self.state.get("node") or "")
-        return self._show(node, prefix or []) if node else self.start()
+        if node is None:
+            return self.start()
+        if node["type"] == "form_questions" and self.state.get("fq"):
+            field = self._fq_current_field(node)
+            if field is not None:
+                return self._fq_show(node, field, prefix or [], required=self._fq_state(field, self._answers())["required"])
+            return self._fq_show_programs(node, prefix or [])
+        if node["type"] == "my_ideas" and self.state.get("mi"):
+            view = self.state["mi"].get("view") or "open"
+            item = self._mi_find(self.state["mi"].get("item") or "") if view == "detail" else None
+            if item is not None:
+                return self._mi_detail(node, item, self.state["mi"].get("from") or "open", prefix or [])
+            return self._mi_list(node, "open" if view == "detail" else view, prefix or [])
+        return self._show(node, prefix or [])
 
     def answer(self, text: str, media: list | None = None) -> Screen:
         self.media = list(media or [])
@@ -193,6 +218,12 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
         if node is None:
             return self.start()
         text = (text or "").strip()
+        out = self._way_out(node, text)
+        if out is not None:
+            return out
+        if text == SKIP:
+            words = (node.get("settings") or {}).get("skip_words")
+            text = (pick(words, "en").split(",")[0].strip() if words else "") or "skip"
         handler = getattr(self, f"_answer_{node['type']}", None)
         if handler is None:
             return self.start()
@@ -241,7 +272,8 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
             return self._show(node, prefix)
         return self._finish(prefix + [self.default("broken")], outcome="completed", node_key=key)
 
-    def _show(self, node: dict, prefix: list[str], error: str = "") -> Screen:
+    def _show(self, node: dict, prefix: list[str], error: str = "", only: str = "") -> Screen:
+        """``only`` replaces the step's text (a "still waiting" reply already says what to do)."""
         kind = node["type"]
         settings = node.get("settings") or {}
         self.state["node"] = node["key"]
@@ -271,9 +303,14 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
             expects = "choice"
         elif kind == "handoff":
             body = body or self.default("handoff_note")
+        if only:
+            body = only
+        if error and norm(error) == norm(body):
+            error = ""
         text = "\n".join(part for part in [*prefix, error, body] if part)
         screen = Screen(text=text, end=False, node_key=node["key"], node_type=kind, choices=choices, expects=expects, node_title=node.get("title") or "", lang=self.lang)
-        self._say("bot", screen.ussd_text() if self.channel == "ussd" else text)
+        self._offer_way_out(screen, node, optional=kind == "file" and not settings.get("required"))
+        self._say("bot", screen.ussd_text() if self.channel == "ussd" else screen.text)
         return screen
 
     def _finish(self, parts: list[str], *, outcome: str, node_key: str = "", node_type: str = "end") -> Screen:
@@ -292,17 +329,18 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
 
     def _choose(self, text: str, count: int, titles: list[str]) -> int | None:
         """1-based index of the chosen option from a number, a button id or the title."""
-        if text.isdigit() and 1 <= int(text) <= count:
-            return int(text)
+        plain = norm(text)
+        if plain.isdigit() and 1 <= int(plain) <= count:
+            return int(plain)
         from apps.platform_config.providers.whatsapp import TWILIO_BUTTON_TITLE, TWILIO_LIST_ITEM, cut_title
 
-        lowered = " ".join(text.lower().split())
+        lowered = plain
         for index, title in enumerate(titles, start=1):
-            if title and title.lower() == lowered:
+            if title and norm(title) == lowered:
                 return index
         # A tapped button whose payload was lost still sends its (cut) title as the text.
         for index, title in enumerate(titles, start=1):
-            if title and lowered in {cut_title(title, TWILIO_BUTTON_TITLE).lower(), cut_title(title, TWILIO_LIST_ITEM).lower()}:
+            if title and lowered in {norm(cut_title(title, TWILIO_BUTTON_TITLE)), norm(cut_title(title, TWILIO_LIST_ITEM))}:
                 return index
         return None
 
@@ -315,6 +353,7 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
             return self._show(node, [], error=self.default("invalid_choice"))
         self._record_answer(node, text)
         option = options[index - 1]
+        self.state["last_choice"] = self.t(option.get("label"))
         variable = (node.get("settings") or {}).get("variable")
         if variable:
             self.state["vars"][variable] = option.get("value") or pick(option.get("label"), "en")
@@ -364,7 +403,7 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
                     continue
             return None, self.default("invalid_date")
         if answer_type == "yes_no":
-            lowered = text.lower()
+            lowered = norm(text)
             if lowered in YES_WORDS or lowered == self.default("yes").lower():
                 return True, ""
             if lowered in NO_WORDS or lowered == self.default("no").lower():
@@ -395,7 +434,7 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
     def _words(self, value) -> set[str]:
         words = set()
         for lang in ("en", "tn"):
-            words |= {w.strip().lower() for w in pick(value, lang).split(",") if w.strip()}
+            words |= {norm(w) for w in pick(value, lang).split(",") if norm(w)}
         return words
 
     def _answer_file(self, node: dict, text: str) -> Screen:
@@ -404,7 +443,7 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
         count = counts.get(node["key"], 0)
         max_files = int(settings.get("max_files") or 3)
         required = bool(settings.get("required"))
-        lowered = text.strip().lower()
+        lowered = norm(text)
         if self.media:
             count, notes = self._receive_files(settings, count)
             counts[node["key"]] = count
@@ -415,10 +454,10 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
             return self._show(node, [], error="\n".join(dict.fromkeys(n for n in notes if n)))
         if lowered and (lowered in self._words(settings.get("skip_words")) or lowered in self._words(settings.get("done_words"))):
             if required and count == 0:
-                return self._show(node, [], error=self.t(settings.get("needed_text")))
+                return self._show(node, [], only=self.t(settings.get("needed_text")))
             self._record_answer(node, text)
             return self._advance(node.get("next") or "", prefix=[])
-        return self._show(node, [], error=self.t(settings.get("needed_text")))
+        return self._show(node, [], only=self.t(settings.get("needed_text")))
 
     def _receive_files(self, settings: dict, count: int) -> tuple[int, list[str]]:
         """Check and save this message's files for a file step (or a form's file question).
@@ -463,7 +502,7 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
 
     def _answer_submit(self, node: dict, text: str) -> Screen:
         settings = node.get("settings") or {}
-        lowered = text.strip().lower()
+        lowered = norm(text)
         if lowered in YES_WORDS or lowered == self.default("yes").lower():
             self._record_answer(node, text)
             self.state.setdefault("consented", {})[node["key"]] = True
@@ -588,6 +627,18 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
         equal = str(value).lower() == str(expected).lower() if value is not None else expected in (None, "")
         return equal if operator == "equals" else not equal
 
+    def _handoff_summary(self) -> str:
+        channel = "USSD" if self.channel == "ussd" else "WhatsApp"
+        chose = self.state.get("last_choice") or ""
+        first = pick(HANDOFF_SUMMARY["chose" if chose else "asked"], self.lang).replace("{choice}", chose).replace("{channel}", channel)
+        hidden = {"profile_name", "draft_reference", "reference", *(self.state.get("sensitive_vars") or [])}
+        answers = [
+            f"{key.replace('_', ' ').capitalize()}: {value}"
+            for key, value in self.state["vars"].items()
+            if key not in hidden and not key.startswith("_") and isinstance(value, (str, int, float)) and not isinstance(value, bool) and str(value).strip()
+        ]
+        return "\n".join([first, *[line[:300] for line in answers[:12]]])
+
     def _handoff(self, node: dict, *, note: str, prefix: list[str]) -> Screen:
         from apps.channels.handoff import open_handoff
 
@@ -596,7 +647,8 @@ class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
         if self.user is not None:
             contact.update({"user_id": str(self.user.id), "email": self.user.email or "", "name": self.user.get_full_name() if hasattr(self.user, "get_full_name") else ""})
         subject = self.t(settings.get("subject")) or ("Call-back request from USSD" if self.channel == "ussd" else "WhatsApp chat")
-        transcript = list(self.state["transcript"])
+        # The Inbox gets a short summary, never the bare menu numbers the person typed.
+        transcript = [{"from": "bot", "text": self._handoff_summary(), "at": timezone.now().isoformat()}]
         try:
             if self.dry_run:
                 raise _DryRun()
