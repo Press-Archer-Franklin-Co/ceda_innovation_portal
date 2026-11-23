@@ -14,6 +14,17 @@ from tests.api.test_assistant_api import BASE, DRAFT_ANSWER, data, message
 from tests.api.test_copilot_api import CopilotTestCase
 
 
+def texts(value) -> str:
+    """Every piece of text in a request, as plain strings (str() of a dict would escape the apostrophes)."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, dict):
+        return "\n".join(texts(item) for item in value.values())
+    if isinstance(value, (list, tuple)):
+        return "\n".join(texts(item) for item in value)
+    return texts(getattr(value, "text", "")) if hasattr(value, "text") else ""
+
+
 class InnovatorSideTests(CopilotTestCase):
     def test_innovator_search_is_gone(self):
         self.as_user(self.innovator)
@@ -39,7 +50,7 @@ class InnovatorSideTests(CopilotTestCase):
         draft = self.draft(self.innovator, solution="A cold room for tomatoes in Tlokweng.")
         self.as_user(self.innovator)
         self.assertEqual(self.draft_check(draft).status_code, 200)
-        sent = str(fake.last)
+        sent = texts(fake.last)
         self.assertIn("cold room for tomatoes", sent)
         self.assertIn(prompts.OWN_IDEA_ONLY, sent)
         for other in ("Zebra hide tannery", "Okavango"):
