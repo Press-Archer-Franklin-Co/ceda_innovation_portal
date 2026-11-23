@@ -1,17 +1,17 @@
-import { useMemo, useRef, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Info, MoreHorizontal, Search } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Info, MoreHorizontal } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
-import DataTable from '../../components/ui/DataTable'
+import ServerTable from '../../components/ui/ServerTable'
 import DropdownMenu from '../../components/ui/DropdownMenu'
 import Modal from '../../components/ui/Modal'
-import Input, { InputControl } from '../../components/ui/Input'
+import Input from '../../components/ui/Input'
 import { SelectControl } from '../../components/ui/Select'
 import Tag from '../../components/ui/Tag'
 import Avatar from '../../components/ui/Avatar'
 import Field from '../../components/ui/Field'
-import Pagination from '../../components/ui/Pagination'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
@@ -19,7 +19,7 @@ import { cn } from '../../lib/cn'
 import { useMediaQuery } from '../../lib/useMediaQuery'
 import { EMPTY_CELL } from '../../lib/format'
 import { pickText } from '../../lib/admin/roles'
-import { listParams, userStatus, usersApi } from '../../lib/api/users'
+import { userFilters, userStatus, usersApi } from '../../lib/api/users'
 import { lastSignIn, whatTheyCanDo } from '../../lib/admin/users'
 import { useAdminRoles, useCapabilityCatalogue } from '../../lib/queries/adminRoles'
 
@@ -135,18 +135,24 @@ export default function Users() {
   const confirm = useConfirm()
   const qc = useQueryClient()
   const inviteRef = useRef(null)
-  const [search, setSearch] = useState('')
-  const [role, setRole] = useState('')
-  const [status, setStatus] = useState('active')
-  const [page, setPage] = useState(1)
+  const pageRef = useRef(null)
+  const [params, setParams] = useSearchParams()
+  // Filters live in the address like the table's page and search. No status in the address means Active.
+  const role = params.get('role') ?? ''
+  const status = params.get('status') ?? 'active'
+  const setFilter = (key, value) => setParams((p) => {
+    const next = new URLSearchParams(p)
+    if (value) next.set(key, value); else next.delete(key)
+    next.delete('page')
+    return next
+  }, { replace: true })
   const [dialog, setDialog] = useState(null)
   const wide = useMediaQuery('(min-width: 768px)')
   const roles = useStaffRoles()
   const allRoles = useAdminRoles()
 
-  const params = listParams({ search: search.trim(), role, status, page, pageSize: PAGE_SIZE })
-  const list = useQuery({ queryKey: ['users', params], queryFn: () => usersApi.list(params), placeholderData: (prev) => prev })
-  const rows = rowsOf(list.data)
+  // The Need help guide points at the search box, which the shared table draws.
+  useEffect(() => { pageRef.current?.querySelector('input[type=search]')?.setAttribute('data-guide', 'users.search') })
   const roleName = (code) => pickText(rowsOf(allRoles.data).find((r) => r.code === code)?.name, lang) || t('users.otherRole')
 
   const act = useMutation({
@@ -188,15 +194,21 @@ export default function Users() {
       render: (_, u) => (
         <span className="flex min-w-0 items-center gap-2.5">
           <Avatar name={nameOf(u)} size="sm" decorative />
-          <span className="min-w-0">
+          <span className="min-w-0 flex-1">
             <span className="block truncate font-semibold text-text">{nameOf(u)}</span>
-            <span className="block truncate text-[12px] text-muted">{u.email}</span>
+            <span className="hidden truncate text-[12px] font-normal text-muted md:block">{u.email}</span>
+            {/* Phone card (frame 111:1497): name, role chips and the menu on one card. */}
+            <span className="mt-1 flex flex-wrap gap-1 font-normal md:hidden">
+              {(u.roles ?? []).map((c) => <Tag key={c}>{roleName(c)}</Tag>)}
+              {userStatus(u) !== 'active' && <Tag tone={STATUS_TONE[userStatus(u)]}>{t(`users.status.${userStatus(u)}`)}</Tag>}
+            </span>
           </span>
+          <span className="shrink-0 md:hidden">{menu(u)}</span>
         </span>
       ),
     },
     {
-      key: 'roles', label: t('users.col.roles'), width: '24%',
+      key: 'roles', label: t('users.col.roles'), width: '24%', hideOnPhone: true,
       render: (codes) => (codes?.length
         ? <span className="flex flex-wrap gap-1">{codes.map((c) => <Tag key={c}>{roleName(c)}</Tag>)}</span>
         : EMPTY_CELL),
@@ -206,7 +218,7 @@ export default function Users() {
       key: 'status', label: t('users.col.status'), hideOnPhone: true,
       render: (_, u) => { const s = userStatus(u); return <Tag tone={STATUS_TONE[s]}>{t(`users.status.${s}`)}</Tag> },
     },
-    { key: 'menu', label: <span className="sr-only">{t('common.menu')}</span>, width: '48px', align: 'right', render: (_, u) => menu(u) },
+    { key: 'menu', label: <span className="sr-only">{t('common.menu')}</span>, width: '48px', align: 'right', hideOnPhone: true, render: (_, u) => menu(u) },
   ]
 
   const statusOptions = [
@@ -217,20 +229,15 @@ export default function Users() {
   const roleOptions = roles.map((r) => ({ value: r.code, label: pickText(r.name, lang) }))
 
   const inviteButton = <Button ref={inviteRef} block={!wide} onClick={() => setDialog({ mode: 'invite' })}>{t('users.invite')}</Button>
-  const toolbar = (
-          <div className="flex flex-wrap items-center gap-2">
-            <InputControl data-guide="users.search" type="search" value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              placeholder={t('users.search')} aria-label={t('users.search')} leading={<Search size={15} aria-hidden />} className="w-full sm:w-[280px]" />
-            <SelectControl options={[{ value: '', label: t('users.allRoles') }, ...roleOptions]} value={role} onChange={(v) => { setRole(v ?? ''); setPage(1) }} aria-label={t('users.col.roles')} className="w-[calc(50%-4px)] sm:w-[160px]" />
-            <SelectControl options={[{ value: '', label: t('users.allStatus') }, ...statusOptions]} value={status} onChange={(v) => { setStatus(v ?? ''); setPage(1) }} aria-label={t('users.col.status')} className="w-[calc(50%-4px)] sm:w-[150px]" />
-          </div>
+  const filterRow = (
+    <>
+      <SelectControl options={[{ value: '', label: t('users.allRoles') }, ...roleOptions]} value={role} onChange={(v) => setFilter('role', v)} aria-label={t('users.col.roles')} className="w-[calc(50vw-32px)] sm:w-[160px]" />
+      <SelectControl options={[{ value: 'all', label: t('users.allStatus') }, ...statusOptions]} value={status} onChange={(v) => setFilter('status', v === 'active' ? '' : v)} aria-label={t('users.col.status')} className="w-[calc(50vw-32px)] sm:w-[150px]" />
+    </>
   )
-  const totalPages = Math.max(1, Math.ceil((list.data?.count ?? rows.length) / PAGE_SIZE))
-  // Loading, error and empty stay with the shared table; the phone cards are for real rows.
-  const phoneCards = !wide && !list.isLoading && !list.isError && rows.length > 0
 
   return (
-    <div>
+    <div ref={pageRef}>
       <PageHeader
         back={<span className="text-[12px] text-muted">{t('staff.group.admin')} / {t('users.crumb')}</span>}
         title={t('users.title')}
@@ -238,47 +245,18 @@ export default function Users() {
         actions={wide ? inviteButton : null}
       />
       {!wide && <div className="mb-3">{inviteButton}</div>}
-      {phoneCards ? (
-        <div className="flex flex-col gap-3">
-          {toolbar}
-          <ul className="flex flex-col gap-3" aria-label={t('users.title')}>
-            {rows.map((u) => {
-              const state = userStatus(u)
-              return (
-                <li key={u.id} className="flex items-center gap-3 rounded-card border border-border bg-surface p-3">
-                  <Avatar name={nameOf(u)} size="md" decorative />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[14px] font-semibold text-text">{nameOf(u)}</span>
-                    <span className="mt-1 flex flex-wrap gap-1">
-                      {(u.roles ?? []).map((c) => <Tag key={c}>{roleName(c)}</Tag>)}
-                      {state !== 'active' && <Tag tone={STATUS_TONE[state]}>{t(`users.status.${state}`)}</Tag>}
-                    </span>
-                  </span>
-                  {menu(u)}
-                </li>
-              )
-            })}
-          </ul>
-          {totalPages > 1 && <Pagination page={page} totalPages={totalPages} onChange={setPage} />}
-        </div>
-      ) : (
-      <DataTable
+      <ServerTable
         caption={t('users.title')}
-        toolbar={toolbar}
+        queryKey={(request) => ['users', request]}
+        fetcher={(request) => usersApi.list(request)}
+        filters={userFilters({ role, status })}
+        pageSize={PAGE_SIZE}
+        searchLabel={t('users.search')}
+        toolbar={filterRow}
         columns={columns}
-        data={rows}
-        loading={list.isLoading}
-        error={list.isError ? t('users.loadError') : null}
-        onRetry={() => list.refetch()}
-        retrying={list.isFetching}
         emptyTitle={t('users.emptyTitle')}
         emptyMessage={t('users.emptyBody')}
-        page={page}
-        total={list.data?.count ?? rows.length}
-        pageSize={PAGE_SIZE}
-        onPageChange={setPage}
       />
-      )}
       {dialog && <PersonDialog key={dialog.person?.id ?? 'invite'} mode={dialog.mode} person={dialog.person} onClose={() => setDialog(null)} triggerRef={dialog.mode === 'invite' ? inviteRef : undefined} />}
     </div>
   )

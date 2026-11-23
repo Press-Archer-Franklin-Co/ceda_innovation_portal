@@ -43,42 +43,57 @@ export function groupCapabilities(catalogue) {
 
 export const pickText = (value, lang) => (value && typeof value === 'object' ? (value[lang]?.trim() ? value[lang] : value.en ?? '') : value ?? '')
 
-/**
- * 3.24 (Figma 111:1585): permissions as rows in plain words with View / Edit / Approve columns. Each cell is one
- * capability from the catalogue (S1), so nothing here grants more than the API checks. A capability the catalogue
- * adds later, and this list does not name, joins its group as an Edit cell under its own label.
- */
-export const PERMISSION_ROWS = [
-  { group: 'overview', key: 'dashboard', view: 'dashboard.view' },
-  { group: 'overview', key: 'reports', view: 'analytics.view', edit: 'reports.export' },
-  { group: 'ideas', key: 'search', view: 'entries.search' },
-  { group: 'ideas', key: 'review', edit: 'entries.review' },
-  { group: 'ideas', key: 'assign', edit: 'entries.assign' },
-  { group: 'ideas', key: 'score', edit: 'entries.score' },
-  { group: 'ideas', key: 'inbox', edit: 'conversations.reply' },
-  { group: 'challenges', key: 'challenges', edit: 'challenges.manage' },
-  { group: 'challenges', key: 'forms', edit: 'forms.manage' },
-  { group: 'challenges', key: 'criteria', edit: 'criteria.manage' },
-  { group: 'website', key: 'content', edit: 'content.edit' },
-  { group: 'website', key: 'publish', approve: 'content.approve' },
-  { group: 'administration', key: 'users', edit: 'users.manage' },
-  { group: 'administration', key: 'settings', edit: 'settings.manage' },
-  { group: 'administration', key: 'channels', edit: 'channels.manage' },
-  { group: 'administration', key: 'audit', view: 'audit.view' },
-]
 export const PERMISSION_COLUMNS = ['view', 'edit', 'approve']
+export const OTHER_GROUP = 'other'
+// Group names the strings files already have words for. A group the API adds brings its own (group_details).
+const NAMED_GROUPS = ['overview', 'ideas', 'challenges', 'website', 'administration']
 
-/** [{ key: group, rows: [{ key, label?, view?, edit?, approve? }] }] for the catalogue, in its group order. */
+/** Which column a capability's box sits in: the API's `level`, or else its action word (dashboard.view -> view). */
+export function levelOf(capability) {
+  if (PERMISSION_COLUMNS.includes(capability?.level)) return capability.level
+  const action = String(capability?.key ?? '').split('.').pop()
+  if (['view', 'search', 'hints'].includes(action)) return 'view'
+  return action === 'approve' ? 'approve' : 'edit'
+}
+
+/**
+ * 3.24, compact (Nshathisi, 23 Nov): the catalogue from GET /api/admin/capabilities/ as one entry per group:
+ * [{ key, label?, description?, keys: [capability keys], rows: [{ key, label, view?, edit?, approve? }] }].
+ * Capabilities that share an `area` share a line; without one each has its own. No group, or a group nobody can
+ * name, goes under "Other", which is always last.
+ */
 export function permissionGroups(catalogue) {
-  const caps = catalogue?.capabilities ?? []
-  const known = new Set(caps.map((c) => c.key))
-  const named = new Set(PERMISSION_ROWS.flatMap((r) => PERMISSION_COLUMNS.map((col) => r[col]).filter(Boolean)))
-  const rows = PERMISSION_ROWS
-    .map((r) => Object.fromEntries(Object.entries(r).filter(([k, v]) => !PERMISSION_COLUMNS.includes(k) || known.has(v))))
-    .filter((r) => PERMISSION_COLUMNS.some((col) => r[col]))
-  const extra = caps.filter((c) => !named.has(c.key)).map((c) => ({ group: c.group, key: c.key, label: c.label, edit: c.key }))
-  const all = [...rows, ...extra]
-  return (catalogue?.groups ?? []).map((g) => ({ key: g, rows: all.filter((r) => r.group === g) })).filter((g) => g.rows.length)
+  const order = catalogue?.groups ?? []
+  const details = catalogue?.group_details ?? {}
+  const shown = (g) => order.includes(g) && (Boolean(details[g]) || NAMED_GROUPS.includes(g))
+  const byGroup = new Map()
+  for (const c of catalogue?.capabilities ?? []) {
+    const key = shown(c.group) ? c.group : OTHER_GROUP
+    if (!byGroup.has(key)) byGroup.set(key, { key, label: details[key]?.label, description: details[key]?.description, keys: [], rows: [] })
+    const group = byGroup.get(key)
+    const level = levelOf(c)
+    const line = c.area ? group.rows.find((r) => r.area === c.area && !r[level]) : null
+    if (line) line[level] = c.key
+    else group.rows.push({ key: c.area ? `${c.area}:${c.key}` : c.key, area: c.area, label: c.area_label ?? c.label, [level]: c.key })
+    group.keys.push(c.key)
+  }
+  return [...order.filter((g) => g !== OTHER_GROUP), OTHER_GROUP].map((g) => byGroup.get(g)).filter(Boolean)
+}
+
+/** One group's checkbox: how many are on, all / some / none, and which boxes it may change (not the locked ones). */
+export function groupSummary(group, held = [], locks = {}) {
+  const on = group.keys.filter((k) => held.includes(k)).length
+  const total = group.keys.length
+  return { on, total, state: on === 0 ? 'none' : on === total ? 'all' : 'some', free: group.keys.filter((k) => locks[k] == null) }
+}
+
+/** Ticking the group box: turns on everything it may change, or, when all of those are on already, turns them off. */
+export function toggleGroup(group, held = [], locks = {}) {
+  const { free } = groupSummary(group, held, locks)
+  const next = new Set(held)
+  const allOn = free.every((k) => next.has(k))
+  for (const k of free) { if (allOn) next.delete(k); else next.add(k) }
+  return [...next].sort()
 }
 
 /** The capabilities a copy of a role may carry: not the ones only administrators may hold. */

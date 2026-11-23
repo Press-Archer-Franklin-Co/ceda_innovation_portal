@@ -28,6 +28,8 @@ export interface ModalProps {
   alert?: boolean
   /** The button or row that opened it: the genie grows out of it and shrinks back into it. */
   triggerRef?: RefObject<HTMLElement | null>
+  /** Nothing is clicked to open it (a route, a timer, after a save). It scales in from the centre instead. */
+  routeOpened?: boolean
 }
 
 const sizes = { sm: 'sm:max-w-md', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl', xl: 'sm:max-w-5xl' }

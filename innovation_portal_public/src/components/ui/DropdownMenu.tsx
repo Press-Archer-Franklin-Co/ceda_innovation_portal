@@ -2,6 +2,7 @@ import { KeyboardEvent, ReactNode, useRef, useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import clsx from 'clsx'
 import Popover from './Popover'
+import { rememberOrigin } from '../../lib/motion/origin'
 
 // Figma Foundations › Dropdown menu. Actions that grow out of their button (small genie).
 // Gate each item on what this person may do: hidden: !can(...). Danger items sit last after a divider.
@@ -79,7 +80,7 @@ export default function DropdownMenu({
       type="button"
       role="menuitem"
       disabled={item.disabled}
-      onClick={() => { setOpen(false); item.onSelect?.() }}
+      onClick={() => { setOpen(false); rememberOrigin(triggerRef.current); item.onSelect?.() }}
       className={clsx(
         'w-full flex items-center gap-3 px-3 min-h-[44px] sm:min-h-[40px] rounded-control text-left text-d-body-s',
         'focus:outline-none focus-visible:bg-surface2 hover:bg-surface2 disabled:opacity-50 disabled:cursor-not-allowed',

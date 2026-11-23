@@ -30,7 +30,7 @@ function errorText(err) {
   return err?.message ?? ''
 }
 
-export default function ConnectionSetup({ kind, connectionId, startStep = 0, open, onClose }) {
+export default function ConnectionSetup({ kind, connectionId, startStep = 0, open, onClose, triggerRef }) {
   const { t } = useI18n()
   const toast = useToast()
   const providers = useChannelProviders()
@@ -172,6 +172,7 @@ export default function ConnectionSetup({ kind, connectionId, startStep = 0, ope
     <Modal
       open={open}
       onClose={onClose}
+      triggerRef={triggerRef}
       size="lg"
       title={id ? t('ch.keys.changeTitle', { name: connection?.name ?? name }) : t(kind === 'ussd' ? 'ch.keys.newUssd' : 'ch.keys.newWhatsapp')}
       footer={footer}
