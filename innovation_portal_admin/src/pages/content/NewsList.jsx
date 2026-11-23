@@ -15,6 +15,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import { useI18n, useT } from '../../i18n/context'
+import { useTrigger } from '../../components/ui/useTrigger'
 import { cn } from '../../lib/cn'
 import { POST_TYPES, SHOWS_ON, TYPE_TONE, countByType, filterByState, listStats, postDate } from '../../lib/content/posts'
 import { useApprovals, useDecideApproval, usePostAction, usePosts, useSubscriberCounts } from '../../lib/queries/websiteContent'
@@ -40,7 +41,7 @@ function Tile({ title, value, note, icon: Icon, tone, loading }) {
   )
 }
 
-function PinDialog({ post, onClose }) {
+function PinDialog({ post, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const act = usePostAction()
@@ -56,7 +57,7 @@ function PinDialog({ post, onClose }) {
     }
   }
   return (
-    <Modal open={!!post} onClose={onClose} title={post ? t('news.pinTitle', { title: post.titleText }) : ''} size="sm"
+    <Modal open={!!post} onClose={onClose} triggerRef={triggerRef} title={post ? t('news.pinTitle', { title: post.titleText }) : ''} size="sm"
       footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={save} loading={act.isPending} disabled={!until || past}>{t('news.pin')}</Button></>}>
       <Input type="datetime-local" label={t('news.pinUntil')} hint={t('news.pinHint')} value={until} onChange={(e) => setUntil(e.target.value)} error={past ? t('post.pinFuture') : undefined} />
     </Modal>
@@ -113,6 +114,8 @@ export default function NewsList() {
   const [q, setQ] = useState(params.get('q') ?? '')
   const timer = useRef(null)
   const [pinning, setPinning] = useState(null)
+  // Opened from a row's menu: the menu hands over its "..." button (DropdownMenu), so the ref stays empty.
+  const pinTrigger = useTrigger()
 
   const list = usePosts(params.get('q') ? { q: params.get('q') } : undefined)
   const approvals = useApprovals('pending')
@@ -252,7 +255,7 @@ export default function NewsList() {
         caption={t('news.title')}
       />
 
-      <PinDialog post={pinning} onClose={() => setPinning(null)} />
+      <PinDialog post={pinning} onClose={() => setPinning(null)} triggerRef={pinTrigger.ref} />
     </div>
   )
 }

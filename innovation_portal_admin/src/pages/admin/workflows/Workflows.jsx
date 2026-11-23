@@ -19,6 +19,7 @@ import { RadioGroup } from '../../../components/ui/Choice'
 import { useConfirm } from '../../../components/ui/confirm'
 import { useToast } from '../../../components/ui/toast'
 import { useT } from '../../../i18n/context'
+import { useTrigger } from '../../../components/ui/useTrigger'
 import { client } from '../../../lib/api/client'
 import { workflows as wfApi } from '../../../lib/api/endpoints'
 import { usePrograms } from '../../../lib/queries/programs'
@@ -194,7 +195,8 @@ export default function Workflows() {
   const navigate = useNavigate()
   const confirm = useConfirm()
   const toast = useToast()
-  const createRef = useRef(null)
+  // The header button (hidden on phones) and the empty state both open it, each out of itself.
+  const create = useTrigger()
   const [creating, setCreating] = useState(false)
   const list = useWorkflowDefinitions()
   const clone = useCloneWorkflow()
@@ -233,7 +235,7 @@ export default function Workflows() {
         title={t('wfl.title')}
         subtitle={t('wfl.subtitle')}
         actions={
-          <Button ref={createRef} data-guide="workflows.create" onClick={() => setCreating(true)} className="hidden md:inline-flex">
+          <Button ref={create.ref} data-guide="workflows.create" onClick={(e) => { create.from(e); setCreating(true) }} className="hidden md:inline-flex">
             <Plus size={16} aria-hidden />
             {t('wfl.create')}
           </Button>
@@ -246,7 +248,7 @@ export default function Workflows() {
       ) : list.isError ? (
         <ErrorState framed title={t('wfl.loadError')} message={list.error?.message} onRetry={list.refetch} />
       ) : shown.length === 0 ? (
-        <EmptyState framed icon={Layers} title={t('wfl.empty')} message={t('wfl.emptyBody')} action={<Button data-guide="workflows.create" onClick={() => setCreating(true)}>{t('wfl.create')}</Button>} />
+        <EmptyState framed icon={Layers} title={t('wfl.empty')} message={t('wfl.emptyBody')} action={<Button data-guide="workflows.create" onClick={(e) => { create.from(e); setCreating(true) }}>{t('wfl.create')}</Button>} />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {shown.map((wf) => (
@@ -285,7 +287,7 @@ export default function Workflows() {
         </ul>
       )}
 
-      <CreateWorkflow open={creating} onClose={() => setCreating(false)} triggerRef={createRef} workflows={workflows} />
+      <CreateWorkflow open={creating} onClose={() => setCreating(false)} triggerRef={create.ref} workflows={workflows} />
     </div>
   )
 }

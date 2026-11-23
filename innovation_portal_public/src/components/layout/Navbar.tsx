@@ -10,8 +10,8 @@ import Logo from '../ui/Logo'
 import Avatar from '../ui/Avatar'
 import LanguageSwitch from '../ui/LanguageSwitch'
 import { buttonClasses } from '../ui/Button'
-import { useFocusTrap } from '../ui/useFocusTrap'
 import Popover from '../ui/Popover'
+import Drawer from '../ui/Drawer'
 import SiteSearch from '../search/SiteSearch'
 import NotificationsPanel from '../innovator/NotificationsPanel'
 import { useShellSettings, useUnreadCount } from './shellData'
@@ -220,20 +220,16 @@ function SearchButton() {
   )
 }
 
-function MenuDrawer({ open, onClose, links, canStaff, onLogout, onAccessibility }: { open: boolean; onClose: () => void; links: NavItem[]; canStaff: boolean; onLogout: () => void; onAccessibility: () => void }) {
+function MenuDrawer({ open, onClose, triggerRef, links, canStaff, onLogout, onAccessibility }: { open: boolean; onClose: () => void; triggerRef: RefObject<HTMLButtonElement>; links: NavItem[]; canStaff: boolean; onLogout: () => void; onAccessibility: () => void }) {
   const { t } = useI18n()
   const { isAuthenticated } = useAuth()
   const settings = useShellSettings()
-  const ref = useRef<HTMLDivElement>(null)
   const [searching, setSearching] = useState(false)
-  useFocusTrap(ref, open, onClose)
   useEffect(() => { if (!open) setSearching(false) }, [open])
-  if (!open) return null
   const row = 'flex items-center min-h-[48px] px-1 text-d-h5 font-heading text-text border-b border-border'
   return (
-    <div className="lg:hidden fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-scrim/45" aria-hidden onClick={onClose} />
-      <div ref={ref} role="dialog" aria-modal="true" aria-label={t('common.menu')} className="absolute inset-y-0 right-0 w-full max-w-[390px] bg-bg flex flex-col animate-slide-in-right">
+    // Figma 11:694: the phone menu, on the shared Drawer (genie out of the menu button).
+    <Drawer open={open} onClose={onClose} triggerRef={triggerRef} label={t('common.menu')} side="right" width={390} className="lg:hidden">
         <div className="flex items-center justify-between px-5 h-[60px] border-b border-border shrink-0">
           <Logo className="scale-[0.8] origin-left" />
           <button type="button" onClick={onClose} aria-label={t('common.close')} className="w-11 h-11 -mr-2 flex items-center justify-center rounded-control text-text hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -294,8 +290,7 @@ function MenuDrawer({ open, onClose, links, canStaff, onLogout, onAccessibility 
             </Link>
           )}
         </div>
-      </div>
-    </div>
+    </Drawer>
   )
 }
 
@@ -378,6 +373,7 @@ export default function Navbar() {
       <MenuDrawer
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        triggerRef={menuButtonRef}
         links={links}
         canStaff={canStaff}
         onLogout={handleLogout}

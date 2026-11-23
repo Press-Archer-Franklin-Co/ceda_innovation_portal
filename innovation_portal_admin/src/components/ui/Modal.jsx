@@ -20,6 +20,7 @@ const SIZE_MAP = {
  * Esc closes, focus is trapped once it has opened and returns to the trigger. Bottom sheet on phone.
  * Props: open, onClose, title, description, size sm|md|lg|xl, footer, triggerRef, closeOnBackdrop, alert.
  * sheet: stays a bottom sheet at every width (EditorWorkspace's panel below 1024px).
+ * routeOpened: nothing is clicked to open it (a route, a timer, after a save); it scales in from the centre.
  */
 export default function Modal({ open, onClose, title, description, size = 'md', footer, children, closeOnBackdrop = true, alert = false, bodyClassName, triggerRef, sheet = false }) {
   const t = useT()

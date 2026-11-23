@@ -317,7 +317,7 @@ export default function Styleguide() {
           <p className="text-[13px] text-muted mb-3">Add partner saves through a fake API here and shows a toast with Undo. Set DevTools Animations to 10% to watch the genie.</p>
           <div className="flex flex-wrap gap-2.5">
             <Button ref={addRef} icon={<Plus size={14} aria-hidden />} onClick={() => setAddOpen(true)}>Add partner</Button>
-            <Button ref={deleteRef} variant="danger" icon={<Trash2 size={14} aria-hidden />} onClick={() => setConfirmOpen(true)}>Delete partner</Button>
+            <Button ref={deleteRef} variant="danger" icon={<Trash2 size={14} aria-hidden />} onClick={(e) => { deleteRef.current = e.currentTarget; setConfirmOpen(true) }}>Delete partner</Button>
           </div>
           <AddPartnerDialog open={addOpen} onClose={() => setAddOpen(false)} triggerRef={addRef} api={fakeApi} />
           <ConfirmDialog
@@ -341,7 +341,7 @@ export default function Styleguide() {
                 { key: 'edit', label: 'Edit partner', icon: <Pencil size={14} />, onSelect: () => {} },
                 { key: 'copy', label: 'Duplicate', icon: <Copy size={14} />, onSelect: () => {} },
                 { key: 'hidden', label: 'Only for admins', hidden: true },
-                { key: 'delete', label: 'Delete partner', icon: <Trash2 size={14} />, danger: true, onSelect: () => setConfirmOpen(true) },
+                { key: 'delete', label: 'Delete partner', icon: <Trash2 size={14} />, danger: true, onSelect: () => { deleteRef.current = null; setConfirmOpen(true) } },
               ]}
             />
             <DropdownMenu label="More" trigger={(props) => <Button {...props} variant="secondary" size="sm">More actions</Button>} items={[{ key: 'a', label: 'Archive challenge' }, { key: 'b', label: 'Export entries (CSV)' }]} />
