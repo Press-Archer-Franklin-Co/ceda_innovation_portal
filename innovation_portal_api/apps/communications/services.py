@@ -101,6 +101,14 @@ class CommunicationService:
             related_submission=submission,
             related_program=submission.program,
         )
+        from apps.platform_config.email_backend import delivery_block
+
+        blocked = delivery_block([submission.guest_email])
+        if blocked:
+            log.status = CommunicationStatus.FAILED
+            log.failure_reason = blocked
+            log.save(update_fields=["status", "failure_reason", "updated_at"])
+            return log
         try:
             send_mail(subject, body, getattr(settings, "DEFAULT_FROM_EMAIL", None), [submission.guest_email], fail_silently=False)
             log.status = CommunicationStatus.SENT
@@ -214,7 +222,14 @@ class CommunicationService:
         log = CommunicationLog.objects.select_related("recipient", "related_submission", "related_program").get(id=log_id)
         log.last_attempt_at = timezone.now()
         log.retry_count += 1
-        if log.channel == CommunicationChannel.EMAIL:
+        from apps.platform_config.email_backend import delivery_block
+
+        blocked = delivery_block([log.recipient.email if log.recipient else log.to_address]) if log.channel == CommunicationChannel.EMAIL else ""
+        if blocked:
+            # Say what really happened: this email did not leave the portal.
+            log.status = CommunicationStatus.FAILED
+            log.failure_reason = blocked
+        elif log.channel == CommunicationChannel.EMAIL:
             try:
                 summary_items = []
                 if log.related_submission:

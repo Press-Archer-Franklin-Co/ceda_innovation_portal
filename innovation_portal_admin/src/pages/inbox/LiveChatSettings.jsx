@@ -24,6 +24,7 @@ import { useAdminRoles } from '../../lib/queries/adminRoles'
 // replies officers can insert. A plain sentence at the top says what the settings mean. settings.manage.
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+// Toggle (components/ui/Choice) calls onChange with true or false, not with the event.
 
 function Card({ title, action, children, className }) {
   return (
@@ -120,7 +121,7 @@ export default function LiveChatSettings() {
 
       <section className="flex flex-col gap-2 rounded-card bg-surface2 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
         <Toggle label={form.enabled ? t('chatset.on') : t('chatset.off')} description={form.enabled ? (form.open_now ? t('chatset.openNow') : t('chatset.closedNow')) : t('chatset.offHint')}
-          checked={Boolean(form.enabled)} onChange={(e) => set({ enabled: e.target.checked })} />
+          checked={Boolean(form.enabled)} onChange={(on) => set({ enabled: on })} />
         <p className="text-[13px] text-text lg:max-w-[60%]" aria-live="polite">{sentence}</p>
       </section>
 
@@ -135,15 +136,15 @@ export default function LiveChatSettings() {
                     <span className="w-[120px] text-[14px] text-text">{t(`chatset.day.${day}`)}</span>
                     {w ? (
                       <span className="flex items-center gap-1.5">
-                        <Input type="time" aria-label={t('chatset.opens', { day: t(`chatset.day.${day}`) })} value={w.opens} onChange={(e) => setDay(day, { ...w, opens: e.target.value })} className="w-[110px]" />
+                        <Input type="time" aria-label={t('chatset.opens', { day: t(`chatset.day.${day}`) })} value={w.opens} onChange={(e) => setDay(day, { ...w, opens: e.target.value })} className="w-[130px]" />
                         <span className="text-[13px] text-muted">{t('chatset.to')}</span>
-                        <Input type="time" aria-label={t('chatset.closes', { day: t(`chatset.day.${day}`) })} value={w.closes} onChange={(e) => setDay(day, { ...w, closes: e.target.value })} className="w-[110px]" />
+                        <Input type="time" aria-label={t('chatset.closes', { day: t(`chatset.day.${day}`) })} value={w.closes} onChange={(e) => setDay(day, { ...w, closes: e.target.value })} className="w-[130px]" />
                       </span>
                     ) : (
                       <span className="text-[13px] text-muted">{t('chatset.closed')}</span>
                     )}
                     <span className="ml-auto">
-                      <Toggle aria-label={t('chatset.openOn', { day: t(`chatset.day.${day}`) })} checked={Boolean(w)} onChange={(e) => setDay(day, e.target.checked ? { opens: '08:00', closes: '16:30' } : null)} />
+                      <Toggle aria-label={t('chatset.openOn', { day: t(`chatset.day.${day}`) })} checked={Boolean(w)} onChange={(on) => setDay(day, on ? { opens: '08:00', closes: '16:30' } : null)} />
                     </span>
                   </li>
                 )
@@ -177,7 +178,7 @@ export default function LiveChatSettings() {
                     <Input type="number" min={1} max={50} aria-label={t('chatset.maxOpenFor', { name: nameOf(a.id) })} value={a.max_open ?? 5} className="w-[64px]"
                       onChange={(e) => set({ answerers: answerers.map((x, j) => (j === i ? { ...x, max_open: Number(e.target.value) || 1 } : x)) })} />
                   </label>
-                  <Toggle label={t('chatset.backup')} checked={Boolean(a.backup)} onChange={(e) => set({ answerers: answerers.map((x, j) => (j === i ? { ...x, backup: e.target.checked } : x)) })} />
+                  <Toggle label={t('chatset.backup')} checked={Boolean(a.backup)} onChange={(on) => set({ answerers: answerers.map((x, j) => (j === i ? { ...x, backup: on } : x)) })} />
                   <button type="button" aria-label={t('chatset.remove', { name: nameOf(a.id) })} onClick={() => set({ answerers: answerers.filter((_, j) => j !== i) })} className="text-muted hover:text-danger"><Trash2 size={16} aria-hidden /></button>
                 </li>
               ))}
@@ -216,12 +217,12 @@ export default function LiveChatSettings() {
 
           <Card title={t('chatset.handover')}>
             <div className="flex flex-col gap-3">
-              <Toggle label={t('chatset.askHuman')} checked={Boolean(form.handoff_on_ask_human)} onChange={(e) => set({ handoff_on_ask_human: e.target.checked })} />
-              <Toggle label={t('chatset.aiUnsure')} checked={Boolean(form.handoff_on_ai_unsure)} onChange={(e) => set({ handoff_on_ai_unsure: e.target.checked })} />
+              <Toggle label={t('chatset.askHuman')} checked={Boolean(form.handoff_on_ask_human)} onChange={(on) => set({ handoff_on_ask_human: on })} />
+              <Toggle label={t('chatset.aiUnsure')} checked={Boolean(form.handoff_on_ai_unsure)} onChange={(on) => set({ handoff_on_ai_unsure: on })} />
               <Toggle label={t('chatset.whatsappFollowUp', { n: form.whatsapp_follow_up_minutes || 10 })} checked={form.whatsapp_follow_up_minutes != null}
-                onChange={(e) => set({ whatsapp_follow_up_minutes: e.target.checked ? 10 : null })} />
-              <Toggle label={t('chatset.askRating')} checked={Boolean(form.ask_rating)} onChange={(e) => set({ ask_rating: e.target.checked })} />
-              <Toggle label={t('chatset.allowGuests')} description={t('chatset.allowGuestsHint')} checked={Boolean(form.allow_guests)} onChange={(e) => set({ allow_guests: e.target.checked })} />
+                onChange={(on) => set({ whatsapp_follow_up_minutes: on ? 10 : null })} />
+              <Toggle label={t('chatset.askRating')} checked={Boolean(form.ask_rating)} onChange={(on) => set({ ask_rating: on })} />
+              <Toggle label={t('chatset.allowGuests')} description={t('chatset.allowGuestsHint')} checked={Boolean(form.allow_guests)} onChange={(on) => set({ allow_guests: on })} />
             </div>
           </Card>
 

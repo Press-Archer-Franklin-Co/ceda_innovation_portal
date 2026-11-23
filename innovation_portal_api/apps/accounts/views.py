@@ -839,7 +839,7 @@ class LoginCodeRequestView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         from apps.accounts.otp_services import OTPService
 
-        OTPService.assert_channel_available(serializer.validated_data["target_type"])
+        OTPService.assert_channel_available(serializer.validated_data["target_type"], serializer.validated_data["target"])
         result = OTPService.request_code(
             target_type=serializer.validated_data["target_type"],
             target=serializer.validated_data["target"],
