@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ChevronDown, FileText, ShieldCheck, Sparkles, Star, X } from 'lucide-react'
 import clsx from 'clsx'
 import Button from '../../ui/Button'
@@ -21,6 +21,32 @@ type DocState = { file: UploadedFile; kind: 'reading' | 'ready' | 'failed' | 'un
 
 const STATUS_TONE: Record<CheckStatus, TagTone> = { clear: 'green', add_more: 'amber', missing: 'red' }
 
+/**
+ * "Check my idea" from more than one place (the panel and the button beside Next, 2.13 pin 1). The form owns it:
+ * the panel says whether the AI helper is on and draws the drawer; any button can open it, and the drawer pours
+ * out of, and back into, the button that was pressed.
+ */
+export interface CheckMyIdea {
+  available: boolean
+  setAvailable: (on: boolean) => void
+  open: boolean
+  openFrom: (trigger: HTMLElement | null) => void
+  close: () => void
+  triggerRef: RefObject<HTMLElement | null>
+}
+
+export function useCheckMyIdea(): CheckMyIdea {
+  const [available, setAvailable] = useState(false)
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLElement | null>(null)
+  const openFrom = useCallback((trigger: HTMLElement | null) => {
+    triggerRef.current = trigger
+    setOpen(true)
+  }, [])
+  const close = useCallback(() => setOpen(false), [])
+  return useMemo(() => ({ available, setAvailable, open, openFrom, close, triggerRef }), [available, open, openFrom, close])
+}
+
 export interface AiHelperPanelProps {
   draftId: string
   steps: FormStep[]
@@ -33,6 +59,8 @@ export interface AiHelperPanelProps {
   watchSelector?: string
   /** Today's panel (similar ideas, tips, WhatsApp). Always shown; it is all that shows when the AI helper is off. */
   children?: ReactNode
+  /** Shared with other "Check my idea" buttons on the page (useCheckMyIdea). Without it the panel keeps its own. */
+  check?: CheckMyIdea
 }
 
 /**
@@ -41,7 +69,7 @@ export interface AiHelperPanelProps {
  * full review of every step (Figma 133:1341, phone 133:1583). Off or not set up: only today's panel shows.
  */
 export default function AiHelperPanel({
-  draftId, steps, stepIndex, answers, onShowField, watchSelector = 'section[aria-labelledby="step-heading"]', children,
+  draftId, steps, stepIndex, answers, onShowField, watchSelector = 'section[aria-labelledby="step-heading"]', children, check: shared,
 }: AiHelperPanelProps) {
   const { t, lang } = useI18n()
   const [helper, setHelper] = useState<'loading' | 'on' | 'off'>('loading')
@@ -49,8 +77,9 @@ export default function AiHelperPanel({
   const [results, setResults] = useState<Record<string, StepResult>>({})
   const [docs, setDocs] = useState<Record<string, DocState>>({})
   const [phoneOpen, setPhoneOpen] = useState(false)
-  const [checkOpen, setCheckOpen] = useState(false)
-  const checkRef = useRef<HTMLButtonElement>(null)
+  const own = useCheckMyIdea()
+  const check = shared ?? own
+  const { setAvailable } = check
 
   const step: FormStep | undefined = steps[stepIndex]
   const stepRef = useRef(step)
@@ -71,6 +100,11 @@ export default function AiHelperPanel({
       alive = false
     }
   }, [])
+
+  // Other "Check my idea" buttons show only while the helper is on.
+  useEffect(() => {
+    setAvailable(helper === 'on')
+  }, [helper, setAvailable])
 
   // ── The step check ──────────────────────────────────────────────────────
   const run = useCallback(
@@ -241,7 +275,7 @@ export default function AiHelperPanel({
             </ul>
           )}
 
-          <Button ref={checkRef} data-guide="idea.check" variant="secondary" block icon={<Star size={18} aria-hidden />} onClick={() => setCheckOpen(true)}>
+          <Button data-guide="idea.check" variant="secondary" block icon={<Star size={18} aria-hidden />} onClick={(e) => check.openFrom(e.currentTarget)}>
             {t('ai.check')}
           </Button>
         </div>
@@ -250,14 +284,14 @@ export default function AiHelperPanel({
       {children}
 
       <CheckDrawer
-        open={checkOpen}
-        onClose={() => setCheckOpen(false)}
-        triggerRef={checkRef}
+        open={check.open}
+        onClose={check.close}
+        triggerRef={check.triggerRef}
         draftId={draftId}
         steps={steps}
         answers={answers}
         onShowField={(index, key) => {
-          setCheckOpen(false)
+          check.close()
           onShowField(index, key)
         }}
       />
@@ -344,7 +378,7 @@ function CheckDrawer({
 }: {
   open: boolean
   onClose: () => void
-  triggerRef: React.RefObject<HTMLButtonElement | null>
+  triggerRef: RefObject<HTMLElement | null>
   draftId: string
   steps: FormStep[]
   answers: Answers
