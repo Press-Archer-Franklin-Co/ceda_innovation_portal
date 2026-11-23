@@ -1,6 +1,6 @@
 import { type FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { MessageCircle, SendHorizontal, Star, X } from 'lucide-react'
+import { ArrowLeft, MessageCircle, SendHorizontal, Star, X } from 'lucide-react'
 import clsx from 'clsx'
 import axios from 'axios'
 import Modal from '../ui/Modal'
@@ -38,11 +38,13 @@ function useIsPhone() {
  * window from there (fromGuide: no bubble of its own, opened and closed by the guide). With the guide off the
  * bubble works exactly as before. onStatus tells the guide whether live chat is on.
  */
-export default function HelpBubble({ fromGuide = false, open: openProp, onOpenChange, onStatus }: {
+export default function HelpBubble({ fromGuide = false, open: openProp, onOpenChange, onStatus, onBack }: {
   fromGuide?: boolean
   open?: boolean
   onOpenChange?: (open: boolean) => void
   onStatus?: (enabled: boolean) => void
+  /** Back to the "Need help?" start view, keeping the chat open (guide only). */
+  onBack?: () => void
 } = {}) {
   const { t, lang } = useI18n()
   const { pathname } = useLocation()
@@ -57,6 +59,10 @@ export default function HelpBubble({ fromGuide = false, open: openProp, onOpenCh
   const phone = useIsPhone()
   const chat = useChat(open)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  // After the person ends the chat, the next open starts fresh (the start view, or an empty chat).
+  const { ended, startOver } = chat
+  useEffect(() => { if (!open && ended) startOver() }, [open, ended, startOver])
+  const back = onBack ? () => { setOpen(false); onBack() } : undefined
 
   useEffect(() => {
     let alive = true
@@ -91,7 +97,7 @@ export default function HelpBubble({ fromGuide = false, open: openProp, onOpenCh
       </button>
 
       {phone ? (
-        <Modal open={open} onClose={() => setOpen(false)} triggerRef={buttonRef} size="lg" bodyClassName="!p-0 flex flex-col" header={<ChatHeader status={status} chat={chat} />}>
+        <Modal open={open} onClose={() => setOpen(false)} triggerRef={buttonRef} size="lg" bodyClassName="!p-0 flex flex-col" header={<ChatHeader status={status} chat={chat} onBack={back} />}>
           <div id="help-chat" className="flex flex-col min-h-[70vh]">{content}</div>
         </Modal>
       ) : (
@@ -105,7 +111,7 @@ export default function HelpBubble({ fromGuide = false, open: openProp, onOpenCh
             open ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none',
           )}
         >
-          <ChatHeader status={status} chat={chat} onClose={() => { setOpen(false); buttonRef.current?.focus() }} />
+          <ChatHeader status={status} chat={chat} onBack={back} onClose={() => { setOpen(false); buttonRef.current?.focus() }} />
           {content}
         </section>
       )}
@@ -125,6 +131,7 @@ function useChat(open: boolean) {
   const [typing, setTyping] = useState<{ name: string } | null>(null)
   const [staffOnline, setStaffOnline] = useState(false)
   const [seenUpTo, setSeenUpTo] = useState<string | null>(null)
+  const [ended, setEnded] = useState(false)
   const lastId = useRef<string | null>(null)
 
   const merge = (incoming: ChatMessage[], reset = false) =>
@@ -205,26 +212,42 @@ function useChat(open: boolean) {
     setAskRating(false)
   }
 
-  function startOver() {
+  const startOver = useCallback(() => {
     chatStore.clear()
     setStored(null)
     setMessages([])
     setConvStatus(null)
+    setEnded(false)
     lastId.current = null
+  }, [])
+
+  /** The person ends the chat: it closes for staff too, then the rating (if asked) and "This chat has ended." */
+  async function end() {
+    if (!stored) return
+    const result = await helpChatService.end(stored.id, stored.token)
+    chatStore.clear() // the next "Need help?" opens the start view, not this chat
+    setConvStatus('closed')
+    setAskRating(Boolean(result.ask_rating))
+    setEnded(true)
   }
 
-  return { started: Boolean(stored), messages, status, askRating, typing, staffOnline, unread, seenAt, send, typingNow, rate, startOver }
+  return { started: Boolean(stored), messages, status, askRating, typing, staffOnline, unread, seenAt, ended, send, typingNow, rate, end, startOver }
 }
 
 type Chat = ReturnType<typeof useChat>
 
-function ChatHeader({ status, chat, onClose }: { status: HelpChatStatus; chat: Chat; onClose?: () => void }) {
+function ChatHeader({ status, chat, onClose, onBack }: { status: HelpChatStatus; chat: Chat; onClose?: () => void; onBack?: () => void }) {
   const { t } = useI18n()
   const officer = [...chat.messages].reverse().find((m) => m.author_role === 'staff')?.author
   const online = chat.started ? chat.staffOnline || status.staff_online : status.staff_online
   const open = status.open_now
   return (
     <div className="flex items-center gap-3 bg-banner text-on-banner px-4 py-3 shrink-0">
+      {onBack && (
+        <button type="button" onClick={onBack} aria-label={t('chat.back')} className="-ml-1 p-1.5 rounded-full hover:bg-on-banner/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-on-banner">
+          <ArrowLeft size={20} aria-hidden />
+        </button>
+      )}
       <span aria-hidden className="w-9 h-9 rounded-full bg-banner-muted text-banner-deep flex items-center justify-center font-heading font-bold text-[12px]">
         {officer ? initials(officer.name) : 'CEDA'}
       </span>
@@ -254,6 +277,7 @@ function ChatWindow({ status, chat }: { status: HelpChatStatus; chat: Chat }) {
   const [email, setEmail] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [confirming, setConfirming] = useState(false)
   const endRef = useRef<HTMLLIElement>(null)
   const guest = !isAuthenticated
   const last = chat.messages[chat.messages.length - 1]?.id
@@ -284,6 +308,19 @@ function ChatWindow({ status, chat }: { status: HelpChatStatus; chat: Chat }) {
   const intro = introNotice(status.open_now ? status.welcome : status.away, chat.messages)
   const signInOnly = guest && !status.allow_guests && !chat.started
   const closed = chat.status === 'closed'
+
+  async function endChat() {
+    setBusy(true)
+    setError('')
+    try {
+      await chat.end()
+      setConfirming(false)
+    } catch {
+      setError(t('chat.endFailed'))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <>
@@ -321,9 +358,18 @@ function ChatWindow({ status, chat }: { status: HelpChatStatus; chat: Chat }) {
         </div>
       ) : (
         <form onSubmit={submit} className="border-t border-border px-3 pt-2.5 pb-3 flex flex-col gap-2 shrink-0">
-          {wa && (
-            <div className="flex flex-wrap gap-1.5">
-              <a href={wa} target="_blank" rel="noreferrer" className="rounded-full bg-surface2 px-3 py-1 text-d-label-s text-text hover:bg-border">{t('chat.whatsapp')}</a>
+          {confirming ? (
+            <div role="group" aria-label={t('chat.end')} className="rounded-control bg-surface2 px-3 py-2.5 flex flex-col gap-2">
+              <p className="text-d-body-s text-text">{t('chat.endAsk')}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={busy} onClick={endChat} className="rounded-control bg-primary text-white px-3 py-1.5 text-d-btn-s font-heading font-semibold disabled:opacity-50">{t('chat.endYes')}</button>
+                <button type="button" onClick={() => setConfirming(false)} className="rounded-control border border-border bg-surface px-3 py-1.5 text-d-btn-s font-heading font-semibold text-text">{t('chat.endNo')}</button>
+              </div>
+            </div>
+          ) : (wa || chat.started) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {wa && <a href={wa} target="_blank" rel="noreferrer" className="rounded-full bg-surface2 px-3 py-1 text-d-label-s text-text hover:bg-border">{t('chat.whatsapp')}</a>}
+              {chat.started && <button type="button" onClick={() => setConfirming(true)} className="ml-auto rounded-full border border-border px-3 py-1 text-d-label-s text-text hover:bg-surface2">{t('chat.end')}</button>}
             </div>
           )}
           {!chat.started && guest && (

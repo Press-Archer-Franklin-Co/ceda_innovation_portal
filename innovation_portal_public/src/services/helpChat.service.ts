@@ -85,6 +85,11 @@ export const helpChatService = {
   async typing(id: string, token?: string | null): Promise<void> {
     await api.post(`/help-chat/${id}/typing/`, {}, { headers: headers(token) })
   },
+  /** The person ends their own chat. Returns whether to ask for a rating. */
+  async end(id: string, token?: string | null): Promise<{ status: string; ask_rating: boolean }> {
+    const { data } = await api.post(`/help-chat/${id}/end/`, {}, { headers: headers(token) })
+    return unwrapData<{ status: string; ask_rating: boolean }>(data)
+  },
   async rate(id: string, satisfaction: number, token?: string | null): Promise<void> {
     await api.post(`/help-chat/${id}/rate/`, { satisfaction }, { headers: headers(token) })
   },

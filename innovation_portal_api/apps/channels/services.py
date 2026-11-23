@@ -14,7 +14,8 @@ from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from apps.audit.services import AuditService
-from apps.channels.engine import JourneyRunner, Screen, build_graph_from_nodes
+from apps.channels.actions import pick
+from apps.channels.engine import Choice, JourneyRunner, Screen, build_graph_from_nodes
 from apps.channels.models import Channel, ChannelConnection, Journey, JourneyNode, JourneySession, JourneySessionStep, JourneyVersion
 from apps.channels.nodes import TYPE_KEYS, check_graph, errors_only
 from apps.channels.way_out import norm
@@ -466,16 +467,9 @@ class SessionService:
         """(can this session show buttons, the connection's way-out words)."""
         if session.channel != Channel.WHATSAPP:
             return False, {}
-        link = session.connection
-        if link is None:  # the simulator shows WhatsApp buttons
+        if session.connection is None:  # the simulator shows WhatsApp buttons
             return True, {}
-        config = link.connection.config or {}
-        words = {name: config[name] for name in ("menu_words", "cancel_words", "greeting_words") if isinstance(config.get(name), list)}
-        provider = _provider(link)
-        interactive = bool(getattr(provider, "supports_interactive", False))
-        if link.connection.provider == "whatsapp_twilio":
-            interactive = config.get("interactive_mode", "buttons") == "buttons"
-        return interactive, words
+        return connection_options(session.connection)
 
     @staticmethod
     def _runner(session: JourneySession, graph: dict, **extra) -> JourneyRunner:
@@ -696,15 +690,18 @@ class WhatsAppWebhookService:
                 with transaction.atomic():
                     _lock_phone(channel_connection.id, phone)
                     conversation = WhatsAppHandover.open_for(phone)
+                    back_to_menu = False
                     if conversation is not None:
-                        # A person is talking to an officer: everything goes to the Inbox, no journey and no bot.
-                        node_type, outcome = "inbox", "to_inbox"
-                        waiting_note = WhatsAppHandover.receive(conversation, provider=provider, message=message, phone=phone, connection=channel_connection)
-                        if waiting_note:
-                            WhatsAppOutbound.send_screen(provider, phone, Screen(text=waiting_note, end=False, lang=conversation.language))
-                    else:
+                        # A person is talking to an officer: their words go to the Inbox, except a way back (prompt 54).
+                        node_type = "inbox"
+                        reply, outcome = WhatsAppHandover.route(conversation, provider=provider, message=message, phone=phone, connection=channel_connection)
+                        if reply == "menu":
+                            back_to_menu = True
+                        elif reply is not None:
+                            WhatsAppOutbound.send_screen(provider, phone, reply)
+                    if conversation is None or back_to_menu:
                         session = SessionService.find_active(channel=Channel.WHATSAPP, external_id=phone, channel_connection=channel_connection)
-                        restart = norm(message.text) in {norm(word) for word in provider.restart_words()}
+                        restart = back_to_menu or norm(message.text) in {norm(word) for word in provider.restart_words()}
                         if session is not None and restart:
                             SessionService.cancel(session)
                             session, outcome = None, "restarted"
@@ -713,7 +710,7 @@ class WhatsAppWebhookService:
                                 channel=Channel.WHATSAPP, journey=journey, external_id=phone, phone=phone, channel_connection=channel_connection,
                                 initial_vars={"profile_name": message.name}, message_id=message.message_id,
                             )
-                            outcome = outcome if outcome == "restarted" else "started"
+                            outcome = outcome if outcome in ("restarted", "left_to_menu") else "started"
                             if media:
                                 screen.text = f"{provider.reply_text('file_not_expected', session.language)}\n{screen.text}"
                         else:
@@ -739,6 +736,17 @@ class WhatsAppWebhookService:
                 channel_connection.id, mask_phone(phone), message.message_id, node_type, outcome, getattr(message, "choice_source", "text"), len(media), int((time.monotonic() - started) * 1000),
             )
         return handled, provider
+
+
+def connection_options(link) -> tuple[bool, dict]:
+    """(can this WhatsApp connection show buttons, its way-out words: menu_words, cancel_words, greeting_words)."""
+    config = link.connection.config or {}
+    words = {name: config[name] for name in ("menu_words", "cancel_words", "greeting_words") if isinstance(config.get(name), list)}
+    provider = _provider(link)
+    interactive = bool(getattr(provider, "supports_interactive", False))
+    if link.connection.provider == "whatsapp_twilio":
+        interactive = config.get("interactive_mode", "buttons") == "buttons"
+    return interactive, words
 
 
 def _lock_phone(connection_id, phone: str) -> None:
@@ -790,6 +798,56 @@ class WhatsAppHandover:
             logger.warning("A WhatsApp file for the Inbox could not be saved", exc_info=True)
             return None
 
+    WAIT_SECONDS = 24 * 3600
+
+    @staticmethod
+    def route(conversation, *, provider, message, phone: str, connection):
+        """What one message does while a hand-over is open: (reply, outcome).
+
+        reply is "menu" (the caller starts the journey), a Screen to send, or None (nothing to send).
+        Menu words leave to the main menu; cancel words stop with a goodbye; a greeting asks whether to keep
+        waiting. Anything else goes to the officer, as before. Words come from the connection (way_out.py)."""
+        from django.core.cache import cache
+
+        from apps.channels.way_out import DEFAULT_WORDS, MENU, WAY_OUT_TEXT
+        from apps.conversations.services import leave
+
+        interactive, words = connection_options(connection) if connection is not None else (True, {})
+        lang = conversation.language or "en"
+        value = norm(message.text) if not message.media else ""
+        menu_words = {norm(w) for w in (words.get("menu_words") or DEFAULT_WORDS["menu_words"])}
+        cancel_words = {norm(w) for w in (words.get("cancel_words") or DEFAULT_WORDS["cancel_words"])}
+        greeting_words = {norm(w) for w in (words.get("greeting_words") or DEFAULT_WORDS["greeting_words"])}
+        pending_key = f"channels:wa-wait:{conversation.id}"
+        keep_words = {"1", norm(pick(WAY_OUT_TEXT["keep_waiting"], "en")), norm(pick(WAY_OUT_TEXT["keep_waiting"], "tn")), norm(WhatsAppHandover.KEEP)}
+        if value and cache.get(pending_key):
+            cache.delete(pending_key)
+            if value in keep_words:
+                return Screen(text=provider.reply_text("handover_keep", lang), end=False, lang=lang), "keep_waiting"
+            if value == "0" or value in {norm(pick(WAY_OUT_TEXT["main_menu"], "en")), norm(pick(WAY_OUT_TEXT["main_menu"], "tn"))}:
+                value = norm(MENU)
+        if value and (value in menu_words or value == norm(MENU)):
+            leave(conversation, how="menu", user=conversation.contact_user)
+            return "menu", "left_to_menu"
+        if value and value in cancel_words:
+            leave(conversation, how="cancel", user=conversation.contact_user)
+            return Screen(text=provider.reply_text("handover_stopped", lang), end=True, lang=lang), "left_stopped"
+        if value and value in greeting_words:
+            cache.set(pending_key, 1, WhatsAppHandover.WAIT_SECONDS)
+            if interactive:
+                choices = [Choice(WhatsAppHandover.KEEP, pick(WAY_OUT_TEXT["keep_waiting"], lang)), Choice(MENU, pick(WAY_OUT_TEXT["main_menu"], lang))]
+                return Screen(text=provider.reply_text("handover_ask", lang), end=False, choices=choices, lang=lang), "asked_keep_waiting"
+            text = f"{provider.reply_text('handover_ask', lang)}\n{provider.reply_text('handover_ask_text', lang)}"
+            return Screen(text=text, end=False, lang=lang), "asked_keep_waiting"
+        note = WhatsAppHandover.receive(conversation, provider=provider, message=message, phone=phone, connection=connection)
+        if not note:
+            return None, "to_inbox"
+        text = f"{note}\n{provider.reply_text('handover_back', lang)}"
+        choices = [Choice(MENU, pick(WAY_OUT_TEXT["main_menu"], lang))] if interactive else []
+        return Screen(text=text, end=False, choices=choices, lang=lang), "to_inbox"
+
+    KEEP = "__keep"
+
     @staticmethod
     def receive(conversation, *, provider, message, phone: str, connection) -> str:
         """Put the message in the Inbox. Returns the once-only "officer will reply" text, or ""."""
@@ -815,7 +873,7 @@ class WhatsAppHandover:
         JourneySession.objects.filter(
             pk__in=JourneySession.objects.filter(channel=Channel.WHATSAPP, phone=phone, is_simulation=False).order_by("-last_activity_at").values("pk")[:1]
         ).update(last_inbound_at=timezone.now())
-        config = connection.connection.config or {}
+        config = (connection.connection.config or {}) if connection is not None else {}
         try:
             minutes = float(config.get("handover_wait_minutes", DEFAULT_HANDOVER_WAIT_MINUTES))
         except (TypeError, ValueError):
@@ -919,6 +977,24 @@ class SimulatorService:
                 old = JourneySession.objects.filter(id=session_id, is_simulation=True).first()
                 if old:
                     SessionService.cancel(old)
+            if session_id and not restart and session is None and channel == Channel.WHATSAPP:
+                # After "Talk to a person" the simulator follows the hand-over like the webhook (prompt 54).
+                old = JourneySession.objects.filter(id=session_id, is_simulation=True, journey=journey, status=JourneySession.Status.HANDED_OVER).first()
+                conversation = WhatsAppHandover.open_for(old.phone) if old else None
+                if conversation is not None:
+                    from types import SimpleNamespace
+
+                    from apps.platform_config.providers.whatsapp import BaseWhatsAppProvider
+
+                    shim = SimpleNamespace(reply_text=lambda key, lang="en": BaseWhatsAppProvider.reply_text(SimpleNamespace(config={}), key, lang), fetch_media=None)
+                    message = SimpleNamespace(text=text or "", shown_text=text or "", media=[], message_id="")
+                    reply, _ = WhatsAppHandover.route(conversation, provider=shim, message=message, phone=old.phone, connection=None)
+                    if reply == "menu":
+                        return SessionService.start(
+                            channel=channel, journey=journey, external_id=f"sim-{actor.id}-{timezone.now().timestamp()}", phone=old.phone,
+                            simulation=True, use_draft=use_draft, user=old.user,
+                        )
+                    return old, reply if reply is not None else Screen(text="", end=False, node_key="", node_type="inbox", lang=conversation.language or "en")
             if session is None:
                 if as_registered:
                     user, phone = actor, (actor.phone_number or SimulatorService.fake_phone())

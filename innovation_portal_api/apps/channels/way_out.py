@@ -33,6 +33,8 @@ WAY_OUT_TEXT = {
     "save_stop": {"en": "Save and stop", "tn": "Boloka o emise"},
     "skip": {"en": "Skip", "tn": "Tlola"},
     "carry_on": {"en": "Carry on", "tn": "Tswelela"},
+    "keep_waiting": {"en": "Keep waiting", "tn": "Tswelela o emetse"},
+    "send_menu": {"en": "Send *menu* to go back.", "tn": "Romela *menu* go boela morago."},
     "zero": {"en": "0. Main menu", "tn": "0. Lenane le legolo"},
     "saved": {"en": "Saved. Choose Check my idea any time to carry on.", "tn": "E bolokilwe. Tlhopha Tlhola kakanyo ya me nako nngwe le nngwe go tswelela."},
     "nothing_saved": {"en": "Stopped. Nothing was saved yet.", "tn": "Go emisitswe. Ga go a bolokwa sepe."},

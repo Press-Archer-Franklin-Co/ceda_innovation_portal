@@ -3,6 +3,7 @@ Public: /api/help-chat/. Everything here is 404 while the live_chat switch is of
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 from django.http import Http404
@@ -11,7 +12,7 @@ from django.utils.dateparse import parse_datetime
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers, status
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework.views import APIView
@@ -537,8 +538,10 @@ class HelpChatView(APIView):
 class HelpChatActionView(APIView):
     permission_classes = [AllowAny, LIVE]
 
-    @extend_schema(tags=PUBLIC_TAGS, summary="Write, type or rate in my help chat", description="messages {body}. typing. rate {satisfaction: 1 to 5}.", request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
+    @extend_schema(tags=PUBLIC_TAGS, summary="Write, type, rate or end my help chat", description="messages {body}. typing. rate {satisfaction: 1 to 5}. end: the person ends their own chat (403 for anyone else); returns {status, ask_rating}.", request=OpenApiTypes.OBJECT, responses=OpenApiTypes.OBJECT)
     def post(self, request, pk, action):
+        if action == "end":
+            return self._end(request, pk)
         conversation = _own(request, pk)
         if action == "messages":
             serializer = TextSerializer(data=request.data)
@@ -553,3 +556,21 @@ class HelpChatActionView(APIView):
             services.rate(conversation, request.data.get("satisfaction") or 0)
             return api_success(data={"satisfaction": conversation.satisfaction})
         raise Http404
+
+    def _end(self, request, pk):
+        """Only the chat's own person (their account, or the guest token) may end it; anyone else gets 403, recorded."""
+        conversation = Conversation.objects.filter(id=pk, channel__in=[Conversation.Channel.WEB, Conversation.Channel.AI]).select_related("contact_user").first()
+        if conversation is None:
+            raise Http404
+        try:
+            conversation = _own(request, pk)
+        except Http404:
+            user = request.user if request.user.is_authenticated else None
+            AuditService.log_action(actor=user, action_type="help_chat_end_refused", target=conversation, metadata={"signed_in": user is not None})
+            logging.getLogger("security.access").warning("security.help_chat_end_refused conversation=%s signed_in=%s", conversation.id, user is not None)
+            raise PermissionDenied("Only the person in this chat can end it.")
+        user = request.user if request.user.is_authenticated else None
+        services.leave(conversation, how="ended", user=user)
+        from apps.conversations.models import LiveChatSettings
+
+        return api_success(data={"status": conversation.status, "ask_rating": LiveChatSettings.load().ask_rating and conversation.satisfaction is None})
