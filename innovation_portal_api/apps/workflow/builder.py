@@ -200,6 +200,9 @@ def step_settings(step) -> dict:
         "time_limit_days": int(days) if days and days == int(days) else days,
         "reminder_after_days": extra.get("reminder_after_days"),
         "next_steps": extra.get("next_steps") or [],
+        # 23 Nov: tell the innovator when an idea reaches this step (on by default). A challenge stage's own
+        # "Tell applicants" setting wins for challenges; this is for General ideas and steps without a stage setting.
+        "notify_innovator": bool(extra.get("notify_innovator", True)),
     }
 
 
@@ -232,6 +235,8 @@ def save_step_settings(step, data: dict, *, actor) -> dict:
     for name in ("share_out", "reminder_after_days"):
         if name in data:
             extra[name] = data[name]
+    if "notify_innovator" in data:
+        extra["notify_innovator"] = bool(data["notify_innovator"])
     if "next_steps" in data:
         codes = {str(item.id) for item in step.workflow_definition.steps.all()}
         for rule in data["next_steps"]:
