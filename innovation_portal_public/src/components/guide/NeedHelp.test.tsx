@@ -11,12 +11,12 @@ import NeedHelp from './NeedHelp'
 
 ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
-const state = { guide: false }
+const state = { guide: false, guests: true }
 vi.mock('../../lib/guide/api', () => ({
   guideStatus: vi.fn(async () => ({ features: { guide: state.guide } })),
   askGuide: vi.fn(async () => ({ answer: '', language: 'en', steps: [], sources: [], handoff: true })),
 }))
-vi.mock('../../lib/usePublicConfig', () => ({ usePublicConfig: () => ({ features: {} }) }))
+vi.mock('../../lib/usePublicConfig', () => ({ usePublicConfig: () => ({ features: {}, assistant: { guide_for_guests: state.guests } }) }))
 vi.mock('../../services/helpChat.service', () => ({
   helpChatService: {
     status: vi.fn(async () => ({ enabled: true, online: true, hours: null, away_message: '', whatsapp: null })),
@@ -71,6 +71,15 @@ describe('Need help? and live chat', () => {
     expect(buttons().some((b) => b.textContent?.includes('Need help?'))).toBe(false)
     await act(async () => { bubble!.click() })
     expect(document.querySelector('#help-chat')?.hasAttribute('hidden')).toBe(false)
+  })
+
+  it('guide on but not allowed for guests: a guest gets the live chat bubble, not the guide', async () => {
+    state.guide = true
+    state.guests = false
+    await mount()
+    state.guests = true
+    expect(buttons().some((b) => b.textContent?.includes('Need help?'))).toBe(false)
+    expect(buttons().some((b) => b.textContent?.includes('Chat with us'))).toBe(true)
   })
 
   it('guide on: one Need help? button, and Talk to a person opens live chat', async () => {
