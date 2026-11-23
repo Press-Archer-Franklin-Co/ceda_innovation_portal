@@ -173,6 +173,7 @@ export const analytics = {
   sources:       (filters)           => client.get('/api/analytics/sources/', filters),
   sectors:       (filters)           => client.get('/api/analytics/sectors/', filters),
   inclusion:     (filters)           => client.get('/api/analytics/inclusion/', filters),
+  chat:          (filters)           => client.get('/api/analytics/chat/', filters),
   // Exports need reports.export. The download needs the sign-in, so it is fetched as a blob, not opened as a link.
   createExport:  (body)              => client.post('/api/analytics/exports/', body),
   exportStatus:  (id)                => client.get(`/api/analytics/exports/${id}/`),

@@ -4,7 +4,7 @@ import uuid
 
 from django.shortcuts import get_object_or_404
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import serializers
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -307,6 +307,32 @@ class EntryPitchSessionView(APIView):
         submission = get_object_or_404(get_object_or_404(Program, id=program_id).submissions, id=submission_id)
         pitch.save_for_idea(submission, None, actor=request.user)
         return api_success(data=None, message="Pitch session removed.")
+
+
+class PitchScheduleView(APIView):
+    """R-84: the staff Pitch schedule, one row per shortlisted entry."""
+
+    permission_classes = [HasCapability.of("challenges.manage")]
+
+    @extend_schema(
+        tags=["Programs"],
+        summary="Pitch schedule: every shortlisted entry and its session",
+        description="{count, not_set_count (all shortlisted entries the search and filter leave aside too), page, page_size, stage_session (staff payload) | null, "
+        "results: [{submission_id, reference, title, innovator: {name, first_name}, own (the idea's own session) | null, shown (the session the person sees) | null}]}. "
+        "Never an email or phone number. shown is null when no time is set.",
+        parameters=[
+            OpenApiParameter("search", OpenApiTypes.STR, description="Name, title or reference."),
+            OpenApiParameter("not_set", OpenApiTypes.BOOL, description="Only entries with no session."),
+            OpenApiParameter("ordering", OpenApiTypes.STR, enum=["name", "-name", "starts_at", "-starts_at"]),
+            OpenApiParameter("page", OpenApiTypes.INT),
+            OpenApiParameter("page_size", OpenApiTypes.INT, description="Up to 100."),
+        ],
+        responses=OpenApiTypes.OBJECT,
+    )
+    def get(self, request, program_id):
+        from apps.programs import pitch
+
+        return api_success(data=pitch.schedule(get_object_or_404(Program, id=program_id), request.query_params))
 
 
 class EntryPanelFeedbackView(APIView):
