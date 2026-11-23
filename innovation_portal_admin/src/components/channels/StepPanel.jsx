@@ -69,7 +69,7 @@ function StepOptions({ field, items, lang, nodes, selfKey, withTargets, max, onC
   )
 }
 
-function TargetSelect({ label, value, nodes, selfKey, onChange }) {
+export function TargetSelect({ label, value, nodes, selfKey, onChange }) {
   const { t, lang } = useI18n()
   const options = [
     { value: '', label: t('ch.step.nowhere') },

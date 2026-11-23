@@ -68,6 +68,7 @@ class Journey(UUIDModel, TimeStampedModel):
     start_key = models.CharField(max_length=40, blank=True)
     # True when the draft nodes differ from the latest published version.
     has_unpublished_changes = models.BooleanField(default=True)
+    is_archived = models.BooleanField(default=False, help_text="Hidden from the list of flows; kept with its versions and sessions.")
     published_at = models.DateTimeField(null=True, blank=True)
     published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
