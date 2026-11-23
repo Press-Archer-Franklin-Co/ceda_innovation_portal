@@ -175,12 +175,36 @@ class DraftClaimService:
                 {"code": "draft_exists", "detail": "You already have an unfinished idea for this programme.", "draft_id": str(other.id)}
             )
 
+    # The general form's "About you" questions that the account (or the phone just confirmed) already answers.
+    ABOUT_YOU_FROM_ACCOUNT = ("first_name", "last_name", "contact_number")
+
+    @classmethod
+    def _known_about_you(cls, draft: ApplicationDraft, user) -> dict:
+        """Prompt 31 part B: when a quick-start draft joins an account, fill the form's name and phone questions
+        that are still empty from what the account already knows, so the full form never asks them twice.
+        Answers the person already typed are kept."""
+        data = dict(draft.draft_data or {})
+        form = getattr(draft.program, "submission_form", None)
+        if form is None:
+            return data
+        keys = set(form.fields.filter(is_active=True, key__in=cls.ABOUT_YOU_FROM_ACCOUNT).values_list("key", flat=True))
+        known = {
+            "first_name": (user.first_name or "").strip(),
+            "last_name": (user.last_name or "").strip(),
+            "contact_number": (draft.guest_phone or getattr(user, "phone_number", "") or "").strip(),
+        }
+        for key in keys:
+            if known.get(key) and not str(data.get(key) or "").strip():
+                data[key] = known[key]
+        return data
+
     @classmethod
     @transaction.atomic
     def claim(cls, *, draft: ApplicationDraft, user) -> ApplicationDraft:
         cls._assert_no_other_open_draft(user=user, draft=draft)
         draft.innovator = user
-        draft.save(update_fields=["innovator", "updated_at"])
+        draft.draft_data = cls._known_about_you(draft, user)
+        draft.save(update_fields=["innovator", "draft_data", "updated_at"])
         ApplicationDraftService._sync_shared_profile_fields(innovator=user, draft_data=draft.draft_data)
         AuditService.log_action(actor=user, action_type="guest_draft_claimed", target=draft, metadata={"program_id": str(draft.program_id)})
         return draft
