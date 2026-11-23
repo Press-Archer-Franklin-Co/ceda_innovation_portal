@@ -7,7 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import I18nProvider from '../../i18n/I18nProvider'
 import { ToastContext } from '../../components/ui/toast'
 import { analytics } from '../../lib/api/endpoints'
-import { busiestSlot, defaultRange, heatLevel, minutesText, normaliseChatReport, readChatFilters } from '../../lib/analytics/chatReport'
+import { answeredPercent, busiestSlot, defaultRange, heatLevel, minutesText, normaliseChatReport, readChatFilters } from '../../lib/analytics/chatReport'
+import { exportBody } from '../../lib/analytics/dashboard'
 import { chatReportEmpty, chatReportFixture } from '../../lib/analytics/chatReport.fixture'
 import Reports from './Reports'
 
@@ -58,7 +59,7 @@ describe('chat report helpers', () => {
     expect(readChatFilters(new URLSearchParams('chat_channel=office'), now).channel).toBeUndefined()
   })
   it('finds the busiest slot and scales the heat', () => {
-    expect(busiestSlot(chatReportFixture.busiest)).toMatchObject({ weekday: 1, hour: 10 })
+    expect(busiestSlot(normaliseChatReport(chatReportFixture).busiest)).toMatchObject({ weekday: 1, hour: 10, chats: 12 })
     expect(busiestSlot([])).toBeNull()
     expect([heatLevel(0, 12), heatLevel(1, 12), heatLevel(12, 12)]).toEqual([0, 1, 4])
   })
@@ -67,6 +68,23 @@ describe('chat report helpers', () => {
     expect(r.totals.medianFirstReply).toBeNull()
     expect(r.totals.averageRating).toBeNull()
     expect(r.totals.started).toBe(0)
+    expect(r.totals.answeredPct).toBeNull()
+  })
+  it('reads the real API shape', () => {
+    const r = normaliseChatReport(chatReportFixture)
+    expect(r.totals).toMatchObject({ answeredPct: 88.3, medianFirstReply: 4, averageRating: 4.4, ratedCount: 61, outsideHours: 22, escalated: 7 })
+    expect(r.ratings.map((x) => x.count)).toEqual([2, 3, 6, 15, 35])
+    expect(r.answerers[0]).toMatchObject({ name: 'Kago Tau', chats: 64, medianFirstReply: 3, rating: 4.6, openNow: 2 })
+    expect(r.answerers[1].rating).toBeNull()
+  })
+  it('works out the answered share, with no share when nothing started', () => {
+    expect(answeredPercent(113, 128)).toBe(88.3)
+    expect(answeredPercent(0, 10)).toBe(0)
+    expect(answeredPercent(0, 0)).toBeNull()
+  })
+  it('exports with channel, from and to, never chat_channel', () => {
+    const filters = readChatFilters(new URLSearchParams('from=2026-11-01&to=2026-11-23&chat_channel=whatsapp'))
+    expect(exportBody('chat', 'csv', filters)).toEqual({ report: 'chat', format: 'csv', filters: { from: '2026-11-01', to: '2026-11-23', channel: 'whatsapp' } })
   })
 })
 
@@ -105,6 +123,7 @@ describe('Reports > Live chat', () => {
     const rating = [...document.querySelectorAll('dt')].find((d) => d.textContent === 'Average rating').parentElement
     expect(rating.textContent).toContain('No data yet')
     expect(document.querySelector('a[href="/admin/live-chat"]')).toBeNull() // needs settings.manage
+    expect(document.querySelectorAll('[data-testid=chart]').length).toBe(0) // zero-filled days are not a flat chart
   })
   it('says plainly when the report is not on the server yet', async () => {
     capabilities = ['analytics.view']
