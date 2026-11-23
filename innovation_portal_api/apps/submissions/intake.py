@@ -214,6 +214,9 @@ class DraftStepService:
     @staticmethod
     @transaction.atomic
     def save_step(*, draft: ApplicationDraft, section_code: str, answers: dict, actor=None) -> dict:
+        if draft.status != ApplicationDraft.STATUS_DRAFT:
+            # A sent idea changes only through "Respond to changes" (POST /api/me/ideas/{id}/resend/).
+            raise ValidationError({"code": "draft_sent", "detail": "This idea has been sent. Open it from My ideas to see it or respond to changes."})
         form = getattr(draft.program, "submission_form", None)
         section = form.sections.filter(code=section_code, is_active=True).first() if form else None
         if section is None:

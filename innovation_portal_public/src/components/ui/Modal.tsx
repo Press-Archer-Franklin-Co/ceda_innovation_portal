@@ -4,6 +4,7 @@ import { X } from 'lucide-react'
 import clsx from 'clsx'
 import { useFocusTrap } from './useFocusTrap'
 import { useGenie } from '../../lib/motion/useGenie'
+import { useOverlay } from '../../lib/overlays'
 import { useT } from '../../i18n'
 
 // Figma Foundations › Modal and confirm dialog. Header (title, muted description, square close),
@@ -42,6 +43,7 @@ export default function Modal({
   const [settled, setSettled] = useState(false)
   const onOpened = useCallback(() => setSettled(true), [])
   const { mounted, panelRef, backdropRef } = useGenie(open, triggerRef, { onOpened })
+  useOverlay(mounted) // the Need help? button hides while this is open
 
   useEffect(() => {
     if (!open) setSettled(false)

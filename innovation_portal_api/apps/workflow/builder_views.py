@@ -53,12 +53,13 @@ class StepSettingsSerializer(serializers.Serializer):
     time_limit_days = serializers.DecimalField(max_digits=5, decimal_places=1, min_value=0, max_value=365, required=False)
     reminder_after_days = serializers.IntegerField(min_value=0, max_value=365, required=False, allow_null=True)
     next_steps = NextStepSerializer(many=True, required=False)
+    notify_innovator = serializers.BooleanField(required=False, help_text="Tell the innovator when an idea reaches this step (default on).")
 
 
 STEP_SHAPE = (
     "{step_id, name, who_has_it: {mode: role|team|people, role, team_id, people}, judges_per_idea, share_out: take_turns|least_busy|everyone, "
     "duties: {conflict_first, comment_every_criterion, see_other_scores}, buttons, marking_criteria, pass_mark, time_limit_days, "
-    "reminder_after_days, next_steps: [{when, to_step}]}"
+    "reminder_after_days, next_steps: [{when, to_step}], notify_innovator}"
 )
 
 

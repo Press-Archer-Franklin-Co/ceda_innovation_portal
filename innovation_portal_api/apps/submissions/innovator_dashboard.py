@@ -78,7 +78,8 @@ def submission_stage(submission) -> str:
 
 
 def _program_payload(program) -> dict:
-    return {"id": str(program.id), "title": program.title, "is_general_intake": program.is_general_intake}
+    # slug: a challenge entry opens at /challenges/{slug}/entry/{id} straight away, without a redirect.
+    return {"id": str(program.id), "title": program.title, "slug": program.slug, "is_general_intake": program.is_general_intake}
 
 
 def draft_item(draft, lang: str) -> dict:
@@ -205,6 +206,8 @@ def home_messages(user, submissions, drafts, lang: str = "en") -> list[dict]:
             out.append({
                 "type": "shortlisted", **base(sub, "submission"), "at": _iso(changed or sub.updated_at),
                 "challenge": None if sub.program.is_general_intake else sub.program.title,
+                # Prompt 39 shape (PR 113): null until staff set one. Never a made-up date.
+                "pitch_session": pitch_fields(sub, lang)["pitch_session"],
             })
     moved = (
         SubmissionStatusHistory.objects.filter(submission__in=[s for s in submissions if s.current_status not in SHORTLIST_STATUSES], created_at__gte=now - STAGE_MOVE_WINDOW)
@@ -315,6 +318,7 @@ class InnovatorDashboardSelector:
                 "title": draft["title"],
                 "detail": "Finish and send your idea.",
                 "percent_complete": draft["percent_complete"],
+                "program": draft["program"],
             }
         else:
             profile = getattr(user, "innovator_profile", None)

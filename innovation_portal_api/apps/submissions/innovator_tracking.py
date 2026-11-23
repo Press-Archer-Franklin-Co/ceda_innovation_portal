@@ -320,7 +320,29 @@ def returned_payload(submission, lang: str = "en") -> dict | None:
         "items": items,
         "answers": {key: answers.get(key) for key in answer_keys},
         "fields": _fix_fields(submission, answer_keys, lang),
+        # "Respond to changes" shows the whole form as it was sent, with every answer, and opens only the items.
+        "form": _sent_form(submission, lang),
+        "sent_answers": {r.field_key_snapshot: r.value for r in submission.responses.all()},
     }
+
+
+def _sent_form(submission, lang: str) -> dict | None:
+    """The form version the idea was sent on (its latest version if that one is gone), in the person's language."""
+    from apps.programs.form_schema import localize_schema
+    from apps.programs.models import FormVersion
+
+    form = getattr(submission.program, "form", None)
+    if form is None:
+        return None
+    version = submission.form_version
+    if version is None and getattr(submission, "form_version_number", None):
+        version = FormVersion.objects.filter(form=form, number=submission.form_version_number).first()
+    version = version or form.latest_version
+    if version is None:
+        return None
+    document = localize_schema(version.schema, lang)
+    document["version"] = {"id": str(version.id), "number": version.number}
+    return document
 
 
 def tracking(user, idea_id, lang: str = "en") -> dict:

@@ -1,6 +1,6 @@
 import Input from '../ui/Input'
 import Select from '../ui/Select'
-import { Checkbox } from '../ui/Choice'
+import { Checkbox, Toggle } from '../ui/Choice'
 import { useT } from '../../i18n/context'
 
 // 3.21 step panel: the R-48 settings the older step fields do not cover, on GET/PATCH /api/workflow-steps/{id}/settings/.
@@ -26,6 +26,7 @@ export default function StepExtras({ extras, scoring }) {
       )}
       <Checkbox label={t('wfx.conflictFirst')} description={t('wfx.conflictFirstHint')} checked={draft.conflict_first} onChange={(e) => set({ conflict_first: e.target.checked })} />
       {scoring && <Checkbox label={t('wfx.commentEvery')} checked={draft.comment_every_criterion} onChange={(e) => set({ comment_every_criterion: e.target.checked })} />}
+      <Toggle label={t('wfx.notifyInnovator')} description={t('wfx.notifyInnovatorHint')} checked={draft.notify_innovator} onChange={(on) => set({ notify_innovator: on })} />
       <Input label={t('wfx.reminder')} hint={t('wfx.reminderHint')} type="number" min="0" max="365" optional value={draft.reminder_after_days} onChange={(e) => set({ reminder_after_days: e.target.value })} />
     </fieldset>
   )

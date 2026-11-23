@@ -55,8 +55,13 @@ class JourneyListSerializer(serializers.ModelSerializer):
         model = Journey
         fields = (
             "id", "name", "description", "channel", "status", "version", "default_language", "start_key",
-            "has_unpublished_changes", "published_at", "updated_at", "node_count", "connection_count",
+            "has_unpublished_changes", "published_at", "updated_at", "node_count", "connection_count", "is_archived", "connection_names",
         )
+
+    connection_names = serializers.SerializerMethodField()
+
+    def get_connection_names(self, obj) -> list[str]:
+        return [link.connection.name for link in obj.connections.all()]
 
 
 class JourneyDetailSerializer(serializers.ModelSerializer):
@@ -88,6 +93,7 @@ class JourneyWriteSerializer(serializers.Serializer):
     default_language = serializers.ChoiceField(choices=(("en", "English"), ("tn", "Setswana")), required=False)
     start_key = serializers.CharField(max_length=40, required=False, allow_blank=True)
     nodes = JourneyNodeWriteSerializer(many=True, required=False)
+    is_archived = serializers.BooleanField(required=False, help_text="Archive (hide from the list) or restore. Refused while an active connection runs it.")
 
 
 class JourneyVersionSerializer(serializers.ModelSerializer):
