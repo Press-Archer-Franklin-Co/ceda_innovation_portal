@@ -80,6 +80,7 @@ def _file_types():
 FILE_TYPES = _file_types()
 
 TEXT = {"label": "Text", "label_tn": "Mafoko"}
+AI_GUIDANCE = _f("ai_guidance", "boolean", "AI guidance on WhatsApp (a suggestion, document notes, help)", "Kaelo ya AI mo WhatsApp (kakantsho, dintlha tsa tokomane, thuso)", default=False)
 WAY_OUT = _f("way_out", "boolean", "Offer Main menu and Save and stop on this step", "Neela Lenane le legolo le Boloka o emise mo kgatong e", default=True)
 
 NODE_SETTINGS: dict[str, dict] = {
@@ -110,6 +111,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("error_text", "bilingual", "Message when the answer is not right", "Molaetsa fa karabo e sa siama", optional=True),
             _f("sensitive", "boolean", "Sensitive answer (not written to the session log)", "Karabo e e botlhokwa (ga e kwalwe mo rekotong)", default=False),
             WAY_OUT,
+            AI_GUIDANCE,
         ],
     },
     "save_draft": {
@@ -178,6 +180,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("needed_text", "bilingual", "Reply when a file is needed", "Karabo fa faele e tlhokega", default={"en": "Please send a file to go on.", "tn": "Tsweetswee romela faele go tswelela."}),
             _f("failed_text", "bilingual", "Reply when the file could not be saved", "Karabo fa faele e sa kgona go bolokwa", default={"en": "We could not save that file. Please try again.", "tn": "Ga re a kgona go boloka faele eo. Tsweetswee leka gape."}),
             WAY_OUT,
+            AI_GUIDANCE,
         ],
     },
     "submit": {
@@ -224,6 +227,7 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("website_text", "bilingual", "Message for questions to finish on the website ({fields}, {link})", "Molaetsa wa dipotso tse di fediwang mo webosaeteng", default={"en": "Finish these on the website: {fields}. {link}", "tn": "Fetsa tse mo webosaeteng: {fields}. {link}"}),
             _f("error_next", "node", "If the idea cannot be started, go to", "Fa kakanyo e sa kgone go simololwa, ya kwa", optional=True),
             WAY_OUT,
+            AI_GUIDANCE,
         ],
     },
     "my_ideas": {

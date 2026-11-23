@@ -118,11 +118,14 @@ class WayOutMixin:
         """A screen when the message was a way out; None when it is an answer for the step."""
         value = norm(text)
         pending = self.state.get("pending")
+        if pending and pending.get("kind") not in ("greeting", "cancel"):
+            pending = None  # another part's question (AI guidance) answers it
         if pending and not self.media:
             answered = self._answer_pending(node, pending, text, value)
             if answered is not None:
                 return answered
-        self.state.pop("pending", None)
+        if pending:
+            self.state.pop("pending", None)
         if self.media or not self._way_out_on(node):
             return None
         if text == MENU:
