@@ -123,6 +123,8 @@ export interface SubmitRequest {
   district?: string
   /** Guests only: also gets the confirmation copy (R-22). */
   email?: string
+  /** Guests only (23 Nov): one of email or phone is enough to send without an account. */
+  phone?: string
 }
 
 export interface NextStep {
@@ -141,6 +143,8 @@ export interface SubmitResult {
   copy_sent_to: { channel: 'email' | 'sms' | 'whatsapp' | string; to: string } | null
   account: { created: boolean; sign_in_with: 'phone_code' | 'email' } | null
   first_name: string
+  /** A guest's email and phone as they gave them ("We'll contact you on ..."). */
+  contact?: { email: string; phone: string } | null
 }
 
 // ── Similar ideas (B2) ─────────────────────────────────────────────────────

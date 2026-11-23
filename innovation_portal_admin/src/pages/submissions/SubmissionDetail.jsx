@@ -146,6 +146,7 @@ export default function SubmissionDetail() {
               <Avatar name={s.innovator?.name ?? ''} size="lg" decorative />
               <div className="min-w-0">
                 <p className="truncate text-[15px] font-bold text-text">{s.innovator?.name || EMPTY_CELL}</p>
+                {s.innovator?.is_guest && <p className="text-[12px] text-muted">{t('ideas.guest')}</p>}
                 {(s.innovator?.district || s.innovator?.age) && (
                   <p className="text-[12px] text-muted">{[s.innovator.district, s.innovator.age].filter(Boolean).join(' · ')}</p>
                 )}
@@ -153,6 +154,7 @@ export default function SubmissionDetail() {
             </div>
             <dl className="mt-3 border-t border-border pt-2">
               <Fact label={t('ideas.phone')}>{s.innovator?.phone}</Fact>
+              <Fact label={t('ideas.email')}>{s.innovator?.email}</Fact>
               <Fact label={t('ideas.otherIdeas')}>
                 {s.innovator?.other_ideas ? t('ideas.otherIdeasValue', { n: s.innovator.other_ideas.count, shortlisted: s.innovator.other_ideas.shortlisted }) : null}
               </Fact>

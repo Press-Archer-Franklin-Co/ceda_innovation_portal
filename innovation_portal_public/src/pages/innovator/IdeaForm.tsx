@@ -22,7 +22,9 @@ import {
 } from '../../components/innovator/form/logic'
 import { useI18n } from '../../i18n'
 import { formsService } from '../../services/forms.service'
-import { intakeService } from '../../services/intake.service'
+import { type GuestContact, guestContactProblem, guestContactStorage, intakeService, resumeStorage } from '../../services/intake.service'
+import { normalisePhone } from '../../lib/phone'
+import Input from '../../components/ui/Input'
 import { challengeEntryService } from '../../services/challengeEntry.service'
 import { useAsync } from '../../lib/useAsync'
 import type { FormStep, IntakeDraft, Lang, PublishedForm, SimilarIdea } from '../../types/innovator'
@@ -46,8 +48,14 @@ const SIMILAR_MIN_CHARS = 40
  * Opened as /challenges/:slug/entry/:id it is 2.10, the challenge's own entry form (Figma 108:367, 108:578):
  * the challenge name and closing date in the header, and the entry is sent to that challenge (U10).
  */
-export default function IdeaForm() {
+export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   const { id = '', slug } = useParams()
+  // 23 Nov, send without an account: /submit/draft/:id is the same form for a guest, using the draft's resume token
+  // kept on this device. It sends from the last step with the guest's email or phone, and makes no account.
+  const kept = guest ? resumeStorage.get() : null
+  const token = kept && kept.draftId === id ? kept.token : undefined
+  const [contact, setContact] = useState<GuestContact>(() => guestContactStorage.get() ?? { name: '', email: '', phone: '' })
+  const [contactError, setContactError] = useState('')
   const [params] = useSearchParams()
   /** Set by "Link it" on 2.1: open at the first unanswered question's step. */
   const askedStep = params.get('step')
@@ -81,7 +89,11 @@ export default function IdeaForm() {
   const loadDraft = useCallback(async () => {
     setLoad({ kind: 'loading' })
     try {
-      const draft = await intakeService.getDraft(id)
+      if (guest && !token) {
+        setLoad({ kind: 'error' })
+        return
+      }
+      const draft = await intakeService.getDraft(id, token)
       if (draft.status === 'submitted') {
         setLoad({ kind: 'sent', submissionId: draft.submitted_submission })
         return
@@ -95,7 +107,7 @@ export default function IdeaForm() {
     } catch {
       setLoad({ kind: 'error' })
     }
-  }, [id])
+  }, [id, guest, token])
 
   useEffect(() => {
     loadDraft()
@@ -104,7 +116,7 @@ export default function IdeaForm() {
   const draft = load.kind === 'ready' ? load.draft : null
 
   // A challenge entry opened from My ideas uses the challenge's own address (2.10).
-  const entrySlug = !slug && draft && !draft.program_detail?.is_general_intake ? draft.program_detail?.slug : null
+  const entrySlug = !guest && !slug && draft && !draft.program_detail?.is_general_intake ? draft.program_detail?.slug : null
   useEffect(() => {
     if (entrySlug) navigate(`/challenges/${entrySlug}/entry/${id}`, { replace: true })
   }, [entrySlug, id, navigate])
@@ -141,7 +153,7 @@ export default function IdeaForm() {
     async (target: FormStep) => {
       setSave({ kind: 'saving' })
       try {
-        const result = await intakeService.saveStep(id, target.code, answersToSend(target, answersRef.current))
+        const result = await intakeService.saveStep(id, target.code, answersToSend(target, answersRef.current), token)
         dirty.current.delete(target.code)
         setSave({ kind: 'saved', at: Date.now() })
         return result
@@ -258,7 +270,8 @@ export default function IdeaForm() {
       setBusy(false)
       if (!ok) return
     }
-    navigate('/my-ideas')
+    // A guest's draft stays on this device; the home page offers to carry on.
+    navigate(guest ? '/' : '/my-ideas')
   }
 
   async function onSend() {
@@ -266,9 +279,29 @@ export default function IdeaForm() {
       setConsentError(true)
       return
     }
+    let guestPayload = {}
+    if (guest) {
+      const problem = guestContactProblem(contact)
+      if (problem) {
+        setContactError(problem === 'none' ? t('qs2.contactNeeded') : problem === 'email' ? t('qs2.emailError') : t('qs2.phoneError'))
+        return
+      }
+      const first = typeof answers.first_name === 'string' ? answers.first_name.trim() : ''
+      const last = typeof answers.last_name === 'string' ? answers.last_name.trim() : ''
+      guestPayload = {
+        create_account: false,
+        ...(first || last ? { first_name: first, last_name: last } : { name: contact.name.trim() }),
+        ...(contact.email.trim() ? { email: contact.email.trim() } : {}),
+        ...(contact.phone.trim() ? { phone: normalisePhone(contact.phone) } : {}),
+      }
+    }
     setSending(true)
     try {
-      const result = await intakeService.submit(id, { consent: true })
+      const result = await intakeService.submit(id, { consent: true, ...guestPayload }, token)
+      if (guest) {
+        resumeStorage.clear()
+        guestContactStorage.clear()
+      }
       // 1.5 replaces the form in the history, so Back cannot reopen a form that would send the idea twice.
       const sentFor = challenge ? { title: challenge.title, slug: challenge.slug } : undefined
       navigate('/idea-sent', { replace: true, state: { result, challenge: sentFor } })
@@ -376,6 +409,32 @@ export default function IdeaForm() {
             <FormRenderer step={step} answers={answers} onChange={onChange} lang={lang} errors={errors} />
           ) : null}
 
+          {onReview && guest && (
+            // Send without an account: how CEDA can reach them. One of the two is enough.
+            <fieldset className="mt-8 flex flex-col gap-3 rounded-card border border-border p-4" aria-describedby="guest-one-of">
+              <legend className="px-1 font-heading text-d-h5 text-text">{t('form.guestReach')}</legend>
+              <p id="guest-one-of" role={contactError ? 'alert' : undefined} className={contactError ? 'text-d-cap text-danger' : 'text-d-cap text-muted'}>
+                {contactError || t('qs2.oneOf')}
+              </p>
+              <Input
+                label={t('qs2.email')}
+                type="email"
+                autoComplete="email"
+                value={contact.email}
+                onChange={(e) => { const next = { ...contact, email: e.target.value }; setContact(next); guestContactStorage.set(next); setContactError('') }}
+              />
+              <Input
+                label={t('qs2.phone')}
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={contact.phone}
+                onChange={(e) => { const next = { ...contact, phone: e.target.value }; setContact(next); guestContactStorage.set(next); setContactError('') }}
+              />
+              <p className="text-d-cap text-muted">{t('form.guestNoAccount')}</p>
+            </fieldset>
+          )}
+
           {onReview && (
             <div className="mt-8">
               <Checkbox
@@ -415,6 +474,49 @@ export default function IdeaForm() {
 
         {/* 2.13: the AI helper sits on top and the right column stays in view, with its own scroll, while the form scrolls. */}
         <aside className="flex flex-col gap-4 lg:sticky lg:top-[128px] lg:max-h-[calc(100vh-152px)] lg:self-start lg:overflow-y-auto lg:overscroll-contain">
+          {/* The AI helper's step check needs a signed-in person; a guest sees the rest of the column as it is. */}
+          {guest ? (
+            <>
+          {!onReview && similar.length > 0 && (
+            <section className={clsx('rounded-card p-6', slug ? 'bg-info-soft' : 'bg-surface2')}>
+              <p className={clsx('flex items-center gap-2 font-heading text-d-h5', slug ? 'text-info' : 'text-text')}>
+                <Sparkles size={18} aria-hidden className={slug ? 'text-info' : 'text-accent'} />
+                {similar.length === 1 ? t('form.similarOne') : t('form.similarMany', { count: similar.length })}
+              </p>
+              <p className="mt-2 text-d-body-s text-muted">{t('form.similarBody')}</p>
+              <ul className="mt-3 flex flex-col gap-1.5">
+                {similar.map((idea, i) => (
+                  <li key={`${idea.title}-${i}`} className="text-d-body-s text-text">
+                    {[idea.title, idea.place].filter(Boolean).join(', ')}
+                    {idea.year ? ` (${idea.year})` : ''}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {!onReview && step && step.tips.length > 0 && (
+            <Card padding="md">
+              <p className="flex items-center gap-2 font-heading text-d-h5 text-text">
+                <Lightbulb size={18} aria-hidden className="text-amber" />
+                {t('form.tips')}
+              </p>
+              <ul className="mt-3 flex list-disc flex-col gap-2 pl-5 text-d-body-s text-text">
+                {step.tips.map((tip, i) => (
+                  <li key={i}>{tip}</li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {settings.whatsapp_number && (
+            <p className="flex items-start gap-3 rounded-card bg-surface2 p-4 text-d-body-s text-text">
+              <MessageCircle size={20} aria-hidden className="mt-0.5 shrink-0 text-muted" />
+              {t('form.voiceNote', { number: settings.whatsapp_number })}
+            </p>
+          )}
+            </>
+          ) : (
           <AiHelperPanel
             draftId={id}
             steps={steps}
@@ -468,6 +570,7 @@ export default function IdeaForm() {
             </p>
           )}
           </AiHelperPanel>
+          )}
         </aside>
       </div>
     </div>

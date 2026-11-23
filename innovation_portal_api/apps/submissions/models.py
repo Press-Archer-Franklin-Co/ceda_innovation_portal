@@ -27,6 +27,9 @@ class ApplicationDraft(UUIDModel, TimeStampedModel, AuditMetadataMixin):
     guest_name = models.CharField(max_length=255, blank=True)
     guest_phone = models.CharField(max_length=32, blank=True)
     guest_phone_verified_at = models.DateTimeField(null=True, blank=True)
+    # Send without an account (23 Nov): a guest may give an email instead of (or as well as) a phone.
+    guest_email = models.EmailField(blank=True)
+    guest_email_verified_at = models.DateTimeField(null=True, blank=True)
     title = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_DRAFT, db_index=True)
     version = models.PositiveIntegerField(default=1)

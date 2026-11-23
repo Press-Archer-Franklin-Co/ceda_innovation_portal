@@ -97,6 +97,9 @@ export default function IdeaSent() {
                 <Link to={`/challenges/${data.challenge.slug}`} className="underline">{t('ent.seeChallenge')}</Link>
               </p>
             )}
+            {result.contact && (result.contact.email || result.contact.phone) && (
+              <p className="text-d-body text-on-banner">{t('sent.contactOn', { contact: result.contact.email || result.contact.phone })}</p>
+            )}
             {result.copy_sent_to && (
               <p className="text-d-body text-banner-muted">
                 {t('sent.copyTo', { to: result.copy_sent_to.to, channel: t(`sent.channel.${channel}` as StringKey) || String(channel) })}

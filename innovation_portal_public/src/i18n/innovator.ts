@@ -58,6 +58,8 @@ export const innovatorEn = {
   'form.voiceNote': 'Prefer to talk? Send a voice note on WhatsApp to {number} and an officer types it up.',
   'form.consent': 'I agree CEDA may contact me about this idea and store my details as the privacy notice explains.',
   'form.consentNeeded': 'Please tick the box to agree before you send.',
+  'form.guestReach': 'How we can reach you',
+  'form.guestNoAccount': 'You are sending without an account. We use these only to contact you about this idea.',
   'form.send': 'Send my idea',
   'form.loadError': 'We could not load your form.',
   'form.notPublished': 'This form is not ready yet. Please try again later, or ask an officer for help.',
@@ -288,6 +290,8 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'form.voiceNote': 'O rata go bua? Romela molaetsa wa lentswe ka WhatsApp kwa {number} mme motlhankedi o tla o kwala.',
   'form.consent': 'Ke dumela gore CEDA e ka ikgolaganya le nna ka ga kakanyo e mme e boloke dintlha tsa me jaaka kitsiso ya sephiri e tlhalosa.',
   'form.consentNeeded': 'Tsweetswee tshwaya lebokoso go dumela pele o romela.',
+  'form.guestReach': 'Kafa re ka go fitlhelelang ka teng', // TODO tn-review
+  'form.guestNoAccount': 'O romela kwa ntle ga akhaonto. Re dirisa tse fela go ikgolaganya le wena ka kakanyo e.', // TODO tn-review
   'form.send': 'Romela kakanyo ya me',
   'form.loadError': 'Ga re a kgona go bula foromo ya gago.',
   'form.notPublished': 'Foromo e ga e ise e siamele. Tsweetswee leka gape moragonyana, kgotsa kopa thuso mo motlhankeding.',

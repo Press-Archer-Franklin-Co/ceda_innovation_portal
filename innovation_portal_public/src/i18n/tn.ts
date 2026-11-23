@@ -185,6 +185,15 @@ const tn: Record<StringKey, string> = {
   'qs2.title': 'Re ka go fitlhelela jang?', // TODO tn-review
   'qs2.continue': 'Netefatsa o tswelele', // TODO tn-review
   'qs2.joinFail': 'Founo ya gago e netefaditswe, mme ga re a kgona go bula kakanyo ya gago. Kakanyo e bolokilwe. Leka gape ka bonako.', // TODO tn-review
+  'qs2.oneOf': 'Re neye imeile kgotsa nomoro ya founo gore re kgone go go fitlhelela. Nngwe ya tsone e lekane.', // TODO tn-review
+  'qs2.contactNeeded': 'Re neye imeile kgotsa nomoro ya founo gore re kgone go go fitlhelela.', // TODO tn-review
+  'qs2.reachYou': 'Kafa re ka go fitlhelelang ka teng', // TODO tn-review
+  'qs2.accountOptional': 'Dira akhaonto go sala kakanyo ya gago morago (ga go patelesege)', // TODO tn-review
+  'qs2.codeForAccount': 'Re romela khoutu ya dinomoro di le 6 kwa founong ya gago, kgotsa kwa imeileng fa o sa neela founo. E dira akhaonto ya gago.', // TODO tn-review
+  'qs2.codeForGuest': 'Re romela khoutu ya dinomoro di le 6 kwa founong ya gago, kgotsa kwa imeileng fa o sa neela founo, go netefatsa gore ke ya gago.', // TODO tn-review
+  'qs2.codeFirst': 'Kopa khoutu pele, morago o e kwale fano.', // TODO tn-review
+  'qs2.continueGuest': 'Tswelela', // TODO tn-review
+  'sent.contactOn': 'Re tla ikgolaganya le wena ka {contact}.', // TODO tn-review
   'form.sendNow': 'Romela jaanong, o fetse moragonyana', // TODO tn-review
   'qs2.edit': 'Fetola', // TODO tn-review
   'qs2.general': 'Kakanyo ya kakaretso', // TODO tn-review
