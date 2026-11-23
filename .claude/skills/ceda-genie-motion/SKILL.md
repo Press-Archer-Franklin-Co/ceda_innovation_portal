@@ -94,6 +94,23 @@ gives the fluid start and finish.
 These are slower than a plain fade on purpose: the genie needs time to be seen
 bending. Do not shorten the modal below 560ms or it turns snappy again.
 
+## Where it opens from (origin), and the fallback
+
+`useGenie` picks the element to open out of (`lib/motion/origin.js`, the same in both apps):
+
+1. The `triggerRef` the page passes, while that element is on screen. Give **each** trigger its own ref, or record
+   the element that was used with `useTrigger()` (`components/ui/useTrigger`): `onClick={(e) => { t.from(e); open() }}`.
+   Never point two buttons at one ref: the panel then flies out of the wrong button.
+2. Otherwise the control the person pressed in the last 1.5 seconds (pointer, Enter or Space). `DropdownMenu`
+   hands over its own "…" button when an item is picked, so a dialog chosen from a menu opens out of the "…".
+3. Otherwise there is no trigger (a modal opened by a route, a timer or after a save): the panel **scales in from
+   the centre** (`lib/motion/scaleFromCentre.js`: 0.94 to 1 with a fade, 320ms open, 240ms close, turns round like
+   the genie). Mark such a modal `routeOpened`. Never a page's own animation, never none.
+
+Every overlay is a shared component: `Modal`, `ConfirmDialog`, `Popover`, `DropdownMenu`, `Drawer` (a full-height
+side panel, for example the public phone menu) and the toasts. `scripts/check_old_ui.mjs` fails when a page builds
+its own overlay (`fixed inset-0`, `role="dialog"`) or opens one without `triggerRef` (or `routeOpened`).
+
 ## Behaviour rules
 
 - A re-open during a close (or the reverse) **turns round from the current

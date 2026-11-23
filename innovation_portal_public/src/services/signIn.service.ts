@@ -29,7 +29,7 @@ export interface SignupInput {
   next?: string
 }
 
-export type SignupResult = SignedIn | (Extract<StartResult, { next: 'code' }> & { created: true })
+export type SignupResult = SignedIn | (Extract<StartResult, { next: 'code' }> & { created: boolean; found_account?: boolean; identifier?: string; message?: string })
 
 export const signInService = {
   async start(identifier: string, wantCode = false): Promise<StartResult> {

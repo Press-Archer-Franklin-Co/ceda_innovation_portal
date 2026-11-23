@@ -19,6 +19,7 @@ import { formatDateTime } from '../../components/channels/format'
 import { useChannelConnections, useChannelReport, useChannelSession, useChannelSessions, useChannelStatus, useJourneys } from '../../lib/queries/channels'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { useI18n } from '../../i18n/context'
+import { useTrigger } from '../../components/ui/useTrigger'
 import { cn } from '../../lib/cn'
 
 // 3.33 Channels: connections and activity (Figma 137:2158 website, 137:2593 phone).
@@ -179,11 +180,11 @@ function result(row, t) {
   return t('ch.over.stoppedAt', { step: row.current_node_title || t('ch.over.start') })
 }
 
-function SessionSteps({ id, onClose }) {
+function SessionSteps({ id, onClose, triggerRef }) {
   const { t } = useI18n()
   const { data, isLoading, isError, error, refetch } = useChannelSession(id)
   return (
-    <Modal open={!!id} onClose={onClose} size="lg" title={t('ch.act.sessionTitle')}>
+    <Modal open={!!id} onClose={onClose} triggerRef={triggerRef} size="lg" title={t('ch.act.sessionTitle')}>
       {isLoading ? <Skeleton className="h-40 w-full" /> : isError ? <ErrorState compact title={t('ch.act.sessionFailed')} message={error?.message} onRetry={refetch} /> : data ? (
         <div className="space-y-3">
           <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm">
@@ -209,6 +210,7 @@ function SessionSteps({ id, onClose }) {
 }
 
 export default function ChannelsOverview() {
+  const sessionTrigger = useTrigger()
   const { t } = useI18n()
   const navigate = useNavigate()
   const [tests, setTests] = useState(false)
@@ -260,7 +262,7 @@ export default function ChannelsOverview() {
             onRetry={() => sessions.refetch()}
             emptyTitle={t('ch.act.noSessionsTitle')}
             emptyMessage={t('ch.act.noSessionsBody')}
-            onRowClick={(row) => setOpen(row.id)}
+            onRowClick={(row, e) => { sessionTrigger.from(e); setOpen(row.id) }}
             data={sessions.data?.results ?? []}
             columns={[
               { key: 'started_at', label: t('ch.over.when'), render: (v) => formatDateTime(v) },
@@ -271,7 +273,7 @@ export default function ChannelsOverview() {
           />
         </SectionCard>
       </div>
-      <SessionSteps id={open} onClose={() => setOpen(null)} />
+      <SessionSteps id={open} onClose={() => setOpen(null)} triggerRef={sessionTrigger.ref} />
     </div>
   )
 }

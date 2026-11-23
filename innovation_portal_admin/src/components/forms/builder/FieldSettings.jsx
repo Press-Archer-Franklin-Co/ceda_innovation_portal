@@ -5,6 +5,7 @@ import Input, { InputControl } from '../../ui/Input'
 import { SelectControl } from '../../ui/Select'
 import { Toggle } from '../../ui/Choice'
 import Tabs from '../../ui/Tabs'
+import { useEditorPanel } from '../../ui/editorPanel'
 import { useT } from '../../../i18n/context'
 import { cn } from '../../../lib/cn'
 import { pick } from '../../../lib/forms/format'
@@ -30,11 +31,8 @@ const NUMBER_RULES = [
 export default function FieldSettings({ doc, field, onChange, onClose, onDuplicate, onDelete, onSuggest, suggestion }) {
   const t = useT()
   const [tab, setTab] = useState('field')
-  if (!field) {
-    return (
-      <aside className="rounded-card border border-border bg-surface p-[14px] text-[13px] text-muted">{t('settings.none')}</aside>
-    )
-  }
+  const { inSheet } = useEditorPanel()
+  if (!field) return null
   const text = (attr, lang) => field[attr]?.[lang] ?? ''
   const setText = (attr, lang, value) => onChange({ [attr]: { ...(field[attr] ?? { en: '', tn: '' }), [lang]: value } })
   const layout = LAYOUT_TYPES.has(field.type)
@@ -42,8 +40,8 @@ export default function FieldSettings({ doc, field, onChange, onClose, onDuplica
   const withTn = (doc.languages ?? []).includes('tn')
 
   return (
-    <aside aria-label={t('settings.title')} className="flex flex-col gap-4 rounded-card border border-border bg-surface p-[14px] 2xl:p-[18px]">
-      <div className="flex items-center justify-between gap-2">
+    <div className={cn('flex flex-col gap-4', !inSheet && 'rounded-card border border-border bg-surface p-[14px] 2xl:p-[18px]')}>
+      <div className={cn('flex items-center justify-between gap-2', inSheet && 'hidden')}>
         <h2 className="text-[15px] font-bold text-text">{t('settings.title')}</h2>
         <button type="button" onClick={onClose} aria-label={t('settings.close')} className="flex h-8 w-8 items-center justify-center rounded-control text-muted hover:bg-surface2 hover:text-text">
           <X size={16} aria-hidden />
@@ -158,7 +156,7 @@ export default function FieldSettings({ doc, field, onChange, onClose, onDuplica
           <Trash2 size={14} aria-hidden /> {t('settings.delete')}
         </Button>
       </div>
-    </aside>
+    </div>
   )
 }
 

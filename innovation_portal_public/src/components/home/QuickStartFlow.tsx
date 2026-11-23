@@ -49,7 +49,8 @@ export function useQuickStartFlow(challenges: ChallengeCard[]): { card: ReactNod
   const step2 = step ? <QuickStartStep2 draft={step.draft} onEdit={() => setStep(null)} onSent={onSent} /> : null
   const card = isDesktop && step2 ? step2 : step1
   const sheet = isDesktop ? null : (
-    <Modal open={Boolean(step)} onClose={() => setStep(null)} closeOnBackdrop={false} bodyClassName="!p-0" size="md">
+    // Opens once the draft is saved (after a network call), not on the click itself.
+    <Modal open={Boolean(step)} onClose={() => setStep(null)} routeOpened closeOnBackdrop={false} bodyClassName="!p-0" size="md">
       {/* pr-10 on the heading row keeps "Step 2 of 2" clear of the sheet's close button. */}
       {step2 && <div className="[&>form]:shadow-none [&>form]:rounded-none [&>form>div:first-child]:pr-10">{step2}</div>}
     </Modal>

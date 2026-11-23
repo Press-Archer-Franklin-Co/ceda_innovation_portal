@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { SlidersHorizontal } from 'lucide-react'
 import clsx from 'clsx'
@@ -38,6 +38,7 @@ export default function Challenges() {
   const sector = params.get('sector') ?? ''
   const sort = (params.get('sort') as Sort | null) ?? 'closing_soon'
   const [sheet, setSheet] = useState(false)
+  const filtersRef = useRef<HTMLButtonElement>(null)
 
   const set = (patch: Record<string, string>) =>
     setParams((p) => {
@@ -105,7 +106,7 @@ export default function Challenges() {
             <SelectControl aria-label={t('chl.sector')} className="w-[220px]" options={sectorOptions} value={sector} onChange={(v) => set({ sector: v })} />
             <SelectControl aria-label={t('chl.sort')} className="w-[220px]" options={sortOptions} value={sort} onChange={(v) => set({ sort: v === 'closing_soon' ? '' : v })} />
           </div>
-          <Button variant="secondary" size="sm" className="md:hidden ml-auto" icon={<SlidersHorizontal size={16} aria-hidden />} onClick={() => setSheet(true)}>
+          <Button ref={filtersRef} variant="secondary" size="sm" className="md:hidden ml-auto" icon={<SlidersHorizontal size={16} aria-hidden />} onClick={() => setSheet(true)}>
             {t('chl.filters')}
           </Button>
         </div>
@@ -141,7 +142,7 @@ export default function Challenges() {
         </section>
       )}
 
-      <Modal open={sheet} onClose={() => setSheet(false)} title={t('chl.filters')} footer={<Button block onClick={() => setSheet(false)}>{t('chl.apply')}</Button>}>
+      <Modal open={sheet} onClose={() => setSheet(false)} triggerRef={filtersRef} title={t('chl.filters')} footer={<Button block onClick={() => setSheet(false)}>{t('chl.apply')}</Button>}>
         <div className="flex flex-col gap-4">
           <Select label={t('chl.sector')} options={sectorOptions} value={sector} onChange={(v) => set({ sector: v })} />
           <Select label={t('chl.sort')} options={sortOptions} value={sort} onChange={(v) => set({ sort: v === 'closing_soon' ? '' : v })} />

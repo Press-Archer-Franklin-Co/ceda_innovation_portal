@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowDown, ArrowUp, CheckCircle2, Eye, FileText, MessageCircle, Plus, Star, Trash2 } from 'lucide-react'
 import PageHeader from '../../../components/ui/PageHeader'
+import EditorWorkspace from '../../../components/ui/EditorWorkspace'
+import { useEditorPanel } from '../../../components/ui/editorPanel'
 import Button from '../../../components/ui/Button'
 import Input from '../../../components/ui/Input'
 import Select from '../../../components/ui/Select'
@@ -253,6 +255,7 @@ function StepCard({ step, index, count, selected, onSelect, onMove, busy }) {
 /** ③ to ⑥: the selected step. Same fields and save as the old drawer, grouped as the frame. */
 function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
   const t = useT()
+  const { inSheet } = useEditorPanel()
   const { data: stageConfig } = useStageConfig(step?.id)
   const extras = useStepExtras(step?.id)
   const toast = useToast()
@@ -304,7 +307,7 @@ function StepPanel({ step, busy, allSteps, onSave, onDelete, onDirtyChange }) {
   }
 
   return (
-    <section aria-label={t('wfb.stepSettings')} className="flex flex-col gap-5 rounded-card border border-border bg-surface p-4">
+    <section aria-label={t('wfb.stepSettings')} className={cn('flex flex-col gap-5', !inSheet && 'rounded-card border border-border bg-surface p-4')}>
       <h2 className="flex items-center gap-2 text-[17px] font-heading font-bold text-text">
         <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-[12px] text-on-primary">{draft.order}</span>
         {draft.name || t('wfb.untitled')}
@@ -434,7 +437,6 @@ export default function WorkflowBuilder() {
   const [reordering, setReordering] = useState(false)
   const [panelDirty, setPanelDirty] = useState(false)
   const [localSteps, setLocalSteps] = useState([])
-  const panelRef = useRef(null)
 
   const serverSteps = useMemo(() => sortSteps(Array.isArray(stepsData) ? stepsData : stepsData?.results ?? []), [stepsData])
   useEffect(() => { setLocalSteps(serverSteps) }, [serverSteps])
@@ -479,7 +481,11 @@ export default function WorkflowBuilder() {
     if (stepId === editingStepId) return
     if (!(await confirmDiscardChanges())) return
     setEditingStepId(stepId)
-    setTimeout(() => panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
+  // The phone sheet's close: same care for unsaved changes as moving to another step.
+  const closeStep = async () => {
+    if (await confirmDiscardChanges()) setEditingStepId(null)
   }
 
   const runAction = async (action) => {
@@ -619,7 +625,8 @@ export default function WorkflowBuilder() {
   const summary = plainWords(t, steps)
 
   return (
-    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
+    <EditorWorkspace
+      header={
       <PageHeader
         back={
           <span className="text-[12px] text-muted">
@@ -638,10 +645,10 @@ export default function WorkflowBuilder() {
           </div>
         }
       />
-      <p className="text-[13px] text-muted md:hidden">{t('wfb.phoneNote')}</p>
-
-      <div className="grid grid-cols-1 gap-[14px] md:grid-cols-[180px_minmax(0,1fr)] xl:grid-cols-[180px_minmax(0,1fr)_360px] 2xl:gap-[22px]">
-        <nav data-guide="workflowBuilder.addStage" aria-label={t('wfb.addStep')} className="hidden md:block">
+      }
+      notices={<p className="text-[13px] text-muted md:hidden">{t('wfb.phoneNote')}</p>}
+      side={
+        <nav data-guide="workflowBuilder.addStage" aria-label={t('wfb.addStep')} className="hidden lg:block lg:w-[180px]">
           <p className="mb-2 text-[12px] font-bold text-muted">{t('wfb.addStep')}</p>
           <ul className="flex flex-col gap-2">
             {PALETTE.map(({ kind, icon: Icon }) => (
@@ -660,8 +667,27 @@ export default function WorkflowBuilder() {
             ))}
           </ul>
         </nav>
-
-        <div className="flex min-w-0 flex-col gap-3 rounded-card bg-surface2 p-4">
+      }
+      panel={editingStep ? (
+        <StepPanel
+          step={editingStep}
+          busy={updateStep.isPending || deleteStep.isPending || setStageConfig.isPending}
+          allSteps={steps}
+          onSave={saveStep}
+          onDelete={removeStep}
+          onDirtyChange={setPanelDirty}
+        />
+      ) : null}
+      empty={
+        <div className="flex flex-col gap-3">
+          <p className="rounded-card border border-border bg-surface p-[14px] text-[13px] text-muted">{t('editor.selectStep')}</p>
+          <DetailsPanel definition={definition} meta={meta} setMeta={setMeta} onSave={() => runAction('save-meta')} saving={updateWorkflow.isPending} />
+        </div>
+      }
+      panelLabel={t('wfb.stepSettings')}
+      onClosePanel={closeStep}
+    >
+        <div className="flex min-h-full min-w-0 flex-col gap-3 rounded-card bg-surface2 p-4">
           {stepsLoading ? (
             <div aria-hidden className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-card" />)}</div>
           ) : steps.length === 0 ? (
@@ -689,22 +715,6 @@ export default function WorkflowBuilder() {
             </div>
           )}
         </div>
-
-        <div ref={panelRef} className="hidden md:col-span-2 md:block xl:col-span-1">
-          {editingStep ? (
-            <StepPanel
-              step={editingStep}
-              busy={updateStep.isPending || deleteStep.isPending || setStageConfig.isPending}
-              allSteps={steps}
-              onSave={saveStep}
-              onDelete={removeStep}
-              onDirtyChange={setPanelDirty}
-            />
-          ) : (
-            <DetailsPanel definition={definition} meta={meta} setMeta={setMeta} onSave={() => runAction('save-meta')} saving={updateWorkflow.isPending} />
-          )}
-        </div>
-      </div>
-    </div>
+    </EditorWorkspace>
   )
 }

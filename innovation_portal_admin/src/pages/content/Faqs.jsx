@@ -27,6 +27,7 @@ import {
   NO_GROUP, PLACEMENTS, faqOrderPayload, faqProblems, fromFaq, groupFaqs, groupOrderPayload, missingSetswana, moveItem, sortGroups, toFaqPayload,
 } from '../../lib/content/faqs'
 import { useFaqAction, useFaqData } from '../../lib/queries/websiteContent'
+import { useTrigger } from '../../components/ui/useTrigger'
 
 const apiMessage = (err) => {
   const data = err?.data?.errors ?? err?.data ?? {}
@@ -61,7 +62,7 @@ function GroupRow({ group, count, index, total, selected, onSelect, onMove, menu
   )
 }
 
-function GroupDialog({ group, open, onClose }) {
+function GroupDialog({ group, open, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const act = useFaqAction()
@@ -81,7 +82,7 @@ function GroupDialog({ group, open, onClose }) {
     }
   }
   return (
-    <Modal open={open} onClose={onClose} title={group?.id ? t('faqs.renameGroup') : t('faqs.addGroup')} size="sm"
+    <Modal open={open} onClose={onClose} triggerRef={triggerRef} title={group?.id ? t('faqs.renameGroup') : t('faqs.addGroup')} size="sm"
       footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={save} loading={act.isPending}>{t('faqs.saveGroup')}</Button></>}>
       <div className="flex flex-col gap-3">
         <Input label={t('faqs.groupName')} value={name} onChange={(e) => setName(e.target.value)} maxLength={120} required error={show && !name.trim() ? t('faqs.needGroupName') : undefined} />
@@ -180,6 +181,7 @@ export default function Faqs() {
   const [editing, setEditing] = useState(null) // faq id, 'new' or null
   const [prefill, setPrefill] = useState(null)
   const [groupDialog, setGroupDialog] = useState(null) // group, 'new' or null
+  const groupTrigger = useTrigger()
   const [order, setOrder] = useState(null)
   const editorTop = useRef(null)
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))
@@ -271,7 +273,7 @@ export default function Faqs() {
         <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]"><Skeleton className="h-72 rounded-card" /><Skeleton className="h-96 rounded-card" /></div>
       ) : groupRows.length === 0 ? (
         <div className="flex flex-col gap-4">
-          <EmptyState title={t('faqs.empty')} message={t('faqs.emptyBody')} framed action={<Button onClick={() => setGroupDialog('new')}>{t('faqs.addGroup')}</Button>} />
+          <EmptyState title={t('faqs.empty')} message={t('faqs.emptyBody')} framed action={<Button onClick={(e) => { groupTrigger.from(e); setGroupDialog('new') }}>{t('faqs.addGroup')}</Button>} />
           {asking}
         </div>
       ) : (
@@ -286,14 +288,14 @@ export default function Faqs() {
                       <GroupRow key={g.id} group={g} count={(byGroup[g.id] ?? []).length} index={i} total={groups.length} selected={current?.id === g.id}
                         onSelect={() => { setSelectedGroup(g.id); setEditing(null) }} onMove={(d) => moveGroup(i, d)}
                         menu={<DropdownMenu label={t('faqs.groupActions', { name: g.label })} items={[
-                          { key: 'rename', label: t('faqs.renameGroup'), onSelect: () => setGroupDialog(groups.find((x) => String(x.id) === g.id)) },
+                          { key: 'rename', label: t('faqs.renameGroup'), onSelect: () => { groupTrigger.ref.current = null; setGroupDialog(groups.find((x) => String(x.id) === g.id)) } },
                           { key: 'delete', label: t('faqs.deleteGroup'), danger: true, onSelect: () => removeGroup(g) },
                         ]} trigger={(props) => <button type="button" {...props} className="flex h-7 w-7 items-center justify-center rounded text-muted hover:text-text"><MoreHorizontal size={15} aria-hidden /><span className="sr-only">{t('faqs.groupActions', { name: g.label })}</span></button>} />} />
                     ))}
                   </ul>
                 </SortableContext>
               </DndContext>
-              <button type="button" onClick={() => setGroupDialog('new')} className="mt-2 inline-flex items-center gap-1 px-1 text-[13px] font-semibold text-primary hover:underline">
+              <button type="button" onClick={(e) => { groupTrigger.from(e); setGroupDialog('new') }} className="mt-2 inline-flex items-center gap-1 px-1 text-[13px] font-semibold text-primary hover:underline">
                 <Plus size={13} aria-hidden /> {t('faqs.addGroup')}
               </button>
             </section>
@@ -339,7 +341,7 @@ export default function Faqs() {
         </div>
       )}
 
-      {groupDialog && <GroupDialog key={groupDialog === 'new' ? 'new' : groupDialog.id} group={groupDialog === 'new' ? null : groupDialog} open onClose={() => setGroupDialog(null)} />}
+      {groupDialog && <GroupDialog key={groupDialog === 'new' ? 'new' : groupDialog.id} group={groupDialog === 'new' ? null : groupDialog} open onClose={() => setGroupDialog(null)} triggerRef={groupTrigger.ref} />}
     </div>
   )
 }

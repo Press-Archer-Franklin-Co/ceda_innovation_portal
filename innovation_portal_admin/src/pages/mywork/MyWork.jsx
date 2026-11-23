@@ -17,6 +17,7 @@ import { useT } from '../../i18n/context'
 import { useAuth } from '../../lib/auth/AuthContext'
 import { cn } from '../../lib/cn'
 import { useMediaQuery } from '../../lib/useMediaQuery'
+import { useTrigger } from '../../components/ui/useTrigger'
 import { myWork } from '../../lib/api/ideas'
 import { EMPTY_CELL } from '../../lib/format'
 
@@ -95,6 +96,7 @@ function Detail({ item, onReassign, reassignRef }) {
 }
 
 export default function MyWork() {
+  const itemTrigger = useTrigger()
   const t = useT()
   const [params, setParams] = useSearchParams()
   const isDesktop = useMediaQuery('(min-width: 1024px)')
@@ -154,7 +156,7 @@ export default function MyWork() {
                       <li key={item.id}>
                         <button
                           type="button"
-                          onClick={() => set({ item: String(item.id) })}
+                          onClick={(e) => { itemTrigger.from(e); set({ item: String(item.id) }) }}
                           aria-current={on || undefined}
                           className={cn(
                             'flex w-full items-center gap-3 rounded-card border bg-surface px-4 py-3 text-left transition-colors hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
@@ -190,7 +192,7 @@ export default function MyWork() {
       </div>
 
       {!isDesktop && (
-        <Modal open={Boolean(selected)} onClose={() => set({ item: '' })} title={selected ? t(`work.kind.${selected.kind}`) : ''}>
+        <Modal open={Boolean(selected)} onClose={() => set({ item: '' })} triggerRef={itemTrigger.ref} title={selected ? t(`work.kind.${selected.kind}`) : ''}>
           {selected && <Detail item={selected} onReassign={() => setReassigning(true)} reassignRef={reassignRef} />}
         </Modal>
       )}

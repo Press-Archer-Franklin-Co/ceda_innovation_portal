@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom'
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { Check, Eye, Globe, Monitor, Pencil, Redo2, Smartphone, Undo2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
+import EditorWorkspace from '../../components/ui/EditorWorkspace'
+import StatusPill from '../../components/ui/StatusPill'
 import Button from '../../components/ui/Button'
 import ErrorState from '../../components/ui/ErrorState'
 import Skeleton from '../../components/ui/Skeleton'
@@ -257,12 +259,44 @@ export default function FormBuilder() {
   const ActiveIcon = activeType ? TYPE_ICON[activeType] : null
   const labelRow = selected ? rows.find((r) => r.key === `field.${selected.key}.label`) : null
 
+  const panelContent = lang === 'tn'
+    ? (
+      <TranslationsPanel
+                rows={rows}
+                onText={(row, text) => apply((d) => setText(d, row, 'tn', text))}
+                suggestions={suggestions}
+                onSuggest={() => onSuggest()}
+                suggesting={suggesting}
+                suggestOff={suggestOff}
+                onRequestReview={onRequestReview}
+                reviewing={reviewing}
+                focusKey={selectedKey}
+              />
+    )
+    : selected
+      ? (
+      <FieldSettings
+                doc={doc}
+                field={selected}
+                onChange={changeField}
+                onClose={() => setSelectedKey(null)}
+                onDuplicate={() => apply((d) => duplicateField(d, selected.key))}
+                onDelete={deleteSelected}
+                onSuggest={suggestOff || !labelRow ? undefined : () => onSuggest([labelRow.key])}
+                suggestion={labelRow ? suggestions[labelRow.key] : undefined}
+              />
+      )
+      : null
+
   return (
-    <div className="flex flex-col gap-[14px] 2xl:gap-[22px]">
+    <DndContext sensors={sensors} onDragStart={(e) => setActive(String(e.active.id))} onDragCancel={() => setActive(null)} onDragEnd={onDragEnd}>
       <p ref={announce} className="sr-only" aria-live="polite" />
+      <EditorWorkspace
+        header={
       <PageHeader
         back={<Link to="/forms" className="text-[12px] text-muted hover:text-text hover:underline">{t('builder.crumb', { name: pick(doc.name, 'en') })}</Link>}
         title={pick(doc.name, 'en')}
+        badge={doc.status ? <StatusPill status={doc.status} /> : null}
         subtitle={t('builder.intro')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -297,8 +331,8 @@ export default function FormBuilder() {
           </div>
         }
       />
-
-      {archived && <p role="alert" className="rounded-control bg-warning-soft px-3 py-2 text-[13px] text-text">{t('builder.archived')}</p>}
+        }
+        notices={<>      {archived && <p role="alert" className="rounded-control bg-warning-soft px-3 py-2 text-[13px] text-text">{t('builder.archived')}</p>}
 
       {problems.length > 0 && (
         <div role="alert" className="rounded-card border border-danger/40 bg-danger-soft p-3">
@@ -322,9 +356,16 @@ export default function FormBuilder() {
             })}
           </ul>
         </div>
-      )}
-
-      <div className="flex items-center justify-end gap-1">
+      )}</>}
+        side={previewing ? null : <div className="lg:w-[236px] 2xl:w-[256px]"><Palette onAdd={addAtEnd} disabled={archived} /></div>}
+        panel={previewing ? null : panelContent}
+        empty={<p className="rounded-card border border-border bg-surface p-[14px] text-[13px] text-muted">{t('settings.none')}</p>}
+        panelLabel={lang === 'tn' ? t('tr.title') : t('settings.title')}
+        onClosePanel={() => setSelectedKey(null)}
+        phonePanel={lang === 'tn' ? 'inline' : 'sheet'}
+        noPanel={previewing}
+      >
+      <div className="mb-3 flex items-center justify-end gap-1">
         <span className="mr-1 text-[12px] text-muted">{t('builder.device')}</span>
         {[{ key: 'desktop', icon: Monitor }, { key: 'phone', icon: Smartphone }].map(({ key, icon: Icon }) => (
           <button key={key} type="button" aria-pressed={device === key} aria-label={t(`builder.${key}`)} onClick={() => setDevice(key)}
@@ -333,13 +374,9 @@ export default function FormBuilder() {
           </button>
         ))}
       </div>
-
-      {previewing ? (
-        <PreviewFrame doc={doc} lang={lang} device={device} stepIndex={stepIndex} />
-      ) : (
-        <DndContext sensors={sensors} onDragStart={(e) => setActive(String(e.active.id))} onDragCancel={() => setActive(null)} onDragEnd={onDragEnd}>
-          <div className="grid items-start gap-4 lg:grid-cols-[236px_minmax(0,1fr)_300px] 2xl:grid-cols-[256px_minmax(0,1fr)_310px]">
-            <Palette onAdd={addAtEnd} disabled={archived} />
+        {previewing ? (
+          <PreviewFrame doc={doc} lang={lang} device={device} stepIndex={stepIndex} />
+        ) : (
             <Canvas
               doc={doc}
               stepIndex={Math.min(stepIndex, doc.steps.length - 1)}
@@ -354,31 +391,8 @@ export default function FormBuilder() {
               onWidth={(key, width) => apply((d) => setWidth(d, key, width))}
               device={device}
             />
-            {lang === 'tn' ? (
-              <TranslationsPanel
-                rows={rows}
-                onText={(row, text) => apply((d) => setText(d, row, 'tn', text))}
-                suggestions={suggestions}
-                onSuggest={() => onSuggest()}
-                suggesting={suggesting}
-                suggestOff={suggestOff}
-                onRequestReview={onRequestReview}
-                reviewing={reviewing}
-                focusKey={selectedKey}
-              />
-            ) : (
-              <FieldSettings
-                doc={doc}
-                field={selected}
-                onChange={changeField}
-                onClose={() => setSelectedKey(null)}
-                onDuplicate={() => apply((d) => duplicateField(d, selected.key))}
-                onDelete={deleteSelected}
-                onSuggest={suggestOff || !labelRow ? undefined : () => onSuggest([labelRow.key])}
-                suggestion={labelRow ? suggestions[labelRow.key] : undefined}
-              />
-            )}
-          </div>
+        )}
+      </EditorWorkspace>
           <DragOverlay dropAnimation={null}>
             {activeType && (
               <div className="flex items-center gap-2 rounded-control border border-primary bg-surface px-3 py-2 text-[13px] font-bold text-text shadow-card">
@@ -387,8 +401,6 @@ export default function FormBuilder() {
               </div>
             )}
           </DragOverlay>
-        </DndContext>
-      )}
-    </div>
+    </DndContext>
   )
 }

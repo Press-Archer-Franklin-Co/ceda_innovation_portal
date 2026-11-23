@@ -192,7 +192,7 @@ export default function DataTable({
                 <tr
                   key={row.id ?? i}
                   data-guide={rowGuide}
-                  onClick={() => onRowClick?.(row)}
+                  onClick={(e) => onRowClick?.(row, e)}
                   className={cn(
                     'transition-colors',
                     onRowClick && 'cursor-pointer',
@@ -238,7 +238,7 @@ export default function DataTable({
               <li
                 key={row.id ?? i}
                 data-guide={rowGuide}
-                onClick={() => onRowClick?.(row)}
+                onClick={(e) => onRowClick?.(row, e)}
                 className={cn('rounded-card border border-border bg-surface p-3', onRowClick && 'cursor-pointer active:bg-surface2')}
               >
                 {columns.filter((c) => !c.hideOnPhone).map((col, j) => (
