@@ -55,6 +55,8 @@ The phone simulator saves nothing: no draft, account, file or idea.
 
 **Upgrading the example journey:** `python manage.py upgrade_example_whatsapp_journey` adds these steps to the journey live WhatsApp connections run, publishes a new version and prints what changed. Running it again changes nothing. `--undo` puts back the version from before.
 
+**AI guidance** (setting on question, file and form question steps, off by default): after a long text answer the AI helper may send one short suggestion with Add more and Keep my answer. It never changes the answer. A document sent at the step gets "Reading your document..." and at most 3 short notes. "help" or "?" gets a short answer about the step, then the question again. There is at most one AI message per question. If the AI is off, not set up or fails, the journey runs as it does without it and the reason is logged. USSD never uses it.
+
 ## Set up the Twilio WhatsApp Sandbox
 
 1. In the staff console: **Channels**, the **WhatsApp** card, **Add WhatsApp number**. Provider "Twilio WhatsApp", name "Twilio Sandbox", sender +14155238886, journey "CEDA Innovation (WhatsApp)". Next.

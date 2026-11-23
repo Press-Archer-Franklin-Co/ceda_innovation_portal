@@ -516,6 +516,8 @@ class SessionService:
             session.draft_id = runner.effects["draft_id"]
         if runner.effects.get("draft_deleted"):
             session.draft_id = None
+        if runner.effects.get("ai_documents"):
+            screen.ai_documents = runner.effects["ai_documents"]  # the webhook queues the review after replying
         if runner.effects.get("conversation_id"):
             session.conversation_id = runner.effects["conversation_id"][:64]
         if screen.end:
@@ -715,6 +717,11 @@ class WhatsAppWebhookService:
                             )
                         node_type = screen.node_type
                         WhatsAppOutbound.send_screen(provider, phone, screen)
+                        documents = getattr(screen, "ai_documents", None)
+                        if documents:
+                            from apps.channels.ai_guidance import queue_document_notes
+
+                            queue_document_notes(connection_id=channel_connection.id, phone=phone, document_ids=documents["ids"], lang=documents["lang"], node_key=documents["node"])
             except Exception:
                 logger.exception("WhatsApp session failed on connection %s", channel_connection.id)
                 outcome = "error"
