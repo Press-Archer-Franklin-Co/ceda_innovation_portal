@@ -11,6 +11,7 @@ import { programmesEn } from './programmes'
 import { conversationsEn } from './conversations'
 import { reviewEn } from './review'
 import { usersEn } from './users'
+import { u9aEn } from './u9a'
 import { pitchEn } from './pitch'
 import { platformSettingsEn } from './platformSettings'
 import { contentBEn } from './contentB'
@@ -157,6 +158,7 @@ const en = {
   ...conversationsEn,
   ...reviewEn,
   ...usersEn,
+  ...u9aEn,
   ...pitchEn,
   ...platformSettingsEn,
   ...contentBEn,

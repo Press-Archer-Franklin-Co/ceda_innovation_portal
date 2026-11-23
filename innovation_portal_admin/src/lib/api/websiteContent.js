@@ -11,6 +11,7 @@ export const homePage = {
 
 export const approvals = {
   list:    (status)          => client.get('/api/content/approvals/', status ? { status } : undefined),
+  get:     (id)              => client.get(`/api/content/approvals/${id}/`),
   approve: (id, comment)     => client.post(`/api/content/approvals/${id}/approve/`, comment ? { comment } : {}),
   reject:  (id, comment)     => client.post(`/api/content/approvals/${id}/reject/`, { comment }),
 }
