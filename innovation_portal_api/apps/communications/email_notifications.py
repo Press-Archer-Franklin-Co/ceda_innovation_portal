@@ -17,6 +17,12 @@ from PIL import Image, ImageDraw, ImageFont
 logger = logging.getLogger(__name__)
 
 
+def _contact_address() -> str:
+    from apps.platform_config.email_backend import from_address
+
+    return from_address()
+
+
 class InlineImageEmail(EmailMultiAlternatives):
     def __init__(self, *args, related_parts=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -118,7 +124,7 @@ class EmailNotificationService:
         portal_url = settings.PUBLIC_BASE_URL.rstrip("/")
         return {
             "portal_name": "CEDA Innovation Portal",
-            "support_email": getattr(settings, "SYSTEM_EMAIL", "") or settings.DEFAULT_FROM_EMAIL,
+            "support_email": _contact_address(),
             "portal_url": portal_url,
             "brand_url": portal_url,
             "hero_cid": EmailNotificationService.HERO_CID,
@@ -375,7 +381,7 @@ class EmailNotificationService:
             action_label="Review account",
             summary_items=[
                 {"label": "Change status", "value": "Successful"},
-                {"label": "Support", "value": getattr(settings, 'SYSTEM_EMAIL', '') or settings.DEFAULT_FROM_EMAIL},
+                {"label": "Support", "value": _contact_address()},
             ],
         )
         EmailNotificationService._send(
@@ -419,11 +425,11 @@ class EmailNotificationService:
             headline="Notification delivery test",
             intro="This is a live test email from the CEDA Innovation Portal notification service.",
             cta_label="Sender email",
-            cta_value=settings.DEFAULT_FROM_EMAIL,
+            cta_value=_contact_address(),
             cta_hint="If you received this message, outbound notification delivery is working.",
             action_label="Open portal",
             summary_items=[
-                {"label": "System email", "value": getattr(settings, 'SYSTEM_EMAIL', '') or settings.DEFAULT_FROM_EMAIL},
+                {"label": "System email", "value": _contact_address()},
                 {"label": "Environment", "value": "Production container"},
             ],
         )

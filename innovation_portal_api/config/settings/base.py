@@ -316,18 +316,10 @@ SPECTACULAR_SETTINGS = {
     "COMPONENT_SPLIT_REQUEST": True,
 }
 
-EMAIL_BACKEND = env(
-    _prefixed_name("EMAIL_BACKEND"),
-    default="django.core.mail.backends.console.EmailBackend",
-)
-EMAIL_HOST = env(_prefixed_name("EMAIL_HOST"), default="localhost")
-EMAIL_PORT = env.int(_prefixed_name("EMAIL_PORT"), default=25)
-EMAIL_HOST_USER = env(_prefixed_name("EMAIL_HOST_USER"), default="")
-EMAIL_HOST_PASSWORD = env(_prefixed_name("EMAIL_HOST_PASSWORD"), default="")
-EMAIL_USE_TLS = env.bool(_prefixed_name("EMAIL_USE_TLS"), default=False)
-EMAIL_USE_SSL = env.bool(_prefixed_name("EMAIL_USE_SSL"), default=False)
-SYSTEM_EMAIL = env(_prefixed_name("SYSTEM_EMAIL"), default="")
-DEFAULT_FROM_EMAIL = env(_prefixed_name("DEFAULT_FROM_EMAIL"), default=SYSTEM_EMAIL or "noreply@ceda-innovation.local")
+# All email goes through the active Email connection in the staff console (3.27); no mail settings in the environment.
+EMAIL_BACKEND = "apps.platform_config.email_backend.PlatformEmailBackend"
+DEFAULT_FROM_EMAIL = "noreply@ceda-innovation.local"  # replaced by the connection's from address when sending
+SYSTEM_EMAIL = ""
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
 
 PUBLIC_BASE_URL = env(
