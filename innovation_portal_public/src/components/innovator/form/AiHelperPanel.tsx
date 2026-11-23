@@ -446,7 +446,7 @@ function CheckDrawer({
                     </div>
                     {item.suggestion && <p className="text-d-body-s text-text">{item.suggestion}</p>}
                     {item.field_key && item.status !== 'clear' && (
-                      <button type="button" onClick={() => onShowField(item.stepIndex, item.field_key)} className="self-start rounded text-d-label-s text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                      <button type="button" onClick={() => onShowField(item.stepIndex, item.field_key)} className="self-start rounded text-d-label text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                         {t('ai.showMe')}
                       </button>
                     )}
