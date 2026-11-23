@@ -119,7 +119,11 @@ export const contentBEn = {
   'hk.preview': 'Preview',
   'hk.save': 'Save',
   'hk.saved': 'Hackathon page saved',
-  'hk.directNote': 'Changes go live when you save. Sending them for approval first comes with the next update.',
+  'hk.directNote': 'Schedule changes go to approvals, and visitors see them once approved. Other parts of this page save straight away.',
+  'hk.pendingApproval': 'A schedule change is waiting for approval.',
+  'hk.sentForApproval': 'Saved. The schedule change is waiting for approval.',
+  'hk.whatTn': 'In Setswana (optional)',
+  'hk.scheduleIncomplete': 'Each schedule item needs a date, a time and what happens.',
   'hk.sections': 'Sections',
   'hk.sectionsSoon': 'Turning sections on and off, and their order, come with the next update.',
   'hk.showSection': 'Show {name}',
@@ -330,7 +334,11 @@ export const contentBTn = {
   'hk.preview': 'Leba pele', // TODO tn-review
   'hk.save': 'Boloka', // TODO tn-review
   'hk.saved': 'Tsebe ya hackathon e bolokilwe', // TODO tn-review
-  'hk.directNote': 'Diphetogo di simolola go dira fa o boloka. Go di romela go dumelelwa pele go tla le phetogo e e tlang.', // TODO tn-review
+  'hk.directNote': 'Diphetogo tsa lenaneo di ya go dumelelwa, mme baeti ba di bona fa di dumeletswe. Dikarolo tse dingwe di bolokwa ka bonako.', // TODO tn-review
+  'hk.pendingApproval': 'Phetogo ya lenaneo e emetse go dumelelwa.', // TODO tn-review
+  'hk.sentForApproval': 'Go bolokilwe. Phetogo ya lenaneo e emetse go dumelelwa.', // TODO tn-review
+  'hk.whatTn': 'Ka Setswana (ga go patelediwe)', // TODO tn-review
+  'hk.scheduleIncomplete': 'Ntlha nngwe le nngwe ya lenaneo e tlhoka letlha, nako le se se diragalang.', // TODO tn-review
   'hk.sections': 'Dikarolo', // TODO tn-review
   'hk.sectionsSoon': 'Go bulela le go tima dikarolo, le thulaganyo ya tsone, go tla le phetogo e e tlang.', // TODO tn-review
   'hk.showSection': 'Bontsha {name}', // TODO tn-review

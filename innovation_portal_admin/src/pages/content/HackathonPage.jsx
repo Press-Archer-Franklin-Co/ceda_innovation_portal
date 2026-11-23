@@ -20,20 +20,21 @@ import { relativeTime } from '../../lib/forms/format'
 import { useActiveHackathon } from '../../lib/queries/hackathon'
 import { usePartners } from '../../lib/queries/websiteContent'
 import { useProgram } from '../../lib/queries/programs'
+import { currentRow, incompleteRows, scheduleItems, scheduleRows } from '../../lib/content/hackathonSchedule'
 
 // 3.36 Hackathon page editor (Figma 141:1859 website, 141:2141 phone). In the menu only while a hackathon is on.
 // ① Sections like the home page editor: switch on, reorder. ② Schedule with times; the public page highlights what is
 // happening now. ③ Prizes and sponsors from Partners (3.13). ④ Live updates post as short notices with an optional
 // photo. Changes go through approvals.
-// Saves on today's hackathon page (schedule, prizes, FAQs, banner text). Section switches, venue, live updates and
-// sending for approval wait for R-59 item 2; until then the page saves directly, and says so.
+// The schedule is the live page's schedule_items: a change goes to approvals and visitors see it once approved.
+// Prizes, FAQs and banner text still save directly, and the page says so.
 // Phone: post live updates from the venue (the updates card comes first).
 
 const SECTIONS = ['banner', 'schedule', 'venue', 'prizes', 'teams', 'updates', 'faqs']
 const PLACES = ['1st', '2nd', '3rd']
 const asList = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 
-function toDraft(p) {
+function toDraft(p, doc) {
   return {
     theme: p?.theme ?? '',
     description: p?.description ?? '',
@@ -42,23 +43,10 @@ function toDraft(p) {
       const s = (p?.sections ?? []).find((x) => x.key === key)
       return { key, enabled: s ? !!s.enabled : true, order: s?.order ?? i }
     }).sort((a, b) => a.order - b.order),
-    schedule: (p?.schedule ?? []).map((s) => ({ date: s.date ?? '', time: s.time ?? '', label: s.label ?? s.title ?? '', description: s.description ?? '' })),
+    schedule: scheduleRows(doc?.draft?.schedule_items, p?.schedule),
     prizes: (p?.prizes ?? []).map((x) => ({ position: x.position ?? '', label: x.label ?? '', amount: x.amount ?? '', description: x.description ?? '', sponsor_partner_id: x.sponsor_partner_id ?? '', sponsor: x.sponsor ?? '' })),
     faq: (p?.faq ?? []).map((x) => ({ question: x.question ?? '', answer: x.answer ?? '' })),
   }
-}
-
-const startOf = (s) => (s.date ? new Date(`${s.date}T${s.time || '00:00'}`).getTime() : NaN)
-
-/** The schedule item running now: started, and the next one has not. */
-function nowIndex(items, now = Date.now()) {
-  const times = items.map(startOf)
-  let found = -1
-  times.forEach((time, i) => { if (!Number.isNaN(time) && time <= now) found = i })
-  if (found === -1) return -1
-  const next = times.slice(found + 1).find((x) => !Number.isNaN(x))
-  const sameDay = items[found].date === new Date(now).toISOString().slice(0, 10)
-  return next == null ? (sameDay ? found : -1) : found
 }
 
 function Panel({ id, title, action, children, className }) {
@@ -154,15 +142,17 @@ export default function HackathonPage() {
   const active = useActiveHackathon(!routeId)
   const id = routeId ?? active.data?.id
   const page = useQuery({ queryKey: ['content', 'hackathons', id], enabled: !!id, queryFn: () => client.get(`/api/content/hackathons/${id}/`) })
+  const pageDoc = useQuery({ queryKey: ['content', 'hackathons', id, 'page'], enabled: !!id, queryFn: () => client.get(`/api/content/hackathons/${id}/page/`) })
   const partners = usePartners()
   const program = useProgram(page.data?.program)
   const [draft, setDraft] = useState(null)
   const [busy, setBusy] = useState(false)
   const [current, setCurrent] = useState('schedule')
+  const [scheduleError, setScheduleError] = useState(false)
 
-  useEffect(() => { if (page.data) setDraft(toDraft(page.data)) }, [page.data])
+  useEffect(() => { if (page.data && pageDoc.data) setDraft(toDraft(page.data, pageDoc.data)) }, [page.data, pageDoc.data])
   useEffect(() => { document.title = `${t('hk.title')} · CEDA Innovation` }, [t])
-  const base = useMemo(() => (page.data ? JSON.stringify(toDraft(page.data)) : ''), [page.data])
+  const base = useMemo(() => (page.data && pageDoc.data ? JSON.stringify(toDraft(page.data, pageDoc.data)) : ''), [page.data, pageDoc.data])
 
   const header = (actions) => (
     <PageHeader back={<span className="text-[12px] text-muted">{t('hk.crumb')}</span>} title={t('hk.title')} subtitle={page.data?.program_title ? t('hk.subtitleFor', { name: page.data.program_title }) : t('hk.subtitle')} actions={actions} />
@@ -170,8 +160,8 @@ export default function HackathonPage() {
 
   if (!routeId && active.isLoading) return <div className="flex flex-col gap-3">{header()}<Skeleton className="h-[480px] rounded-card" /></div>
   if (!id) return <div className="flex flex-col gap-3">{header()}<EmptyState framed icon={Sparkles} title={t('hk.none')} message={t('hk.noneBody')} action={<Link to="/programs" className="text-[14px] font-bold text-primary hover:underline">{t('hk.toChallenges')}</Link>} /></div>
-  if (page.isError) return <div className="flex flex-col gap-3">{header()}<ErrorState framed title={t('hk.loadError')} message={page.error?.message} onRetry={page.refetch} /></div>
-  if (page.isLoading || !draft) return <div className="flex flex-col gap-3">{header()}<Skeleton className="h-[480px] rounded-card" /></div>
+  if (page.isError || pageDoc.isError) return <div className="flex flex-col gap-3">{header()}<ErrorState framed title={t('hk.loadError')} message={(page.error ?? pageDoc.error)?.message} onRetry={() => { page.refetch(); pageDoc.refetch() }} /></div>
+  if (page.isLoading || pageDoc.isLoading || !draft) return <div className="flex flex-col gap-3">{header()}<Skeleton className="h-[480px] rounded-card" /></div>
 
   const changed = JSON.stringify(draft) !== base
   const hasSections = Array.isArray(page.data.sections)
@@ -180,11 +170,20 @@ export default function HackathonPage() {
   const removeItem = (key, i) => set({ [key]: draft[key].filter((_, j) => j !== i) })
   const moveSection = (i, by) => { const next = [...draft.sections]; const [it] = next.splice(i, 1); next.splice(i + by, 0, it); set({ sections: next.map((s, j) => ({ ...s, order: j })) }) }
   const partnerOptions = [{ value: '', label: t('hk.noSponsor') }, ...(partners.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))]
-  const live = nowIndex(draft.schedule)
+  const live = currentRow(draft.schedule)
+  const savedSchedule = JSON.stringify(JSON.parse(base).schedule)
+  const missing = scheduleError ? incompleteRows(draft.schedule) : []
   // The public hackathon page is the challenge's own page now (1.8).
   const publicUrl = program.data?.slug ? `${window.location.origin}/challenges/${program.data.slug}` : null
 
   async function save() {
+    const scheduleChanged = JSON.stringify(draft.schedule) !== savedSchedule
+    if (scheduleChanged && incompleteRows(draft.schedule).length) {
+      setScheduleError(true)
+      go('schedule')
+      return
+    }
+    setScheduleError(false)
     setBusy(true)
     try {
       const form = new FormData()
@@ -192,13 +191,16 @@ export default function HackathonPage() {
       form.append('theme', draft.theme)
       form.append('description', draft.description)
       form.append('is_published', draft.is_published ? 'true' : 'false')
-      form.append('schedule', JSON.stringify([...draft.schedule].sort((a, b) => startOf(a) - startOf(b))))
       form.append('prizes', JSON.stringify(draft.prizes.map((p) => ({ ...p, sponsor: partners.data?.find((x) => String(x.id) === p.sponsor_partner_id)?.name ?? '' }))))
       form.append('faq', JSON.stringify(draft.faq))
       if (hasSections) form.append('sections', JSON.stringify(draft.sections))
       await client.patch(`/api/content/hackathons/${id}/`, form)
+      if (scheduleChanged) {
+        await client.put(`/api/content/hackathons/${id}/page/`, { schedule_items: scheduleItems(draft.schedule) })
+        await client.post(`/api/content/hackathons/${id}/page/submit/`)
+      }
       qc.invalidateQueries({ queryKey: ['content', 'hackathons'] })
-      toast.show({ tone: 'success', title: t('hk.saved') })
+      toast.show({ tone: 'success', title: t(scheduleChanged ? 'hk.sentForApproval' : 'hk.saved') })
     } catch (err) {
       toast.show({ tone: 'error', title: t('common.somethingWrong'), body: err?.message })
     } finally {
@@ -219,7 +221,10 @@ export default function HackathonPage() {
           <Button onClick={save} loading={busy} disabled={!changed}>{t('hk.save')}</Button>
         </div>,
       )}
-      <p className="rounded-control bg-surface2 px-3 py-2 text-[13px] text-muted">{t('hk.directNote')}</p>
+      <p className="rounded-control bg-surface2 px-3 py-2 text-[13px] text-muted">
+        {t('hk.directNote')}
+        {pageDoc.data?.pending_approval_id && <> <Link to="/content/approvals" className="font-bold text-primary hover:underline">{t('hk.pendingApproval')}</Link></>}
+      </p>
 
       <div className="grid grid-cols-[minmax(0,1fr)] items-start gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         <nav aria-label={t('hk.sections')} className="flex min-w-0 flex-col gap-2">
@@ -251,15 +256,16 @@ export default function HackathonPage() {
             </div>
           </Panel>
 
-          <Panel id="hk-schedule" title={t('hk.section.schedule')} action={<Button variant="link" size="sm" icon={<Plus size={14} aria-hidden />} onClick={() => set({ schedule: [...draft.schedule, { date: draft.schedule.at(-1)?.date ?? '', time: '', label: '', description: '' }] })}>{t('hk.addItem')}</Button>}>
+          <Panel id="hk-schedule" title={t('hk.section.schedule')} action={<Button variant="link" size="sm" icon={<Plus size={14} aria-hidden />} onClick={() => set({ schedule: [...draft.schedule, { id: '', date: draft.schedule.at(-1)?.date ?? '', time: '', label: '', label_tn: '' }] })}>{t('hk.addItem')}</Button>}>
             {draft.schedule.length === 0 ? <p className="text-[13px] text-muted">{t('hk.noSchedule')}</p> : (
               <ul className="flex flex-col gap-2">
                 {draft.schedule.map((s, i) => (
                   <li key={i} className={cn('grid grid-cols-[1fr_96px_auto] items-center gap-2 rounded-control p-2 md:grid-cols-[150px_96px_minmax(0,1fr)_auto]', i === live ? 'bg-accent-soft' : '')}>
-                    <InputControl type="date" aria-label={t('hk.date')} value={s.date} onChange={(e) => setItem('schedule', i, { date: e.target.value })} />
-                    <InputControl type="time" aria-label={t('hk.time')} value={s.time} onChange={(e) => setItem('schedule', i, { time: e.target.value })} />
-                    <span className="flex min-w-0 items-center gap-2 max-md:col-span-3 max-md:row-start-2">
-                      <span className="min-w-0 flex-1"><InputControl aria-label={t('hk.what')} placeholder={t('hk.what')} value={s.label} onChange={(e) => setItem('schedule', i, { label: e.target.value })} /></span>
+                    <InputControl type="date" aria-label={t('hk.date')} invalid={missing.includes(i) && !s.date} value={s.date} onChange={(e) => setItem('schedule', i, { date: e.target.value })} />
+                    <InputControl type="time" aria-label={t('hk.time')} invalid={missing.includes(i) && !s.time} value={s.time} onChange={(e) => setItem('schedule', i, { time: e.target.value })} />
+                    <span className="flex min-w-0 items-center gap-2 max-md:col-span-3 max-md:row-start-2 max-md:flex-col max-md:items-stretch">
+                      <span className="min-w-0 flex-1"><InputControl aria-label={t('hk.what')} placeholder={t('hk.what')} maxLength={200} invalid={missing.includes(i) && !s.label.trim()} value={s.label} onChange={(e) => setItem('schedule', i, { label: e.target.value })} /></span>
+                      <span className="min-w-0 flex-1"><InputControl aria-label={t('hk.whatTn')} placeholder={t('hk.whatTn')} maxLength={200} value={s.label_tn} onChange={(e) => setItem('schedule', i, { label_tn: e.target.value })} /></span>
                       {i === live && <span className="shrink-0 text-[12px] font-bold text-accent">{t('hk.now')}</span>}
                     </span>
                     <button type="button" className="btn-icon" aria-label={t('hk.removeItem')} onClick={() => removeItem('schedule', i)}><Trash2 size={14} aria-hidden /></button>
@@ -267,6 +273,7 @@ export default function HackathonPage() {
                 ))}
               </ul>
             )}
+            {missing.length > 0 && <p role="alert" className="mt-2 text-[13px] font-bold text-danger">{t('hk.scheduleIncomplete')}</p>}
           </Panel>
 
           <Panel id="hk-venue" title={t('hk.section.venue')}>
