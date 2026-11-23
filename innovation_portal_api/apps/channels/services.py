@@ -151,6 +151,13 @@ class JourneyService:
     @staticmethod
     @transaction.atomic
     def update(*, journey: Journey, actor, data: dict) -> Journey:
+        if "is_archived" in data and bool(data["is_archived"]) != journey.is_archived:
+            if data["is_archived"] and ChannelConnection.objects.filter(journey=journey, connection__is_active=True).exists():
+                raise ValidationError({"code": "journey_in_use", "detail": "An active connection runs this journey. Choose another journey for it first."})
+            journey.is_archived = bool(data["is_archived"])
+            journey.updated_by = actor
+            journey.save(update_fields=["is_archived", "updated_by", "updated_at"])
+            _audit(actor, "channel_journey_archived" if journey.is_archived else "channel_journey_restored", "Journey", journey.id)
         changed = []
         for name in JourneyService.JOURNEY_FIELDS:
             if name in data and getattr(journey, name) != data[name]:

@@ -3,7 +3,7 @@ import { useToast } from '../ui/toast'
 import { useConfirm } from '../ui/confirm'
 import { useJourney, useNodeTypes, usePublishJourney, useSaveNodes, useValidateJourney } from '../../lib/queries/channels'
 import { useI18n } from '../../i18n/context'
-import { connect, fromJourney, newNode, pick, toPayload, typeMap, unlinkTarget } from './journeyModel'
+import { connect, fromJourney, newNode, pick, portsOf, toPayload, typeMap, unlinkTarget } from './journeyModel'
 
 function snapshot(nodes, start) {
   return JSON.stringify({ n: toPayload(nodes), s: start })
@@ -70,9 +70,24 @@ export function useJourneyEditor(id) {
     return created
   }, [nodes, startKey, types])
 
-  const removeNode = useCallback(async (node) => {
+  /** Put a new step on a branch: the branch now leads to it, and it leads on to where the branch went. */
+  const addOnBranch = useCallback((type, from) => {
+    const created = newNode(type, nodes, types)
+    const source = nodes.find((n) => n.key === from?.key)
+    const port = source ? portsOf(source, types).find((p) => p.id === from.port) : null
+    const onward = port?.target || ''
+    if (onward && portsOf(created, types).some((p) => p.id === 'next')) created.next = onward
+    const linked = source ? nodes.map((n) => (n.key === source.key ? connect(n, from.port, created.key) : n)) : nodes
+    setNodes([...linked, created])
+    if (!startKey) setStartKey(created.key)
+    setSelected(created.key)
+    return created
+  }, [nodes, startKey, types])
+
+  const removeNode = useCallback(async (node, { stranded = 0 } = {}) => {
     const name = node.title || pick(node.text, lang) || pick({ en: types[node.type]?.label, tn: types[node.type]?.label_tn }, lang)
-    const ok = await confirm({ title: t('ch.builder.deleteTitle', { name }), body: t('ch.builder.deleteBody'), confirmLabel: t('ch.step.delete') })
+    const body = stranded ? t('ch.flow.deleteStranded', { count: stranded }) : t('ch.builder.deleteBody')
+    const ok = await confirm({ title: t('ch.builder.deleteTitle', { name }), body, confirmLabel: t('ch.step.delete') })
     if (!ok) return
     setNodes((list) => list.filter((n) => n.key !== node.key).map((n) => unlinkTarget(n, node.key, types)))
     setStartKey((key) => (key === node.key ? '' : key))
@@ -125,7 +140,7 @@ export function useJourneyEditor(id) {
     nodes, setNodes, startKey, setStartKey, selected, setSelected,
     selectedNode: nodes.find((n) => n.key === selected) ?? null,
     dirty, problems, problemsByNode,
-    updateNode, addNode, removeNode, save, check, publish: doPublish,
+    updateNode, addNode, addOnBranch, removeNode, save, check, publish: doPublish,
     saving: saveNodes.isPending, checking: validate.isPending, publishing: publish.isPending,
   }
 }

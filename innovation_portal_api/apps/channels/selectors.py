@@ -18,7 +18,7 @@ REPORT_MAX_DAYS = 180
 class JourneySelector:
     @staticmethod
     def all():
-        return Journey.objects.annotate(node_count=Count("nodes", distinct=True), connection_count=Count("connections", distinct=True)).order_by("name")
+        return Journey.objects.annotate(node_count=Count("nodes", distinct=True), connection_count=Count("connections", distinct=True)).prefetch_related("connections__connection").order_by("name")
 
 
 class ChannelConnectionSelector:
