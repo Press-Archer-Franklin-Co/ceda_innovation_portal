@@ -17,6 +17,7 @@ from apps.core.api import api_success
 from apps.core.i18n import resolve_request_language
 from apps.core.permissions import IPRateThrottle
 from apps.platform_config.flags import require_feature
+from apps.programs.access import ProgramAccessService
 from apps.programs.general_idea import FORM_NOT_READY, GeneralIdeaProgram, form_ready
 from apps.submissions.draft_services import _UNSET, ApplicationDraftService
 from apps.submissions.intake import (
@@ -125,6 +126,8 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
         UserVerificationService.assert_verified(user=self.request.user, reason="draft_create")
         data = serializer.validated_data
         program = data.get("program") or GeneralIdeaProgram.get()
+        # Who may enter and when come first, so people get the audience, dates or limit reason before the form one.
+        ProgramAccessService.assert_can_enter(program, self.request.user)
         if not program.is_general_intake and not form_ready(program):
             raise ValidationError({"program": {"code": "form_not_ready", "detail": FORM_NOT_READY}})
         draft = ApplicationDraftService.save_draft(

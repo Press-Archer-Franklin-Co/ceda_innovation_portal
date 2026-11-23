@@ -11,6 +11,7 @@ from apps.content.models import HackathonDetail, WinnerSpotlight
 from apps.core.constants import ProgramAudience, ProgramTypeCode, RoleType, SubmissionStatus, SubmissionType
 from apps.evaluation.models import ReviewCycle
 from apps.programs.challenge_results import ChallengeResultsService
+from apps.programs.general_idea import ensure_published_version
 from apps.programs.models import Program, ProgramType, SubmissionForm
 from apps.submissions.models import Submission
 from apps.workflow.models import WorkflowDefinition, WorkflowInstance
@@ -43,7 +44,8 @@ class InnovationChallengeTestMixin:
             is_public=True,
             audience=audience,
         )
-        SubmissionForm.objects.create(program=program, title="Entry form")
+        ensure_published_version(SubmissionForm.objects.create(program=program, title="Entry form"))
+        program.refresh_from_db()
         return program
 
     def save_draft(self, user, program):

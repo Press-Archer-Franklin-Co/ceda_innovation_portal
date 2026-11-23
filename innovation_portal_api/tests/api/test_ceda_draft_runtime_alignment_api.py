@@ -6,6 +6,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.accounts.services import RoleService
 from apps.core.constants import ProgramTypeCode, RoleType, SubmissionFormFieldType
+from apps.programs.general_idea import ensure_published_version
 from apps.programs.models import FormSection, Program, ProgramType, SubmissionForm, SubmissionFormField
 
 
@@ -52,6 +53,7 @@ class CedaDraftRuntimeAlignmentApiTests(TestCase):
         )
 
     def test_draft_submit_creates_runtime_submission(self):
+        ensure_published_version(self.program.form)  # a programme takes entries only with a published form
         self.client.force_authenticate(self.innovator)
         create_response = self.client.post(
             "/api/drafts/",
@@ -96,6 +98,7 @@ class CedaDraftRuntimeAlignmentApiTests(TestCase):
             required=False,
             ordering=2,
         )
+        ensure_published_version(self.program.form)  # published after the file question is added
         self.client.force_authenticate(self.innovator)
         create_response = self.client.post(
             "/api/drafts/",
