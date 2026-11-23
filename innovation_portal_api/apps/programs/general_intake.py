@@ -121,7 +121,7 @@ class GeneralIntakeService:
                     )
             except IntegrityError:
                 # Created by a concurrent request, or the slug is taken by another programme.
-                program = Program.objects.filter(is_general_intake=True).first()
+                program = Program.objects.filter(is_general_intake=True).order_by("created_at").first()
                 if program is None:
                     program = Program.objects.create(
                         slug=f"{SLUG}-{program_type.code}", program_type=program_type, owner=cls._owner(), **program_defaults()

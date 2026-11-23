@@ -38,7 +38,7 @@ class B5TestCase(TestCase):
         self.type, _ = ProgramType.objects.get_or_create(code=ProgramTypeCode.INNOVATION_CHALLENGE, defaults={"name": "Innovation Challenge"})
         self.sector = Sector.objects.filter(active=True).order_by("ordering").first()
 
-    def challenge(self, title, *, opens_in=-5, closes_in=5, status=ProgramStatus.PUBLISHED, public=True, **extra):
+    def challenge(self, title, *, opens_in=-5, closes_in=5, status=ProgramStatus.PUBLISHED, public=True, with_form=True, **extra):
         now = timezone.now()
         program = Program.objects.create(
             title=title,
@@ -54,6 +54,10 @@ class B5TestCase(TestCase):
         )
         if self.sector:
             program.sectors.add(self.sector)
+        if with_form:
+            from tests.api.form_helpers import published_form
+
+            published_form(program, title=f"{title} form")
         return program
 
 
@@ -200,7 +204,7 @@ class BuilderTests(B5TestCase):
 
         refused = self.client.post(f"/api/programs/{program_id}/publish/")
         self.assertEqual(refused.status_code, 400)
-        self.assertEqual(set(refused.json()["errors"]), {"description", "opening_date", "closing_date"})
+        self.assertEqual(set(refused.json()["errors"]), {"description", "opening_date", "closing_date", "form"})
         self.assertEqual(Program.objects.get(id=program_id).status, ProgramStatus.DRAFT)
 
         now = timezone.now()
@@ -208,6 +212,11 @@ class BuilderTests(B5TestCase):
         self.assertEqual(self.client.patch(f"/api/programs/{program_id}/", backwards, format="json").status_code, 400)
         filled = {"description": "Ideas for farmers", "opening_date": now.isoformat(), "closing_date": (now + timedelta(days=30)).isoformat()}
         self.assertEqual(self.client.patch(f"/api/programs/{program_id}/", filled, format="json").status_code, 200)
+        still = self.client.post(f"/api/programs/{program_id}/publish/")
+        self.assertEqual(set(still.json()["errors"]), {"form"})  # prompt 31: no published form, no publishing
+        from tests.api.form_helpers import published_form
+
+        published_form(Program.objects.get(id=program_id))
         self.assertEqual(self.client.post(f"/api/programs/{program_id}/publish/").status_code, 200)
         self.assertEqual(Program.objects.get(id=program_id).status, ProgramStatus.PUBLISHED)
 

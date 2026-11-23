@@ -65,6 +65,12 @@ def has_results(program) -> bool:
     return bool(program.results_announced_at) or program.winner_spotlights.exists()
 
 
+def form_ready(program) -> bool:
+    from apps.programs.general_idea import form_ready as ready
+
+    return ready(program)
+
+
 def card(program, lang: str, now=None) -> dict:
     """One challenge in the public list (R-2a / B5). Same names the home page uses."""
     now = now or timezone.now()
@@ -90,6 +96,8 @@ def card(program, lang: str, now=None) -> dict:
         "window_progress": progress,
         "cover_url": program.cover.file.url if program.cover_id and program.cover.file else None,
         "has_results": status == "closed" and has_results(program),
+        # Prompt 31: "Enter" shows only when the challenge's form is published; otherwise "Applications open soon".
+        "form_ready": form_ready(program),
         "results_url": f"/challenges/{program.slug}/results" if status == "closed" and has_results(program) else None,
     }
 

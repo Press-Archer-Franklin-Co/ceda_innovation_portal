@@ -37,6 +37,7 @@ export default function FormCard({ form, actions }) {
       </p>
       <div className="col-start-2 row-start-2 flex min-w-0 flex-wrap items-center gap-1.5 sm:col-span-2 sm:col-start-1 sm:row-start-4">
         <StatusPill status={form.status} />
+        {form.general_ideas && <Tag tone="blue">{t('forms.general.tag')}</Tag>}
         {(form.languages ?? []).length > 0 && (
           <Tag tone="neutral" className="hidden sm:inline-flex">
             <span aria-hidden>{form.languages.map((l) => l.toUpperCase()).join(' · ')}</span>

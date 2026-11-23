@@ -4,7 +4,7 @@ import { unwrapData } from './envelope'
 // U10: entering a challenge (1.9, 1.9b, 2.10) and its results (1.10, 2.11). A challenge has its own form, so
 // Enter never falls back to the general idea form. `slug` may also be the challenge id (old links carry it).
 
-export type EntryState = 'sign_in' | 'questions' | 'form' | 'not_open' | 'closed' | 'entered' | 'limit' | 'audience'
+export type EntryState = 'sign_in' | 'questions' | 'form' | 'not_open' | 'not_ready' | 'closed' | 'entered' | 'limit' | 'audience'
 
 export interface EntryChallenge {
   id: string

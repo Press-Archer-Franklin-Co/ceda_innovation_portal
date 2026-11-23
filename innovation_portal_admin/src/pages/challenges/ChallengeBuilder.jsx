@@ -812,6 +812,7 @@ function FormStep({ program, programId }) {
                 {!summary.version_number && <Tag tone="amber" className="ml-2">{t('cb.formNotPublished')}</Tag>}
               </p>
               <p className="text-[12px] text-muted">{t('cb.formFacts', { steps: summary.step_count ?? 0, questions: summary.question_count ?? 0, challenge: summary.challenge_question_count ?? 0 })}</p>
+              {!summary.version_number && <p className="text-[12px] text-warning">{t('cb.formPublishFirst')}</p>}
               <Link to={`/forms/${summary.form_id}`} className="text-[12px] text-primary hover:underline">{t('cb.openForm')}</Link>
             </>
           ) : (

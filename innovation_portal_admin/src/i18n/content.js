@@ -107,6 +107,7 @@ export const contentEn = {
   'home.type.cta_band': 'Call to action band',
   'home.type.stories': 'Success stories',
 
+  'home.field.small_label': 'Small label',
   'home.field.headline': 'Headline',
   'home.field.text': 'Supporting text',
   'home.field.primary_button': 'Main button',
@@ -613,6 +614,7 @@ export const contentTn = {
   'home.type.cta_band': 'Mola wa taletso',
   'home.type.stories': 'Dipolelo tsa katlego',
 
+  'home.field.small_label': 'Leina le lennye', // TODO tn-review
   'home.field.headline': 'Setlhogo',
   'home.field.text': 'Mafoko a a tshegetsang',
   'home.field.primary_button': 'Konopo e kgolo',

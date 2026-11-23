@@ -61,6 +61,18 @@ function Countdown({ target, label }: { target: string | null; label: string }) 
   )
 }
 
+/** Prompt 31: an open challenge whose form is not published yet takes no entries: no Enter button. */
+function OpenSoon() {
+  const { t } = useI18n()
+  return (
+    <div role="status" className="rounded-control bg-warning-soft px-4 py-3 text-d-body-s text-text">
+      <p className="font-heading text-d-h5">{t('chd.openSoon')}</p>
+      <p className="mt-1 text-muted">{t('chd.openSoonBody')}</p>
+      <Link to="/submit" className="mt-2 inline-block text-d-label-s text-primary hover:underline">{t('ent.generalIdea')}</Link>
+    </div>
+  )
+}
+
 function ApplyCard({ c, enterTo }: { c: Detail; enterTo: string }) {
   const { t, lang } = useI18n()
   const settings = useShellSettings()
@@ -71,12 +83,13 @@ function ApplyCard({ c, enterTo }: { c: Detail; enterTo: string }) {
       <p className="text-d-label text-text">
         {open ? t('chd.closesAt', { when: longDate(c.closes_at, lang) }) : c.status === 'upcoming' ? t('chd.opensAt', { when: longDate(c.opens_at, lang) }) : t('chd.closedAt', { when: formatDate(c.closes_at, lang) })}
       </p>
-      {open && (
+      {open && c.form_ready !== false && (
         <Link data-guide="challenge.enter" to={enterTo} className={buttonClasses({ block: true })}>
           {t('chd.enter')}
           <ArrowRight size={18} aria-hidden />
         </Link>
       )}
+      {open && c.form_ready === false && <OpenSoon />}
       {c.status === 'closed' && c.results_url && (
         <Link to={c.results_url} className={buttonClasses({ block: true, variant: 'secondary' })}>
           <Trophy size={18} aria-hidden />
@@ -405,13 +418,23 @@ export default function ChallengeDetail() {
       </div>
 
       {/* Phone: the apply card becomes a sticky bar above the tab bar. */}
-      {c.status === 'open' && (
+      {c.status === 'open' && c.form_ready !== false && (
         <div className="lg:hidden fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 bg-bg border-t border-border px-5 py-3 flex items-center gap-3 shadow-[0_-6px_20px_rgba(46,26,15,0.08)]">
           <div className="flex-1 min-w-0">
             <p className="text-d-label text-text truncate">{t('chd.closesAt', { when: formatDate(c.closes_at, lang) })}</p>
             <DaysLeft days={c.days_left} className="mt-1" />
           </div>
           <Link data-guide="challenge.enter" to={enterTo} className={buttonClasses({ size: 'sm' })}>{t('chd.enter')}</Link>
+        </div>
+      )}
+      {/* Phone, form not published yet: the same bar says so, with no Enter button. */}
+      {c.status === 'open' && c.form_ready === false && (
+        <div role="status" className="lg:hidden fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-20 bg-bg border-t border-border px-5 py-3 flex items-center gap-3 shadow-[0_-6px_20px_rgba(46,26,15,0.08)]">
+          <div className="flex-1 min-w-0">
+            <p className="text-d-label text-text">{t('chd.openSoon')}</p>
+            <p className="mt-1 text-d-cap text-muted truncate">{t('chd.closesAt', { when: formatDate(c.closes_at, lang) })}</p>
+          </div>
+          <Link to="/submit" className={buttonClasses({ size: 'sm', variant: 'secondary' })}>{t('ent.generalIdea')}</Link>
         </div>
       )}
     </>

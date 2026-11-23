@@ -719,11 +719,13 @@ class Command(BaseCommand):
                     "resources, and potential funding or incubation support."
                 ),
                 "program_type": program_type,
-                "status": ProgramStatus.PUBLISHED,
+                # Prompt 31: ordinary ideas go to General ideas only. This programme keeps the old production
+                # form, rubric and workflow as a reference, archived and not public.
+                "status": ProgramStatus.ARCHIVED,
                 "opening_date": now,
                 "closing_date": now.replace(year=now.year + 1),
                 "owner": admin,
-                "is_public": True,
+                "is_public": False,
                 "allow_individual_submission": True,
                 "allow_team_submission": False,
                 "terms_and_conditions": terms,

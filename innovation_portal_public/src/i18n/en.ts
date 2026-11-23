@@ -378,6 +378,8 @@ const en = {
   'chd.opensAt': 'Opens {when}',
   'chd.closedAt': 'Entries closed on {when}',
   'chd.enter': 'Enter this challenge',
+  'chd.openSoon': 'Applications open soon',
+  'chd.openSoonBody': 'The entry form for this challenge is being finished. Check back soon, or send your idea as a general idea now.',
   'chd.minutes': 'About {n} minutes. Your draft saves as you go.',
   'chd.questions': 'Questions? WhatsApp {number}',
   'chd.started': '{n} people have started an entry',

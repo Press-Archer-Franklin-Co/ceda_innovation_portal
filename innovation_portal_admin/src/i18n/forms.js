@@ -36,6 +36,15 @@ export const formsEn = {
   'forms.duplicate': 'Make a copy',
   'forms.duplicated': 'Copy made: {name}',
   'forms.archive': 'Archive',
+  'forms.general.tag': 'General ideas',
+  'forms.general.title': 'General idea form',
+  'forms.general.none': 'Not set',
+  'forms.general.hint': 'Ordinary ideas use it: quick start, Submit an idea, WhatsApp, USSD and the Need help guide.',
+  'forms.general.change': 'Change',
+  'forms.general.changeTitle': 'Change the general idea form',
+  'forms.general.changeBody': 'Choose a published form. Ideas already sent keep the form they used.',
+  'forms.general.choose': 'Form',
+  'forms.general.changed': 'General idea form changed',
   'forms.archiveTitle': 'Archive the form {name}?',
   'forms.archiveBody': 'It leaves the list and nobody can answer it. Answers already sent are kept.',
   'forms.archived': 'Archived {name}',
@@ -257,6 +266,15 @@ export const formsTn = {
   'forms.duplicate': 'Dira khopi',
   'forms.duplicated': 'Khopi e dirilwe: {name}',
   'forms.archive': 'Boloka mo polokelong',
+  'forms.general.tag': 'Dikakanyo tse di akaretsang', // TODO tn-review
+  'forms.general.title': 'Foromo ya dikakanyo tse di akaretsang', // TODO tn-review
+  'forms.general.none': 'Ga e ise e tlhophiwe', // TODO tn-review
+  'forms.general.hint': 'Dikakanyo tsa ka metlha di e dirisa: simolola ka bonako, Romela kakanyo, WhatsApp, USSD le kaelo ya Need help.', // TODO tn-review
+  'forms.general.change': 'Fetola', // TODO tn-review
+  'forms.general.changeTitle': 'Fetola foromo ya dikakanyo tse di akaretsang', // TODO tn-review
+  'forms.general.changeBody': 'Tlhopha foromo e e gatisitsweng. Dikakanyo tse di setseng di rometswe di tswelela ka foromo e di e dirisitseng.', // TODO tn-review
+  'forms.general.choose': 'Foromo', // TODO tn-review
+  'forms.general.changed': 'Foromo ya dikakanyo tse di akaretsang e fetotswe', // TODO tn-review
   'forms.archiveTitle': 'Boloka foromo {name} mo polokelong?',
   'forms.archiveBody': 'E tswa mo lenaaneng mme ga go ope yo o ka e arabang. Dikarabo tse di setseng di rometswe di a bolokwa.',
   'forms.archived': '{name} e bolokilwe mo polokelong',

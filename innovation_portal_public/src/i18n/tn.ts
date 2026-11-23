@@ -379,6 +379,8 @@ const tn: Record<StringKey, string> = {
   'chd.opensAt': 'E bulwa {when}', // TODO tn-review
   'chd.closedAt': 'Go tsenela go tswetswe ka {when}', // TODO tn-review
   'chd.enter': 'Tsenela kgwetlho e', // TODO tn-review
+  'chd.openSoon': 'Dikopo di bulwa ka bonako', // TODO tn-review
+  'chd.openSoonBody': 'Foromo ya go tsenela kgwetlho e e sa ntse e baakanngwa. Boa ka bonako, kgotsa o romele kakanyo ya gago jaaka kakanyo e e akaretsang jaanong.', // TODO tn-review
   'chd.minutes': 'Ka metsotso e ka nna {n}. Kakanyetso ya gago e bolokwa fa o ntse o tsweletse.', // TODO tn-review
   'chd.questions': 'Dipotso? WhatsApp {number}', // TODO tn-review
   'chd.started': 'Batho ba le {n} ba simolotse go tsenela', // TODO tn-review

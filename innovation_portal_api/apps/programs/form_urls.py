@@ -2,6 +2,7 @@ from django.urls import path
 
 from apps.programs.form_views import (
     FormArchiveView,
+    GeneralIdeaFormView,
     FormDetailView,
     FormDraftView,
     FormDuplicateView,
@@ -21,6 +22,7 @@ from apps.programs.form_views import (
 urlpatterns = [
     path("", FormListCreateView.as_view(), name="form-list"),
     path("templates/", FormTemplateListView.as_view(), name="form-templates"),
+    path("general-ideas/", GeneralIdeaFormView.as_view(), name="form-general-ideas"),
     path("review-roles/", FormReviewRolesView.as_view(), name="form-review-roles"),
     path("<uuid:form_id>/", FormDetailView.as_view(), name="form-detail"),
     path("<uuid:form_id>/draft/", FormDraftView.as_view(), name="form-draft"),

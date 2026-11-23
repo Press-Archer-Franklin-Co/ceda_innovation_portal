@@ -16,7 +16,7 @@ from apps.core.i18n import get_text
 from apps.programs.challenge_public import _iso, challenge_status, has_results, text_in
 from apps.programs.models import EligibilityRule, Program
 
-GENERAL_IDEA_URL = "/submit"
+from apps.programs.general_idea import FORM_NOT_READY, URL as GENERAL_IDEA_URL, form_ready
 SHORTLIST_STATUSES = (SubmissionStatus.SHORTLISTED, SubmissionStatus.FINALIST)
 PLACE_ORDER = {"1st": 1, "2nd": 2, "3rd": 3, "runner_up": 4, "special": 5}
 
@@ -137,6 +137,10 @@ def entry_state(program, user, lang: str) -> dict:
     if status == "closed":
         data["state"] = "closed"
         return data
+    if not form_ready(program):
+        # Prompt 31: no entries until the challenge has a published form ("Applications open soon").
+        data["state"] = "not_ready"
+        return data
     if status == "upcoming":
         data["state"] = "not_open"
         return data
@@ -178,6 +182,8 @@ def check_eligibility(program, user, answers: dict, lang: str) -> dict:
     from apps.submissions.intake import submission_type_for
 
     ProgramAccessService.assert_can_enter(program, user)
+    if not form_ready(program):
+        raise ValidationError({"detail": {"code": "form_not_ready", "detail": FORM_NOT_READY}})
     rules = _rules(program)
     answers = answers or {}
     missing = [str(rule.id) for rule in rules if not isinstance(answers.get(str(rule.id)), bool)]

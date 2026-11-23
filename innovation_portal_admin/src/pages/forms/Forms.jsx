@@ -13,6 +13,7 @@ import { useConfirm } from '../../components/ui/confirm'
 import { useToast } from '../../components/ui/toast'
 import FormCard from '../../components/forms/FormCard'
 import CreateFormWizard from '../../components/forms/CreateFormWizard'
+import GeneralIdeaForm from '../../components/forms/GeneralIdeaForm'
 import { useT } from '../../i18n/context'
 import { forms as formsApi } from '../../lib/api/formBuilder'
 import { formKeys, useArchiveForm, useDuplicateForm } from '../../lib/queries/forms'
@@ -106,7 +107,7 @@ export default function Forms() {
     { key: 'open', label: t('forms.open'), onSelect: () => navigate(`/forms/${form.id}`) },
     { key: 'copy', label: t('forms.duplicate'), onSelect: () => duplicateForm(form) },
     { key: 'export', label: t('forms.export'), onSelect: () => exportCsv(form), hidden: !form.answer_count },
-    { key: 'archive', label: t('forms.archive'), onSelect: () => archiveForm(form), danger: true },
+    { key: 'archive', label: t('forms.archive'), onSelect: () => archiveForm(form), danger: true, hidden: form.general_ideas },
   ]
 
   return (
@@ -122,6 +123,8 @@ export default function Forms() {
           </Button>
         }
       />
+
+      <GeneralIdeaForm liveForms={tab === 'all' || tab === 'live' ? results.filter((f) => f.status === 'live') : null} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs
