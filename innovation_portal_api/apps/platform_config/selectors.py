@@ -68,6 +68,11 @@ class IntegrationRuntimeSelector:
             return not CedaStaffIdentityProvider().missing_config_keys()
         if kind == IntegrationConnection.Kind.SMS:
             return bool((getattr(settings, "MESSAGE_SENDERS", {}) or {}).get("sms"))
+        if kind == IntegrationConnection.Kind.EMAIL:
+            # Only when a test or command swapped the backend. In the running portal email needs a console connection.
+            from apps.platform_config.email_backend import uses_console_connection
+
+            return not uses_console_connection()
         return False
 
     @staticmethod
@@ -128,7 +133,9 @@ class FeatureFlagSelector:
             "features": {key: bool(flags.get(key)) and not service_status.needs_setup(key, states) for key in sorted(public_keys)},
             "sign_in": {
                 "password": bool(flags.get("password_sign_in")),
-                "code": bool(flags.get("code_sign_in")),
+                # A code needs a way to reach the person: SMS, WhatsApp or email.
+                "code": bool(flags.get("code_sign_in")) and not service_status.needs_setup("code_sign_in", states),
+                "code_by_email": bool(flags.get("code_sign_in")) and states.get(IntegrationConnection.Kind.EMAIL) == "active",
                 "code_by_sms": bool(flags.get("code_sign_in")) and bool(flags.get("sms_messages")),
                 "sso": {"active": sso_active, "provider": "ceda_staff", "label": SSO_BUTTON_LABEL},
                 # U7: the one second step after phone or email ("code" or "password").

@@ -22,7 +22,7 @@ from apps.platform_config.serializers import (
 from apps.platform_config.services import FeatureFlagService, IntegrationService, SMSStatusService, SSOTrialService
 from apps.platform_config.throttles import PlatformAdminThrottle, PlatformTestThrottle
 
-KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms, ussd, whatsapp or ai.", required=False, enum=["sso", "sms", "ussd", "whatsapp", "ai"])
+KIND_PARAMETER = OpenApiParameter("kind", str, description="Filter by kind: sso, sms, email, ussd, whatsapp or ai.", required=False, enum=["sso", "sms", "email", "ussd", "whatsapp", "ai"])
 TAGS = ["Platform settings"]
 
 

@@ -60,7 +60,8 @@ export default function AppLayout() {
           style={{ marginLeft: 'var(--sidebar-current)' }}
         >
           <Topbar />
-          <DemoLoginsBanner />
+          {/* The Form builder is for managing the form (3.5): no "Test accounts are on" strip above it. */}
+          {!/^\/forms\/[^/]+\/?$/.test(location.pathname) && <DemoLoginsBanner />}
           {location.pathname.startsWith('/evaluate/') ? (
             <main className="flex-1 overflow-hidden min-h-0">
               <div className="h-full w-full overflow-hidden">
