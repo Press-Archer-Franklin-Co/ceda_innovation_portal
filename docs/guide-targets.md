@@ -61,7 +61,7 @@ Use these ids when you write manual pages or guide answers. Each one has a short
 | `idea.back` | Idea form | Back |
 | `idea.saveExit` | Idea form | Save and exit |
 | `idea.send` | Idea form, last step | Send my idea |
-| `idea.check` | Idea form | Check my idea (2.13). Reserved: the button comes with the AI helper screens; the guide then shows "Check my idea" next to Show me |
+| `idea.check` | Idea form | Check my idea (2.13), in the AI helper panel beside the form. Shown only when the AI helper is on; the guide then shows "Check my idea" next to Show me |
 | `myIdeas.new` | My ideas | New idea |
 | `myIdeas.open` | My ideas | Open an idea (the first card) |
 | `track.progress` | Track my idea | Where your idea is (the stage timeline) |
