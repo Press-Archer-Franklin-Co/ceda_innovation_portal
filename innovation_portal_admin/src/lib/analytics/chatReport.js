@@ -32,18 +32,27 @@ export function readChatFilters(params, now = new Date()) {
 
 const orNull = (v) => (v === undefined || v === null ? null : v)
 
-/** The API's answer in the shape the screen draws. */
+/** answered / started as a percentage with one decimal. No chats started means there is no percentage. */
+export function answeredPercent(answered, started) {
+  if (answered === null || answered === undefined || !started) return null
+  return Math.round((answered * 1000) / started) / 10
+}
+
+/** The API's answer (prompt 53) in the shape the screen draws. */
 export function normaliseChatReport(data) {
   const totals = data?.totals ?? {}
+  const firstReply = data?.first_reply_minutes ?? {}
+  const satisfaction = data?.satisfaction ?? {}
+  const byScore = satisfaction.by_score ?? {}
   return {
     liveChatOn: data?.live_chat_on !== false,
     totals: {
       started: orNull(totals.started),
       answered: orNull(totals.answered),
-      answeredPct: orNull(totals.answered_pct),
-      medianFirstReply: orNull(totals.median_first_reply_minutes),
-      averageRating: orNull(totals.average_rating),
-      ratedCount: orNull(totals.rated_count),
+      answeredPct: answeredPercent(totals.answered, totals.started),
+      medianFirstReply: orNull(firstReply.median),
+      averageRating: orNull(satisfaction.average),
+      ratedCount: orNull(satisfaction.rated),
       outsideHours: orNull(totals.outside_hours),
       escalated: orNull(totals.escalated),
     },
@@ -52,10 +61,10 @@ export function normaliseChatReport(data) {
       .map((channel) => (data?.by_channel ?? []).find((r) => r.channel === channel))
       .filter(Boolean)
       .map((r) => ({ channel: r.channel, started: r.started ?? 0, answered: r.answered ?? 0 })),
-    busiest: (data?.busiest ?? []).filter((r) => r.weekday >= 0 && r.weekday <= 6 && r.hour >= 0 && r.hour <= 23).map((r) => ({ weekday: r.weekday, hour: r.hour, chats: r.chats ?? 0 })),
-    ratings: [1, 2, 3, 4, 5].map((stars) => ({ stars, count: (data?.ratings ?? []).find((r) => r.stars === stars)?.count ?? 0 })),
-    answerers: (data?.answerers ?? []).map((r) => ({
-      id: r.id, name: r.name, chats: orNull(r.chats_handled), medianFirstReply: orNull(r.median_first_reply_minutes), rating: orNull(r.average_rating), openNow: orNull(r.open_now),
+    busiest: (data?.busiest_hours ?? []).filter((r) => r.weekday >= 0 && r.weekday <= 6 && r.hour >= 0 && r.hour <= 23).map((r) => ({ weekday: r.weekday, hour: r.hour, chats: r.started ?? 0 })),
+    ratings: [1, 2, 3, 4, 5].map((stars) => ({ stars, count: byScore[String(stars)] ?? 0 })),
+    answerers: (data?.agents ?? []).map((r) => ({
+      id: r.id, name: r.name, chats: orNull(r.handled), medianFirstReply: orNull(r.median_first_reply_minutes), rating: orNull(r.average_satisfaction), openNow: orNull(r.open_now),
     })),
   }
 }

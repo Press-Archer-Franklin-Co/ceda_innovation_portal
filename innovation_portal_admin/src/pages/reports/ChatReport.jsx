@@ -154,10 +154,10 @@ export default function ChatReport() {
         <Stat label={t('chatrep.stat.escalated')} value={totals.escalated} />
       </dl>
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
-        <ChartCard className="lg:col-span-2" title={t('chatrep.perDay')} query={query} isEmpty={report.perDay.length === 0}
+        <ChartCard className="lg:col-span-2" title={t('chatrep.perDay')} query={query} isEmpty={report.perDay.every((r) => !r.started && !r.answered)}
           chart={{ config: perDay, label: t('chatrep.perDayLabel') }}
           table={{ columns: [{ key: 'date', label: t('chatrep.col.date') }, { key: 'started', label: t('chatrep.startedSeries'), align: 'right' }, { key: 'answered', label: t('chatrep.answeredSeries'), align: 'right' }], rows: report.perDay.map((r) => ({ id: r.date, ...r })) }} />
-        <ChartCard title={t('chatrep.byChannel')} query={query} isEmpty={report.byChannel.length === 0}
+        <ChartCard title={t('chatrep.byChannel')} query={query} isEmpty={report.byChannel.every((r) => !r.started && !r.answered)}
           chart={{ config: byChannel, label: t('chatrep.byChannelLabel') }}
           table={{ columns: [{ key: 'name', label: t('chatrep.col.channel') }, { key: 'started', label: t('chatrep.startedSeries'), align: 'right' }, { key: 'answered', label: t('chatrep.answeredSeries'), align: 'right' }], rows: report.byChannel.map((r) => ({ id: r.channel, name: t(`chatrep.ch.${r.channel}`), started: r.started, answered: r.answered })) }} />
         <ChartCard className="lg:col-span-2" title={t('chatrep.busiest')} subtitle={caption} query={query} isEmpty={!best}
