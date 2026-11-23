@@ -475,6 +475,8 @@ export const programmesEn = {
   'wfx.commentEvery': 'A comment on every criterion',
   'wfx.reminder': 'Remind after (days)',
   'wfx.reminderHint': 'Leave empty for no reminder.',
+  'wfx.notifyInnovator': 'Tell the innovator when an idea reaches this step',
+  'wfx.notifyInnovatorHint': 'In the portal and by email, and on WhatsApp if the idea came in on WhatsApp. A challenge stage uses its own setting in the Challenge builder.',
   'wfx.saved': 'Step saved',
   'wfx.saveError': 'We could not save the extra step settings',
 }
@@ -950,6 +952,8 @@ export const programmesTn = {
   'wfx.commentEvery': 'Ntlha mo tekanyong nngwe le nngwe', // TODO tn-review
   'wfx.reminder': 'Gakolola morago ga (malatsi)', // TODO tn-review
   'wfx.reminderHint': 'Tlogela go se na sepe fa go sa tlhokege kgakololo.', // TODO tn-review
+  'wfx.notifyInnovator': 'Itsise moitseanape fa kakanyo e goroga mo kgatong e', // TODO tn-review
+  'wfx.notifyInnovatorHint': 'Mo porotaleng le ka imeile, le ka WhatsApp fa kakanyo e tsile ka WhatsApp. Kgato ya kgaisano e dirisa thulaganyo ya yone mo Challenge builder.', // TODO tn-review
   'wfx.saved': 'Kgato e bolokilwe', // TODO tn-review
   'wfx.saveError': 'Ga re a kgona go boloka dithulaganyo tse dingwe tsa kgato', // TODO tn-review
 }
