@@ -8,7 +8,7 @@ const withLegend = (options) => ({
 
 export function perDayConfig(rows, { t }) {
   const day = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-BW', { timeZone: 'UTC', day: 'numeric', month: 'short' })
-  const line = (label, key, color) => ({ label, data: rows.map((r) => r[key]), borderColor: tokenColor(color), backgroundColor: tokenColor(color, 0.15), pointRadius: rows.length > 31 ? 0 : 2, tension: 0.25, borderWidth: 2 })
+  const line = (label, key, color) => ({ label, data: rows.map((r) => r[key]), borderColor: tokenColor(color), backgroundColor: tokenColor(color, 0.15), pointRadius: rows.length > 31 ? 0 : 2, cubicInterpolationMode: 'monotone', borderWidth: 2 })
   return {
     type: 'line',
     data: { labels: rows.map((r) => day(r.date)), datasets: [line(t('chatrep.startedSeries'), 'started', 'primary'), line(t('chatrep.answeredSeries'), 'answered', 'success')] },
