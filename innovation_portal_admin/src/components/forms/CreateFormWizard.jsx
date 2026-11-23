@@ -8,7 +8,7 @@ import Select from '../ui/Select'
 import { Checkbox } from '../ui/Choice'
 import ErrorState from '../ui/ErrorState'
 import Skeleton from '../ui/Skeleton'
-import LayoutThumb from './LayoutThumb'
+import FormIcon from './FormIcon'
 import { useT } from '../../i18n/context'
 import { useCreateForm, useForms, useFormTemplates } from '../../lib/queries/forms'
 import { usePrograms } from '../../lib/queries/programs'
@@ -183,9 +183,9 @@ function SourceGrid({ title, items, sourceId, setSourceId, meta }) {
                 selected ? 'border-2 border-primary' : 'border-border hover:shadow-card',
               )}
             >
-              <LayoutThumb rows={item.layout_preview} />
-              <span className="flex items-center justify-between gap-2 p-3">
-                <span className="min-w-0">
+              <span className="flex items-center gap-2 p-3">
+                <FormIcon />
+                <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-bold text-text">{item.name}</span>
                   <span className="block truncate text-[12px] text-muted">{meta(item)}</span>
                 </span>
