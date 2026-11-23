@@ -63,3 +63,12 @@ export function formatGaboroneDateTime(value: string | null | undefined, lang: L
   if (!date) return ''
   return date.toLocaleString(LOCALE[lang], { timeZone: 'Africa/Gaborone', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false })
 }
+
+/** A pitch session's Gaborone date and time from the API's own "date" and "time": "Fri 28 Nov, 09:00". */
+export function formatPitchWhen(session: { date: string; time: string }, lang: Lang): string {
+  const [y, m, d] = (session.date || '').split('-').map(Number)
+  if (!y || !m || !d) return ''
+  // Noon UTC keeps the calendar day the same in every time zone; only the day name and month are read from it.
+  const day = new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString(LOCALE[lang], { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' })
+  return session.time ? `${day}, ${session.time}` : day
+}

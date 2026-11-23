@@ -206,6 +206,8 @@ def home_messages(user, submissions, drafts, lang: str = "en") -> list[dict]:
             out.append({
                 "type": "shortlisted", **base(sub, "submission"), "at": _iso(changed or sub.updated_at),
                 "challenge": None if sub.program.is_general_intake else sub.program.title,
+                # Prompt 39 shape (PR 113): null until staff set one. Never a made-up date.
+                "pitch_session": pitch_fields(sub, lang)["pitch_session"],
             })
     moved = (
         SubmissionStatusHistory.objects.filter(submission__in=[s for s in submissions if s.current_status not in SHORTLIST_STATUSES], created_at__gte=now - STAGE_MOVE_WINDOW)
