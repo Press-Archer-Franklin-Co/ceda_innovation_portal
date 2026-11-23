@@ -192,9 +192,50 @@ NODE_SETTINGS: dict[str, dict] = {
             _f("error_next", "node", "If it cannot be sent, go to", "Fa e sa kgone go romelwa, ya kwa", optional=True),
         ],
     },
+    # Whole idea in WhatsApp (feat/whatsapp-full-flow).
+    "form_questions": {
+        "text": {"label": "What we say before the first question", "label_tn": "Se re se buang pele ga potso ya ntlha"},
+        "next": True,
+        "fields": [
+            _f("program_source", "select", "Which challenge's form", "Foromo ya kgaisano efe", choices=_choices([
+                ("ask", "Ask the person to choose an open challenge (or General idea)", "Kopa motho go tlhopha kgaisano e e butsweng (kgotsa kakanyo fela)"),
+                ("fixed", "This challenge", "Kgaisano e"),
+                ("variable", "The challenge chosen earlier (an answer)", "Kgaisano e e tlhophilweng pele (karabo)"),
+            ]), default="ask"),
+            _f("program_id", "program", "Challenge", "Kgaisano", default=None, show_if={"field": "program_source", "in": ["fixed"]}),
+            _f("program_variable", "variable_ref", "Answer holding the challenge", "Karabo e e nang le kgaisano", optional=True, show_if={"field": "program_source", "in": ["variable"]}),
+            _f("program_text", "bilingual", "Question asking for the challenge", "Potso e e kopang kgaisano", default={"en": "Which challenge is your idea for?", "tn": "Kakanyo ya gago ke ya kgaisano efe?"}, show_if={"field": "program_source", "in": ["ask"]}),
+            _f("ask", "select", "Questions to ask", "Dipotso tse di botswang", choices=_choices([
+                ("required", "Only the questions that need an answer", "Dipotso tse di tlhokang karabo fela"),
+                ("all", "Every question", "Dipotso tsotlhe"),
+            ]), default="required"),
+            _f("sections", "text", "Only these form steps (their codes, comma between them; empty for all)", "Dikgato tse fela tsa foromo (dikhoutu, khoma magareng; go se kwalwe sepe go botsa tsotlhe)", optional=True, default=""),
+            _f("title_field", "text", "Form field that names the idea", "Lefelo la foromo le le neelang kakanyo leina", default="title"),
+            _f("name_variable", "variable_ref", "Person's name comes from", "Leina la motho le tswa mo", optional=True, default="name"),
+            _f("create_account", "boolean", "Make an account for new numbers", "Dira akhaonto ya dinomoro tse dintšhwa", default=True),
+            _f("back_words", "bilingual", "Words for the previous question (comma between them)", "Mafoko a potso e e fetileng", default={"en": "back", "tn": "morago"}),
+            _f("skip_words", "bilingual", "Words that skip a question that is not needed", "Mafoko a a tlolang potso e e sa tlhokegeng", default={"en": "skip", "tn": "tlola"}),
+            _f("done_words", "bilingual", "Words that finish sending files", "Mafoko a a fetsang go romela difaele", default={"en": "done", "tn": "fedile"}),
+            _f("done_text", "bilingual", "Message after the last question", "Molaetsa morago ga potso ya bofelo", optional=True),
+            _f("website_text", "bilingual", "Message for questions to finish on the website ({fields}, {link})", "Molaetsa wa dipotso tse di fediwang mo webosaeteng", default={"en": "Finish these on the website: {fields}. {link}", "tn": "Fetsa tse mo webosaeteng: {fields}. {link}"}),
+            _f("error_next", "node", "If the idea cannot be started, go to", "Fa kakanyo e sa kgone go simololwa, ya kwa", optional=True),
+        ],
+    },
+    "my_ideas": {
+        "text": {"label": "What we say above the list", "label_tn": "Se re se buang fa godimo ga lenane"},
+        "next": True,
+        "fields": [
+            _f("open_text", "bilingual", "Heading of the open ideas", "Setlhogo sa dikakanyo tse di buleditsweng", default={"en": "Your open ideas:", "tn": "Dikakanyo tsa gago tse di buleditsweng:"}),
+            _f("recent_text", "bilingual", "Heading of the recent ideas", "Setlhogo sa dikakanyo tsa bosheng", default={"en": "Your recent ideas:", "tn": "Dikakanyo tsa gago tsa bosheng:"}),
+            _f("empty_text", "bilingual", "Message when there are no ideas", "Molaetsa fa go se na dikakanyo", default={"en": "You have no ideas with us yet.", "tn": "Ga o ise o nne le dikakanyo le rona."}),
+            _f("continue_next", "node", "Continue this idea goes to", "Tswelela ka kakanyo e e ya kwa", optional=True),
+        ],
+    },
 }
 
 DESCRIPTIONS_TN = {
+    "form_questions": "E botsa dipotso tsa foromo ya kgaisano ka nngwe ka nngwe mme e boloka dikarabo mo kakanyong.",
+    "my_ideas": "E bontsha dikakanyo tsa motho (tse di buleditsweng le tsa bosheng) ntle le dinomoro tsa dikakanyo.",
     "file": "E kopa setshwantsho kgotsa tokomane mme e e boloka mo kakanyong.",
     "submit": "E romela kakanyo kwa CEDA mme e neela nomoro ya kakanyo.",
     "menu": "Dikgetho tse di nang le dinomoro mo USSD; dikonopo (go fitlha go 3) kgotsa lenane (go fitlha go 10) mo WhatsApp.",

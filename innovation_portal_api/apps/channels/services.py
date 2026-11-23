@@ -469,7 +469,7 @@ class SessionService:
         file they are ignored and ``file_note`` goes before the screen (the text is still used)."""
         graph = SessionService.graph_for(session)
         runner = SessionService._runner(session, graph, message_id=message_id)
-        if media and runner.current_type() != "file":
+        if media and not runner.expects_file():
             screen = runner.answer(text) if (text or "").strip() else runner.repeat()
             if file_note:
                 screen.text = f"{file_note}\n{screen.text}" if screen.text else file_note
@@ -685,8 +685,8 @@ class WhatsAppWebhookService:
             WhatsAppOutbound.send_screen(provider, phone, screen)
             handled += 1
             whatsapp_logger.info(
-                "whatsapp inbound connection=%s phone=%s sid=%s node=%s outcome=%s files=%d ms=%d",
-                channel_connection.id, mask_phone(phone), message.message_id, node_type, outcome, len(media), int((time.monotonic() - started) * 1000),
+                "whatsapp inbound connection=%s phone=%s sid=%s node=%s outcome=%s choice=%s files=%d ms=%d",
+                channel_connection.id, mask_phone(phone), message.message_id, node_type, outcome, getattr(message, "choice_source", "text"), len(media), int((time.monotonic() - started) * 1000),
             )
         return handled, provider
 
@@ -694,9 +694,17 @@ class WhatsAppWebhookService:
 class WhatsAppOutbound:
     @staticmethod
     def send_screen(provider, phone: str, screen: Screen) -> None:
-        from apps.platform_config.providers.whatsapp import Choice, OutboundReply
+        from apps.channels.actions import pick
+        from apps.channels.engine import DEFAULT_TEXT
+        from apps.platform_config.providers.whatsapp import MAX_LIST_ROWS, Choice, OutboundReply, numbered
 
-        reply = OutboundReply(text=screen.text, choices=[Choice(c.id, c.title) for c in screen.choices])
+        lang = getattr(screen, "lang", "en") or "en"
+        choices = [Choice(c.id, c.title) for c in screen.choices]
+        if len(choices) > MAX_LIST_ROWS:
+            # WhatsApp lists hold 10 rows: longer menus go as numbered text.
+            reply = OutboundReply(text=numbered(screen.text, choices) + "\n" + pick(DEFAULT_TEXT["reply_number"], lang))
+        else:
+            reply = OutboundReply(text=screen.text, choices=choices, list_button=pick(DEFAULT_TEXT["list_button"], lang))
         try:
             result = provider.send_reply(phone, reply)
             if not result.ok:

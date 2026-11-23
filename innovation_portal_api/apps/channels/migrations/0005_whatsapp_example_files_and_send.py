@@ -6,8 +6,12 @@ no unpublished changes, the seeded steps). Publishes version 2. Reversible: the 
 version 2 and the two steps and puts the "Save idea" step back as it was.
 """
 
+import logging
+
 from django.db import migrations
 from django.utils import timezone
+
+logger = logging.getLogger("apps.channels.whatsapp")  # has a console handler, so migrate shows why it skipped
 
 NAME = "CEDA Innovation (WhatsApp)"
 SEEDED_KEYS = {
@@ -76,13 +80,29 @@ def forward(apps, schema_editor):
     Journey = apps.get_model("channels", "Journey")
     JourneyNode = apps.get_model("channels", "JourneyNode")
     JourneyVersion = apps.get_model("channels", "JourneyVersion")
-    journey = Journey.objects.filter(name=NAME, version=1, has_unpublished_changes=False).first()
+    journey = Journey.objects.filter(name=NAME).first()
     if journey is None:
+        logger.warning("%s skipped: no journey called %r", MARK, NAME)
+        return
+    if journey.version != 1 or journey.has_unpublished_changes:
+        logger.warning(
+            "%s skipped %r: it is at version %s%s, not the seeded version 1. Run upgrade_example_whatsapp_journey instead.",
+            MARK, NAME, journey.version, " with unpublished changes" if journey.has_unpublished_changes else "",
+        )
         return
     keys = set(JourneyNode.objects.filter(journey=journey).values_list("key", flat=True))
     save = JourneyNode.objects.filter(journey=journey, key="save").first()
-    if keys != SEEDED_KEYS or save is None or save.next_key != "idea_done" or save.text != OLD_SAVE_TEXT:
-        return  # staff changed it: leave their journey alone
+    reasons = []
+    if keys != SEEDED_KEYS:
+        reasons.append(f"steps added {sorted(keys - SEEDED_KEYS)} removed {sorted(SEEDED_KEYS - keys)}")
+    if save is None:
+        reasons.append("no 'save' step")
+    elif save.next_key != "idea_done" or save.text != OLD_SAVE_TEXT:
+        reasons.append("the 'save' step was changed")
+    if reasons:
+        # Staff changed it: leave their journey alone, and say why.
+        logger.warning("%s skipped %r: %s. Run upgrade_example_whatsapp_journey instead.", MARK, NAME, "; ".join(reasons))
+        return
     for step in (FILE_STEP, SEND_STEP):
         JourneyNode.objects.create(
             journey=journey, key=step["key"], type=step["type"], title=step["title"], text=step["text"],
