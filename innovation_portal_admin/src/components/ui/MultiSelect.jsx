@@ -127,7 +127,7 @@ export function MultiSelectControl({ options, value = [], onChange, placeholder,
               />
             </div>
           </div>
-          <ul id={listId} role="listbox" aria-multiselectable="true" aria-labelledby={buttonId} className="flex-1 min-h-0 overflow-y-auto py-1">
+          <ul id={listId} role="listbox" aria-multiselectable="true" aria-labelledby={buttonId} className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-1">
             {shown.length === 0 && <li className="px-3 py-2 text-[13px] text-muted">{t('common.noMatches')}</li>}
             {shown.map((o, i) => {
               const isSel = value.includes(o.value)

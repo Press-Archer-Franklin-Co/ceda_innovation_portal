@@ -133,7 +133,7 @@ export default function ChatPanel({ type, id, row, onChanged }) {
           )}
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           {chat.state === 'loading' ? (
             <div className="flex flex-col gap-3" aria-busy="true"><Skeleton className="h-12 w-2/3" /><Skeleton className="ml-auto h-12 w-1/2" /><Skeleton className="h-12 w-3/5" /></div>
           ) : chat.messages.length === 0 ? (

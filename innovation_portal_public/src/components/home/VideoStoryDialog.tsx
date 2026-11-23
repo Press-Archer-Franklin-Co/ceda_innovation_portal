@@ -104,7 +104,7 @@ export default function VideoStoryDialog({ post, onClose, onOpenPost, triggerRef
                 )}
               </div>
               {showTranscript && (
-                <section aria-label={t('video.transcript')} className="rounded-card bg-surface2 p-4 max-h-60 overflow-y-auto text-d-body-s text-text space-y-2">
+                <section aria-label={t('video.transcript')} className="rounded-card bg-surface2 p-4 max-h-60 overflow-y-auto overscroll-contain text-d-body-s text-text space-y-2">
                   {transcript === null ? <Skeleton className="h-16 w-full" /> : transcript.map((line, i) => <p key={i}>{line}</p>)}
                 </section>
               )}

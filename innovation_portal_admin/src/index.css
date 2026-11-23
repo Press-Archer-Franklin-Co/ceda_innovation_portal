@@ -274,6 +274,9 @@
 
 /* EditorWorkspace (builders): from 1024px the page does not scroll; the canvas and the panel scroll on their own. */
 @media (min-width: 1024px) {
-  main:has(> div > [data-editor-workspace]) { overflow: hidden; }
+  main:has(> div > [data-editor-workspace]) { overflow: hidden; scrollbar-gutter: auto; }
   main:has(> div > [data-editor-workspace]) > div { height: 100%; }
 }
+
+/* The staff content area is the page: its width never shifts when a scrollbar comes or goes. */
+.staff-scroll { scrollbar-gutter: stable; }

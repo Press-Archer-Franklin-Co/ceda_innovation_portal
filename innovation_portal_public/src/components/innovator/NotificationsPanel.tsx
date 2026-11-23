@@ -94,7 +94,7 @@ export default function NotificationsPanel({ compact = false, onNavigate }: { co
         )}
       </div>
       <FilterPills options={filters} value={filter} onChange={setFilter} className={compact ? 'px-5 pt-3' : 'pt-4'} />
-      <div className={clsx('mt-3', compact && 'max-h-[360px] overflow-y-auto')}>
+      <div className={clsx('mt-3', compact && 'max-h-[360px] overflow-y-auto overscroll-contain')}>
         {failed ? (
           <ErrorState title={t('notif.loadError')} onRetry={load} framed={!compact} />
         ) : !shown ? (

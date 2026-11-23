@@ -34,7 +34,7 @@ export default function GuideSheet({ triggerRef }) {
       id="need-help-guide"
       data-guide-ui
       aria-labelledby="guide-title"
-      className="fixed inset-x-0 bottom-0 z-[70] max-h-[70vh] overflow-y-auto rounded-t-[20px] bg-surface shadow-pop border-t border-border px-4 pb-[max(16px,env(safe-area-inset-bottom))] flex flex-col gap-3"
+      className="fixed inset-x-0 bottom-0 z-[70] max-h-[70vh] overflow-y-auto overscroll-contain rounded-t-[20px] bg-surface shadow-pop border-t border-border px-4 pb-[max(16px,env(safe-area-inset-bottom))] flex flex-col gap-3"
     >
       <button
         type="button"

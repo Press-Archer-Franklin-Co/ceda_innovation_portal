@@ -51,7 +51,7 @@ export default function Popover({ open, onClose, triggerRef, align = 'start', wi
       tabIndex={-1}
       style={inline ? { width, maxHeight } : anchorStyle(triggerRef?.current, { align, width, maxHeight })}
       className={cn(
-        'z-[55] bg-surface border border-border rounded-card shadow-pop overflow-y-auto focus:outline-none',
+        'z-[55] bg-surface border border-border rounded-card shadow-pop overflow-y-auto overscroll-contain focus:outline-none',
         inline ? 'absolute mt-1.5 right-0' : 'fixed',
         className,
       )}

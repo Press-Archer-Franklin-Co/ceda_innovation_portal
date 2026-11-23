@@ -168,7 +168,7 @@ function SourceGrid({ title, items, sourceId, setSourceId, meta }) {
   return (
     <div>
       <p className="mb-2 text-[13px] font-bold text-text">{title}</p>
-      <div role="radiogroup" aria-label={title} className="grid max-h-[300px] gap-3 overflow-y-auto sm:grid-cols-3">
+      <div role="radiogroup" aria-label={title} className="grid max-h-[300px] gap-3 overflow-y-auto overscroll-contain sm:grid-cols-3">
         {items.map((item) => {
           const selected = sourceId === item.id
           return (

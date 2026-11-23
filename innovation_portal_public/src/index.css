@@ -7,7 +7,8 @@
 
 
 @layer base {
-  html { scroll-behavior: smooth; }
+  /* The page never shifts sideways when a dialog locks scrolling. */
+  html { scroll-behavior: smooth; scrollbar-gutter: stable; }
   body { @apply font-body antialiased text-text bg-bg; }
   h1, h2, h3, h4, h5, h6 { @apply font-heading; }
   :focus-visible { @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg; }

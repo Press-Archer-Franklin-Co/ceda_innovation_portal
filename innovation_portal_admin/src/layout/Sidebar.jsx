@@ -244,7 +244,7 @@ export default function Sidebar({ previewUser } = {}) {
           </div>
         </div>
 
-        <nav ref={ref('nav')} className="relative flex-1 overflow-y-auto overflow-x-hidden sidebar-scroll px-2 py-1.5">
+        <nav ref={ref('nav')} className="relative flex-1 overflow-y-auto overscroll-contain overflow-x-hidden sidebar-scroll px-2 py-1.5">
           {groups.map((group) => (
             <div key={group.key} className="mt-2 first:mt-0">
               <p data-menu-row="title" className="sidebar-title relative pl-[18px] pt-2 pb-1 text-[10px] 2xl:text-[11px] font-heading font-bold tracking-[0.08em] uppercase whitespace-nowrap select-none">

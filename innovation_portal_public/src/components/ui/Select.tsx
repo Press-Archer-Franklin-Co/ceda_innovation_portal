@@ -189,7 +189,7 @@ export function SelectControl<V extends string | number = string>({
             aria-labelledby={buttonId}
             aria-activedescendant={!withSearch && shown[active] ? `${listId}-${active}` : undefined}
             onKeyDown={withSearch ? undefined : onListKey}
-            className="flex-1 min-h-0 overflow-y-auto py-1 focus:outline-none"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-1 focus:outline-none"
           >
             {shown.length === 0 && <li className="px-3.5 py-2.5 text-d-body-s text-muted">{t('common.noMatches')}</li>}
             {shown.map((o, i) => {

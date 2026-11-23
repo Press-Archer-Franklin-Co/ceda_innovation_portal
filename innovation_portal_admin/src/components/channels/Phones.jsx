@@ -88,7 +88,7 @@ export function WhatsAppPhone({ sim }) {
         <Idle label={t('ch.sim.sayHi')} hint={t('ch.sim.idleWhatsapp')} onStart={sim.start} />
       ) : (
         <>
-          <ol className="flex-1 overflow-y-auto p-2.5 space-y-1.5" aria-live="polite">
+          <ol className="flex-1 overflow-y-auto overscroll-contain p-2.5 space-y-1.5" aria-live="polite">
             {sim.chat.map((bubble, i) => {
               const last = i === sim.chat.length - 1
               if (bubble.from === 'person') return <li key={i} className="ml-auto max-w-[80%] rounded-card bg-success-soft px-2.5 py-1.5 text-[12px] text-text">{bubble.text}</li>

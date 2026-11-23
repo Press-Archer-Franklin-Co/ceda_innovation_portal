@@ -58,7 +58,7 @@ function IdeaLink({ value, onChange }) {
         onChange={(e) => { setQ(e.target.value); clearTimeout(timer.current); timer.current = setTimeout(() => setTerm(e.target.value.trim()), 300) }} />
       {term.length >= 2 && !ideas.isLoading && (
         list.length ? (
-          <ul className="flex max-h-48 flex-col overflow-y-auto rounded-control border border-border">
+          <ul className="flex max-h-48 flex-col overflow-y-auto overscroll-contain rounded-control border border-border">
             {list.map((s) => {
               const label = t('stories.linkedTo', { reference: s.reference_number ?? '', title: s.title ?? '', name: s.innovator_detail?.full_name ?? '' }).replace(/ \(\)$/, '')
               return (

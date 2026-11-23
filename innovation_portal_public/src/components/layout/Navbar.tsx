@@ -244,7 +244,7 @@ function MenuDrawer({ open, onClose, triggerRef, links, canStaff, onLogout, onAc
         <div className="px-5 pt-3 pb-1 shrink-0">
           <SiteSearch variant="drawer" onNavigate={onClose} onQueryChange={setSearching} />
         </div>
-        <nav aria-label={t('nav.main')} className={clsx('flex-1 overflow-y-auto px-5 py-2', searching && 'hidden')}>
+        <nav aria-label={t('nav.main')} className={clsx('flex-1 overflow-y-auto overscroll-contain px-5 py-2', searching && 'hidden')}>
           {links.map((l) => {
             const Icon = MENU_ICONS[l.to] ?? FileText
             return (

@@ -9,6 +9,8 @@ import { useI18n } from '../i18n'
 import { useAsync } from '../lib/useAsync'
 import { usePageTitle } from '../lib/usePageTitle'
 import { faqsService } from '../services/faqs.service'
+import { channelsService } from '../services/channels.service'
+import OtherWaysBlock from '../components/home/OtherWaysBlock'
 import type { ApiFAQ } from '../types/api'
 
 // Figma 1.11 Help centre (138:840 website, 138:1238 phone).
@@ -102,6 +104,7 @@ export default function FAQ() {
   const { t, lang } = useI18n()
   usePageTitle(t('nav.help'))
   const res = useAsync(() => faqsService.getPublic(lang), [lang])
+  const channels = useAsync(() => channelsService.publicChannels(), [])
   const [q, setQ] = useState('')
   const [topic, setTopic] = useState<string | null>(null)
   const term = q.trim().toLowerCase()
@@ -186,6 +189,7 @@ export default function FAQ() {
             </div>
           </>
         )}
+        <OtherWaysBlock channels={channels.data} />
       </div>
     </>
   )

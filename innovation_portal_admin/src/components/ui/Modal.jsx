@@ -87,7 +87,7 @@ export default function Modal({ open, onClose, title, description, size = 'md', 
           </button>
         </div>
 
-        <div className={cn('flex-1 min-h-0 overflow-y-auto px-5 py-3 2xl:px-6 2xl:py-4', bodyClassName)}>{children}</div>
+        <div className={cn('flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-3 2xl:px-6 2xl:py-4', bodyClassName)}>{children}</div>
 
         {footer && (
           <div className="flex flex-wrap items-center justify-end gap-2 px-5 py-3 2xl:px-6 2xl:py-4 bg-surface2 flex-shrink-0">{footer}</div>

@@ -8,6 +8,8 @@ import { HeroBannerSkeleton } from '../components/home/HeroBanner'
 import { ErrorState } from '../components/ui/EmptyState'
 import { useQuickStartFlow } from '../components/home/QuickStartFlow'
 import { useTrigger } from '../components/ui/useTrigger'
+import OtherWaysBlock from '../components/home/OtherWaysBlock'
+import { channelsService } from '../services/channels.service'
 import HomeSections from '../components/home/HomeSections'
 import VideoStoryDialog from '../components/home/VideoStoryDialog'
 
@@ -29,6 +31,8 @@ function HomeSkeleton() {
 export default function Home() {
   const { t, lang } = useI18n()
   const home = useAsync(() => publicContent.home(), [lang])
+  // Loaded with the page, so the block is there on first paint and nothing below it jumps.
+  const channels = useAsync(() => channelsService.publicChannels(), [])
   const sections = (home.data?.sections ?? []) as HomeSection[]
   const challenges: Challenge[] = (sections.find((s) => s.type === 'challenges')?.data as { items: Challenge[] } | undefined)?.items ?? []
   // The quick start card in the banner (1.1, 1.2), shared with /submit.
@@ -49,7 +53,7 @@ export default function Home() {
   const storyCard = useTrigger() // the card that was pressed: the story opens out of it
   const video: PostCard | null = storySlug ? ({ slug: storySlug, id: storySlug, title: '' } as PostCard) : null
 
-  if (home.loading) return <HomeSkeleton />
+  if (home.loading || channels.loading) return <HomeSkeleton />
   if (home.error && !home.data) {
     return (
       <div className="max-w-[1200px] mx-auto px-5 lg:px-6 py-16">
@@ -61,7 +65,12 @@ export default function Home() {
   return (
     <div aria-busy={home.fetching || undefined}>
       <div className="contents" onClickCapture={storyCard.fromInside}>
-        <HomeSections sections={sections} card={card} onOpenVideo={openStory} />
+        <HomeSections
+          sections={sections}
+          card={card}
+          onOpenVideo={openStory}
+          afterHero={<OtherWaysBlock channels={channels.data} className="mx-auto max-w-[1200px] px-5 pt-10 lg:px-6 lg:pt-11" />}
+        />
       </div>
       <VideoStoryDialog post={video} onClose={() => openStory(null)} onOpenPost={openStory} triggerRef={storyCard.ref} />
       {sheet}

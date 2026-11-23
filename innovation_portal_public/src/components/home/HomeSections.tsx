@@ -1,3 +1,4 @@
+import { Fragment } from 'react'
 import type { ReactNode } from 'react'
 import HeroBanner, { HeroSettings } from './HeroBanner'
 import {
@@ -10,14 +11,19 @@ import type { HomeSection, PostCard } from '../../services/publicContent.service
  * home page editor's preview (3.8, /preview/home), so the preview and the site never drift.
  * `card` is the quick start card shown in the banner.
  */
-export default function HomeSections({ sections, card, onOpenVideo }: { sections: HomeSection[]; card: ReactNode; onOpenVideo?: (post: PostCard) => void }) {
+export default function HomeSections({ sections, card, onOpenVideo, afterHero }: { sections: HomeSection[]; card: ReactNode; onOpenVideo?: (post: PostCard) => void; afterHero?: ReactNode }) {
   return (
     <>
       {sections.map((section, i) => {
         const key = section.id ?? `${section.type}-${i}`
         switch (section.type) {
           case 'hero_banner':
-            return <HeroBanner key={key} settings={section.settings as HeroSettings} card={card} photo={section.data?.photo ?? null} />
+            return (
+              <Fragment key={key}>
+                <HeroBanner settings={section.settings as HeroSettings} card={card} photo={section.data?.photo ?? null} />
+                {afterHero}
+              </Fragment>
+            )
           case 'partners_strip':
             return <PartnersStrip key={key} title={section.settings.title} items={section.data?.items ?? []} />
           case 'challenges':

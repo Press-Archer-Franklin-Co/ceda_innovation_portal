@@ -103,7 +103,7 @@ export default function Modal({
             )
           )}
           {!header && !title && !description && <CloseButton onClose={onClose} label={t('common.close')} className="absolute right-4 top-4 z-10" />}
-          <div className={clsx('px-6 py-4 overflow-y-auto min-h-0 flex-1', bodyClassName)}>{children}</div>
+          <div className={clsx('px-6 py-4 overflow-y-auto overscroll-contain min-h-0 flex-1', bodyClassName)}>{children}</div>
           {footer && <div className="flex flex-wrap items-center justify-end gap-3 px-6 py-4 bg-surface2 shrink-0">{footer}</div>}
         </div>
       </div>

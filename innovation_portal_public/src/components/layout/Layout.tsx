@@ -1,5 +1,5 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { Suspense, useEffect } from 'react'
+import { Suspense } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import MobileTabBar from './MobileTabBar'
@@ -9,15 +9,15 @@ import PageSkeleton from '../ui/PageSkeleton'
 import PageErrorBoundary from '../ui/PageErrorBoundary'
 import { BootStep } from '../ui/BrandLoader'
 import { boot } from '../../lib/boot'
+import { useScrollKeeper } from '../../lib/scrollKeeper'
 
 /** Public shell: utility bar + nav, page, footer; on phone a sticky tab bar. Page background is always bg (white). */
 export default function Layout() {
   const { pathname } = useLocation()
   const t = useT()
 
-  useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+  // A new page starts at the top; Back and Forward return to where the person was.
+  useScrollKeeper()
 
   return (
     <div className="flex flex-col min-h-screen bg-bg text-text">

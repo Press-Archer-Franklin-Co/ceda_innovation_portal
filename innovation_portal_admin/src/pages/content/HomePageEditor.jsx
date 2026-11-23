@@ -426,7 +426,7 @@ export default function HomePageEditor() {
 
       <Modal open={previewOpen} onClose={() => setPreviewOpen(false)} triggerRef={previewTrigger} title={t('home.livePreview')} size="xl"
         footer={<DeviceSwitch device={device} onChange={setDevice} />}>
-        {previewOpen && <HomePreview sections={previewSections} lang={lang} device={device} height="auto" className="max-h-[70vh] overflow-y-auto" />}
+        {previewOpen && <HomePreview sections={previewSections} lang={lang} device={device} height="auto" className="max-h-[70vh] overflow-y-auto overscroll-contain" />}
       </Modal>
     </div>
   )

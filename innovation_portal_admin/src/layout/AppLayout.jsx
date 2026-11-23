@@ -9,6 +9,7 @@ import PageErrorBoundary from '../components/ui/PageErrorBoundary'
 import { BootStep } from '../components/ui/BrandLoader'
 import { boot } from '../lib/boot'
 import { useMediaQuery } from '../lib/useMediaQuery'
+import { useScrollKeeper } from '../lib/scrollKeeper'
 import { MENU } from '../lib/motion/brand'
 import NeedHelp from '../components/guide/NeedHelp'
 
@@ -30,6 +31,9 @@ export default function AppLayout() {
   const phone = !useMediaQuery('(min-width: 1024px)')
   const shellRef = useRef(null)
   const location = useLocation()
+  const contentRef = useRef(null)
+  // The content area is what scrolls: a new page starts at the top; Back and Forward return to the old position.
+  useScrollKeeper(() => contentRef.current)
 
   const setSidebarOpen = (next) => {
     setSidebarOpenState((prev) => {
@@ -74,7 +78,7 @@ export default function AppLayout() {
               </div>
             </main>
           ) : (
-            <main className="flex-1 overflow-y-auto overflow-x-hidden">
+            <main ref={contentRef} className="staff-scroll flex-1 overflow-y-auto overflow-x-hidden">
               <div className="p-[14px] sm:p-4 2xl:p-[22px] min-w-0 w-full">
                 <PageErrorBoundary resetKey={location.pathname}>
                   <Suspense fallback={<PageSkeleton />}>

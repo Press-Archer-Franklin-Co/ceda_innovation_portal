@@ -287,7 +287,7 @@ function ChatWindow({ status, chat }: { status: HelpChatStatus; chat: Chat }) {
 
   return (
     <>
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 py-4">
         <ol className="flex flex-col gap-3" aria-live="polite" aria-relevant="additions">
           {intro && <li className="text-center text-d-cap text-muted">{intro}</li>}
           {chat.messages.map((m) => <Bubble key={m.id} m={m} seen={Boolean(m.seen_by) || Boolean(chat.seenAt && m.created_at <= chat.seenAt)} />)}

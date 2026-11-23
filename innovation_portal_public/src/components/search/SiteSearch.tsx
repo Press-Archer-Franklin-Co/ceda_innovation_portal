@@ -131,7 +131,7 @@ export default function SiteSearch({ variant, onNavigate, onQueryChange }: { var
         {status === 'loading' ? t('search.loading') : status === 'ok' ? (total === 1 ? t('search.countOne', { q: term }) : total ? t('search.count', { n: total, q: term }) : t('search.none', { q: term })) : ''}
       </p>
 
-      <div className={clsx('overflow-y-auto', panel ? 'max-h-[min(478px,calc(100vh-260px))]' : 'mt-2')}>
+      <div className={clsx('overflow-y-auto overscroll-contain', panel ? 'max-h-[min(478px,calc(100vh-260px))]' : 'mt-2')}>
         {status === 'idle' && term.length > 0 && <p className={clsx('text-d-cap text-muted', panel ? 'px-[22px] py-4' : 'px-1 py-3')}>{t('search.hint')}</p>}
 
         {status === 'loading' && !result && (

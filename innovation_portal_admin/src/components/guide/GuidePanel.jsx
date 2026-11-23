@@ -20,7 +20,7 @@ export default function GuidePanel({ triggerRef }) {
       id="need-help-guide"
       data-guide-ui
       aria-labelledby="guide-title"
-      className="fixed right-8 bottom-[96px] z-[70] w-[380px] max-h-[calc(100vh-120px)] overflow-y-auto rounded-card bg-surface shadow-pop border border-border p-4 flex flex-col gap-4"
+      className="fixed right-8 bottom-[96px] z-[70] w-[380px] max-h-[calc(100vh-120px)] overflow-y-auto overscroll-contain rounded-card bg-surface shadow-pop border border-border p-4 flex flex-col gap-4"
     >
       <GuideHeader titleId="guide-title" onClose={g.close} />
       <GuideAnswer />

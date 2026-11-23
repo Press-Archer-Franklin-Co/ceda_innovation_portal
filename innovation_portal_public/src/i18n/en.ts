@@ -11,6 +11,7 @@ import { statusEn } from './status'
 import { brandEn } from './brand'
 import { guideEn } from './guide'
 import { previewEn } from './preview'
+import { otherWaysEn } from './otherWays'
 import { aiHelperEn } from './aiHelper'
 import { inviteEn } from './invite'
 import { accountEn } from './account'
@@ -467,6 +468,7 @@ const en = {
   ...brandEn,
   ...guideEn,
   ...previewEn,
+  ...otherWaysEn,
   ...aiHelperEn,
   ...inviteEn,
   ...accountEn,

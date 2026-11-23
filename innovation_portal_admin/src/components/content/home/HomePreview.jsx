@@ -61,7 +61,7 @@ export default function HomePreview({ sections, lang, device = 'desktop', height
       ) : (
         <>
           {!ready && <p className="p-4 text-[13px] text-muted">{t('home.previewLoading')}</p>}
-          <div className={cn('overflow-y-auto overflow-x-hidden', !ready && 'invisible h-0')} style={height === 'auto' ? undefined : { height }}>
+          <div className={cn('overflow-y-auto overscroll-contain overflow-x-hidden', !ready && 'invisible h-0')} style={height === 'auto' ? undefined : { height }}>
             <div style={{ height: scaledHeight, width: width * scale, margin: '0 auto' }}>
               <iframe
                 ref={frame}
