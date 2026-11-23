@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useI18n } from '../../i18n'
 import { formsService } from '../../services/forms.service'
 import type { FormStep, PublishedForm } from '../../types/innovator'
@@ -26,14 +26,17 @@ export function useJourney(formId: string | null): Journey {
       alive = false
     }
   }, [formId, lang])
-  const steps = (form?.steps ?? []).filter((step) => step.is_active !== false)
-  return { form, steps, names: steps.length ? [...steps.map((s) => s.title), t('form.reviewStep')] : [] }
+  const steps = useMemo(() => (form?.steps ?? []).filter((step) => step.is_active !== false), [form])
+  const names = useMemo(() => (steps.length ? [...steps.map((s) => s.title), t('form.reviewStep')] : []), [steps, t])
+  return { form, steps, names }
 }
+
+export const stepFields = (step: FormStep) => step.rows.flatMap((row) => row.fields)
 
 /** The step that holds the person's name, if the form asks it (the general form's "About you"). */
 export function nameStep(steps: FormStep[]): FormStep | undefined {
   return steps.find((step) => {
-    const keys = step.rows.flatMap((row) => row.fields.map((f) => f.key))
+    const keys = stepFields(step).map((f) => f.key)
     return keys.includes('first_name') && keys.includes('last_name')
   })
 }

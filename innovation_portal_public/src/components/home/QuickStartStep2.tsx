@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Lightbulb } from 'lucide-react'
 import Button from '../ui/Button'
 import Input from '../ui/Input'
@@ -7,7 +7,7 @@ import { useAuth } from '../../context/AuthContext'
 import { codeSignInService } from '../../services/codeSignIn.service'
 import { intakeService, resumeStorage } from '../../services/intake.service'
 import { JourneyBar } from './QuickStartCard'
-import { nameStep, startStep, useJourney } from './journeySteps'
+import { nameStep, startStep, stepFields, useJourney } from './journeySteps'
 import type { QuickStartDraft } from './QuickStartCard'
 
 // Figma 1.2 › Quick start step 2 (11:279 website, 11:375 phone sheet), for signed-out visitors.
@@ -31,10 +31,10 @@ const splitName = (full: string) => {
 
 export default function QuickStartStep2({ draft, onEdit, onContinued }: { draft: QuickStartDraft; onEdit: () => void; onContinued: (path: string) => void }) {
   const { t } = useI18n()
-  const { signInWithCode } = useAuth()
+  const { signInWithCode, refreshProfile } = useAuth()
   const [formId, setFormId] = useState<string | null>(null)
   const journey = useJourney(draft.programId ? formId : null)
-  const aboutYou = nameStep(journey.steps)
+  const aboutYou = useMemo(() => nameStep(journey.steps), [journey.steps])
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [codeSentTo, setCodeSentTo] = useState<string | null>(null)
@@ -52,26 +52,34 @@ export default function QuickStartStep2({ draft, onEdit, onContinued }: { draft:
         setFormId(d.form_id)
         const data = d.draft_data ?? {}
         const kept = [data.first_name, data.last_name].filter((v) => typeof v === 'string' && v.trim()).join(' ')
-        if (kept) {
-          savedName.current = kept
-          setName((v) => v || kept)
-        }
+        const keptPhone = typeof data.contact_number === 'string' ? data.contact_number : ''
+        savedName.current = JSON.stringify([kept, keptPhone])
+        if (kept) setName((v) => v || kept)
+        if (keptPhone) setPhone((v) => v || keptPhone)
       })
       .catch(() => undefined)
   }, [draft.draftId, draft.token])
 
-  // Save the name to the form's "About you" step as it is typed, so a refresh keeps it and step 2 shows it filled.
+  // Save the name (and the phone, when the form asks it there) to the form's "About you" step as it is typed, so a
+  // refresh keeps them and step 2 shows them filled.
+  const aboutYouAnswers = useCallback((confirmed = false) => {
+    const answers: Record<string, string> = splitName(name)
+    if (aboutYou && phone.trim() && stepFields(aboutYou).some((f) => f.key === 'contact_number')) {
+      answers.contact_number = confirmed ? normalisePhone(phone) : phone.trim()
+    }
+    return answers
+  }, [name, phone, aboutYou])
   useEffect(() => {
-    const clean = name.trim()
-    if (!aboutYou || !clean || clean === savedName.current) return
+    const key = JSON.stringify([name.trim(), phone.trim()])
+    if (!aboutYou || !name.trim() || key === savedName.current) return
     const timer = window.setTimeout(() => {
       intakeService
-        .saveStep(draft.draftId, aboutYou.code, splitName(clean), draft.token)
-        .then(() => { savedName.current = clean })
+        .saveStep(draft.draftId, aboutYou.code, aboutYouAnswers(), draft.token)
+        .then(() => { savedName.current = key })
         .catch(() => undefined)
     }, 800)
     return () => window.clearTimeout(timer)
-  }, [name, aboutYou, draft.draftId, draft.token])
+  }, [name, phone, aboutYou, aboutYouAnswers, draft.draftId, draft.token])
 
   useEffect(() => {
     if (resendIn <= 0) return
@@ -109,9 +117,7 @@ export default function QuickStartStep2({ draft, onEdit, onContinued }: { draft:
     setBusy('verify')
     try {
       // The name first, while the draft is still the visitor's, so the account and step 2 both get it.
-      if (aboutYou && name.trim() !== savedName.current) {
-        await intakeService.saveStep(draft.draftId, aboutYou.code, splitName(name), draft.token).catch(() => undefined)
-      }
+      if (aboutYou) await intakeService.saveStep(draft.draftId, aboutYou.code, aboutYouAnswers(true), draft.token).catch(() => undefined)
       const outcome = await signInWithCode({ phone: normalisePhone(phone) }, code.trim())
       if (outcome.status !== 'ok') {
         // An account with a second sign-in step: finish signing in there; the draft stays on this device.
@@ -125,6 +131,8 @@ export default function QuickStartStep2({ draft, onEdit, onContinued }: { draft:
     }
     try {
       const joined = await intakeService.claim(draft.draftId, draft.token)
+      // Claiming copies the name from "About you" to the account; show it in the header.
+      await refreshProfile().catch(() => undefined)
       const step = startStep(journey.steps, Boolean(joined.send_now_allowed))
       onContinued(`/my-ideas/draft/${draft.draftId}${step ? `?step=${encodeURIComponent(step)}` : ''}`)
       // Forget the guest draft only once the account has it.
