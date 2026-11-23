@@ -14,27 +14,8 @@ class ProgramService:
         problems = program.publish_problems()
         if problems:
             raise ValidationError(problems)
-        try:
-            type_code = program.program_type.code
-        except Exception:
-            type_code = ""
-
-        if type_code == "idea":
-            superseded = Program.objects.filter(
-                program_type__code="idea",
-                status=ProgramStatus.PUBLISHED,
-            ).exclude(id=program.id)
-            for other in superseded:
-                other.status = ProgramStatus.CLOSED
-                other.save(update_fields=["status", "updated_at"])
-                AuditService.log_action(
-                    actor=actor,
-                    action_type="program_closed",
-                    target=other,
-                    after_state={"status": other.status},
-                    metadata={"reason": "superseded_by_new_idea_program", "new_program_id": str(program.id)},
-                )
-
+        # Prompt 31: publishing an idea call no longer closes the other idea calls. One General ideas
+        # programme is kept by the database (programs 0025); idea calls are challenges with their own dates.
         program.status = ProgramStatus.PUBLISHED
         program.is_public = True
         program.published_at = timezone.now()

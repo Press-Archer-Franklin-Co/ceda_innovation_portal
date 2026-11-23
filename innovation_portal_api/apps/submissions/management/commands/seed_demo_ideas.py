@@ -13,7 +13,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from apps.core.constants import SubmissionStatus, SubmissionType
-from apps.programs.models import Program
+from apps.programs.general_idea import GeneralIdeaProgram
 from apps.submissions.models import Submission
 from apps.workflow.models import WorkflowInstance
 from apps.workflow.services import WorkflowDefinitionService
@@ -47,7 +47,7 @@ class Command(BaseCommand):
             return
         if not 1 <= count <= 1000:
             raise CommandError("Use a count from 1 to 1000.")
-        program = Program.objects.filter(is_general_intake=True).first() or Program.objects.first()
+        program = GeneralIdeaProgram.get()
         if program is None:
             raise CommandError("There is no challenge or general ideas programme yet.")
         definition = WorkflowDefinitionService.ensure_active_definition(program)

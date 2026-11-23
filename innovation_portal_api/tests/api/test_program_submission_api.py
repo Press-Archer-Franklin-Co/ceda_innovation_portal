@@ -30,6 +30,10 @@ class ProgramApiTests(APITestCase):
         create_response = self.client.post("/api/programs/", create_payload, format="json")
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
 
+        from apps.programs.models import Program
+        from tests.api.form_helpers import published_form
+
+        published_form(Program.objects.get(id=create_response.data["id"]))  # prompt 31: publishing needs a published form
         publish_response = self.client.post(f"/api/programs/{create_response.data['id']}/publish/")
         self.assertEqual(publish_response.status_code, status.HTTP_200_OK)
         self.assertEqual(publish_response.data["status"], "published")

@@ -75,7 +75,10 @@ def open_programs() -> list:
     from apps.programs.selectors import ProgramSelector
 
     programs = ProgramSelector.public_programs(None).filter(status=ProgramStatus.PUBLISHED, is_general_intake=False).order_by("closes_at", "closing_date", "title")[:40]
-    return [p for p in programs if p.is_submission_open()][:MAX_PROGRAM_CHOICES]
+    from apps.programs.general_idea import form_ready
+
+    # Only challenges that can take an entry now: open, with a published form (prompt 31).
+    return [p for p in programs if p.is_submission_open() and form_ready(p)][:MAX_PROGRAM_CHOICES]
 
 
 def program_by_id(program_id):

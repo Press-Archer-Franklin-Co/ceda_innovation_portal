@@ -10,6 +10,7 @@ from rest_framework import serializers, status
 from rest_framework.permissions import AllowAny
 from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 
 from apps.audit.services import AuditService
@@ -358,6 +359,48 @@ class FormDuplicateView(APIView):
         name = serializer.validated_data.get("name") or f"Copy of {source.title}"[:255]
         form = FormLibraryService.create(start="copy", name=name, actor=request.user, source=source)
         return api_success(data=_detail(form), message="Form copied.", status_code=status.HTTP_201_CREATED)
+
+
+def _is_uuid(value) -> bool:
+    import uuid
+
+    try:
+        uuid.UUID(str(value))
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+class GeneralIdeaFormView(APIView):
+    """Prompt 31: the one setting for which form takes ordinary ideas (quick start, /submit, WhatsApp, USSD, the guide)."""
+
+    permission_classes = [HasCapability.of("forms.manage")]
+
+    @extend_schema(tags=TAGS, summary="The general idea form", description="{program_id, form: form list item}.", responses=OpenApiTypes.OBJECT)
+    def get(self, request):
+        from apps.programs.general_idea import GeneralIdeaProgram
+
+        program = GeneralIdeaProgram.get()
+        form = FormLibraryService.annotated(SubmissionForm.objects.filter(id=program.form_id)).first()
+        return api_success(data={"program_id": str(program.id), "form": FormListItemSerializer(form).data if form else None})
+
+    @extend_schema(
+        tags=TAGS,
+        summary="Choose the general idea form",
+        description="{form_id}: a published form that is not a template. Ideas already sent keep the version they used.",
+        request=inline_serializer("GeneralIdeaFormRequest", fields={"form_id": serializers.UUIDField()}),
+        responses=OpenApiTypes.OBJECT,
+    )
+    def put(self, request):
+        from apps.programs.general_idea import GeneralIdeaProgram
+
+        form_id = request.data.get("form_id")
+        form = SubmissionForm.objects.filter(id=form_id).first() if _is_uuid(form_id) else None
+        if form is None:
+            raise ValidationError({"form_id": "Choose a form."})
+        program = FormLibraryService.attach_to_program(GeneralIdeaProgram.get(), form, actor=request.user, general_ideas_setting=True)
+        detail = FormLibraryService.annotated(SubmissionForm.objects.filter(id=form.id)).get()
+        return api_success(data={"program_id": str(program.id), "form": FormListItemSerializer(detail).data}, message="General idea form changed.")
 
 
 class FormArchiveView(APIView):

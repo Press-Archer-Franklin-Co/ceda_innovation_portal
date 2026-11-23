@@ -122,6 +122,10 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
 
     class Meta:
         indexes = [models.Index(fields=["status", "program_type"]), models.Index(fields=["opening_date", "closing_date"])]
+        constraints = [
+            # Prompt 31: exactly one General ideas programme takes ordinary ideas.
+            models.UniqueConstraint(fields=["is_general_intake"], condition=models.Q(is_general_intake=True), name="uq_one_general_intake_program"),
+        ]
 
     @property
     def submission_form(self):
@@ -148,6 +152,10 @@ class Program(UUIDModel, TimeStampedModel, AuditMetadataMixin):
             problems["closing_date"] = "Set when entries close before publishing."
         if opens and closes and closes <= opens:
             problems["closing_date"] = "Entries must close after they open."
+        from apps.programs.general_idea import form_ready
+
+        if not self.is_general_intake and not form_ready(self):
+            problems["form"] = "Choose a form and publish it before publishing this challenge."
         return problems
 
     @property

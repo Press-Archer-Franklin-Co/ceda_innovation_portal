@@ -773,6 +773,14 @@ class FormLibraryService:
     @staticmethod
     @transaction.atomic
     def archive(form: SubmissionForm, *, actor) -> SubmissionForm:
+        from apps.core.constants import ProgramStatus
+
+        # Prompt 31: a form that people can still fill in stays. Archive it once nobody can enter with it.
+        if any(program.is_general_intake for program in form.programs.all()):
+            raise ValidationError({"form": {"code": "general_ideas", "detail": "This is the general idea form. Choose another general idea form first."}})
+        using = [p.title for p in form.programs.filter(status=ProgramStatus.PUBLISHED) if p.is_submission_open()]
+        if using:
+            raise ValidationError({"form": {"code": "in_use", "detail": f"{', '.join(using)} still takes entries with this form. Close that challenge or give it another form first."}})
         before = form.status
         form.status = SubmissionForm.Status.ARCHIVED
         form.save(update_fields=["status", "updated_at"])
@@ -781,7 +789,9 @@ class FormLibraryService:
 
     @staticmethod
     @transaction.atomic
-    def attach_to_program(program: Program, form: SubmissionForm, *, actor) -> Program:
+    def attach_to_program(program: Program, form: SubmissionForm, *, actor, general_ideas_setting: bool = False) -> Program:
+        if program.is_general_intake and not general_ideas_setting:
+            raise ValidationError({"form_id": {"code": "general_ideas", "detail": "Change the general idea form in Forms, under General idea form."}})
         if form.is_template:
             raise ValidationError({"form_id": "Templates cannot be used directly. Start a form from the template first."})
         if form.status == SubmissionForm.Status.ARCHIVED:

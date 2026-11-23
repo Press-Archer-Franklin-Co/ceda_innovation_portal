@@ -26,7 +26,7 @@ from apps.audit.services import AuditService
 from apps.core.i18n import get_text
 from apps.core.constants import CommunicationChannel, CommunicationStatus, ProgramStatus, ProgramTypeCode, SubmissionType
 from apps.core.phone import mask_phone
-from apps.programs.general_intake import GeneralIntakeService
+from apps.programs.general_idea import FORM_NOT_READY, GeneralIdeaProgram, form_ready
 from apps.submissions.draft_services import ApplicationDraftService
 from apps.submissions.models import ApplicationDraft, Submission
 
@@ -89,7 +89,7 @@ class QuickStartService:
     @staticmethod
     def _program_for(program_id):
         if not program_id:
-            return GeneralIntakeService.program()
+            return GeneralIdeaProgram.get()
         from apps.programs.selectors import ProgramSelector
 
         program = ProgramSelector.public_programs(None).filter(id=program_id, status=ProgramStatus.PUBLISHED).select_related("program_type").first()
@@ -97,6 +97,8 @@ class QuickStartService:
             raise ValidationError({"program_id": {"code": "program_not_found", "detail": "This programme is not open for ideas."}})
         if not program.is_submission_open():
             raise ValidationError({"program_id": {"code": "program_closed", "detail": "This programme is not open for ideas right now."}})
+        if not form_ready(program):
+            raise ValidationError({"program_id": {"code": "form_not_ready", "detail": FORM_NOT_READY}})
         return program
 
     @classmethod

@@ -388,6 +388,10 @@ class Command(BaseCommand):
                         field.options.update_or_create(value=option[0], defaults={"label": option[1], "ordering": option_order})
                     for rule_type, rule_value in field_spec.get("rules", []):
                         FieldValidationRule.objects.get_or_create(field=field, rule_type=rule_type, rule_value=str(rule_value))
+        # Prompt 31: a challenge takes entries only with a published form, so the seed publishes version 1.
+        from apps.programs.general_idea import ensure_published_version
+
+        ensure_published_version(form)
         return form
 
     def _ensure_workflow(self, program, steps, evaluation_round=None):

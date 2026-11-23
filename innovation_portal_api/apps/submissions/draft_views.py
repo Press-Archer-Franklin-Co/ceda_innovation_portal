@@ -8,7 +8,7 @@ from django.http import Http404
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotAuthenticated, PermissionDenied
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied, ValidationError
 from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 
 from apps.submissions import openapi as docs
@@ -17,7 +17,7 @@ from apps.core.api import api_success
 from apps.core.i18n import resolve_request_language
 from apps.core.permissions import IPRateThrottle
 from apps.platform_config.flags import require_feature
-from apps.programs.general_intake import GeneralIntakeService
+from apps.programs.general_idea import FORM_NOT_READY, GeneralIdeaProgram, form_ready
 from apps.submissions.draft_services import _UNSET, ApplicationDraftService
 from apps.submissions.intake import (
     DRAFT_TOKEN_HEADER,
@@ -124,7 +124,9 @@ class ApplicationDraftViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         UserVerificationService.assert_verified(user=self.request.user, reason="draft_create")
         data = serializer.validated_data
-        program = data.get("program") or GeneralIntakeService.program()
+        program = data.get("program") or GeneralIdeaProgram.get()
+        if not program.is_general_intake and not form_ready(program):
+            raise ValidationError({"program": {"code": "form_not_ready", "detail": FORM_NOT_READY}})
         draft = ApplicationDraftService.save_draft(
             program=program,
             innovator=self.request.user,

@@ -676,9 +676,9 @@ class BuilderDraftListView(BuilderMixin, APIView):
         self.check_builder_rights(values["make"])
         program = get_object_or_404(Program, pk=values["program_id"]) if values.get("program_id") else None
         if program is None:
-            from apps.programs.general_intake import GeneralIntakeService
+            from apps.programs.general_idea import GeneralIdeaProgram
 
-            program = GeneralIntakeService.program()
+            program = GeneralIdeaProgram.get()
         try:
             draft = builder.create(actor=request.user, description=values["description"], make=values["make"], program=program, general_ideas=values["general_ideas"], requested_language=values.get("language"))
         except AssistantUnavailable as exc:

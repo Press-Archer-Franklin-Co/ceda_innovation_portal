@@ -21,6 +21,7 @@ class FormListItemSerializer(serializers.ModelSerializer):
     answer_count = serializers.IntegerField(read_only=True)
     latest_version = serializers.SerializerMethodField()
     layout_preview = serializers.SerializerMethodField(help_text='Widths of the first 4 rows, e.g. [["half", "half"], ["full"]].')
+    general_ideas = serializers.SerializerMethodField(help_text="True for the form General ideas uses (the general idea form, prompt 31).")
 
     class Meta:
         model = SubmissionForm
@@ -40,6 +41,7 @@ class FormListItemSerializer(serializers.ModelSerializer):
             "version",
             "latest_version",
             "layout_preview",
+            "general_ideas",
             "created_at",
             "updated_at",
         )
@@ -53,6 +55,9 @@ class FormListItemSerializer(serializers.ModelSerializer):
     def get_latest_version(self, obj) -> dict | None:
         versions = sorted(obj.versions.all(), key=lambda item: item.number, reverse=True)
         return FormVersionSummarySerializer(versions[0]).data if versions else None
+
+    def get_general_ideas(self, obj) -> bool:
+        return any(program.is_general_intake for program in obj.programs.all())
 
     def get_layout_preview(self, obj) -> list:
         from apps.programs.form_builder import FormLibraryService

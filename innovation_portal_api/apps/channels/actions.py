@@ -42,14 +42,15 @@ def find_user_by_phone(phone: str):
 
 
 def _program(program_id):
-    from apps.programs.general_intake import GeneralIntakeService
+    from apps.programs.general_idea import GeneralIdeaProgram, form_ready
     from apps.programs.models import Program
 
     if program_id:
-        program = Program.objects.filter(id=program_id, status=ProgramStatus.PUBLISHED).select_related("program_type").first()
-        if program is not None:
+        program = Program.objects.filter(id=program_id, status=ProgramStatus.PUBLISHED).select_related("program_type", "form").first()
+        # A challenge whose form is not published takes no entries (prompt 31); the idea goes to General ideas.
+        if program is not None and (program.is_general_intake or form_ready(program)):
             return program
-    return GeneralIntakeService.program()
+    return GeneralIdeaProgram.get()
 
 
 def save_draft(*, settings: dict, variables: dict, phone: str, user, channel: str, session_id: str, draft_id: str | None, simulation: bool):
@@ -120,13 +121,14 @@ def save_draft(*, settings: dict, variables: dict, phone: str, user, channel: st
 
 
 def _open_challenges(lang: str, channel: str) -> str:
+    from apps.programs.general_idea import form_ready
     from apps.programs.selectors import ProgramSelector
 
     now = timezone.now()
     programs = [
         p
         for p in ProgramSelector.public_programs(None).filter(status=ProgramStatus.PUBLISHED, is_general_intake=False).order_by("closes_at", "closing_date", "title")[:20]
-        if p.is_submission_open()
+        if p.is_submission_open() and form_ready(p)
     ][: 3 if channel == "ussd" else 5]
     if not programs:
         return {"en": "There are no open challenges right now.", "tn": "Ga go na dikgaisano tse di butsweng jaanong."}.get(lang) or ""  # TODO tn-review

@@ -100,9 +100,9 @@ def templates() -> list[dict]:
 
 
 def general_ideas_program():
-    from apps.programs.models import Program
+    from apps.programs.general_idea import GeneralIdeaProgram
 
-    return Program.objects.filter(is_general_intake=True).order_by("created_at").first()
+    return GeneralIdeaProgram.find()
 
 
 def used_by(definition) -> list[dict]:
