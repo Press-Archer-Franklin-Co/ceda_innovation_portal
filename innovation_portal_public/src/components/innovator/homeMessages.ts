@@ -1,7 +1,7 @@
 import type { TFunction } from '../../i18n'
 import type { HomeMessage, Lang } from '../../types/innovator'
 import { statusWord } from './ideaStatus'
-import { formatGaboroneDateTime, formatShortDate } from './format'
+import { formatGaboroneDateTime, formatPitchWhen, formatShortDate } from './format'
 
 export interface MessageView {
   key: string
@@ -30,8 +30,12 @@ export function messageView(m: HomeMessage, t: TFunction, lang: Lang): MessageVi
     }
     case 'draft':
       return { ...base, headline: t('hm.draft.headline'), body: t('hm.draft.body', { title: m.title, percent: m.percent_complete }), line: t('hm.alsoDraft', { title: m.title, percent: m.percent_complete }), cta: { to: ideaPath(m), label: t('hm.draft.cta') } }
-    case 'shortlisted':
+    case 'shortlisted': {
+      // Prompt 39: name the pitch date only when staff set one.
+      const when = m.pitch_session ? formatPitchWhen(m.pitch_session, lang) : ''
+      if (when) return { ...base, headline: t('hm.short.headline'), body: t('hm.short.bodyPitch', { title: m.title, date: when }), line: t('hm.alsoShortPitch', { title: m.title, date: when }) }
       return { ...base, headline: t('hm.short.headline'), body: m.challenge ? t('hm.short.body', { title: m.title, challenge: m.challenge }) : t('hm.short.bodyGeneral', { title: m.title }), line: t('hm.alsoShort', { title: m.title }) }
+    }
     case 'stage_moved': {
       const stage = t(statusWord(m.status).key)
       return { ...base, headline: t('hm.moved.headline'), body: t('hm.moved.body', { title: m.title, stage }), line: t('hm.alsoMoved', { title: m.title, stage }) }

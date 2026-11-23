@@ -120,7 +120,7 @@ export default function TrackIdea() {
               }}
             />
           )}
-          {word.key === 'status.shortlisted' && <ShortlistedCard session={tracking?.pitch_session} />}
+          <ShortlistedCard shortlisted={tracking?.shortlisted ?? word.key === 'status.shortlisted'} session={tracking?.pitch_session} />
           <MessageThread ideaId={idea.id} />
           {trackingFailed ? (
             <ErrorState title={t('trk.feedbackError')} onRetry={loadTracking} />

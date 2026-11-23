@@ -75,7 +75,7 @@ class MySummarySerializer(serializers.Serializer):
         child=serializers.DictField(),
         help_text=(
             "2.1 home messages, most urgent first: changes_requested {note, officer, fix_by}, question "
-            "{officer_first_name, excerpt, reply_by}, draft {percent_complete}, shortlisted {challenge}, stage_moved "
+            "{officer_first_name, excerpt, reply_by}, draft {percent_complete}, shortlisted {challenge, pitch_session (the prompt 39 shape, or null)}, stage_moved "
             "{status, stage}, event {challenge, event_date}. Each has type, idea_id, kind, reference, title and at."
         ),
     )
