@@ -484,3 +484,37 @@ class SubmissionFormFieldOption(UUIDModel, TimeStampedModel):
 
     class Meta:
         ordering = ("ordering",)
+
+
+class PitchSession(UUIDModel, TimeStampedModel):
+    """A pitch session staff set for a challenge stage, or for one idea when they choose (apps.programs.pitch).
+
+    starts_at is stored in UTC and shown in Gaborone time. Texts are {"en": ..., "tn": ...}. No slot picking:
+    staff set one session; innovators only read it.
+    """
+
+    class Format(models.TextChoices):
+        IN_PERSON = "in_person", "In person"
+        ONLINE = "online", "Online"
+
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name="pitch_sessions")
+    stage = models.OneToOneField(ProgramStage, on_delete=models.CASCADE, null=True, blank=True, related_name="pitch_session")
+    submission = models.OneToOneField("submissions.Submission", on_delete=models.CASCADE, null=True, blank=True, related_name="pitch_session")
+    starts_at = models.DateTimeField()
+    duration_minutes = models.PositiveIntegerField(null=True, blank=True)
+    format = models.CharField(max_length=20, choices=Format.choices, default=Format.IN_PERSON)
+    place = models.JSONField(default=dict, blank=True, help_text='In person: {"en": "...", "tn": "..."}')
+    meeting_link = models.URLField(max_length=500, blank=True)
+    instructions = models.JSONField(default=dict, blank=True, help_text='{"en": "...", "tn": "..."}')
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+")
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(stage__isnull=False, submission__isnull=True) | models.Q(stage__isnull=True, submission__isnull=False)),
+                name="pitch_session_stage_or_idea",
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"Pitch {self.starts_at:%Y-%m-%d %H:%M}"

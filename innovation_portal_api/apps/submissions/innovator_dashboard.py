@@ -87,6 +87,8 @@ def draft_item(draft, lang: str) -> dict:
         "id": str(draft.id),
         "kind": "draft",
         "channel": draft.channel,
+        "shortlisted": False,
+        "pitch_session": None,
         "state": "drafts",
         "reference": draft.reference_number,
         "title": draft.title,
@@ -129,7 +131,15 @@ def submission_item(submission, lang: str) -> dict:
         "decided_at": _iso(decided_at(submission)) if state == "finished" else None,
         "has_feedback": submission.feedback_snapshots.exists() if state == "finished" else False,
         "open_question": open_question(submission),
+        # 23 Nov: shortlisted, and the pitch session staff set (or null). Never a made-up date.
+        **pitch_fields(submission, lang),
     }
+
+
+def pitch_fields(submission, lang: str) -> dict:
+    from apps.programs.pitch import innovator_fields
+
+    return innovator_fields(submission, lang)
 
 
 def submission_stages(submission) -> list[dict]:
