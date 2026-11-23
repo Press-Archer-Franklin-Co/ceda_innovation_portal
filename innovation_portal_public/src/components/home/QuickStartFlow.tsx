@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useState } from 'react'
+import { ReactNode, useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import QuickStartCard, { QuickStartDraft } from './QuickStartCard'
 import QuickStartStep2 from './QuickStartStep2'
@@ -27,6 +27,7 @@ export function useQuickStartFlow(challenges: ChallengeCard[]): { card: ReactNod
   const isDesktop = useMediaQuery('(min-width: 1024px)')
   const [step, setStep] = useState<{ draft: QuickStartDraft } | null>(null)
   const [opening, setOpening] = useState(false)
+  const continueRef = useRef<HTMLButtonElement>(null) // the sheet pours out of Continue
 
   const onContinued = useCallback((path: string) => navigate(path), [navigate])
 
@@ -58,12 +59,12 @@ export function useQuickStartFlow(challenges: ChallengeCard[]): { card: ReactNod
     setStep(null)
   }, [])
 
-  const step1 = <QuickStartCard challenges={challenges} onContinue={onContinue} busy={opening} />
+  const step1 = <QuickStartCard challenges={challenges} onContinue={onContinue} busy={opening} continueRef={continueRef} />
   const step2 = step ? <QuickStartStep2 draft={step.draft} onEdit={back} onContinued={onContinued} /> : null
   const card = isDesktop && step2 ? step2 : step1
   const sheet = isDesktop ? null : (
-    // Opens once the draft is saved (after a network call), not on the click itself.
-    <Modal open={Boolean(step)} onClose={back} routeOpened closeOnBackdrop={false} bodyClassName="!p-0" size="md">
+    // Opens once the draft is saved (after a network call), out of the Continue button that was pressed.
+    <Modal open={Boolean(step)} onClose={back} triggerRef={continueRef} closeOnBackdrop={false} bodyClassName="!p-0" size="md">
       {/* pr-10 on the heading keeps the title clear of the sheet's close button. */}
       {step2 && <div className="[&>form]:shadow-none [&>form]:rounded-none [&>form>h2:first-child]:pr-10">{step2}</div>}
     </Modal>

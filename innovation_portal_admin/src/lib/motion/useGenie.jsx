@@ -33,6 +33,8 @@ export function useGenie(open, triggerRef, { small = false, onOpened, onClosed }
   useLayoutEffect(() => {
     const panel = panelRef.current;
     if (!mounted || !panel) return;
+    // A panel mounted already open: this runs before the effect above, so take its origin here.
+    if (open && !originRef.current) originRef.current = pickOrigin(triggerRef?.current ?? null);
     const origin = originRef.current;
     const run = runRef.current;
 
@@ -54,7 +56,7 @@ export function useGenie(open, triggerRef, { small = false, onOpened, onClosed }
         if (dir === 'close') { runRef.current = null; setMounted(false); onClosed?.(); if (isOnScreen(origin)) origin.focus?.(); }
       });
     }
-  }, [open, mounted, small, onOpened, onClosed]);
+  }, [open, mounted, small, onOpened, onClosed, triggerRef]);
 
   useEffect(() => () => runRef.current?.cancel(), []);
 

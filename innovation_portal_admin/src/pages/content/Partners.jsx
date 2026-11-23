@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Building2, ImagePlus, Plus, Trash2 } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import { useTrigger } from '../../components/ui/useTrigger'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import MultiSelect from '../../components/ui/MultiSelect'
@@ -38,7 +39,7 @@ function Logo({ logo, name, mono = true, className }) {
   )
 }
 
-function PartnerPanel({ partner, open, onClose }) {
+function PartnerPanel({ partner, open, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
@@ -104,7 +105,7 @@ function PartnerPanel({ partner, open, onClose }) {
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={partner?.id ? t('partners.edit') : t('partners.add')} size="lg"
+    <Modal open={open} onClose={onClose} triggerRef={triggerRef} title={partner?.id ? t('partners.edit') : t('partners.add')} size="lg"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           {partner?.id ? <Button variant="ghost" icon={<Trash2 size={14} aria-hidden />} onClick={remove}>{t('partners.delete')}</Button> : <span />}
@@ -160,7 +161,11 @@ export default function Partners() {
   const t = useT()
   const { lang } = useI18n()
   const list = usePartners()
-  const [editing, setEditing] = useState(null) // partner, 'new' or null
+  const [editing, setEditing] = useState(null)
+  const [panelOpen, setPanelOpen] = useState(false) // kept apart from editing so the panel can close into its button
+  const [session, setSession] = useState(0) // each opening starts from the saved partner
+  const trigger = useTrigger()
+  const edit = (e, item) => { trigger.from(e); setEditing(item); setSession((n) => n + 1); setPanelOpen(true) } // partner, 'new' or null
   const partners = useMemo(() => sortPartners(list.data ?? []), [list.data])
 
   if (list.isError) return <ErrorState title={t('partners.loadError')} onRetry={() => list.refetch()} />
@@ -169,12 +174,12 @@ export default function Partners() {
     <div>
       <p className="mb-1 text-[12px] text-muted"><Link to="/content/home" className="hover:underline">{t('news.crumb')}</Link> / {t('partners.title')}</p>
       <PageHeader title={t('partners.title')} subtitle={t('partners.subtitle')}
-        actions={<Button icon={<Plus size={15} aria-hidden />} onClick={() => setEditing('new')}>{t('partners.add')}</Button>} />
+        actions={<Button icon={<Plus size={15} aria-hidden />} onClick={(e) => edit(e, 'new')}>{t('partners.add')}</Button>} />
 
       {list.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-44 rounded-card" />)}</div>
       ) : partners.length === 0 ? (
-        <EmptyState title={t('partners.empty')} message={t('partners.emptyBody')} framed action={<Button onClick={() => setEditing('new')}>{t('partners.add')}</Button>} />
+        <EmptyState title={t('partners.empty')} message={t('partners.emptyBody')} framed action={<Button onClick={(e) => edit(e, 'new')}>{t('partners.add')}</Button>} />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {partners.map((p) => {
@@ -183,7 +188,7 @@ export default function Partners() {
               : p.show_from ? t('partners.from', { date: day(p.show_from, lang) }) : p.show_until ? t('partners.until', { date: day(p.show_until, lang) }) : ''
             return (
               <li key={p.id}>
-                <button type="button" onClick={() => setEditing(p)} className="flex h-full w-full flex-col gap-3 rounded-card border border-border bg-surface p-4 text-left hover:border-primary">
+                <button type="button" onClick={(e) => edit(e, p)} className="flex h-full w-full flex-col gap-3 rounded-card border border-border bg-surface p-4 text-left hover:border-primary">
                   <Logo logo={p.logo} name={p.name} className="h-20 w-full" />
                   <span className="text-[15px] font-bold text-text">{p.name}</span>
                   <span className="flex flex-wrap gap-1.5">
@@ -200,7 +205,7 @@ export default function Partners() {
         </ul>
       )}
 
-      {editing && <PartnerPanel key={editing === 'new' ? 'new' : editing.id} partner={editing === 'new' ? null : editing} open={!!editing} onClose={() => setEditing(null)} />}
+      {editing && <PartnerPanel key={`${editing === 'new' ? 'new' : editing.id}-${session}`} partner={editing === 'new' ? null : editing} open={panelOpen} triggerRef={trigger.ref} onClose={() => setPanelOpen(false)} />}
     </div>
   )
 }

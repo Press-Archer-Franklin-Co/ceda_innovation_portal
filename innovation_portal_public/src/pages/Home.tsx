@@ -7,6 +7,7 @@ import Skeleton from '../components/ui/Skeleton'
 import { HeroBannerSkeleton } from '../components/home/HeroBanner'
 import { ErrorState } from '../components/ui/EmptyState'
 import { useQuickStartFlow } from '../components/home/QuickStartFlow'
+import { useTrigger } from '../components/ui/useTrigger'
 import HomeSections from '../components/home/HomeSections'
 import VideoStoryDialog from '../components/home/VideoStoryDialog'
 
@@ -45,6 +46,7 @@ export default function Home() {
       }),
     [setParams],
   )
+  const storyCard = useTrigger() // the card that was pressed: the story opens out of it
   const video: PostCard | null = storySlug ? ({ slug: storySlug, id: storySlug, title: '' } as PostCard) : null
 
   if (home.loading) return <HomeSkeleton />
@@ -58,8 +60,10 @@ export default function Home() {
 
   return (
     <div aria-busy={home.fetching || undefined}>
-      <HomeSections sections={sections} card={card} onOpenVideo={openStory} />
-      <VideoStoryDialog post={video} onClose={() => openStory(null)} onOpenPost={openStory} />
+      <div className="contents" onClickCapture={storyCard.fromInside}>
+        <HomeSections sections={sections} card={card} onOpenVideo={openStory} />
+      </div>
+      <VideoStoryDialog post={video} onClose={() => openStory(null)} onOpenPost={openStory} triggerRef={storyCard.ref} />
       {sheet}
     </div>
   )

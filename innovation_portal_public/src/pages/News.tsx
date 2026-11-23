@@ -10,6 +10,7 @@ import EmptyState, { ErrorState } from '../components/ui/EmptyState'
 import PageBanner from '../components/layout/PageBanner'
 import SubscribeCard from '../components/home/SubscribeCard'
 import VideoStoryDialog from '../components/home/VideoStoryDialog'
+import { useTrigger } from '../components/ui/useTrigger'
 import { Cover, postPath, postTypeTone } from '../components/home/sections'
 import { useI18n, StringKey } from '../i18n'
 import { useAsync } from '../lib/useAsync'
@@ -214,6 +215,7 @@ export default function News() {
   }
 
   const openStory = (p: PostCard | null) => set({ story: p ? p.slug || p.id : '' })
+  const storyCard = useTrigger() // the card that was pressed: the story opens out of it
   const story = storySlug ? ({ slug: storySlug, id: storySlug, title: '' } as PostCard) : null
 
   return (
@@ -291,10 +293,10 @@ export default function News() {
             ) : (
               <>
                 {q && <p role="status" className="text-d-body-s text-muted -mb-4">{t('news.results', { n: list.data?.total ?? posts.length })}</p>}
-                {featured && <FeaturedPost post={featured} onOpen={openStory} />}
+                {featured && <div onClickCapture={storyCard.fromInside}><FeaturedPost post={featured} onOpen={openStory} /></div>}
                 {/* Hidden heading keeps the order h1 > h2 > card h3 for screen readers. */}
                 {posts.length > 0 && <h2 className="sr-only">{t('news.listTitle')}</h2>}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-2">
+                <div onClickCapture={storyCard.fromInside} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-2">
                   {posts.map((p) => <NewsCard key={p.id} post={p} onOpen={openStory} />)}
                 </div>
                 {page < pages && (
@@ -313,7 +315,7 @@ export default function News() {
           </aside>
         </div>
       </div>
-      <VideoStoryDialog post={story} onClose={() => openStory(null)} onOpenPost={openStory} />
+      <VideoStoryDialog post={story} onClose={() => openStory(null)} onOpenPost={openStory} triggerRef={storyCard.ref} />
     </>
   )
 }

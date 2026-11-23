@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, type Ref, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ShieldCheck } from 'lucide-react'
 import clsx from 'clsx'
 import Button from '../ui/Button'
@@ -38,7 +38,7 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error'
 const NOT_SURE = 'not-sure'
 const sectorForApi = (id: string) => (id === NOT_SURE ? null : id)
 
-export default function QuickStartCard({ challenges, onContinue, busy = false }: { challenges: ChallengeCard[]; onContinue: (draft: QuickStartDraft) => void; busy?: boolean }) {
+export default function QuickStartCard({ challenges, onContinue, busy = false, continueRef }: { challenges: ChallengeCard[]; onContinue: (draft: QuickStartDraft) => void; busy?: boolean; continueRef?: Ref<HTMLButtonElement> }) {
   const { t, lang } = useI18n()
   const basicsOnly = useBasicsOnly()
   const sectors = useAsync(() => referenceService.sectors(lang), [lang])
@@ -224,7 +224,7 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
         <SelectControl options={options} value={programId} onChange={setProgramId} />
       </Field>
 
-      <Button type="submit" block loading={busy} disabled={!ready && save !== 'error'}>
+      <Button ref={continueRef} type="submit" block loading={busy} disabled={!ready && save !== 'error'}>
         {t('qs.continue')}
       </Button>
 

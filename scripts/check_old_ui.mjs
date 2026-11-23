@@ -6,7 +6,7 @@
 //   - uses a raw hex colour (#abc, #aabbcc, #aabbccdd) in JS/JSX/TS/TSX/CSS,
 //   - opens a Modal, Popover, Drawer, ConfirmDialog or a *Modal / *Dialog / *Drawer / *Wizard (anything with an
 //     `open` prop) without `triggerRef`, so it would not open out of the control that was used
-//     (ceda-genie-motion). A modal that nothing is clicked to open (a route, a timer) says so with `routeOpened`.
+//     (ceda-genie-motion). Every <Modal needs it; another overlay that nothing clicks open may say `routeOpened`.
 // Pages still in the old look are listed in scripts/old_ui_pages.txt. They are not checked yet; each rebuild PR
 // deletes its lines. The list may only shrink: the guard fails if it has a line that main does not have.
 //
@@ -15,6 +15,7 @@
 import { execSync } from 'node:child_process'
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
+import { untriggeredOverlays } from './overlay_tags.mjs'
 
 const root = new URL('..', import.meta.url).pathname
 const base = process.argv[2] ?? 'origin/main'
@@ -57,33 +58,22 @@ function walk(dir, out) {
   return out
 }
 
-// Overlays: every opened Modal / Popover / Drawer / ConfirmDialog (or a page's own wrapper of one) names its
-// trigger. A tag's attributes may hold arrow functions and nested braces, so they are matched as a whole.
-const OVERLAY = /<(Modal|Popover|Drawer|ConfirmDialog|[A-Z]\w*(?:Modal|Dialog|Drawer|Wizard))\b((?:=>|\{(?:[^{}]|\{(?:[^{}]|\{[^{}]*\})*\})*\}|[^>{])*)>/g
-export function untriggeredOverlays(text) {
-  const out = []
-  for (const m of text.matchAll(OVERLAY)) {
-    const attrs = m[2]
-    if (!/(^|\s)open(?=[\s=]|$)/.test(attrs)) continue
-    if (/\btriggerRef\b|\brouteOpened\b/.test(attrs)) continue
-    out.push({ line: text.slice(0, m.index).split('\n').length, name: m[1] })
-  }
-  return out
-}
-
 const problems = []
 for (const app of Object.values(APPS)) {
   const files = [...walk(join(root, app, 'src/pages'), []), ...walk(join(root, app, 'src/components'), [])]
   for (const full of files) {
     const rel = relative(root, full).split(sep).join('/')
-    if (rel.includes('/src/components/ui/')) continue
-    if (exempt.has(rel)) continue
     const text = readFileSync(full, 'utf8')
-    if (!rel.endsWith('.css')) {
+    // Every <Modal names its trigger, in the shared components too.
+    if (!rel.endsWith('.css') && !rel.includes('/pages/Styleguide')) {
+      const shared = rel.includes('/src/components/ui/')
       for (const o of untriggeredOverlays(text)) {
-        problems.push(`${rel}:${o.line}: <${o.name}> opens without triggerRef (give it its trigger, or routeOpened when nothing is clicked)`)
+        if (shared && o.name !== 'Modal') continue
+        problems.push(`${rel}:${o.line}: <${o.name}> opens without triggerRef (give it its trigger; only non-Modal overlays may use routeOpened)`)
       }
     }
+    if (rel.includes('/src/components/ui/')) continue
+    if (exempt.has(rel)) continue
     text.split('\n').forEach((line, i) => {
       const code = line.replace(/\/\/.*$/, '')
       for (const rule of RULES) {

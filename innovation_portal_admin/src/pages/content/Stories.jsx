@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Globe, Link2, Plus, Search, Send, Star, Trash2, X } from 'lucide-react'
 import PageHeader from '../../components/ui/PageHeader'
 import Button from '../../components/ui/Button'
+import { useTrigger } from '../../components/ui/useTrigger'
 import Input, { InputControl } from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
 import Select from '../../components/ui/Select'
@@ -73,7 +74,7 @@ function IdeaLink({ value, onChange }) {
   )
 }
 
-function StoryEditor({ story, stories, open, onClose }) {
+function StoryEditor({ story, stories, open, onClose, triggerRef }) {
   const t = useT()
   const toast = useToast()
   const confirm = useConfirm()
@@ -131,7 +132,7 @@ function StoryEditor({ story, stories, open, onClose }) {
   const missingTn = ['business', 'place', 'quote'].some((k) => form[k].en.trim() && !form[k].tn.trim())
   const englishHint = (k) => (lang === 'tn' && form[k].en ? `${t('lang.en')}: ${form[k].en}` : undefined)
   return (
-    <Modal open={open} onClose={onClose} title={story?.id ? t('stories.edit') : t('stories.add')} size="lg"
+    <Modal open={open} onClose={onClose} triggerRef={triggerRef} title={story?.id ? t('stories.edit') : t('stories.add')} size="lg"
       footer={
         <div className="flex w-full flex-wrap items-center justify-between gap-2">
           {story?.id ? <Button variant="ghost" icon={<Trash2 size={14} aria-hidden />} onClick={remove}>{t('stories.delete')}</Button> : <span />}
@@ -213,6 +214,10 @@ export default function Stories() {
   const list = useStories()
   const act = useStoryAction()
   const [editing, setEditing] = useState(null)
+  const [panelOpen, setPanelOpen] = useState(false) // kept apart from editing so the panel can close into its button
+  const [session, setSession] = useState(0) // each opening starts from the saved story
+  const trigger = useTrigger()
+  const edit = (e, item) => { trigger.from(e); setEditing(item); setSession((n) => n + 1); setPanelOpen(true) }
   const stories = useMemo(() => [...(list.data ?? [])].sort((a, b) => Number(b.is_featured) - Number(a.is_featured) || String(b.updated_at).localeCompare(String(a.updated_at))), [list.data])
   const featured = stories.filter((s) => s.is_featured).length
 
@@ -233,20 +238,20 @@ export default function Stories() {
     <div>
       <p className="mb-1 text-[12px] text-muted"><Link to="/content/home" className="hover:underline">{t('news.crumb')}</Link> / {t('stories.title')}</p>
       <PageHeader title={t('stories.title')} subtitle={t('stories.subtitle')}
-        actions={<Button icon={<Plus size={15} aria-hidden />} onClick={() => setEditing('new')}>{t('stories.add')}</Button>} />
+        actions={<Button icon={<Plus size={15} aria-hidden />} onClick={(e) => edit(e, 'new')}>{t('stories.add')}</Button>} />
       {!list.isLoading && stories.length > 0 && (
         <p className="mb-3 flex items-center gap-1.5 text-[13px] text-muted"><Star size={14} aria-hidden className="fill-amber text-amber" /> {t('stories.featuredCount', { count: featured })}</p>
       )}
       {list.isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-48 rounded-card" />)}</div>
       ) : stories.length === 0 ? (
-        <EmptyState title={t('stories.empty')} message={t('stories.emptyBody')} framed action={<Button onClick={() => setEditing('new')}>{t('stories.add')}</Button>} />
+        <EmptyState title={t('stories.empty')} message={t('stories.emptyBody')} framed action={<Button onClick={(e) => edit(e, 'new')}>{t('stories.add')}</Button>} />
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {stories.map((s) => (
             <li key={s.id} className="flex flex-col gap-2 rounded-card border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-2">
-                <button type="button" onClick={() => setEditing(s)} className="min-w-0 text-left">
+                <button type="button" onClick={(e) => edit(e, s)} className="min-w-0 text-left">
                   <span className="block text-[15px] font-bold text-text hover:underline">{s.person_name}</span>
                   <span className="block text-[12px] text-muted">{[pick(s.business, lang), pick(s.place, lang)].filter(Boolean).join(', ')}</span>
                 </button>
@@ -270,7 +275,7 @@ export default function Stories() {
           ))}
         </ul>
       )}
-      {editing && <StoryEditor key={editing === 'new' ? 'new' : editing.id} story={editing === 'new' ? null : editing} stories={stories} open onClose={() => setEditing(null)} />}
+      {editing && <StoryEditor key={`${editing === 'new' ? 'new' : editing.id}-${session}`} story={editing === 'new' ? null : editing} stories={stories} open={panelOpen} triggerRef={trigger.ref} onClose={() => setPanelOpen(false)} />}
     </div>
   )
 }

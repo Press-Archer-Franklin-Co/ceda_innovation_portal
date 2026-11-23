@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type RefObject, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Captions } from 'lucide-react'
 import Modal from '../ui/Modal'
@@ -32,7 +32,7 @@ function vttToText(vtt: string): string[] {
     .filter(Boolean)
 }
 
-export default function VideoStoryDialog({ post, onClose, onOpenPost }: { post: PostCard | null; onClose: () => void; onOpenPost?: (p: PostCard) => void }) {
+export default function VideoStoryDialog({ post, onClose, onOpenPost, triggerRef }: { post: PostCard | null; onClose: () => void; onOpenPost?: (p: PostCard) => void; triggerRef: RefObject<HTMLElement | null> }) {
   const { t, lang } = useI18n()
   const slug = post?.slug ?? ''
   const detail = useAsync(() => (slug ? publicContent.post(slug) : Promise.resolve(null)), [slug, lang])
@@ -58,8 +58,9 @@ export default function VideoStoryDialog({ post, onClose, onOpenPost }: { post: 
   const cover = data?.cover ?? post?.cover ?? null
 
   return (
-    // The open story lives in the address (?story=), so it also opens from a shared link; a pressed card is its origin.
-    <Modal open={Boolean(post)} onClose={onClose} routeOpened size="xl" title={data?.title ?? post?.title} bodyClassName="!px-0 !pt-0 sm:!px-6">
+    // The open story lives in the address (?story=). A pressed card is its origin; from a shared link there is none
+    // (triggerRef is empty) and it scales in from the centre.
+    <Modal open={Boolean(post)} onClose={onClose} triggerRef={triggerRef} size="xl" title={data?.title ?? post?.title} bodyClassName="!px-0 !pt-0 sm:!px-6">
       {detail.loading ? (
         <div className="px-5 sm:px-0 space-y-4" aria-hidden>
           <Skeleton className="w-full aspect-video rounded-none sm:rounded-card" />
