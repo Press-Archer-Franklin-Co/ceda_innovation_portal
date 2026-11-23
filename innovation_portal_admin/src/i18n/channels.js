@@ -171,6 +171,8 @@ const SCREENS_EN = {
   'ch.wa.block.handoff': 'Hand over to an officer',
   'ch.wa.block.file': 'Ask for photo or document',
   'ch.wa.block.submit': 'Send the idea',
+  'ch.wa.block.form_questions': "Ask the form's questions",
+  'ch.wa.block.my_ideas': 'Show my ideas',
   'ch.sim.sendFile': 'Send a test file',
   'ch.sim.fileSent': '[test file: idea.pdf]',
   // Edit panel
@@ -350,6 +352,8 @@ const SCREENS_TN = {
   'ch.wa.block.handoff': 'Fetisetsa kwa motlhankeding',
   'ch.wa.block.file': 'Kopa setshwantsho kgotsa tokomane',
   'ch.wa.block.submit': 'Romela kakanyo',
+  'ch.wa.block.form_questions': 'Botsa dipotso tsa foromo',
+  'ch.wa.block.my_ideas': 'Bontsha dikakanyo tsa me',
   'ch.sim.sendFile': 'Romela faele ya teko',
   'ch.sim.fileSent': '[faele ya teko: idea.pdf]',
   'ch.step.panel': 'Ditlhophiso tsa kgato',

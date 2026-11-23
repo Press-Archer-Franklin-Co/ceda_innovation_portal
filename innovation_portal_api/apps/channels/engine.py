@@ -22,6 +22,8 @@ from django.utils import timezone
 
 from apps.channels import actions
 from apps.channels.actions import pick
+from apps.channels.form_steps import FormQuestionsMixin
+from apps.channels.my_ideas import MyIdeasMixin
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +49,7 @@ DEFAULT_TEXT = {
     "goodbye": {"en": "Thank you for using CEDA Innovation.", "tn": "Re a leboga go dirisa CEDA Innovation."},  # TODO tn-review
     "broken": {"en": "Sorry, something went wrong. Please try again later.", "tn": "Maitshwarelo, sengwe se senyegile. Tsweetswee leka gape moragonyana."},  # TODO tn-review
     "list_button": {"en": "Choose", "tn": "Tlhopha"},
+    "reply_number": {"en": "Reply with a number.", "tn": "Araba ka nomoro."},  # TODO tn-review
 }
 
 LANGUAGES = (("en", "English"), ("tn", "Setswana"))
@@ -68,6 +71,7 @@ class Screen:
     expects: str = "none"  # choice, text, none
     outcome: str = ""  # completed, handed_over (set when the session ends)
     node_title: str = ""  # the name staff gave the step (builder and simulator only)
+    lang: str = "en"  # the person's language when the screen was made
 
     def ussd_text(self) -> str:
         body = self.text
@@ -120,7 +124,7 @@ def fill(template: str, variables: dict) -> str:
     return re.sub(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}", replace, template)
 
 
-class JourneyRunner:
+class JourneyRunner(FormQuestionsMixin, MyIdeasMixin):
     """Walk a journey graph for one person.
 
     ``context`` carries what the runner needs from outside: ``channel`` (ussd, whatsapp),
@@ -216,10 +220,17 @@ class JourneyRunner:
                 self.logged_steps.append((node["key"], kind, ""))
                 prefix = prefix + ([extra] if extra else [])
                 continue
+            if kind == "form_questions":
+                return self._enter_form_questions(node, prefix)
+            if kind == "my_ideas":
+                return self._enter_my_ideas(node, prefix)
             if kind == "file" and self.channel == "ussd":
                 key = node.get("next") or ""  # USSD cannot carry files
                 continue
             if kind == "submit":
+                if self.state.get("needs_web"):
+                    # A required question cannot be answered on a phone: do not ask for consent to a send that must fail.
+                    return self._finish(prefix + [self._fq_text("finish_on_web")], outcome="completed", node_key=key, node_type=kind)
                 if (node.get("settings") or {}).get("require_consent", True) and not self.state.get("consented", {}).get(key):
                     return self._show(node, prefix)
                 return self._do_submit(node, prefix)
@@ -261,7 +272,7 @@ class JourneyRunner:
         elif kind == "handoff":
             body = body or self.default("handoff_note")
         text = "\n".join(part for part in [*prefix, error, body] if part)
-        screen = Screen(text=text, end=False, node_key=node["key"], node_type=kind, choices=choices, expects=expects, node_title=node.get("title") or "")
+        screen = Screen(text=text, end=False, node_key=node["key"], node_type=kind, choices=choices, expects=expects, node_title=node.get("title") or "", lang=self.lang)
         self._say("bot", screen.ussd_text() if self.channel == "ussd" else text)
         return screen
 
@@ -272,7 +283,7 @@ class JourneyRunner:
         self.logged_steps.append((node_key, node_type, ""))
         self._say("bot", text)
         title = (self._node(node_key) or {}).get("title") or ""
-        return Screen(text=text, end=True, node_key=node_key, node_type=node_type, outcome=outcome, node_title=title)
+        return Screen(text=text, end=True, node_key=node_key, node_type=node_type, outcome=outcome, node_title=title, lang=self.lang)
 
     def _record_answer(self, node: dict, text: str) -> None:
         hidden = bool((node.get("settings") or {}).get("sensitive"))
@@ -283,9 +294,15 @@ class JourneyRunner:
         """1-based index of the chosen option from a number, a button id or the title."""
         if text.isdigit() and 1 <= int(text) <= count:
             return int(text)
-        lowered = text.lower()
+        from apps.platform_config.providers.whatsapp import TWILIO_BUTTON_TITLE, TWILIO_LIST_ITEM, cut_title
+
+        lowered = " ".join(text.lower().split())
         for index, title in enumerate(titles, start=1):
             if title and title.lower() == lowered:
+                return index
+        # A tapped button whose payload was lost still sends its (cut) title as the text.
+        for index, title in enumerate(titles, start=1):
+            if title and lowered in {cut_title(title, TWILIO_BUTTON_TITLE).lower(), cut_title(title, TWILIO_LIST_ITEM).lower()}:
                 return index
         return None
 
@@ -382,45 +399,14 @@ class JourneyRunner:
         return words
 
     def _answer_file(self, node: dict, text: str) -> Screen:
-        from apps.channels.actions import extension_for, save_file
-
         settings = node.get("settings") or {}
         counts = self.state.setdefault("file_counts", {})
         count = counts.get(node["key"], 0)
         max_files = int(settings.get("max_files") or 3)
-        max_mb = float(settings.get("max_mb") or 10)
-        allowed = {str(x).lower().lstrip(".") for x in (settings.get("allowed_types") or [])}
         required = bool(settings.get("required"))
         lowered = text.strip().lower()
         if self.media:
-            notes = []
-            for item in self.media:
-                if count >= max_files:
-                    break
-                extension = extension_for(item.get("content_type", "")).lstrip(".")
-                if not extension or (allowed and extension not in allowed and not (extension == "jpg" and "jpeg" in allowed)):
-                    notes.append(self.t(settings.get("wrong_type_text")) or self.default("broken"))
-                    continue
-                max_bytes = int(max_mb * 1024 * 1024)
-                if item.get("pretend"):
-                    if int(item.get("size") or 0) > max_bytes:
-                        notes.append(self.t(settings.get("too_big_text")) or self.default("broken"))
-                        continue
-                else:
-                    fetched = item["fetch"](max_bytes) if item.get("fetch") else None
-                    if fetched is None or not fetched.ok:
-                        key = "too_big_text" if getattr(fetched, "too_big", False) else "failed_text"
-                        notes.append(self.t(settings.get(key)) or self.default("broken"))
-                        continue
-                    document, error = save_file(
-                        draft_id=self.state.get("draft_id") or "", field_key=settings.get("field_key") or "", content=fetched.content,
-                        content_type=fetched.content_type or item.get("content_type", ""), user=self.user, phone=self.phone, message_id=self.message_id,
-                    )
-                    if document is None:
-                        notes.append(self.t(settings.get("wrong_type_text" if error == "wrong_type" else "failed_text")) or self.default("broken"))
-                        continue
-                count += 1
-                notes.append(self.t(settings.get("received_text")))
+            count, notes = self._receive_files(settings, count)
             counts[node["key"]] = count
             self.logged_steps.append((node["key"], "file", lowered[:300], len(self.media)))
             self._say("person", f"[{len(self.media)} file(s)]")
@@ -433,6 +419,47 @@ class JourneyRunner:
             self._record_answer(node, text)
             return self._advance(node.get("next") or "", prefix=[])
         return self._show(node, [], error=self.t(settings.get("needed_text")))
+
+    def _receive_files(self, settings: dict, count: int) -> tuple[int, list[str]]:
+        """Check and save this message's files for a file step (or a form's file question).
+        Returns the new number of files kept and the replies for each file."""
+        from apps.channels.actions import extension_for, save_file
+
+        max_files = int(settings.get("max_files") or 3)
+        max_mb = float(settings.get("max_mb") or 10)
+        allowed = {str(x).lower().lstrip(".") for x in (settings.get("allowed_types") or [])}
+        notes: list[str] = []
+        for item in self.media:
+            if count >= max_files:
+                break
+            extension = extension_for(item.get("content_type", "")).lstrip(".")
+            if not extension or (allowed and extension not in allowed and not (extension == "jpg" and "jpeg" in allowed)):
+                notes.append(self.t(settings.get("wrong_type_text")) or self.default("broken"))
+                continue
+            max_bytes = int(max_mb * 1024 * 1024)
+            if item.get("pretend"):
+                if int(item.get("size") or 0) > max_bytes:
+                    notes.append(self.t(settings.get("too_big_text")) or self.default("broken"))
+                    continue
+            else:
+                fetched = item["fetch"](max_bytes) if item.get("fetch") else None
+                if fetched is None or not fetched.ok:
+                    key = "too_big_text" if getattr(fetched, "too_big", False) else "failed_text"
+                    notes.append(self.t(settings.get(key)) or self.default("broken"))
+                    continue
+                if self.state.get("sim_draft") and not self.state.get("draft_id"):
+                    document, error = object(), ""  # simulator: checked, never saved
+                else:
+                    document, error = save_file(
+                        draft_id=self.state.get("draft_id") or "", field_key=settings.get("field_key") or "", content=fetched.content,
+                        content_type=fetched.content_type or item.get("content_type", ""), user=self.user, phone=self.phone, message_id=self.message_id,
+                    )
+                if document is None:
+                    notes.append(self.t(settings.get("wrong_type_text" if error == "wrong_type" else "failed_text")) or self.default("broken"))
+                    continue
+            count += 1
+            notes.append(self.t(settings.get("received_text")))
+        return count, notes
 
     def _answer_submit(self, node: dict, text: str) -> Screen:
         settings = node.get("settings") or {}
@@ -454,8 +481,12 @@ class JourneyRunner:
 
         settings = node.get("settings") or {}
         name = str(self.state["vars"].get(settings.get("name_variable") or "name") or self.state["vars"].get("profile_name") or "")
-        if self.dry_run or not self.state.get("draft_id"):
-            reference, error = ("", "failed") if not self.dry_run else ("TEST", "")
+        if self.dry_run:
+            reference, error = "TEST", ""
+        elif self.state.get("sim_draft") and not self.state.get("draft_id"):
+            reference, error = actions.check_pretend_submit(program_id=self.state["sim_draft"].get("program_id") or "", user=self.user)
+        elif not self.state.get("draft_id"):
+            reference, error = "", "failed"
         else:
             reference, error = actions.submit_draft(
                 draft_id=self.state["draft_id"], user=self.user, name=name, consent=bool(self.state.get("consented", {}).get(node["key"])),
@@ -483,6 +514,19 @@ class JourneyRunner:
         settings = node.get("settings") or {}
         if self.dry_run:
             self.state["vars"]["draft_reference"] = "IDEA-PREVIEW"
+            return node.get("next") or "", self.t(node.get("text"))
+        if self.simulation:
+            # R-69: a simulator run never makes a real draft or account. The answers are kept
+            # in the session as a pretend draft, so later steps can still be tried.
+            from apps.channels.form_steps import program_by_id
+
+            program = program_by_id(settings.get("program_id"))
+            pretend = self.state.get("sim_draft") or {"program_id": str(program.id) if program else "", "data": {}}
+            for field_key, variable in (settings.get("fields") or {}).items():
+                if self.state["vars"].get(variable) not in (None, ""):
+                    pretend.setdefault("data", {})[field_key] = self.state["vars"][variable]
+            self.state["sim_draft"] = pretend
+            self.state["vars"]["draft_reference"] = "TEST-IDEA"
             return node.get("next") or "", self.t(node.get("text"))
         visible_vars = dict(self.state["vars"])
         draft, user, error = actions.save_draft(

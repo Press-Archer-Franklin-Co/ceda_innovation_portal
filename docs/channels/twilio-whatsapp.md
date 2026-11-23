@@ -26,7 +26,7 @@ Each message writes one line to the `apps.channels.whatsapp` log: connection, ma
 | --- | --- |
 | Account SID, Auth token | From the Twilio console. The token is stored encrypted and never shown again; an empty box keeps it. |
 | WhatsApp sender number | +14155238886 for the Sandbox, or your own WhatsApp sender. |
-| How choices are sent | **Numbered text** (default, works everywhere) or **WhatsApp buttons and lists**: up to 3 choices as quick reply buttons, up to 10 as a list, made through Twilio's Content API. If Twilio refuses, numbered text is sent instead. |
+| How choices are sent | **WhatsApp buttons and lists** (default): up to 3 choices as quick reply buttons, 4 to 10 as a list, made through Twilio's Content API. Titles are cut at a word to 20 characters (buttons) or 24 (list rows). More than 10 choices, or a refusal from Twilio, goes as numbered text. **Numbered text** is the other option. |
 | Words that start again | One per line. Defaults: menu, start, restart, simolola, lenane. |
 | Standard replies | The replies the system sends, in English (`.en`) and Setswana (`.tn`): `error`, `not_available`, `file_not_expected`. |
 | Approved message templates | Template (Content SID) per message type, for messages sent more than 24 hours after the person last wrote. |
@@ -46,6 +46,14 @@ Both appear in the WhatsApp flows builder (and the USSD builder) without any scr
 **Send the idea** (`submit`): sends the draft to CEDA, as a guest (with the verified number and the name answer) or as the matched account, following the challenge's rules. Settings: ask the person to agree first (and the question), where the name comes from, and the messages for sent (`{reference}` is the idea number), not agreed, challenge closed and could not send, plus where to go next when it is sent or not. Each sent idea writes the audit entry `channel_submission_created`. In the phone simulator it checks everything but does not send: test runs never create real ideas.
 
 The example WhatsApp journey now asks, after "Save idea", for an optional photo or document (reply SKIP) and then sends the idea and gives its number.
+
+**Ask the form's questions** (`form_questions`): reads the challenge's live form and asks each question in the person's language: text, long text, number, email, date, single choice, yes or no, multiple choice (numbers with commas) and files. It skips hidden questions, checks answers with the form's rules and saves each one in the draft under its field key. BACK goes to the previous question; SKIP leaves out one that is not needed. It makes the draft itself when there is none, so a Save to an idea draft step before it is not needed; a Send the idea step must come after it. A question a phone cannot ask is listed at the end with a link. If that question is required, the idea stays saved and the person finishes it on the website, without being asked to agree to a send that cannot work.
+
+**Show my ideas** (`my_ideas`): lists the open ideas of the person's account and of this phone as a guest, newest first (up to 9, plus Recent ideas, which shows the last 5). Picking one shows its name, status, last update and next step, with Continue this idea for a draft. Typing an idea number still works. It never shows another person's idea, notes or reviewer names. In the simulator it uses sample ideas.
+
+The phone simulator saves nothing: no draft, account, file or idea.
+
+**Upgrading the example journey:** `python manage.py upgrade_example_whatsapp_journey` adds these steps to the journey live WhatsApp connections run, publishes a new version and prints what changed. Running it again changes nothing. `--undo` puts back the version from before.
 
 ## Set up the Twilio WhatsApp Sandbox
 

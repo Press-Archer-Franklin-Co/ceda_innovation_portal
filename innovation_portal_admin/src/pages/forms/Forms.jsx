@@ -148,19 +148,8 @@ export default function Forms() {
         <ErrorState title={t('forms.loadError')} message={list.error?.message} onRetry={list.refetch} framed />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-busy={list.isFetching || undefined}>
-          <button
-            type="button"
-            onClick={(e) => { create.from(e); setCreating(true) }}
-            className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed border-border bg-surface p-4 text-center hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-primary">
-              <Plus size={22} aria-hidden />
-            </span>
-            <span className="text-[14px] font-bold text-text">{t('forms.createCard')}</span>
-            <span className="text-[12px] text-muted">{t('forms.createCardBody')}</span>
-          </button>
           {list.isLoading
-            ? [0, 1, 2].map((i) => <Skeleton key={i} className="h-[220px] rounded-card" />)
+            ? [0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-[166px] rounded-card" />)
             : results.map((form) => <FormCard key={form.id} form={form} actions={actionsFor(form)} />)}
         </div>
       )}
