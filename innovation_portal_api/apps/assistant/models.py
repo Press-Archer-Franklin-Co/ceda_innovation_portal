@@ -281,14 +281,23 @@ class IdeaProfile(TimeStampedModel):
 class DocumentReview(UUIDModel, TimeStampedModel):
     """A saved review of one file version in one language."""
 
-    document = models.ForeignKey("documents.SubmissionDocument", on_delete=models.CASCADE, related_name="assistant_reviews")
+    document = models.ForeignKey("documents.SubmissionDocument", on_delete=models.CASCADE, null=True, blank=True, related_name="assistant_reviews")
+    # R-83: a file uploaded on the idea form (a MediaAsset in the answers). Exactly one of document or media_asset.
+    media_asset = models.ForeignKey("media_assets.MediaAsset", on_delete=models.CASCADE, null=True, blank=True, related_name="assistant_reviews")
     version = models.CharField(max_length=120)
     language = models.CharField(max_length=5, default="en")
     model = models.CharField(max_length=80, blank=True)
     data = models.JSONField(default=dict)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=["document", "version", "language"], name="uq_assistant_document_review")]
+        constraints = [
+            models.UniqueConstraint(fields=["document", "version", "language"], condition=models.Q(document__isnull=False), name="uq_assistant_document_review"),
+            models.UniqueConstraint(fields=["media_asset", "version", "language"], condition=models.Q(media_asset__isnull=False), name="uq_assistant_media_review"),
+            models.CheckConstraint(
+                condition=models.Q(document__isnull=False, media_asset__isnull=True) | models.Q(document__isnull=True, media_asset__isnull=False),
+                name="assistant_review_one_file",
+            ),
+        ]
 
 
 class AIDraft(UUIDModel, TimeStampedModel):

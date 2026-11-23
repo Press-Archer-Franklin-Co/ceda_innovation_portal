@@ -76,11 +76,16 @@ def files_text(documents) -> str:
 
 
 def draft_documents(draft):
-    return draft.documents.filter(is_active=True, is_current=True).exclude(file="").order_by("created_at")
+    """Attached documents, then (R-83) the files uploaded on the form questions."""
+    from apps.assistant.form_uploads import draft_uploads
+
+    return [*draft.documents.filter(is_active=True, is_current=True).exclude(file="").order_by("created_at"), *draft_uploads(draft)]
 
 
 def submission_documents(submission):
-    return submission.documents.filter(is_active=True, is_current=True).exclude(file="").order_by("created_at")
+    from apps.assistant.form_uploads import submission_uploads
+
+    return [*submission.documents.filter(is_active=True, is_current=True).exclude(file="").order_by("created_at"), *submission_uploads(submission)]
 
 
 # -- 2.13 idea coach ---------------------------------------------------------------------------------

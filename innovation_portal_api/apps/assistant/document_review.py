@@ -17,7 +17,7 @@ MAX_FILE_CHARS = 24_000
 
 
 def document_for(user, document_id, *, draft_token: str | None = None):
-    """The SubmissionDocument if this person may see it, else 404 (never 403: do not confirm it exists)."""
+    """The SubmissionDocument (or, R-83, the form upload) if this person may see it, else 404 (never 403)."""
     from apps.documents.models import SubmissionDocument
     from apps.submissions.selectors import SubmissionSelector
 
@@ -26,7 +26,13 @@ def document_for(user, document_id, *, draft_token: str | None = None):
     except (ValueError, TypeError):
         document = None
     if document is None or not document.file:
-        raise NotFound()
+        # R-83: a file uploaded on the idea form is a MediaAsset in the answers, not a SubmissionDocument.
+        from apps.assistant.form_uploads import upload_for
+
+        found = upload_for(user, document_id, draft_token=draft_token)
+        if found is None:
+            raise NotFound()
+        return found
     if document.application_draft_id:
         draft = document.application_draft
         if user.is_authenticated and draft.innovator_id == user.pk:
@@ -67,7 +73,9 @@ def version_key(document) -> str:
 def review(*, user, document, role: str, requested_language: str | None) -> dict:
     language = lang_mod.resolve(user=user, requested=requested_language)
     key = version_key(document)
-    cached = DocumentReview.objects.filter(document=document, version=key, language=language).first()
+    # Separate cache rows per kind of file, so a form upload and a SubmissionDocument with the same id never collide.
+    owner = {"media_asset_id": document.pk} if getattr(document, "is_form_upload", False) else {"document": document}
+    cached = DocumentReview.objects.filter(**owner, version=key, language=language).first()
     if cached:
         return {**cached.data, "cached": True}
     text, files = file_content(document)
@@ -85,10 +93,10 @@ def review(*, user, document, role: str, requested_language: str | None) -> dict
         json_schema=prompts.DOC_REVIEW_SCHEMA,
         files=files or None,
         language=language,
-        target=f"document:{document.pk}",
+        target=f"{'media' if getattr(document, 'is_form_upload', False) else 'document'}:{document.pk}",
     )
     data = shape(result.data or {}, document, language)
-    DocumentReview.objects.update_or_create(document=document, version=key, language=language, defaults={"data": data, "model": result.model})
+    DocumentReview.objects.update_or_create(**owner, version=key, language=language, defaults={"data": data, "model": result.model})
     return {**data, "cached": False}
 
 
