@@ -2187,9 +2187,15 @@ class WorkflowRuntimeService:
 
     @staticmethod
     def _sync_submission(submission: Submission, *, status_value: str, locked: bool):
+        previous_status = submission.current_status
         submission.current_status = status_value
         submission.locked_for_editing = locked
         submission.save(update_fields=["current_status", "locked_for_editing", "updated_at"])
+        if status_value != previous_status:
+            # The first move into the shortlist tells the person (in the portal, email, WhatsApp if they came from there).
+            from apps.programs.pitch import on_status_change
+
+            on_status_change(submission, previous_status)
         return submission
 
     @staticmethod

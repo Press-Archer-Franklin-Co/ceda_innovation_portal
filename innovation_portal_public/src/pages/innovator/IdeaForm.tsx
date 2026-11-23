@@ -14,6 +14,7 @@ import { useToast } from '../../components/ui/Toast'
 import { useShellSettings } from '../../components/layout/shellData'
 import EntryBand from '../../components/challenges/EntryBand'
 import FormRenderer from '../../components/innovator/form/FormRenderer'
+import AiHelperPanel from '../../components/innovator/form/AiHelperPanel'
 import { showAnswer } from '../../components/innovator/form/showAnswer'
 import {
   type Answers, type FieldProblem, answersToSend, checkStep,
@@ -240,6 +241,17 @@ export default function IdeaForm() {
     goTo(stepIndex + 1)
   }
 
+  /** "Send now, finish later": keep what is typed and go to Review, where the idea is sent. */
+  async function onSendNow() {
+    if (step && dirty.current.has(step.code)) {
+      setBusy(true)
+      const ok = await saveStep(step)
+      setBusy(false)
+      if (!ok) return
+    }
+    goTo(reviewIndex)
+  }
+
   async function onBack() {
     if (step && dirty.current.has(step.code)) await saveStep(step)
     goTo(Math.max(0, stepIndex - 1))
@@ -399,14 +411,35 @@ export default function IdeaForm() {
             {onReview ? (
               <Button data-guide="idea.send" onClick={onSend} loading={sending} arrow>{t('form.send')}</Button>
             ) : (
-              <Button data-guide="idea.next" onClick={onContinue} loading={busy} arrow>
-                {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Prompt 31 part B: only when the idea may go with just the basics (R-23); the rest can come later. */}
+                {draft.send_now_allowed && stepIndex < reviewIndex - 1 && (
+                  <Button variant="ghost" onClick={onSendNow} disabled={busy}>{t('form.sendNow')}</Button>
+                )}
+                <Button data-guide="idea.next" onClick={onContinue} loading={busy} arrow>
+                  {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
+                </Button>
+              </div>
             )}
           </div>
         </section>
 
-        <aside className="flex flex-col gap-4">
+        {/* 2.13: the AI helper sits on top and the right column stays in view, with its own scroll, while the form scrolls. */}
+        <aside className="flex flex-col gap-4 lg:sticky lg:top-[128px] lg:max-h-[calc(100vh-152px)] lg:self-start lg:overflow-y-auto lg:overscroll-contain">
+          <AiHelperPanel
+            draftId={id}
+            steps={steps}
+            stepIndex={stepIndex}
+            answers={answers}
+            onShowField={(index, key) => {
+              if (index !== stepIndex) goTo(index)
+              window.setTimeout(() => {
+                const box = document.querySelector<HTMLElement>(`[data-guide="idea.field.${CSS.escape(key)}"]`)
+                box?.scrollIntoView({ block: 'center' })
+                box?.querySelector<HTMLElement>('input, textarea, select, button')?.focus({ preventScroll: true })
+              }, 50)
+            }}
+          >
           {!onReview && similar.length > 0 && (
             <section className={clsx('rounded-card p-6', slug ? 'bg-info-soft' : 'bg-surface2')}>
               <p className={clsx('flex items-center gap-2 font-heading text-d-h5', slug ? 'text-info' : 'text-text')}>
@@ -445,6 +478,7 @@ export default function IdeaForm() {
               {t('form.voiceNote', { number: settings.whatsapp_number })}
             </p>
           )}
+          </AiHelperPanel>
         </aside>
       </div>
     </div>

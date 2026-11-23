@@ -185,6 +185,7 @@ export const audit = {
   assignments: (params) => client.get('/api/audit/assignments/', params),
   evaluations: (params) => client.get('/api/audit/evaluations/', params),
   list:        (params) => client.get('/api/audit/logs/', params),
+  exportCsv:   (params) => client.getBlob('/api/audit/logs/export/', params),
 }
 
 export const users = {

@@ -499,6 +499,9 @@ class FormQuestionsMixin:
             from apps.channels import actions
 
             return self._fq_show(node, field, [], required=required, error=pick(actions.SAVE_FAILED, self.lang))
+        suggested = self._ai_after_long_answer(node, field, value)
+        if suggested is not None:
+            return suggested
         return self._fq_advance(node, key)
 
     def _fq_advance(self, node: dict, key: str):
@@ -530,8 +533,11 @@ class FormQuestionsMixin:
             fq["files"] = count
             self.logged_steps.append((node["key"], "form_questions", lowered[:300], len(self.media)))
             self._say("person", f"[{len(self.media)} file(s)]")
+            reading = self._ai_documents(node, getattr(self, "_saved_documents", []))
+            if reading:
+                notes.append(reading)
             if count >= file_settings["max_files"]:
-                return self._fq_advance_with(node, field, notes[-1:])
+                return self._fq_advance_with(node, field, notes[-2:] if reading else notes[-1:])
             return self._fq_show(node, field, [], required=required, error="\n".join(dict.fromkeys(n for n in notes if n)))
         finish = self._fq_words(settings, "done_words", DEFAULT_DONE_WORDS) | self._fq_words(settings, "skip_words", DEFAULT_SKIP_WORDS)
         if lowered in finish:

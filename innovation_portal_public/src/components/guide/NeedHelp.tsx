@@ -3,6 +3,7 @@ import { useMediaQuery } from '../../lib/useMediaQuery'
 import { guideAvailability } from '../../lib/guide/guide'
 import { guideStatus, type AssistantStatus } from '../../lib/guide/api'
 import { usePublicConfig } from '../../lib/usePublicConfig'
+import { useAuth } from '../../context/AuthContext'
 import HelpBubble from '../livechat/HelpBubble'
 import { GuideProvider } from './GuideProvider'
 import { useGuide } from './guideContext'
@@ -21,6 +22,7 @@ const BUTTON = 'right-4 sm:right-8 bottom-[84px] lg:bottom-8'
 
 export default function NeedHelp() {
   const config = usePublicConfig()
+  const { isAuthenticated } = useAuth()
   const [status, setStatus] = useState<AssistantStatus | null | undefined>(undefined)
   const [chatOn, setChatOn] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -28,12 +30,12 @@ export default function NeedHelp() {
     let live = true
     guideStatus().then((s) => live && setStatus(s))
     return () => { live = false }
-  }, [])
+  }, [isAuthenticated]) // signing in or out changes what this person may use
   const onStatus = useCallback((on: boolean) => setChatOn(on), [])
   const talk = useCallback(() => setChatOpen(true), [])
 
   if (status === undefined) return null // a moment, so the old bubble never flashes before the guide
-  const on = guideAvailability({ status, config, chat: chatOn })
+  const on = guideAvailability({ status, config, chat: chatOn, signedIn: isAuthenticated })
   if (!on.guide) return <HelpBubble onStatus={onStatus} />
   return (
     <GuideProvider app="public" menuSelector={MENU} onTalk={talk} canTalk={chatOn}>

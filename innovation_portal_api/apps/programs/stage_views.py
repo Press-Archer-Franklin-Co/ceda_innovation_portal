@@ -32,6 +32,11 @@ class StageUpdateSerializer(serializers.Serializer):
     takes_part = serializers.ChoiceField(choices=stage_settings.TAKES_PART, required=False)
     moves_on = MovesOnSerializer(required=False)
     notify_applicants = serializers.BooleanField(required=False)
+    pitch = serializers.JSONField(
+        required=False, allow_null=True,
+        help_text='{starts_at (ISO, a time without a zone is Gaborone time), duration_minutes?, format: in_person|online, place {en, tn} '
+        "(in person), meeting_link (online, https), instructions {en, tn}} or null to clear.",
+    )
 
 
 class ProgramStagesView(APIView):
@@ -57,7 +62,7 @@ class ProgramStageDetailView(APIView):
     @extend_schema(
         tags=TAGS,
         summary="Change one stage (3.6c)",
-        description="Any of form, opens_at, closes_at, takes_part, moves_on, notify_applicants. Answers the stage as in the list. "
+        description="Any of form, opens_at, closes_at, takes_part, moves_on, notify_applicants, pitch. Answers the stage as in the list. "
         "A panel_score pass mark on the judging step is also the challenge's pass mark.",
         request=StageUpdateSerializer,
         responses=OpenApiTypes.OBJECT,

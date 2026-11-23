@@ -2,6 +2,7 @@
 // First draft: needs review by a Setswana speaker at CEDA before launch.
 import type { StringKey } from './en'
 import { innovatorTn } from './innovator'
+import { innovatorHomeTn } from './innovatorHome'
 import { trackingTn } from './tracking'
 import { signInTn } from './signin'
 import { pagesTn } from './pages'
@@ -10,6 +11,7 @@ import { a11yTn } from './a11y'
 import { statusTn } from './status'
 import { brandTn } from './brand'
 import { guideTn } from './guide'
+import { aiHelperTn } from './aiHelper'
 import { inviteTn } from './invite'
 import { accountTn } from './account'
 import { challengeEntryTn } from './challengeEntry'
@@ -181,6 +183,9 @@ const tn: Record<StringKey, string> = {
   'home.partnersEmpty': 'Molekane', // TODO tn-review
 
   'qs2.title': 'Re ka go fitlhelela jang?', // TODO tn-review
+  'qs2.continue': 'Netefatsa o tswelele', // TODO tn-review
+  'qs2.joinFail': 'Founo ya gago e netefaditswe, mme ga re a kgona go bula kakanyo ya gago. Kakanyo e bolokilwe. Leka gape ka bonako.', // TODO tn-review
+  'form.sendNow': 'Romela jaanong, o fetse moragonyana', // TODO tn-review
   'qs2.edit': 'Fetola', // TODO tn-review
   'qs2.general': 'Kakanyo ya kakaretso', // TODO tn-review
   'postd.back': 'Dikgang le bulletin', // TODO tn-review
@@ -243,7 +248,7 @@ const tn: Record<StringKey, string> = {
   'qs2.sendFail': 'Ga re a kgona go romela kakanyo ya gago. Kakanyetso ya gago e babalesegile. Leka gape morago ga nakwana.', // TODO tn-review
   'qs2.phoneFirst': 'Netefatsa nomore ya gago ka khoutu pele.', // TODO tn-review
   'qs2.needMore': 'Kakanyo ya gago e tlhoka dikarabo di le mmalwa pele re e romela. Thalo ya gago e bolokilwe.', // TODO tn-review
-  'qs.introFull': 'Dikgato tse pedi tse dikhutshwane. Pele o romela, re go botsa gore kakanyo ya gago e rarabolola bothata bofe le gore jang.', // TODO tn-review
+  'qs.introFull': 'Le ke kgato ya ntlha ya foromo. Morago re go botsa gore re ka go fitlhelela jang, le gore kakanyo ya gago e rarabolola bothata bofe.', // TODO tn-review
   'qs2.problem': 'Kakanyo ya gago e rarabolola bothata bofe?', // TODO tn-review
   'qs2.solution': 'Kakanyo ya gago e bo rarabolola jang?', // TODO tn-review
   'qs2.problemError': 'Re bolelele bothata ka polelo e le nngwe kgotsa tse pedi.', // TODO tn-review
@@ -443,6 +448,7 @@ const tn: Record<StringKey, string> = {
   'tabs.news': 'Dikgang',
   'footer.rights': '© {year} Citizen Entrepreneurial Development Agency',
   ...innovatorTn,
+  ...innovatorHomeTn,
   ...trackingTn,
   ...signInTn,
   ...pagesTn,
@@ -451,6 +457,7 @@ const tn: Record<StringKey, string> = {
   ...statusTn,
   ...brandTn,
   ...guideTn,
+  ...aiHelperTn,
   ...inviteTn,
   ...accountTn,
   ...challengeEntryTn,

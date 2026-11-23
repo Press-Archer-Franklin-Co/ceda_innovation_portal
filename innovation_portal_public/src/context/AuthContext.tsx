@@ -25,6 +25,7 @@ export interface AuthUser {
   /** From GET /api/auth/me/ (S1). Empty for innovators. */
   capabilities: string[]
   profile?: InnovatorProfile
+  photo_url?: string | null
 }
 
 
@@ -104,6 +105,7 @@ function toAuthUser(user: AuthenticatedUser): AuthUser {
     roles:        user.roles ?? [],
     capabilities: user.capabilities ?? [],
     profile:      user.profile ?? undefined,
+    photo_url:    user.photo_url ?? null,
   }
 }
 

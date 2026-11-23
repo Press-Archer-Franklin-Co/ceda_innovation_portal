@@ -88,6 +88,8 @@ def draft_item(draft, lang: str) -> dict:
         "id": str(draft.id),
         "kind": "draft",
         "channel": draft.channel,
+        "shortlisted": False,
+        "pitch_session": None,
         "state": "drafts",
         "reference": draft.reference_number,
         "title": draft.title,
@@ -130,7 +132,15 @@ def submission_item(submission, lang: str) -> dict:
         "decided_at": _iso(decided_at(submission)) if state == "finished" else None,
         "has_feedback": submission.feedback_snapshots.exists() if state == "finished" else False,
         "open_question": open_question(submission),
+        # 23 Nov: shortlisted, and the pitch session staff set (or null). Never a made-up date.
+        **pitch_fields(submission, lang),
     }
+
+
+def pitch_fields(submission, lang: str) -> dict:
+    from apps.programs.pitch import innovator_fields
+
+    return innovator_fields(submission, lang)
 
 
 def submission_stages(submission) -> list[dict]:
@@ -151,6 +161,84 @@ def decided_at(submission):
     last = submission.status_history.order_by("-created_at").values_list("created_at", flat=True).first()
     return last or submission.updated_at
 
+
+
+# 2.1 (23 Nov): the messages on the signed-in home, most urgent first. Real data only.
+MESSAGE_ORDER = ("changes_requested", "question", "draft", "shortlisted", "stage_moved", "event")
+STAGE_MOVE_WINDOW = timedelta(days=14)
+MESSAGES_LIMIT = 6
+
+
+def home_messages(user, submissions, drafts, lang: str = "en") -> list[dict]:
+    """[{type, idea_id, kind, reference, title, at, ...}] in MESSAGE_ORDER, newest first within a type."""
+    from apps.programs.challenge_entry import SHORTLIST_STATUSES
+    from apps.submissions.innovator_tracking import returned_payload
+
+    out: list[dict] = []
+    now = timezone.now()
+    base = lambda obj, kind: {"idea_id": str(obj.id), "kind": kind, "reference": obj.reference_number, "title": obj.title}  # noqa: E731
+    for sub in submissions:
+        state = submission_state(sub)
+        if state == "finished":
+            continue
+        returned = returned_payload(sub, lang) if state == "needs_action" else None
+        if returned:
+            out.append({
+                "type": "changes_requested", **base(sub, "submission"), "at": returned["requested_at"],
+                "note": returned["reason"], "officer": returned["requested_by"], "fix_by": returned["fix_by"],
+            })
+            continue
+        question = open_question(sub)
+        if question:
+            out.append({
+                "type": "question", **base(sub, "submission"), "at": _iso(sub.updated_at),
+                "officer_first_name": question["officer_first_name"], "excerpt": question["excerpt"], "reply_by": question["reply_by"],
+            })
+    if drafts:
+        draft = drafts[0]
+        out.append({
+            "type": "draft", **base(draft, "draft"), "at": _iso(draft.updated_at),
+            "percent_complete": int((draft.progress_metadata or {}).get("percent_complete") or 0),
+        })
+    for sub in submissions:
+        if sub.current_status in SHORTLIST_STATUSES:
+            changed = sub.status_history.filter(to_status=sub.current_status).order_by("-created_at").values_list("created_at", flat=True).first()
+            out.append({
+                "type": "shortlisted", **base(sub, "submission"), "at": _iso(changed or sub.updated_at),
+                "challenge": None if sub.program.is_general_intake else sub.program.title,
+            })
+    moved = (
+        SubmissionStatusHistory.objects.filter(submission__in=[s for s in submissions if s.current_status not in SHORTLIST_STATUSES], created_at__gte=now - STAGE_MOVE_WINDOW)
+        .exclude(to_status__in=("returned", "requires_more_information", "draft", "submitted"))
+        .select_related("submission")
+        .order_by("-created_at")
+    )
+    seen = set()
+    for row in moved:
+        if row.submission_id in seen or row.from_status == row.to_status:
+            continue
+        seen.add(row.submission_id)
+        out.append({
+            "type": "stage_moved", **base(row.submission, "submission"), "at": _iso(row.created_at),
+            "status": row.to_status, "stage": public_status_label(row.to_status),
+        })
+    programs = {}
+    for sub in submissions:
+        program = sub.program
+        if program.event_date and program.event_date >= now and not program.is_general_intake and submission_state(sub) != "finished":
+            programs.setdefault(program.id, (program, sub))
+    for program, sub in programs.values():
+        out.append({
+            "type": "event", **base(sub, "submission"), "at": _iso(program.event_date),
+            "challenge": program.title, "event_date": _iso(program.event_date),
+        })
+    ordered = []
+    for name in MESSAGE_ORDER:
+        group = [m for m in out if m["type"] == name]
+        # Events: soonest first. Everything else: newest first.
+        group.sort(key=lambda m: m["at"] or "", reverse=name != "event")
+        ordered += group
+    return ordered[:MESSAGES_LIMIT]
 
 class InnovatorDashboardSelector:
     @staticmethod
@@ -244,6 +332,7 @@ class InnovatorDashboardSelector:
             "active_idea": active,
             "next_action": next_action,
             "unread_notifications": Notification.objects.filter(recipient=user, is_read=False).count(),
+            "messages": home_messages(user, submissions, drafts, lang),
         }
 
     @classmethod

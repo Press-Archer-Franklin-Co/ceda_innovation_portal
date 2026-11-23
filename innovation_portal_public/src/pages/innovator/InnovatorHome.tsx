@@ -12,11 +12,13 @@ import StageBar from '../../components/innovator/StageBar'
 import { ideaStatusWord } from '../../components/innovator/ideaStatus'
 import { firstName, formatShortDate, relativeTime } from '../../components/innovator/format'
 import { draftLink, ideaLink } from '../../components/innovator/links'
+import { ideaLink } from '../../components/innovator/links'
+import { knownMessages, messageView } from '../../components/innovator/homeMessages'
 import { useAuth } from '../../context/AuthContext'
 import { useI18n } from '../../i18n'
 import { innovatorService } from '../../services/innovator.service'
 import type {
-  ChallengeMatch, IdeaItem, MySummary, NextAction, ProfileCompleteness, RecommendedChallenge, UpdateItem,
+  ChallengeMatch, HomeMessage, IdeaItem, MySummary, NextAction, ProfileCompleteness, RecommendedChallenge, UpdateItem,
 } from '../../types/innovator'
 import { parseApiError } from '../../utils/apiError'
 import { SUBMIT_PATH } from '../../lib/paths'
@@ -57,6 +59,7 @@ export default function InnovatorHome() {
   const name = user?.first_name || firstName(user?.name)
   const active = summary.status === 'ready' ? summary.data.active_idea : null
   const next = summary.status === 'ready' ? summary.data.next_action : null
+  const messages = summary.status === 'ready' ? summary.data.messages : undefined
 
   return (
     <div className="bg-bg">
@@ -72,7 +75,7 @@ export default function InnovatorHome() {
               <Skeleton className="h-6 w-2/3 opacity-40" />
             </div>
           ) : (
-            <Banner name={name} next={next} active={active} />
+            <Banner name={name} next={next} active={active} messages={messages} />
           )}
           {active && <LatestIdeaCard item={active} />}
         </div>
@@ -103,8 +106,10 @@ export default function InnovatorHome() {
   )
 }
 
-function Banner({ name, next, active }: { name: string; next: NextAction | null; active: IdeaItem | null }) {
+function Banner({ name, next, active, messages }: { name: string; next: NextAction | null; active: IdeaItem | null; messages?: HomeMessage[] }) {
   const { t, lang } = useI18n()
+  const known = knownMessages(messages)
+  if (known.length) return <MessagesBanner name={name} messages={known} />
   let headline = t('home.headlineNone')
   let body = t('home.nextNone')
   let primary: { to: string; label: string } = { to: SUBMIT_PATH, label: t('home.startIdea') }
@@ -137,13 +142,48 @@ function Banner({ name, next, active }: { name: string; next: NextAction | null;
 
   return (
     <div>
-      {name && <p className="text-d-over uppercase text-on-banner/80">{t('home.greeting', { name })}</p>}
+      {name && <p className="text-d-over uppercase text-amber">{t('home.greeting', { name })}</p>}
       <h1 className="mt-3 font-heading text-d-mh1 sm:text-d-h2">{headline}</h1>
       {body && <p className="mt-4 max-w-[640px] text-d-body">{body}</p>}
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link to={primary.to} className={buttonClasses({ variant: 'primary' })}>{primary.label}</Link>
+        <Link to={primary.to} className={buttonClasses({ variant: 'accent' })}>{primary.label}<ArrowRight size={16} aria-hidden /></Link>
         {secondary && <Link to={secondary.to} className={buttonClasses({ variant: 'onDark' })}>{secondary.label}</Link>}
       </div>
+    </div>
+  )
+}
+
+/** 2.1 from the home messages: the most urgent one leads the banner; the rest are one line each. */
+function MessagesBanner({ name, messages }: { name: string; messages: HomeMessage[] }) {
+  const { t, lang } = useI18n()
+  const [lead, ...rest] = messages.map((m) => messageView(m, t, lang))
+  return (
+    <div>
+      {name && <p className="text-d-over uppercase text-amber">{t('home.greeting', { name })}</p>}
+      <h1 className="mt-3 font-heading text-d-mh1 sm:text-d-h2">{lead.headline}</h1>
+      <p className="mt-4 max-w-[640px] text-d-body">{lead.body}</p>
+      <div className="mt-6 flex flex-wrap gap-3">
+        <Link to={lead.cta.to} className={buttonClasses({ variant: 'accent' })}>
+          {lead.cta.label}
+          <ArrowRight size={16} aria-hidden />
+        </Link>
+        <Link to={SUBMIT_PATH} className={buttonClasses({ variant: 'onDark' })}>{t('home.startIdea')}</Link>
+      </div>
+      {rest.length > 0 && (
+        <div className="mt-6 max-w-[640px] border-t border-on-banner/20 pt-4">
+          <p className="text-d-label-s text-on-banner/80">{t('hm.also')}</p>
+          <ul className="mt-2 flex flex-col">
+            {rest.map((m) => (
+              <li key={m.key}>
+                <Link to={m.cta.to} className="flex min-h-[44px] items-center justify-between gap-3 rounded-control px-2 text-d-body-s text-on-banner hover:bg-on-banner/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber">
+                  <span className="min-w-0 truncate">{m.line}</span>
+                  <span className="inline-flex shrink-0 items-center gap-1 text-d-label-s text-amber">{m.cta.label}<ArrowRight size={14} aria-hidden /></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }

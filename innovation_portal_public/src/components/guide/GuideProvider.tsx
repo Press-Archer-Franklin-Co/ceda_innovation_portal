@@ -63,6 +63,11 @@ export function GuideProvider({ app, menuSelector, onTalk, canTalk = true, child
     try {
       const answer = await askGuide(body)
       if (asked.current !== id) return
+      if (answer.unavailable) { // said plainly, with Talk to a person beside it
+        setGuide(null)
+        setStatus('failed')
+        return
+      }
       setGuide(answer)
       setCurrent(0)
       setStatus('answered')
