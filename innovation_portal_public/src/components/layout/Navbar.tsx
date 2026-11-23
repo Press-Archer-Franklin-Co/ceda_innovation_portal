@@ -147,7 +147,8 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
   }, [open])
 
   if (!user) return null
-  const name = `${user.first_name} ${user.last_name}`.trim() || user.email
+  // A phone account can have no name or email yet (made from a phone code on 1.2 or 2.0).
+  const name = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email || user.phone_number || ''
   const item = 'flex items-center gap-2.5 px-3 py-2 rounded-control text-d-body-s text-text hover:bg-surface2 focus-visible:outline-none focus-visible:bg-surface2'
 
   return (
@@ -166,7 +167,7 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
         <div role="menu" className="absolute right-0 mt-2 w-64 rounded-card bg-surface border border-border shadow-pop p-2 z-50">
           <div className="px-3 py-2 border-b border-border mb-1">
             <p className="text-d-label text-text truncate">{name}</p>
-            <p className="text-d-cap text-muted truncate">{user.email}</p>
+            <p className="text-d-cap text-muted truncate">{user.email || user.phone_number}</p>
           </div>
           <Link role="menuitem" to="/my-ideas" className={item} onClick={() => setOpen(false)}>
             <LayoutDashboard size={16} aria-hidden className="text-muted" /> {t('nav.myIdeas')}

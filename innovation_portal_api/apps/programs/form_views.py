@@ -266,6 +266,31 @@ class PublishedFormView(APIView):
         return api_success(data=document)
 
 
+class GeneralIdeaPublishedFormView(APIView):
+    """Prompt 31 part B: the home quick start shows the general idea form's own steps before any draft exists."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [PublishedFormThrottle]
+
+    @extend_schema(
+        tags=TAGS,
+        summary="Get the published general idea form",
+        description="The published form that General ideas uses (GeneralIdeaProgram), in one language. 404 when it is not published.",
+        parameters=[OpenApiParameter("lang", OpenApiTypes.STR, enum=["en", "tn"])],
+        responses={200: OpenApiTypes.OBJECT, 404: OpenApiResponse(description="Not published")},
+    )
+    def get(self, request):
+        from apps.programs.general_idea import GeneralIdeaProgram
+
+        program = GeneralIdeaProgram.find()
+        form = program.form if program else None
+        lang = normalize_language(request.query_params.get("lang")) or "en"
+        document = FormPublishService.published_document(form, "en" if lang == "all" else lang) if form and not form.is_template else None
+        if document is None:
+            return Response({"success": False, "message": "This form has not been published.", "errors": {"detail": "Not published."}}, status=404)
+        return api_success(data=document)
+
+
 class FormTranslationsView(APIView):
     permission_classes = [HasCapability.of("forms.manage")]
 

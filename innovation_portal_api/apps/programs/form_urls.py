@@ -3,6 +3,7 @@ from django.urls import path
 from apps.programs.form_views import (
     FormArchiveView,
     GeneralIdeaFormView,
+    GeneralIdeaPublishedFormView,
     FormDetailView,
     FormDraftView,
     FormDuplicateView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("", FormListCreateView.as_view(), name="form-list"),
     path("templates/", FormTemplateListView.as_view(), name="form-templates"),
     path("general-ideas/", GeneralIdeaFormView.as_view(), name="form-general-ideas"),
+    path("general-ideas/published/", GeneralIdeaPublishedFormView.as_view(), name="form-general-ideas-published"),
     path("review-roles/", FormReviewRolesView.as_view(), name="form-review-roles"),
     path("<uuid:form_id>/", FormDetailView.as_view(), name="form-detail"),
     path("<uuid:form_id>/draft/", FormDraftView.as_view(), name="form-draft"),

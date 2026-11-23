@@ -235,6 +235,17 @@ export default function IdeaForm() {
     goTo(stepIndex + 1)
   }
 
+  /** "Send now, finish later": keep what is typed and go to Review, where the idea is sent. */
+  async function onSendNow() {
+    if (step && dirty.current.has(step.code)) {
+      setBusy(true)
+      const ok = await saveStep(step)
+      setBusy(false)
+      if (!ok) return
+    }
+    goTo(reviewIndex)
+  }
+
   async function onBack() {
     if (step && dirty.current.has(step.code)) await saveStep(step)
     goTo(Math.max(0, stepIndex - 1))
@@ -389,9 +400,15 @@ export default function IdeaForm() {
             {onReview ? (
               <Button data-guide="idea.send" onClick={onSend} loading={sending} arrow>{t('form.send')}</Button>
             ) : (
-              <Button data-guide="idea.next" onClick={onContinue} loading={busy} arrow>
-                {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Prompt 31 part B: only when the idea may go with just the basics (R-23); the rest can come later. */}
+                {draft.send_now_allowed && stepIndex < reviewIndex - 1 && (
+                  <Button variant="ghost" onClick={onSendNow} disabled={busy}>{t('form.sendNow')}</Button>
+                )}
+                <Button data-guide="idea.next" onClick={onContinue} loading={busy} arrow>
+                  {slug ? t('ent.next', { name: stepNames[stepIndex + 1] ?? '' }) : stepIndex === reviewIndex - 1 ? t('form.reviewStep') : t('form.continue')}
+                </Button>
+              </div>
             )}
           </div>
         </section>

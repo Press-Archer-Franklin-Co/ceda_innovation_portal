@@ -6,6 +6,8 @@ import { InputControl } from '../ui/Input'
 import Field from '../ui/Field'
 import { SelectControl } from '../ui/Select'
 import Skeleton from '../ui/Skeleton'
+import StepProgress from '../ui/StepProgress'
+import { useJourney } from './journeySteps'
 import { useI18n } from '../../i18n'
 import { useAsync } from '../../lib/useAsync'
 import { useBasicsOnly } from '../../lib/usePublicConfig'
@@ -14,7 +16,8 @@ import { intakeService, resumeStorage } from '../../services/intake.service'
 import { publicContent, ChallengeCard } from '../../services/publicContent.service'
 import { useSearchParams } from 'react-router-dom'
 
-// Figma 1.1 › Hero › Quick start card (10:280), step 1 of 2. Typing a title (with a sector chosen) creates a
+// Figma 1.1 › Hero › Quick start card (10:280). Prompt 31 part B: this card is step 1 of the real form, so its bar
+// shows that form's own steps (the General ideas form, or the chosen challenge's form). Typing a title (with a sector chosen) creates a
 // saved guest draft, debounced 800 ms; later changes save to the same draft. The resume token stays in
 // localStorage so a refresh keeps the draft. Continue opens step 2 (1.2).
 
@@ -56,6 +59,11 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
   const [errors, setErrors] = useState<{ title?: string; sector?: string }>({})
   const lastSaved = useRef<string>('')
   const [retry, setRetry] = useState(0)
+  // The chosen challenge's form once its draft is saved; until then, and for general ideas, the General ideas form.
+  const [formId, setFormId] = useState<string | null>(null)
+  const journey = useJourney(programId ? formId : null)
+  const restored = useRef<QuickStartDraft | null>(null)
+  const resumed = useRef(false)
 
   const sectorList = useMemo(
     () => [...(sectors.data ?? []).map((s) => ({ id: s.id, name: s.name })), { id: NOT_SURE, name: t('qs.notSure') }],
@@ -71,10 +79,21 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
       .then((d) => {
         setTitle((v) => v || d.title || '')
         // A kept draft was saved with a choice, so no sector means "Not sure".
-        const kept = d.sector ?? NOT_SURE
-        setSectorId((v) => v ?? kept)
-        if (d.program_detail && !d.program_detail.is_general_intake) setProgramId(d.program)
-        lastSaved.current = JSON.stringify([d.title, kept, d.program_detail?.is_general_intake ? '' : d.program])
+        const sector = d.sector ?? NOT_SURE
+        setSectorId((v) => v ?? sector)
+        if (d.program_detail && !d.program_detail.is_general_intake) {
+          setProgramId(d.program)
+          setFormId(d.form_id)
+        }
+        // A refresh on the phone step (1.2) reopens it, with everything kept.
+        if (resumeStorage.stage() === 'confirm' && d.title) {
+          restored.current = {
+            draftId: kept.draftId, token: kept.token, title: d.title, sectorId: d.sector,
+            sectorName: '', programId: d.program_detail?.is_general_intake ? null : d.program,
+            programTitle: d.program_detail?.is_general_intake ? null : d.program_detail?.title ?? null,
+          }
+        }
+        lastSaved.current = JSON.stringify([d.title, sector, d.program_detail?.is_general_intake ? '' : d.program])
         setSave('saved')
       })
       .catch(() => {
@@ -82,6 +101,25 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
         setDraft(null)
       })
   }, [])
+
+  // Reopen the phone step after a refresh, once the sector names are in.
+  useEffect(() => {
+    const draftKept = restored.current
+    if (!draftKept || resumed.current || sectors.loading) return
+    resumed.current = true
+    const name = draftKept.sectorId ? (sectors.data ?? []).find((s) => s.id === draftKept.sectorId)?.name ?? '' : t('qs.notSure')
+    onContinue({ ...draftKept, sectorName: name })
+  }, [sectors.loading, sectors.data, onContinue, t, save])
+
+  // A challenge entry uses that challenge's form, so the bar shows its steps.
+  useEffect(() => {
+    if (!programId || !draft || save !== 'saved') return
+    let alive = true
+    intakeService.getDraft(draft.draftId, draft.token).then((d) => alive && setFormId(d.form_id)).catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [programId, draft, save])
 
   // Autosave, 800 ms after the last change, once there is a title and a sector.
   useEffect(() => {
@@ -143,13 +181,8 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
       aria-labelledby="qs-title"
       className="relative flex flex-col gap-4 bg-surface text-text rounded-[16px] p-5 sm:p-7 shadow-[0_10px_15px_rgba(46,26,15,0.25)] w-full lg:w-[470px] shrink-0"
     >
-      <div className="flex items-start justify-between gap-3">
-        <h2 id="qs-title" className="text-d-h4 font-heading">{t('qs.title')}</h2>
-        <p className="text-d-label-s text-muted whitespace-nowrap pt-1">{t('qs.step', { n: 1 })}</p>
-      </div>
-      <div aria-hidden className="h-1 rounded-full bg-surface2">
-        <div className="h-1 w-1/2 rounded-full bg-primary" />
-      </div>
+      <h2 id="qs-title" className="text-d-h4 font-heading">{t('qs.title')}</h2>
+      <JourneyBar names={journey.names} current={0} />
       <p className="text-d-body-s text-muted">{basicsOnly ? t('qs.intro') : t('qs.introFull')}</p>
 
       <Field label={t('qs.ideaLabel')} hint={t('qs.ideaHint')} error={errors.title} required>
@@ -213,4 +246,10 @@ export default function QuickStartCard({ challenges, onContinue, busy = false }:
       </p>
     </form>
   )
+}
+
+/** The real form's steps on the quick start (1.1 and 1.2): step 1 is this card. */
+export function JourneyBar({ names, current }: { names: string[]; current: number }) {
+  if (names.length === 0) return <Skeleton className="h-10 w-full" />
+  return <StepProgress steps={names} current={current} className="!bg-transparent !p-0" />
 }
