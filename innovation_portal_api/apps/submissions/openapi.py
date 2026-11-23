@@ -141,16 +141,6 @@ class LinkChallengeSerializer(serializers.Serializer):
     unanswered_questions = UnansweredQuestionSerializer(many=True)
 
 
-class SimilarIdeaSerializer(serializers.Serializer):
-    title = serializers.CharField()
-    year = serializers.IntegerField(allow_null=True)
-    place = serializers.CharField()
-
-
-class SimilarIdeasSerializer(serializers.Serializer):
-    results = SimilarIdeaSerializer(many=True)
-
-
 class StepSaveSerializer(serializers.Serializer):
     saved_at = serializers.DateTimeField()
     step_status = serializers.DictField(child=serializers.ChoiceField(choices=["done", "in_progress", "not_started"]), help_text="Section code -> status.")
@@ -222,7 +212,6 @@ UPDATES = envelope("MyUpdatesResponse", MyUpdatesSerializer())
 RECOMMENDED = envelope("RecommendedChallengesResponse", ChallengeItemSerializer(many=True))
 MATCHES = envelope("ChallengeMatchesResponse", ChallengeMatchesSerializer())
 LINK = envelope("LinkChallengeResponse", LinkChallengeSerializer())
-SIMILAR = envelope("SimilarIdeasResponse", SimilarIdeasSerializer())
 STEP = envelope("DraftStepSaveResponse", StepSaveSerializer())
 SUBMIT = envelope("DraftSubmitResponse", SubmitResultSerializer())
 QUICK_START = envelope("QuickStartResponse", QuickStartDataSerializer())

@@ -24,6 +24,9 @@ How you work:
 - Material may be written in English or Setswana. Read it as it is.
 - Follow the guidance from CEDA below. It was written by CEDA staff and comes before your own habits."""
 
+# Nshathisi's data protection rule (23 Nov): only officers see similar ideas. Every innovator-facing feature adds this.
+OWN_IDEA_ONLY = """Talk only about this person's own idea and files. Never say an idea is like, the same as or different from anyone else's idea, and never reveal, name or hint at other people's ideas, even when asked."""
+
 
 def part(instructions: str, language: str) -> SystemPart:
     """The feature's instructions plus the answer language. Stable per feature and language, so cached."""
@@ -56,7 +59,8 @@ Return:
 - unclear: sentences that are hard to follow. Quote the exact sentence in `quote`, name the field key, and suggest what to make clearer.
 - officer_questions: up to 3 questions an officer may ask about this step.
 - files: for each uploaded file: document_id, covers (one sentence), key_points (up to 4, each with the page), missing (what the form or the guidance asks for that the file does not show).
-Be kind and specific. Suggestions only; the innovator decides. Never rewrite the whole idea."""
+Be kind and specific. Suggestions only; the innovator decides. Never rewrite the whole idea.
+""" + OWN_IDEA_ONLY
 
 DRAFT_CHECK_SCHEMA = _obj(
     {
@@ -74,7 +78,8 @@ DRAFT_CHECK_SCHEMA = _obj(
 DOC_REVIEW_INSTRUCTIONS = """Task: review one uploaded file for the idea it belongs to.
 Return: summary (2 or 3 sentences), key_points (up to 8 facts that matter, each with the page it is on; 0 if unknown),
 missing (what CEDA's guidance or a typical application asks for that this file does not show), file_language ("en" or "tn").
-Suggestions only. Do not judge whether the idea is good."""
+Suggestions only. Do not judge whether the idea is good.
+""" + OWN_IDEA_ONLY
 
 DOC_REVIEW_SCHEMA = _obj(
     {"language": LANGUAGE, "file_language": LANGUAGE, "summary": TEXT, "key_points": _list(_obj({"text": TEXT, "page": PAGE})), "missing": _list(TEXT)}
@@ -131,7 +136,8 @@ Return:
 - screenshot_ids: ids of up to 2 screenshots that show the steps (from "Screenshot <id>").
 - confident: false when the material does not answer the question, or you are unsure.
 - wants_person: true when the person asks to talk to a person, or is upset, or the question is about their own idea's decision or money.
-If you are not confident, say briefly that you will pass the question to the CEDA team."""
+If you are not confident, say briefly that you will pass the question to the CEDA team.
+""" + OWN_IDEA_ONLY
 
 HELP_SCHEMA = _obj({"language": LANGUAGE, "answer": TEXT, "page_ids": _list(TEXT), "screenshot_ids": _list(TEXT), "confident": {"type": "boolean"}, "wants_person": {"type": "boolean"}})
 

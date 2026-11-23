@@ -62,7 +62,6 @@ FLAG_DEFINITIONS: tuple[FlagDefinition, ...] = (
         False,
         is_public=True,
     ),
-    FlagDefinition("similar_ideas", "Similar ideas", "Show similar ideas while someone writes theirs.", "ideas", True, is_public=True),
     FlagDefinition("public_search", "Website search", "Search box on the public website.", "website", True, is_public=True),
     FlagDefinition("subscriptions", "Email subscriptions", "Visitors can subscribe to news and new challenges.", "website", True, is_public=True),
     FlagDefinition("sms_messages", "SMS messages", "Send SMS, including sign-in codes. Needs an active SMS connection.", "messaging", False),

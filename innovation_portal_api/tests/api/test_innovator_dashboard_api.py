@@ -9,9 +9,7 @@ from rest_framework.test import APIClient
 from apps.accounts.models import User
 from apps.accounts.services import RoleService
 from apps.communications.models import Notification
-from apps.content.models import ContentItem, WinnerSpotlight
 from apps.core.constants import ProgramStatus, ProgramTypeCode, RoleType, SubmissionFormFieldType, SubmissionStatus, SubmissionType
-from apps.platform_config.testing import set_features
 from apps.profiles.models import InnovatorProfile
 from apps.programs.general_intake import GeneralIntakeService
 from apps.programs.models import FormSection, Program, ProgramType, SubmissionForm, SubmissionFormField
@@ -304,58 +302,3 @@ class ProfileCompletenessApiTests(DashboardFixtureMixin, TestCase):
         after = after.get("data", after)
         self.assertGreater(after["percent_complete"], before)
         self.assertNotIn("district", {item["field"] for item in after["missing_fields"]})
-
-
-class SimilarIdeasApiTests(DashboardFixtureMixin, TestCase):
-    def setUp(self):
-        super().setUp()
-        set_features(self, similar_ideas=True)
-        applicant = make_user("winner.applicant@example.com", phone_number="+26772222222")
-        InnovatorProfile.objects.update_or_create(user=applicant, defaults={"district": District.objects.order_by("ordering").first()})
-        winning = Submission.objects.create(
-            reference_number="CEDA-IC-2025-000001", program=self.general, innovator=applicant, submission_type=SubmissionType.IDEA,
-            title="Secret internal title", current_status="winner", submitted_at=timezone.now(), sector=self.sectors[0],
-        )
-        WinnerSpotlight.objects.create(
-            program=self.general, team_name="Team Mokoro", project_name="Solar milk cooling for dairy farmers",
-            description="Keeps milk cold at rural collection points using solar power.", year=2025, submission=winning,
-        )
-        ContentItem.objects.create(
-            title="How a farmer cut milk waste with solar cooling", excerpt="A story about solar milk cooling in Kweneng.",
-            category="success_story", status="published", published_at=timezone.now(),
-        )
-        ContentItem.objects.create(
-            title="Unpublished solar milk cooling story", excerpt="Draft story about solar milk cooling.",
-            category="success_story", status="draft",
-        )
-
-    def test_returns_title_year_and_place_only(self):
-        response = self.client.post("/api/ideas/similar/", {"text": "solar cooling for milk on farms"}, format="json")
-        self.assertEqual(response.status_code, 200, response.content)
-        results = response.json()["data"]["results"]
-        self.assertGreaterEqual(len(results), 2)
-        self.assertLessEqual(len(results), 5)
-        titles = [item["title"] for item in results]
-        self.assertIn("Solar milk cooling for dairy farmers", titles)
-        self.assertIn("How a farmer cut milk waste with solar cooling", titles)
-        self.assertNotIn("Unpublished solar milk cooling story", titles)
-        for item in results:
-            self.assertEqual(set(item), {"kind", "title", "year", "place"})
-        spotlight = next(item for item in results if item["kind"] == "published_idea")
-        self.assertEqual(spotlight["year"], 2025)
-        self.assertTrue(spotlight["place"])
-
-        body = response.content.decode()
-        for private in ("winner.applicant@example.com", "+26772222222", "Team Mokoro", "Secret internal title", "Kebadile", "CEDA-IC-2025-000001"):
-            self.assertNotIn(private, body)
-
-    def test_needs_sign_in_and_the_feature(self):
-        self.client.force_authenticate(None)
-        self.assertEqual(self.client.post("/api/ideas/similar/", {"text": "solar milk"}, format="json").status_code, 401)
-        self.client.force_authenticate(self.user)
-        set_features(self, similar_ideas=False)
-        self.assertEqual(self.client.post("/api/ideas/similar/", {"text": "solar milk"}, format="json").status_code, 404)
-
-    def test_unrelated_text_returns_nothing(self):
-        response = self.client.post("/api/ideas/similar/", {"text": "quantum blockchain spaceship"}, format="json")
-        self.assertEqual(response.json()["data"]["results"], [])

@@ -1,30 +1,26 @@
-"""Signed-in innovator endpoints: /api/me/... and /api/ideas/similar/."""
+"""Signed-in innovator endpoints: /api/me/...
+
+There is no similar ideas search for innovators: only officers see similar ideas (23 Nov data protection rule).
+"""
 from __future__ import annotations
 
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
 
 from apps.core.api import api_success
 from apps.core.i18n import resolve_request_language
-from apps.platform_config.flags import require_feature
 from apps.submissions import innovator_tracking as tracking
 from apps.submissions import openapi as docs
 from apps.submissions.innovator_dashboard import FILTERS, InnovatorDashboardSelector
-from apps.submissions.serializers import ApplicationDraftSerializer, SimilarIdeasRequestSerializer
-from apps.submissions.similar_ideas import find_similar_ideas
+from apps.submissions.serializers import ApplicationDraftSerializer
 
 
 def _lang(request) -> str:
     lang = resolve_request_language(request)
     return "en" if lang == "all" else lang
-
-
-class SimilarIdeasThrottle(UserRateThrottle):
-    scope = "similar_ideas"
 
 
 class MySummaryView(APIView):
@@ -149,25 +145,3 @@ class LinkIdeaToChallengeView(APIView):
             },
             status_code=status.HTTP_201_CREATED,
         )
-
-
-class SimilarIdeasView(APIView):
-    permission_classes = [IsAuthenticated]
-    throttle_classes = [SimilarIdeasThrottle]
-
-    @extend_schema(
-        tags=["Innovator"],
-        summary="Up to 5 published ideas or stories similar to a text (title, year and place only)",
-        request=SimilarIdeasRequestSerializer,
-        responses=docs.SIMILAR,
-    )
-    def post(self, request):
-        require_feature("similar_ideas")
-        serializer = SimilarIdeasRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        results = find_similar_ideas(
-            text=serializer.validated_data["text"],
-            sector=serializer.validated_data.get("sector"),
-            lang=_lang(request),
-        )
-        return api_success(data={"results": results})

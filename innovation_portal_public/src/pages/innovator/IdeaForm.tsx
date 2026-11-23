@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Check, Lightbulb, MessageCircle, Sparkles, Star } from 'lucide-react'
+import { Check, Lightbulb, MessageCircle, Star } from 'lucide-react'
 import clsx from 'clsx'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -28,7 +28,7 @@ import { normalisePhone } from '../../lib/phone'
 import Input from '../../components/ui/Input'
 import { challengeEntryService } from '../../services/challengeEntry.service'
 import { useAsync } from '../../lib/useAsync'
-import type { FormStep, IntakeDraft, Lang, PublishedForm, SimilarIdea } from '../../types/innovator'
+import type { FormStep, IntakeDraft, Lang, PublishedForm } from '../../types/innovator'
 import { parseApiError } from '../../utils/apiError'
 
 type LoadState =
@@ -41,8 +41,6 @@ type LoadState =
 type SaveState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved'; at: number } | { kind: 'failed' }
 
 const AUTOSAVE_MS = 1200
-const SIMILAR_MS = 1500
-const SIMILAR_MIN_CHARS = 40
 
 /**
  * Screen 2.3: the full idea form, one step at a time, saved as you go.
@@ -80,7 +78,6 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   const [errors, setErrors] = useState<Record<string, FieldProblem | string[] | string>>({})
   const [save, setSave] = useState<SaveState>({ kind: 'idle' })
   const [now, setNow] = useState(Date.now())
-  const [similar, setSimilar] = useState<SimilarIdea[]>([])
   const [consent, setConsent] = useState(false)
   const [consentError, setConsentError] = useState(false)
   const [sending, setSending] = useState(false)
@@ -202,32 +199,6 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
     },
     [step],
   )
-
-  // ── Similar ideas: quiet, never blocking ─────────────────────────────────
-  const similarText = useMemo(() => {
-    if (!step) return ''
-    return stepFields(step)
-      .filter((f) => f.type === 'textarea' || f.type === 'text')
-      .map((f) => answers[f.key])
-      .filter((v): v is string => typeof v === 'string')
-      .join(' ')
-      .trim()
-  }, [answers, step])
-
-  useEffect(() => {
-    if (similarText.length < SIMILAR_MIN_CHARS) return // 2.10 shows the note on challenge entries too
-    let alive = true
-    const timer = window.setTimeout(() => {
-      intakeService
-        .similarIdeas(similarText, draft?.sector ?? undefined)
-        .then((list) => alive && setSimilar(list))
-        .catch(() => undefined) // Switched off or failed: the note simply does not show.
-    }, SIMILAR_MS)
-    return () => {
-      alive = false
-      window.clearTimeout(timer)
-    }
-  }, [similarText, draft?.sector])
 
   // ── Moving between steps ─────────────────────────────────────────────────
   function goTo(index: number) {
@@ -516,24 +487,6 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
           {/* The AI helper's step check needs a signed-in person; a guest sees the rest of the column as it is. */}
           {guest ? (
             <>
-          {!onReview && similar.length > 0 && (
-            <section className={clsx('rounded-card p-6', slug ? 'bg-info-soft' : 'bg-surface2')}>
-              <p className={clsx('flex items-center gap-2 font-heading text-d-h5', slug ? 'text-info' : 'text-text')}>
-                <Sparkles size={18} aria-hidden className={slug ? 'text-info' : 'text-accent'} />
-                {similar.length === 1 ? t('form.similarOne') : t('form.similarMany', { count: similar.length })}
-              </p>
-              <p className="mt-2 text-d-body-s text-muted">{t('form.similarBody')}</p>
-              <ul className="mt-3 flex flex-col gap-1.5">
-                {similar.map((idea, i) => (
-                  <li key={`${idea.title}-${i}`} className="text-d-body-s text-text">
-                    {[idea.title, idea.place].filter(Boolean).join(', ')}
-                    {idea.year ? ` (${idea.year})` : ''}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           {!onReview && step && step.tips.length > 0 && (
             <Card padding="md">
               <p className="flex items-center gap-2 font-heading text-d-h5 text-text">
@@ -571,24 +524,6 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
               }, 50)
             }}
           >
-          {!onReview && similar.length > 0 && (
-            <section className={clsx('rounded-card p-6', slug ? 'bg-info-soft' : 'bg-surface2')}>
-              <p className={clsx('flex items-center gap-2 font-heading text-d-h5', slug ? 'text-info' : 'text-text')}>
-                <Sparkles size={18} aria-hidden className={slug ? 'text-info' : 'text-accent'} />
-                {similar.length === 1 ? t('form.similarOne') : t('form.similarMany', { count: similar.length })}
-              </p>
-              <p className="mt-2 text-d-body-s text-muted">{t('form.similarBody')}</p>
-              <ul className="mt-3 flex flex-col gap-1.5">
-                {similar.map((idea, i) => (
-                  <li key={`${idea.title}-${i}`} className="text-d-body-s text-text">
-                    {[idea.title, idea.place].filter(Boolean).join(', ')}
-                    {idea.year ? ` (${idea.year})` : ''}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           {!onReview && step && step.tips.length > 0 && (
             <Card padding="md">
               <p className="flex items-center gap-2 font-heading text-d-h5 text-text">

@@ -57,7 +57,7 @@ export interface AiHelperPanelProps {
   onShowField: (stepIndex: number, fieldKey: string) => void
   /** Where the questions are: leaving or pausing in a field there asks the helper. */
   watchSelector?: string
-  /** Today's panel (similar ideas, tips, WhatsApp). Always shown; it is all that shows when the AI helper is off. */
+  /** Today's panel (tips, WhatsApp). Always shown; it is all that shows when the AI helper is off. */
   children?: ReactNode
   /** Shared with other "Check my idea" buttons on the page (useCheckMyIdea). Without it the panel keeps its own. */
   check?: CheckMyIdea

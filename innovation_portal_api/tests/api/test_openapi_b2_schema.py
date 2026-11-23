@@ -25,7 +25,6 @@ class B2SchemaTests(SimpleTestCase):
             ("/api/me/challenges/recommended/", "get", "200"): "RecommendedChallengesResponse",
             ("/api/me/ideas/{idea_id}/challenge-matches/", "get", "200"): "ChallengeMatchesResponse",
             ("/api/me/ideas/{idea_id}/link-challenge/{program_id}/", "post", "201"): "LinkChallengeResponse",
-            ("/api/ideas/similar/", "post", "200"): "SimilarIdeasResponse",
             ("/api/drafts/{id}/steps/{section_code}/", "put", "200"): "DraftStepSaveResponse",
             ("/api/drafts/{id}/submit/", "post", "200"): "DraftSubmitResponse",
             ("/api/drafts/quick-start/", "post", "201"): "QuickStartResponse",

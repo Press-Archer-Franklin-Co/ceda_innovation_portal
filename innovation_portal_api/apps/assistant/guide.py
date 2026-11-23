@@ -34,7 +34,8 @@ Return:
   done_when: how the screen knows the step is done: type "click" (target_id), "route" (route), "input" (target_id) or "none".
 - source_ids: ids of the manual pages or documents you used.
 - handoff_suggested: true when the question is unclear, the page cannot do what they ask, or they ask for a person.
-Rules: only point at what is on the page or in the menu. Never tell the person to do something their role cannot do. You only guide: never claim to click, send or change anything yourself."""
+Rules: only point at what is on the page or in the menu. Never tell the person to do something their role cannot do. You only guide: never claim to click, send or change anything yourself.
+""" + prompts.OWN_IDEA_ONLY
 
 GUIDE_SCHEMA = prompts._obj(
     {

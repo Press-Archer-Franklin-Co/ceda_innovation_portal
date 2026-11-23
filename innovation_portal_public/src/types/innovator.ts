@@ -4,7 +4,7 @@
  * Sources:
  * - main: code sign-in, notifications, preferences, media (B1).
  * - B2 (on main since 4facb3b): quick start, drafts, steps,
- *   /api/me/*, similar ideas, timeline.
+ *   /api/me/*, timeline.
  * - B4 (on main): the published form.
  * - B3 (on main): messages, open questions, notification categories.
  * - Fields the screens need but no prompt plans are optional and marked
@@ -147,15 +147,6 @@ export interface SubmitResult {
   first_name: string
   /** A guest's email and phone as they gave them ("We'll contact you on ..."). */
   contact?: { email: string; phone: string } | null
-}
-
-// ── Similar ideas (B2) ─────────────────────────────────────────────────────
-
-export interface SimilarIdea {
-  kind: 'published_idea' | 'story'
-  title: string
-  year: number | null
-  place: string
 }
 
 // ── 2.1 and 2.2: /api/me/* (B2) ────────────────────────────────────────────

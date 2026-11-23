@@ -454,15 +454,15 @@ class SignInSafetyRuleTests(PlatformSettingsTestBase):
             self.assertEqual(response.status_code, 200, key)
 
     def test_flag_changes_are_audited(self):
-        self.client.patch(f"{BASE}/features/similar_ideas/", {"enabled": False}, format="json")
-        entry = AuditLog.objects.get(action_type="feature_flag_changed", target_id="similar_ideas")
+        self.client.patch(f"{BASE}/features/public_search/", {"enabled": False}, format="json")
+        entry = AuditLog.objects.get(action_type="feature_flag_changed", target_id="public_search")
         self.assertEqual(entry.after_state, {"enabled": False})
         flags = {item["key"]: item for item in self.client.get(f"{BASE}/features/").json()["data"]}
-        self.assertFalse(flags["similar_ideas"]["enabled"])
-        self.assertEqual(flags["similar_ideas"]["updated_by"]["id"], str(self.admin.id))
+        self.assertFalse(flags["public_search"]["enabled"])
+        self.assertEqual(flags["public_search"]["updated_by"]["id"], str(self.admin.id))
 
     def test_feature_validation(self):
-        self.assertEqual(self.client.patch(f"{BASE}/features/similar_ideas/", {}, format="json").status_code, 400)
+        self.assertEqual(self.client.patch(f"{BASE}/features/public_search/", {}, format="json").status_code, 400)
         self.assertEqual(self.client.patch(f"{BASE}/features/does-not-exist/", {"enabled": True}, format="json").status_code, 404)
 
 
@@ -658,7 +658,7 @@ class AdministratorOnlyTests(PlatformSettingsTestBase):
         self.client.force_authenticate(self.officer)
         calls = [
             ("get", f"{BASE}/features/"),
-            ("patch", f"{BASE}/features/similar_ideas/"),
+            ("patch", f"{BASE}/features/public_search/"),
             ("get", f"{BASE}/providers/"),
             ("get", f"{BASE}/integrations/"),
             ("post", f"{BASE}/integrations/"),

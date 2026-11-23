@@ -48,7 +48,6 @@ urlpatterns = [
     path("api/forms/", include("apps.programs.form_urls")),
     path("api/drafts/", include("apps.submissions.draft_urls")),
     path("api/me/", include("apps.submissions.me_urls")),
-    path("api/ideas/", include("apps.submissions.idea_urls")),
     path("api/submissions/<uuid:submission_id>/messages/", SubmissionMessagesView.as_view(), name="submission-messages"),
     path("api/submissions/<uuid:submission_id>/messages/typing/", SubmissionTypingView.as_view(), name="submission-messages-typing"),
     path("api/inbox/", include("apps.conversations.urls")),

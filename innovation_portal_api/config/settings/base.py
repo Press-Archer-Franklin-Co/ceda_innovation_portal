@@ -256,7 +256,6 @@ REST_FRAMEWORK = {
         "platform_admin": "60/minute",
         "platform_test": "10/minute",
         "draft_quick_start": "10/hour",
-        "similar_ideas": "30/minute",
         "form_published": "60/minute",
         "content_public": "120/minute",
         "subscribe": "10/hour",

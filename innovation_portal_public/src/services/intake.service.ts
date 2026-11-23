@@ -1,7 +1,7 @@
 import api from './api'
 import { unwrapData } from './envelope'
 import type {
-  Envelope, IntakeDraft, QuickStartRequest, QuickStartResult, SimilarIdea,
+  Envelope, IntakeDraft, QuickStartRequest, QuickStartResult,
   StepSaveResult, SubmitRequest, SubmitResult,
 } from '../types/innovator'
 
@@ -154,11 +154,5 @@ export const intakeService = {
   async submit(id: string, payload: SubmitRequest, token?: string): Promise<SubmitResult> {
     const { data } = await api.post<Envelope<SubmitResult>>(`/drafts/${id}/submit/`, payload, tokenHeaders(token))
     return unwrapData(data)
-  },
-
-  /** Signed in only. Never blocks the form; show the note quietly. */
-  async similarIdeas(text: string, sector?: string): Promise<SimilarIdea[]> {
-    const { data } = await api.post<Envelope<{ results: SimilarIdea[] }>>('/ideas/similar/', { text, sector })
-    return unwrapData<{ results: SimilarIdea[] }>(data).results
   },
 }

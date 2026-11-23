@@ -64,7 +64,8 @@ def _parts(lang: str, instructions: str, question: str = ""):
     from apps.assistant.models import Audience
 
     found = knowledge.build(audience=Audience.INNOVATORS, language=lang, question=question, include_manual=False)
-    return found.parts(prompts.BASE_PROMPT) + [prompts.part(instructions, lang)]
+    # Only officers see similar ideas: WhatsApp answers never compare or mention other people's ideas.
+    return found.parts(prompts.BASE_PROMPT) + [prompts.part(f"{instructions}\n{prompts.OWN_IDEA_ONLY}", lang)]
 
 
 def suggestion(*, question: str, answer: str, lang: str, user, node_key: str, target: str = "") -> str:

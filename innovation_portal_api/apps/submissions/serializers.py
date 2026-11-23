@@ -270,11 +270,6 @@ class DraftPhoneVerifySerializer(serializers.Serializer):
         return normalized
 
 
-class SimilarIdeasRequestSerializer(serializers.Serializer):
-    text = serializers.CharField(min_length=3, max_length=2000)
-    sector = serializers.PrimaryKeyRelatedField(queryset=Sector.objects.filter(active=True), required=False, allow_null=True)
-
-
 class SubmissionSerializer(serializers.ModelSerializer):
     responses = SubmissionResponseSerializer(many=True, read_only=True)
     program_detail = ProgramSerializer(source="program", read_only=True)
