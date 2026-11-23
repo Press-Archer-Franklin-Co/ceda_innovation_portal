@@ -49,7 +49,8 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
   const replyBy = item.open_question?.reply_by ?? item.reply_by
 
   return (
-    <article className={clsx('rounded-card border bg-surface p-5', needsAction ? 'border-2 border-accent' : 'border-border')}>
+    // The whole card opens the idea: the title link stretches over it; the button stays its own target above it.
+    <article className={clsx('relative rounded-card border bg-surface p-5 transition-colors hover:bg-surface2/40 focus-within:ring-2 focus-within:ring-primary', needsAction ? 'border-2 border-accent' : 'border-border')}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Tag tone={word.tone}>{t(word.key)}</Tag>
         <span className="text-d-cap text-muted">
@@ -57,7 +58,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
         </span>
       </div>
       <h3 className="mt-3 font-heading text-d-h5 text-text break-words">
-        <Link to={href} className="hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
+        <Link to={href} className="rounded after:absolute after:inset-0 after:rounded-card after:content-[''] hover:underline focus-visible:outline-none">
           {item.title}
         </Link>
       </h3>
@@ -73,7 +74,7 @@ export default function IdeaCard({ item }: { item: IdeaItem }) {
       )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <span className="text-d-cap text-muted">{[meta, channelKey ? t(channelKey) : ''].filter(Boolean).join(' · ')}</span>
-        <Link data-guide="myIdeas.open" to={needsAction && !returned ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm' })}>
+        <Link data-guide="myIdeas.open" to={needsAction && !returned ? `${href}#messages` : href} className={buttonClasses({ variant: needsAction ? 'primary' : 'secondary', size: 'sm', className: 'relative z-10' })}>
           {action}
         </Link>
       </div>

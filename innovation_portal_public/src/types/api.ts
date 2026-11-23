@@ -70,6 +70,8 @@ export interface AuthenticatedUser extends UserSummary {
   /** What this person may do (S1). Ask for these with can(), not for roles. */
   capabilities?: string[]
   profile?: InnovatorProfile | null
+  /** The person's own photo, or null (GET /api/auth/me/). */
+  photo_url?: string | null
 }
 
 export interface InnovatorProfile {

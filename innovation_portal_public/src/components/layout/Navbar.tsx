@@ -1,6 +1,6 @@
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Bell, Briefcase, ChevronRight, FileText, FolderOpen, Globe, Heart, Home, LayoutDashboard, Lightbulb, LogOut, Megaphone, Menu, MessageCircle, Search, ShieldCheck, Trophy, User, X } from 'lucide-react'
+import { ArrowRight, Bell, Briefcase, ChevronRight, FileText, FolderOpen, Globe, Heart, Home, LayoutDashboard, Lightbulb, LogOut, ChevronDown, Megaphone, Menu, MessageCircle, Search, ShieldCheck, Trophy, User, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../../context/AuthContext'
@@ -147,8 +147,10 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
   }, [open])
 
   if (!user) return null
-  // A phone account can have no name or email yet (made from a phone code on 1.2 or 2.0).
+// A phone account can have no name or email yet (made from a phone code on 1.2 or 2.0).
   const name = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email || user.phone_number || ''
+  // Frame 2.1: initials (or photo) and "Neo M." on the button. No name yet: the avatar alone, never a phone or email.
+  const short = user.first_name ? `${user.first_name}${user.last_name ? ` ${user.last_name.charAt(0)}.` : ''}` : ''
   const item = 'flex items-center gap-2.5 px-3 py-2 rounded-control text-d-body-s text-text hover:bg-surface2 focus-visible:outline-none focus-visible:bg-surface2'
 
   return (
@@ -158,10 +160,12 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={t('common.account')}
-        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        aria-label={short ? t('hdr.account', { name: short }) : t('common.account')}
+        className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface py-1 pl-1 pr-1 hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:pr-3"
       >
-        <Avatar name={name} size="md" decorative />
+        <Avatar name={name} src={user.photo_url} size="md" decorative />
+        {short && <span className="hidden max-w-[120px] truncate text-d-label-s text-text sm:inline">{short}</span>}
+        <ChevronDown size={16} aria-hidden className="hidden text-muted sm:inline" />
       </button>
       {open && (
         <div role="menu" className="absolute right-0 mt-2 w-64 rounded-card bg-surface border border-border shadow-pop p-2 z-50">

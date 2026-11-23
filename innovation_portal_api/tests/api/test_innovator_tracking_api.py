@@ -158,6 +158,18 @@ class SeedDemoIdeasTests(TrackingBase):
         self.assertEqual(list(Submission.objects.filter(innovator=self.innovator)), [real])
 
 
+    def test_states_give_one_idea_in_each_home_state_and_clear_removes_them(self):
+        from django.core.management import call_command
+
+        call_command("seed_demo_ideas", email=self.innovator.email, count=0, states=True, verbosity=0)
+        call_command("seed_demo_ideas", email=self.innovator.email, count=0, states=True, verbosity=0)
+        self.client.force_authenticate(self.innovator)
+        kinds = [m["type"] for m in data(self.client.get("/api/me/summary/"))["messages"]]
+        self.assertEqual(kinds, ["changes_requested", "question", "draft", "shortlisted", "stage_moved"])
+        call_command("seed_demo_ideas", email=self.innovator.email, clear=True, verbosity=0)
+        self.assertEqual(data(self.client.get("/api/me/summary/"))["messages"], [])
+
+
 class DocumentsAndOwnershipTests(TrackingBase):
     def upload(self, sub, name="costing.xlsx", user=None, **extra):
         self.client.force_authenticate(user or self.innovator)
