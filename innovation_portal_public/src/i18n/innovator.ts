@@ -50,6 +50,8 @@ export const innovatorEn = {
   'form.reviewIntro': 'Check your answers. You can go back to any step to change them.',
   'form.noAnswer': 'No answer',
   'form.edit': 'Edit',
+  'form.fromProfile': 'From your profile',
+  'form.editProfileAnswer': 'Edit {label}',
   'form.fixStep': 'Some answers need a look before you continue.',
   'form.tips': 'Tips for this step',
   'form.similarOne': '1 similar idea already exists',
@@ -282,6 +284,8 @@ export const innovatorTn: Record<InnovatorKey, string> = {
   'form.reviewIntro': 'Lekola dikarabo tsa gago. O ka boela kwa karolong nngwe le nngwe go di fetola.',
   'form.noAnswer': 'Ga go na karabo',
   'form.edit': 'Fetola',
+  'form.fromProfile': 'Go tswa mo porofaeleng ya gago', // TODO tn-review
+  'form.editProfileAnswer': 'Fetola {label}', // TODO tn-review
   'form.fixStep': 'Dikarabo dingwe di tlhoka go lekolwa pele o tswelela.',
   'form.tips': 'Dikeletso tsa karolo e',
   'form.similarOne': 'Go setse go na le kakanyo e le nngwe e e tshwanang',

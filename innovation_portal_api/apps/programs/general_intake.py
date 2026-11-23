@@ -37,8 +37,8 @@ FORM_SPEC = [
         "title": "About you",
         "description": "So that the innovation team can reach you.",
         "fields": [
-            {"key": "first_name", "label": "First name", "field_type": "text", "required": True},
-            {"key": "last_name", "label": "Last name", "field_type": "text", "required": True},
+            {"key": "first_name", "label": "First name", "field_type": "text", "required": True, "profile_field": "first_name"},
+            {"key": "last_name", "label": "Last name", "field_type": "text", "required": True, "profile_field": "last_name"},
             {"key": "contact_number", "label": "Phone number", "field_type": "phone", "required": False},
         ],
     },
@@ -57,6 +57,10 @@ def program_defaults() -> dict:
         "allow_team_submission": False,
         "allow_individual_submission": True,
     }
+
+
+def _has_profile_field(model) -> bool:
+    return any(f.name == "profile_field" for f in model._meta.get_fields())
 
 
 def build_form(*, program, SubmissionForm, FormSection, SubmissionFormField) -> None:
@@ -82,6 +86,8 @@ def build_form(*, program, SubmissionForm, FormSection, SubmissionFormField) -> 
                 field_type=field_spec["field_type"],
                 required=field_spec["required"],
                 ordering=field_order,
+                # Prompt 37: only on models that have it (older migrations run this with historical models).
+                **({"profile_field": field_spec["profile_field"]} if field_spec.get("profile_field") and _has_profile_field(SubmissionFormField) else {}),
             )
             field_order += 1
 

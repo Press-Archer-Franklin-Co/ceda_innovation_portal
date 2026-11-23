@@ -104,6 +104,10 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
     guest_phone_verified = serializers.SerializerMethodField()
     form_id = serializers.SerializerMethodField(help_text="The programme's form; load GET /api/forms/{form_id}/published/.")
     form_version_id = serializers.SerializerMethodField(help_text="The latest published version of that form (null if never published).")
+    profile_prefill = serializers.SerializerMethodField(
+        help_text="Prompt 37: {question key: {value, source}} the signed-in owner's profile fills, for questions not answered yet "
+        "and shown under the current answers. The form shows them as \"From your profile\" with Edit."
+    )
     send_now_allowed = serializers.SerializerMethodField(
         help_text="True when this idea may be sent before every required question is answered (a General ideas quick start "
         "while \"Send ideas with just the basics\" is on, R-23). The form then offers \"Send now, finish later\"."
@@ -123,6 +127,7 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "guest_phone_verified",
             "form_id",
             "form_version_id",
+            "profile_prefill",
             "send_now_allowed",
             "innovator",
             "team",
@@ -163,6 +168,18 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
         from apps.submissions.draft_services import ApplicationDraftService
 
         return obj.status == ApplicationDraft.STATUS_DRAFT and ApplicationDraftService.allows_basics_only(obj)
+
+    def get_profile_prefill(self, obj) -> dict:
+        from apps.programs.profile_prefill import prefill, schema_fields
+
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        # Only the person's own profile, only for their own unfinished draft.
+        if not user or not user.is_authenticated or obj.innovator_id != user.id or obj.status != ApplicationDraft.STATUS_DRAFT:
+            return {}
+        form = obj.program.form if obj.program_id else None
+        version = form.latest_version if form else None
+        return prefill(schema_fields(version.schema if version else None), user, obj.draft_data) if version else {}
 
     def get_form_version_id(self, obj) -> str | None:
         form = obj.program.form if obj.program_id else None

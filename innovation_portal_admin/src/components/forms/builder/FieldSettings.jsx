@@ -10,9 +10,11 @@ import { useT } from '../../../i18n/context'
 import { cn } from '../../../lib/cn'
 import { pick } from '../../../lib/forms/format'
 import {
-  CHOICE_TYPES, LAYOUT_TYPES, PALETTE, WIDTHS, allFields, allowedWidths, slugKey,
+  CHOICE_TYPES, LAYOUT_TYPES, PALETTE, PROFILE_FIELDS, PROFILE_NONE, PROFILE_TYPE_DEFAULTS, WIDTHS, allFields, allowedWidths, slugKey,
 } from '../../../lib/forms/document'
 
+// Answers a profile value can never stand for.
+const NO_PROFILE_TYPES = new Set(['file', 'media', 'boolean', 'yes_no', 'multiselect', 'checkboxes'])
 const OPS = ['equals', 'not_equals', 'in', 'is_empty', 'is_not_empty']
 const NO_VALUE = new Set(['is_empty', 'is_not_empty'])
 const TEXT_RULES = [
@@ -122,6 +124,26 @@ export default function FieldSettings({ doc, field, onChange, onClose, onDuplica
                 checked={Boolean(field.is_challenge_question)}
                 onChange={(checked) => onChange({ is_challenge_question: checked })}
               />
+              {!NO_PROFILE_TYPES.has(field.type) && (
+                <Labelled label={t('settings.profileField')}>
+                  <SelectControl
+                    aria-label={t('settings.profileField')}
+                    value={field.profile_field || ''}
+                    onChange={(value) => onChange({ profile_field: value })}
+                    options={[
+                      {
+                        value: '',
+                        label: PROFILE_TYPE_DEFAULTS[field.type]
+                          ? t('settings.profileAuto', { name: t(`settings.profile.${PROFILE_TYPE_DEFAULTS[field.type]}`) })
+                          : t('settings.profileOff'),
+                      },
+                      ...PROFILE_FIELDS.map((name) => ({ value: name, label: t(`settings.profile.${name}`) })),
+                      ...(PROFILE_TYPE_DEFAULTS[field.type] ? [{ value: PROFILE_NONE, label: t('settings.profileNever') }] : []),
+                    ]}
+                  />
+                  <span className="text-[12px] text-muted">{t('settings.profileHint')}</span>
+                </Labelled>
+              )}
             </>
           )}
 

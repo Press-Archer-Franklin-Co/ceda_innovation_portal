@@ -18,7 +18,7 @@ import AiHelperPanel, { useCheckMyIdea } from '../../components/innovator/form/A
 import { showAnswer } from '../../components/innovator/form/showAnswer'
 import {
   type Answers, type FieldProblem, answersToSend, checkStep,
-  isLayoutField, isVisible, stepFields,
+  isEmptyAnswer, isLayoutField, isVisible, stepFields,
 } from '../../components/innovator/form/logic'
 import { usePageTitle } from '../../lib/usePageTitle'
 import { useI18n } from '../../i18n'
@@ -73,6 +73,8 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
   const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
   const [forms, setForms] = useState<Partial<Record<Lang, PublishedForm>>>({})
   const [answers, setAnswers] = useState<Answers>({})
+  /** Prompt 37: questions filled from the profile (key to the answer as the person reads it) until they press Edit. */
+  const [fromProfile, setFromProfile] = useState<Record<string, string>>({})
   /** The step the person moved to on this visit; until then the draft's saved step (no jump on open). */
   const [chosenStep, setChosenStep] = useState<number | null>(null)
   const [errors, setErrors] = useState<Record<string, FieldProblem | string[] | string>>({})
@@ -106,7 +108,11 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
         setLoad({ kind: 'not_published' })
         return
       }
-      setAnswers((draft.draft_data ?? {}) as Answers)
+      // The profile fills only questions with no answer yet; what the person typed always wins.
+      const typed = (draft.draft_data ?? {}) as Answers
+      const filled = Object.fromEntries(Object.entries(draft.profile_prefill ?? {}).filter(([key]) => isEmptyAnswer(typed[key])))
+      setAnswers({ ...Object.fromEntries(Object.entries(filled).map(([key, item]) => [key, item.value])), ...typed })
+      setFromProfile(Object.fromEntries(Object.entries(filled).map(([key, item]) => [key, item.display])))
       setLoad({ kind: 'ready', draft })
     } catch {
       setLoad({ kind: 'error' })
@@ -419,7 +425,21 @@ export default function IdeaForm({ guest = false }: { guest?: boolean } = {}) {
           {onReview ? (
             <ReviewStep steps={steps} answers={answers} onEdit={goTo} />
           ) : step ? (
-            <FormRenderer step={step} answers={answers} onChange={onChange} lang={lang} errors={errors} />
+            <FormRenderer
+              step={step}
+              answers={answers}
+              onChange={onChange}
+              lang={lang}
+              errors={errors}
+              fromProfile={fromProfile}
+              onEditProfile={(key) =>
+                setFromProfile((prev) => {
+                  const next = { ...prev }
+                  delete next[key]
+                  return next
+                })
+              }
+            />
           ) : null}
 
           {onReview && guest && (
