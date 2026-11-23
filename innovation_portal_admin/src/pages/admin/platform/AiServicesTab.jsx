@@ -152,8 +152,9 @@ export default function AiServicesTab() {
     </ul>
   )
 
+  // pb-24: room under the last card so the floating Need help button never covers Save.
   return (
-    <div className="flex max-w-4xl flex-col gap-4">
+    <div className="flex max-w-4xl flex-col gap-4 pb-24 xl:pb-0">
       <SectionCard title={t('aiSvc.title')} subtitle={t('aiSvc.body')}
         actions={<Button ref={addRef} size="sm" data-guide="integrations.ai.add" icon={<Plus size={14} aria-hidden />} disabled={providers.isLoading || providers.isError} onClick={() => setPanel({ connection: null, ref: addRef })}>{t('aiSvc.add')}</Button>}>
         {body}
