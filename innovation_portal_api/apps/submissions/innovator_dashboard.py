@@ -78,7 +78,8 @@ def submission_stage(submission) -> str:
 
 
 def _program_payload(program) -> dict:
-    return {"id": str(program.id), "title": program.title, "is_general_intake": program.is_general_intake}
+    # slug: a challenge entry opens at /challenges/{slug}/entry/{id} straight away, without a redirect.
+    return {"id": str(program.id), "title": program.title, "slug": program.slug, "is_general_intake": program.is_general_intake}
 
 
 def draft_item(draft, lang: str) -> dict:
@@ -315,6 +316,7 @@ class InnovatorDashboardSelector:
                 "title": draft["title"],
                 "detail": "Finish and send your idea.",
                 "percent_complete": draft["percent_complete"],
+                "program": draft["program"],
             }
         else:
             profile = getattr(user, "innovator_profile", None)

@@ -1,20 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AlertCircle, Check, Upload } from 'lucide-react'
 import clsx from 'clsx'
-import Button from '../../ui/Button'
-import Modal from '../../ui/Modal'
+import Button, { buttonClasses } from '../../ui/Button'
 import Tag from '../../ui/Tag'
-import FormRenderer from '../form/FormRenderer'
-import { checkStep, type Answers, type FieldProblem } from '../form/logic'
+import type { Answers } from '../form/logic'
 import { useI18n, type StringKey } from '../../../i18n'
 import { documentsService } from '../../../services/documents.service'
-import { innovatorService } from '../../../services/innovator.service'
-import { formatDate, formatShortDate } from '../format'
-import type { FormStep, IdeaTracking, ReturnedForChanges, ReturnItem } from '../../../types/innovator'
+import { changesLink } from '../links'
+import { formatShortDate } from '../format'
+import type { ReturnedForChanges, ReturnItem } from '../../../types/innovator'
 
 // Figma 2.4b (157:922 website, 157:1287 phone). ① Why it came back and the date to fix it by. ② Exactly what to
-// change: each item opens its field or asks for a file. ③ Fix and resend opens the form with only those parts
-// unlocked; resending moves the idea back to the same stage and tells the officer.
+// change: each item opens its question on the changes page. ③ "Respond to changes" opens the form as it was sent
+// (/my-ideas/:id/changes) with the notes pinned and only those parts unlocked; "Send changes" moves the idea back
+// to the same stage and tells the officer.
 
 /** The answers that really changed: only these are sent. */
 export function changedAnswers(before: Record<string, unknown>, now: Answers): Answers {
@@ -25,17 +25,10 @@ export function changedAnswers(before: Record<string, unknown>, now: Answers): A
   return out
 }
 
-export default function ReturnedCard({ ideaId, returned, onChanged, onResent }: { ideaId: string; returned: ReturnedForChanges; onChanged: () => Promise<void> | void; onResent: (next: IdeaTracking) => void }) {
+export default function ReturnedCard({ ideaId, returned }: { ideaId: string; returned: ReturnedForChanges }) {
   const { t, lang } = useI18n()
-  const trigger = useRef<HTMLButtonElement>(null)
-  const [open, setOpen] = useState(false)
-  const [focusItem, setFocusItem] = useState<string | null>(null)
   const first = returned.requested_by.split(' ')[0]
-
-  const show = (itemId: string | null) => {
-    setFocusItem(itemId)
-    setOpen(true)
-  }
+  const to = changesLink(ideaId)
 
   return (
     <section aria-labelledby="returned-title" data-guide="track.returned" className="rounded-card border border-amber bg-warning-soft p-5 lg:p-6">
@@ -49,107 +42,52 @@ export default function ReturnedCard({ ideaId, returned, onChanged, onResent }: 
         </div>
       </div>
       <p className="mt-3 text-d-body-s text-text whitespace-pre-line break-words">{returned.reason}</p>
-      <ul className="mt-3 flex flex-col gap-2">
-        {returned.items.map((item) => (
-          <li key={item.id}>
-            <button type="button" onClick={() => show(item.id)} className="flex w-full items-center gap-3 rounded-control bg-surface px-3 py-2.5 text-left hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-              <span aria-hidden className={clsx('flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border', item.done ? 'border-success bg-success text-white' : 'border-border bg-surface')}>
-                {item.done && <Check size={12} strokeWidth={3} />}
-              </span>
-              <span className="min-w-0 flex-1 text-d-body-s text-text">{item.label}{item.done && <span className="sr-only"> ({t('trk.itemDone')})</span>}</span>
-              <Tag tone="neutral">{t(`trk.kind.${item.kind}` as StringKey)}</Tag>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <ReturnChecklist returned={returned} hrefFor={(item) => `${to}#${itemAnchor(item)}`} />
       <div className="mt-4 flex flex-col-reverse items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-4">
         <a href="#messages" className="text-center text-d-label text-primary hover:underline">{first ? t('trk.askOfficer', { name: first }) : t('trk.askTeam')}</a>
-        <Button ref={trigger} onClick={() => show(null)}>{t('trk.fixResend')}</Button>
+        {/* Opens the form in "Respond to changes" mode: notes pinned, flagged questions highlighted. */}
+        <Link to={to} className={buttonClasses({})}>{t('chg.respond')}</Link>
       </div>
-      {open && (
-        <FixDialog ideaId={ideaId} returned={returned} focusItem={focusItem} triggerRef={trigger} onClose={() => setOpen(false)} onChanged={onChanged} onResent={(next) => { setOpen(false); onResent(next) }} />
-      )}
     </section>
   )
 }
 
-function FixDialog({ ideaId, returned, focusItem, triggerRef, onClose, onChanged, onResent }: {
-  ideaId: string
-  returned: ReturnedForChanges
-  focusItem: string | null
-  triggerRef: React.RefObject<HTMLButtonElement | null>
-  onClose: () => void
-  onChanged: () => Promise<void> | void
-  onResent: (next: IdeaTracking) => void
-}) {
-  const { t, lang } = useI18n()
-  const [answers, setAnswers] = useState<Answers>(() => ({ ...returned.answers }))
-  const [errors, setErrors] = useState<Record<string, FieldProblem | string>>({})
-  const [message, setMessage] = useState('')
-  const [busy, setBusy] = useState(false)
-  const step = useMemo<FormStep>(() => ({
-    id: 'fix', code: 'fix', title: '', description: '', tips: [], is_active: true,
-    rows: returned.fields.map((field, index) => ({ row: index + 1, fields: [{ ...field, width: 'full' as const }] })),
-  }), [returned.fields])
-  const documents = returned.items.filter((item) => item.kind === 'document')
+/** Where a checklist item points on the changes page. */
+export const itemAnchor = (item: ReturnItem) => (item.kind === 'answer' ? `field-${item.field_key}` : `doc-${item.id}`)
 
-  // An item in the checklist links to its own field.
-  useEffect(() => {
-    const item = returned.items.find((i) => i.id === focusItem)
-    if (!item || item.kind !== 'answer') return
-    const timer = window.setTimeout(() => {
-      document.querySelector<HTMLElement>(`[data-guide="idea.field.${CSS.escape(item.field_key)}"] :is(input, textarea, button)`)?.focus()
-    }, 260)
-    return () => window.clearTimeout(timer)
-  }, [focusItem, returned.items])
-
-  async function send() {
-    const problems = checkStep(step, answers)
-    if (Object.keys(problems).length) {
-      setErrors(problems)
-      return
-    }
-    setBusy(true)
-    setMessage('')
-    setErrors({})
-    try {
-      onResent(await innovatorService.resend(ideaId, changedAnswers(returned.answers, answers), lang))
-    } catch (error) {
-      const data = (error as { response?: { data?: { errors?: Record<string, unknown> } & Record<string, unknown> } }).response?.data
-      const body = (data?.errors ?? data ?? {}) as Record<string, unknown>
-      const fieldErrors: Record<string, string> = {}
-      for (const [key, value] of Object.entries(body)) {
-        if (key.startsWith('answers.')) fieldErrors[key.slice(8)] = Array.isArray(value) ? value.join(' ') : String(value)
-      }
-      setErrors(fieldErrors)
-      const items = Array.isArray(body.items) ? (body.items as string[]) : []
-      setMessage(items.length ? t('trk.notDone', { items: items.join(', ') }) : Object.keys(fieldErrors).length ? '' : t('trk.resendError'))
-    } finally {
-      setBusy(false)
-    }
-  }
-
+/** The officer's list of things to change, ticked as each is done. */
+export function ReturnChecklist({ returned, hrefFor }: { returned: ReturnedForChanges; hrefFor: (item: ReturnItem) => string }) {
+  const { t } = useI18n()
   return (
-    <Modal
-      open
-      onClose={onClose}
-      triggerRef={triggerRef}
-      size="lg"
-      closeOnBackdrop={false}
-      title={t('trk.fixTitle')}
-      description={[returned.fix_by ? formatDate(returned.fix_by, lang) : '', t('trk.fixBody')].filter(Boolean).join(' · ')}
-      footer={<><Button variant="ghost" onClick={onClose}>{t('common.cancel')}</Button><Button loading={busy} onClick={send}>{t('trk.resend')}</Button></>}
-    >
-      <div className="flex flex-col gap-6">
-        {returned.fields.length > 0 && <FormRenderer step={step} answers={answers} onChange={(key, value) => setAnswers((a) => ({ ...a, [key]: value }))} lang={lang} errors={errors} />}
-        {documents.map((item) => <DocumentItem key={item.id} ideaId={ideaId} item={item} autoFocus={focusItem === item.id} onChanged={onChanged} />)}
-        {message && <p role="alert" className="rounded-control bg-danger-soft px-3 py-2.5 text-d-body-s text-danger">{message}</p>}
-      </div>
-    </Modal>
+    <ul className="mt-3 flex flex-col gap-2">
+      {returned.items.map((item) => (
+        <li key={item.id}>
+          {(() => {
+            const href = hrefFor(item)
+            const cls = 'flex w-full items-center gap-3 rounded-control bg-surface px-3 py-2.5 text-left hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary'
+            const body = (
+              <>
+                <span aria-hidden className={clsx('flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded border', item.done ? 'border-success bg-success text-white' : 'border-border bg-surface')}>
+                  {item.done && <Check size={12} strokeWidth={3} />}
+                </span>
+                <span className="min-w-0 flex-1 text-d-body-s text-text">{item.label}{item.done && <span className="sr-only"> ({t('trk.itemDone')})</span>}</span>
+                <Tag tone="neutral">{t(`trk.kind.${item.kind}` as StringKey)}</Tag>
+              </>
+            )
+            // On the changes page an item scrolls to its question; elsewhere it opens that page at the question.
+            return href.startsWith('#') ? (
+              <button type="button" className={cls} onClick={() => document.getElementById(href.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>{body}</button>
+            ) : (
+              <Link to={href} className={cls}>{body}</Link>
+            )
+          })()}
+        </li>
+      ))}
+    </ul>
   )
 }
 
-function DocumentItem({ ideaId, item, autoFocus, onChanged }: { ideaId: string; item: ReturnItem; autoFocus: boolean; onChanged: () => Promise<void> | void }) {
+export function DocumentItem({ ideaId, item, autoFocus, onChanged }: { ideaId: string; item: ReturnItem; autoFocus: boolean; onChanged: () => Promise<void> | void }) {
   const { t } = useI18n()
   const input = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
@@ -174,7 +112,7 @@ function DocumentItem({ ideaId, item, autoFocus, onChanged }: { ideaId: string; 
 
   const done = item.done || Boolean(name)
   return (
-    <div className="flex flex-col gap-2">
+    <div id={`doc-${item.id}`} className="flex flex-col gap-2 scroll-mt-40">
       <p className="text-d-label text-text">{item.label}</p>
       <input ref={input} type="file" className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => upload(e.target.files?.[0])} />
       <div className="flex flex-wrap items-center gap-3">
