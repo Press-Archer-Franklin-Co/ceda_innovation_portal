@@ -163,3 +163,16 @@ class MigrationTests(EntryTestCase):
         self.assertEqual((old.status, old.is_public), (ProgramStatus.ARCHIVED, False))
         self.assertEqual(SubmissionForm.objects.get(id=old.form_id).status, "archived")
         self.assertTrue(Submission.objects.filter(id=kept.id).exists())  # nothing deleted
+
+
+class BannerSmallLabelTests(EntryTestCase):
+    def test_the_small_label_is_a_banner_setting_and_empty_means_the_default(self):
+        from apps.content.sections import default_settings, normalize_settings
+
+        self.assertEqual(default_settings("hero_banner")["small_label"], {"en": "", "tn": ""})
+        saved = normalize_settings("hero_banner", {"headline": {"en": "Plant the seed"}, "small_label": {"en": "Ideas welcome all year", "tn": "Dikakanyo di a amogelwa"}})
+        self.assertEqual(saved["small_label"]["en"], "Ideas welcome all year")
+        from apps.content.sections import SettingsError
+
+        with self.assertRaises(SettingsError):
+            normalize_settings("hero_banner", {"headline": {"en": "x"}, "small_label": {"en": "x" * 61}})

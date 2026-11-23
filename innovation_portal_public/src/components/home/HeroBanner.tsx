@@ -21,6 +21,8 @@ import type { ButtonLink, HeroPhoto } from '../../services/publicContent.service
 // needs (792 at 1440). The person stands on the hero's bottom edge in front of the brand circle, ring and dot.
 
 export interface HeroSettings {
+  /** 3.8 Small label; empty shows the default words. */
+  small_label?: string
   headline: string
   headline_marks?: HeadlineMark[] | null
   text: string
@@ -127,7 +129,7 @@ export default function HeroBanner({ settings, card, photo = null }: { settings:
         >
           <p className="inline-flex items-center gap-2 self-start rounded-full bg-on-banner/[0.14] px-3 py-1.5 text-d-label-s">
             <span aria-hidden className="w-2 h-2 rounded-full bg-yellow" />
-            {t('home.pill')}
+            {settings.small_label?.trim() || t('home.pill')}
           </p>
           <h1 id="hero-title" className="font-heading font-extrabold text-d-mh1 lg:text-d-h1">
             <HeroHeadline text={settings.headline} marks={settings.headline_marks} />

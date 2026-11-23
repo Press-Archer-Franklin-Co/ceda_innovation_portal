@@ -33,6 +33,8 @@ SECTION_TYPES: dict[str, dict] = {
         "fixed_first": True,
         "can_disable": False,
         "settings": {
+            # 3.8 "Small label": the pill above the headline. Empty shows the site's own words.
+            "small_label": _text("", max_length=60),
             "headline": _text("Turn your idea into a business", required=True, max_length=120),
             "headline_marks": {"kind": "marks", "of": "headline"},
             "text": _text(max_length=300),
