@@ -14,6 +14,7 @@ import ReturnedCard from '../../components/innovator/tracking/ReturnedCard'
 import { answerFiles, answerText, isFile } from '../../components/innovator/answers'
 import { formatDate, formatShortDate } from '../../components/innovator/format'
 import { statusWord } from '../../components/innovator/ideaStatus'
+import { usePageTitle } from '../../lib/usePageTitle'
 import { useI18n } from '../../i18n'
 import { innovatorService } from '../../services/innovator.service'
 import type { IdeaTracking, SubmissionAnswer, TimelineStage, TrackedIdea } from '../../types/innovator'
@@ -22,13 +23,15 @@ import type { IdeaTracking, SubmissionAnswer, TimelineStage, TrackedIdea } from 
 export default function TrackIdea() {
   const { id = '' } = useParams()
   const { t, lang } = useI18n()
-  const { hash } = useLocation()
+  const { hash, state: routeState } = useLocation()
   const settings = useShellSettings()
   const [idea, setIdea] = useState<TrackedIdea | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'error' | 'not_found'>('loading')
   const [tracking, setTracking] = useState<IdeaTracking | null>(null)
+  usePageTitle(idea ? `${idea.title} · ${t('mode.sent')}` : t('mode.sent'))
   const [trackingFailed, setTrackingFailed] = useState(false)
-  const [resent, setResent] = useState(false)
+  // "Send changes" on the changes page comes back here with resent set.
+  const [resent] = useState(Boolean((routeState as { resent?: boolean } | null)?.resent))
 
   const loadTracking = useCallback(async () => {
     setTrackingFailed(false)
@@ -86,6 +89,7 @@ export default function TrackIdea() {
     <div className="bg-bg">
       <section className="border-b border-border">
         <div className="mx-auto max-w-[1200px] px-4 py-8 sm:px-6">
+          <p className="text-d-over uppercase font-heading text-muted mb-2">{t('mode.sent')}</p>
           <div className="flex flex-wrap gap-2">
             {tracking?.returned ? <Tag tone="blue">{t('trk.returnedTitle')}</Tag> : <Tag tone={word.tone}>{t(word.key)}</Tag>}
             {program && <Tag tone="neutral">{program}</Tag>}
@@ -108,16 +112,7 @@ export default function TrackIdea() {
         <div className="flex min-w-0 flex-col gap-6">
           {resent && <p role="status" className="rounded-control bg-success-soft px-4 py-3 text-d-body-s text-success">{t('trk.resent')}</p>}
           {tracking?.returned && (
-            <ReturnedCard
-              ideaId={idea.id}
-              returned={tracking.returned}
-              onChanged={loadTracking}
-              onResent={(next) => {
-                setTracking(next)
-                setResent(true)
-                innovatorService.trackedIdea(id).then(setIdea).catch(() => undefined)
-              }}
-            />
+            <ReturnedCard ideaId={idea.id} returned={tracking.returned} />
           )}
           <MessageThread ideaId={idea.id} />
           {trackingFailed ? (

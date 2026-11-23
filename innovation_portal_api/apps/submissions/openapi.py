@@ -65,6 +65,7 @@ class NextActionSerializer(serializers.Serializer):
     detail = serializers.CharField()
     reply_by = serializers.DateTimeField(required=False, allow_null=True)
     percent_complete = serializers.IntegerField(required=False)
+    program = serializers.DictField(required=False, help_text="finish_draft only: {id, title, slug, is_general_intake}.")
 
 
 class MySummarySerializer(serializers.Serializer):

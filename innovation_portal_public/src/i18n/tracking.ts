@@ -2,6 +2,18 @@
 // TODO tn-review: the Setswana strings below need a check by a Setswana speaker.
 
 export const trackingEn = {
+  'mode.draft': 'Unfinished draft',
+  'mode.sent': 'Sent idea · read only',
+  'mode.changes': 'Respond to changes',
+  'chg.respond': 'Respond to changes',
+  'chg.flagged': 'Your officer asked to change this',
+  'chg.intro': 'This is your idea as you sent it. Only the highlighted parts can change. Everything else stays as it is.',
+  'chg.documents': 'Documents to add',
+  'chg.send': 'Send changes',
+  'chg.back': 'Back to my idea',
+  'chg.fixBy': 'Please send by {date}.',
+  'chg.notWaiting': 'This idea is not waiting for changes, so it cannot be edited. You can follow it on its page.',
+  'chg.loadError': 'We could not load your idea',
   'ideas.search': 'Search by name or reference',
   'ideas.allChallenges': 'All challenges',
   'ideas.generalIdeas': 'General ideas',
@@ -62,6 +74,18 @@ export const trackingEn = {
 export type TrackingKey = keyof typeof trackingEn
 
 export const trackingTn: Record<TrackingKey, string> = {
+  'mode.draft': 'Kakanyo e e iseng e fele',
+  'mode.sent': 'Kakanyo e e rometsweng · go bala fela',
+  'mode.changes': 'Araba diphetogo',
+  'chg.respond': 'Araba diphetogo',
+  'chg.flagged': 'Motlhankedi wa gago o kopile gore o fetole se',
+  'chg.intro': 'Se ke kakanyo ya gago jaaka o e romile. Ke dikarolo tse di tshwailweng fela tse di ka fetolwang. Tse dingwe di nna jaaka di ntse.',
+  'chg.documents': 'Dikwalo tse o tshwanetseng go di tsenya',
+  'chg.send': 'Romela diphetogo',
+  'chg.back': 'Boela kwa kakanyong ya me',
+  'chg.fixBy': 'Tswee tswee romela pele ga {date}.',
+  'chg.notWaiting': 'Kakanyo e ga e emetse diphetogo, ka jalo ga e ka ke ya fetolwa. O ka e sala morago mo tsebeng ya yona.',
+  'chg.loadError': 'Ga re a kgona go bula kakanyo ya gago',
   'ideas.search': 'Batla ka leina kgotsa nomore',
   'ideas.allChallenges': 'Dikgwetlho tsotlhe',
   'ideas.generalIdeas': 'Dikakanyo tsa kakaretso',
