@@ -13,6 +13,8 @@ const PROVIDERS = [
     { name: 'base_url', label: 'Address (base URL)', type: 'url', required: true, secret: false, choices: [] },
     { name: 'api_key', label: 'API key', type: 'text', required: true, secret: true, choices: [] },
     { name: 'model', label: 'Model name', type: 'text', required: false, secret: false, choices: [] },
+    { name: 'environment', label: 'Key type', type: 'select', required: true, secret: false, default: 'test', choices: [{ value: 'test', label: 'Test key' }, { value: 'live', label: 'Live key' }] },
+    { name: 'json_schema', label: 'Follows a JSON schema', type: 'boolean', required: false, secret: false, default: true, choices: [] },
   ] },
   { key: 'anthropic', kind: 'ai', label: 'Anthropic (Claude)', fields: [] },
   { key: 'openai', kind: 'ai', label: 'OpenAI', fields: [] },
@@ -100,6 +102,7 @@ describe('AI services tab', () => {
     expect(document.querySelector('[data-guide="integrations.test"]')).toBeTruthy()
     expect(document.querySelector('[data-guide="integrations.activate"]')).toBeTruthy()
 
+    expect(document.querySelector('[role="dialog"] input[role="switch"]').checked).toBe(true)
     act(() => type(byLabel('Address (base URL)'), 'https://ai.example.invalid/v1'))
     act(() => type(byLabel('API key'), KEY))
     act(() => type(byLabel('Model name'), 'made-up-model'))
@@ -110,7 +113,7 @@ describe('AI services tab', () => {
     const body = state.saved.at(-1)
     expect(body.provider).toBe('openai_compatible')
     expect(body.secrets.api_key).toBe(KEY)
-    expect(body.config).toMatchObject({ base_url: 'https://ai.example.invalid/v1', model: 'made-up-model' })
+    expect(body.config).toMatchObject({ base_url: 'https://ai.example.invalid/v1', model: 'made-up-model', environment: 'test', json_schema: true })
     const values = [...document.querySelectorAll('input')].map((i) => i.value)
     expect(values).not.toContain(KEY)
     expect(document.body.textContent).toContain('1234')

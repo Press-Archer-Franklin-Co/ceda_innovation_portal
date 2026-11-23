@@ -46,6 +46,8 @@ const rowsOf = (data) => (Array.isArray(data) ? data : data?.results ?? [])
 const when = (v) => (v ? new Date(v).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
 
 
+const defaultsOf = (provider) => Object.fromEntries((provider?.fields ?? []).filter((f) => !f.secret && f.default !== null && f.default !== undefined).map((f) => [f.name, f.default]))
+
 function errorText(err) {
   const errors = err?.data?.errors
   if (errors && typeof errors === 'object') {
@@ -77,6 +79,8 @@ export function SetUpPanel({ kind, connection, onClose, triggerRef }) {
   const [result, setResult] = useState(connection?.last_test_result ?? null)
   const serviceName = t(`integ.svc.${kind}`)
   const chosen = providerList.find((p) => p.key === (provider || providerList[0]?.key))
+  // AI services: show and save the provider's real defaults (key type, time limit), not empty boxes.
+  const shownConfig = kind === 'ai' ? { ...defaultsOf(chosen), ...config } : config
   const dirty = !id || provider !== (current?.provider ?? '') || name !== (current?.name ?? '') || JSON.stringify(config) !== JSON.stringify(current?.config ?? {}) || Object.keys(secretEdits).length > 0
   const step = current?.is_active ? 3 : current?.status === 'tested' || result?.ok ? 3 : id && !dirty ? 2 : chosen ? 1 : 0
   const failed = (e) => toast.show({ tone: 'error', title: t('integ.failed', { message: errorText(e) }) })
@@ -84,13 +88,14 @@ export function SetUpPanel({ kind, connection, onClose, triggerRef }) {
   async function persist() {
     const secrets = Object.fromEntries(Object.entries(secretEdits).filter(([, v]) => v !== undefined))
     const body = id
-      ? { name: name.trim() || serviceName, config, ...(Object.keys(secrets).length ? { secrets } : {}) }
-      : { kind, provider: chosen.key, name: name.trim() || `${serviceName} (${chosen.label})`, config, secrets }
+      ? { name: name.trim() || serviceName, config: shownConfig, ...(Object.keys(secrets).length ? { secrets } : {}) }
+      : { kind, provider: chosen.key, name: name.trim() || `${serviceName} (${chosen.label})`, config: shownConfig, secrets }
     const saved = await save.mutateAsync({ id, body })
     setId(saved.id)
     setCurrent(saved)
     setProvider(saved.provider)
     setName(saved.name)
+    if (kind === 'ai' && saved.config) setConfig(saved.config)
     setSecretEdits({})
     return saved
   }
@@ -161,7 +166,7 @@ export function SetUpPanel({ kind, connection, onClose, triggerRef }) {
           </div>
           {chosen?.description && <p className="-mt-2 text-[12px] text-muted">{chosen.description}</p>}
           {chosen && (
-            <ProviderFields provider={chosen} config={config} onConfig={(k, v) => setConfig((c) => ({ ...c, [k]: v }))}
+            <ProviderFields provider={chosen} config={shownConfig} onConfig={(k, v) => setConfig((c) => ({ ...c, [k]: v }))}
               secretState={current?.secrets} secretEdits={secretEdits} onSecret={(k, v) => setSecretEdits((s) => ({ ...s, [k]: v }))}
               onInvalid={(k, bad) => setInvalid((s) => ({ ...s, [k]: bad }))} />
           )}
