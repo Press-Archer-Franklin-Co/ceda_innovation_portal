@@ -1,15 +1,17 @@
 """U9 (3.23): invite, deactivate and reactivate people."""
 
 from django.shortcuts import get_object_or_404
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema
 from rest_framework import serializers
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
 from apps.accounts import user_admin
 from apps.accounts.models import User
 from apps.accounts.serializers import UserSummarySerializer
 from apps.core.api import api_success
-from apps.core.permissions import HasCapability
+from apps.core.permissions import AuthRateThrottle, HasCapability
 
 TAGS = ["Users"]
 
@@ -67,3 +69,28 @@ class UserReactivateView(APIView):
     def post(self, request, user_id):
         user = user_admin.reactivate(get_object_or_404(User, id=user_id), actor=request.user)
         return api_success(data=UserSummarySerializer(user).data, message="Reactivated.")
+
+
+class VerifyPhoneSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=32)
+    code = serializers.CharField(max_length=10)
+
+
+class MyPhoneVerifyView(APIView):
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [AuthRateThrottle]
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Prove my phone with a code",
+        description="{phone, code} (code from POST /api/auth/otp/request/). Saves the number as verified, attaches guest ideas with it, and joins a "
+        "phone-only WhatsApp or USSD account. 400 phone_other_account when it belongs to another account. Answers {claimed, joined, conflict}.",
+        request=VerifyPhoneSerializer,
+        responses=OpenApiTypes.OBJECT,
+    )
+    def post(self, request):
+        from apps.accounts.phone_accounts import verify_my_phone
+
+        serializer = VerifyPhoneSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return api_success(data=verify_my_phone(request.user, serializer.validated_data["phone"], serializer.validated_data["code"]), message="Phone confirmed.")

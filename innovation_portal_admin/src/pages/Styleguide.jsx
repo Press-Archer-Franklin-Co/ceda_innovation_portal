@@ -25,6 +25,7 @@ import Logo, { BrandLockup, CedaMark } from '../components/ui/Logo'
 import BrandLoader from '../components/ui/BrandLoader'
 import { createBoot } from '../lib/boot'
 import PageHeader from '../components/ui/PageHeader'
+import EditorWorkspace from '../components/ui/EditorWorkspace'
 import SectionCard from '../components/ui/SectionCard'
 import Sidebar from '../layout/Sidebar'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
@@ -136,6 +137,10 @@ export default function Styleguide() {
               }
             />
           </div>
+        </Section>
+
+        <Section figma="Builders (3.5, 3.7, 3.21, 3.6c)" title="EditorWorkspace: canvas and a sticky properties panel">
+          <WorkspacePreview />
         </Section>
 
         <Section figma="Shell (U12 lit menu)" title="Sidebar (as an administrator), lit open and dim rail">
@@ -429,6 +434,35 @@ function ShellPreview() {
           </SectionCard>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** EditorWorkspace in a 520px box: the canvas and the panel each scroll on their own; the panel stays put. */
+function WorkspacePreview() {
+  const [picked, setPicked] = useState(null)
+  const steps = Array.from({ length: 12 }, (_, i) => `Step ${i + 1}`)
+  return (
+    <div className="h-[520px] rounded-card border border-border p-3">
+      <EditorWorkspace
+        header={<PageHeader title="Workflow builder" subtitle="Pick a step to see its settings." actions={<Button size="sm">Publish</Button>} />}
+        side={<p className="w-[160px] rounded-card bg-surface2 p-3 text-[13px] text-muted">Palette</p>}
+        panel={picked ? (
+          <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-[14px]">
+            <h3 className="text-[15px] font-bold text-text">{picked}</h3>
+            {Array.from({ length: 14 }, (_, i) => <Input key={i} label={`Setting ${i + 1}`} defaultValue="" />)}
+          </div>
+        ) : null}
+        onClosePanel={() => setPicked(null)}
+      >
+        <ol className="flex flex-col gap-2 rounded-card bg-surface2 p-3">
+          {steps.map((s) => (
+            <li key={s}>
+              <button type="button" onClick={() => setPicked(s)} className="w-full rounded-control border border-border bg-surface px-3 py-4 text-left text-[14px] hover:bg-surface2">{s}</button>
+            </li>
+          ))}
+        </ol>
+      </EditorWorkspace>
     </div>
   )
 }
