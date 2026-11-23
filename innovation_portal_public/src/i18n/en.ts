@@ -180,6 +180,9 @@ const en = {
   'home.partnersEmpty': 'Partner',
 
   'qs2.title': 'How can we reach you?',
+  'qs2.continue': 'Confirm and continue',
+  'qs2.joinFail': 'Your phone is confirmed, but we could not open your idea. Your draft is saved. Try again in a moment.',
+  'form.sendNow': 'Send now, finish later',
   'qs2.edit': 'Edit',
   'qs2.general': 'General idea',
   'postd.back': 'News and bulletin',
@@ -242,7 +245,7 @@ const en = {
   'qs2.sendFail': 'We could not send your idea. Your draft is safe. Try again in a moment.',
   'qs2.phoneFirst': 'Confirm your phone number with the code first.',
   'qs2.needMore': 'Your idea needs a few more answers before we can send it. Your draft is saved.',
-  'qs.introFull': 'Two short steps. Before you send, we ask what problem your idea solves and how.',
+  'qs.introFull': 'This is the first step of the form. Next we ask how to reach you, then what problem your idea solves.',
   'qs2.problem': 'What problem does your idea solve?',
   'qs2.solution': 'How does your idea solve it?',
   'qs2.problemError': 'Tell us the problem in a sentence or two.',

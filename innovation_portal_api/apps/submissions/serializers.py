@@ -104,6 +104,10 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
     guest_phone_verified = serializers.SerializerMethodField()
     form_id = serializers.SerializerMethodField(help_text="The programme's form; load GET /api/forms/{form_id}/published/.")
     form_version_id = serializers.SerializerMethodField(help_text="The latest published version of that form (null if never published).")
+    send_now_allowed = serializers.SerializerMethodField(
+        help_text="True when this idea may be sent before every required question is answered (a General ideas quick start "
+        "while \"Send ideas with just the basics\" is on, R-23). The form then offers \"Send now, finish later\"."
+    )
 
     class Meta:
         model = ApplicationDraft
@@ -119,6 +123,7 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
             "guest_phone_verified",
             "form_id",
             "form_version_id",
+            "send_now_allowed",
             "innovator",
             "team",
             "title",
@@ -153,6 +158,11 @@ class ApplicationDraftSerializer(serializers.ModelSerializer):
     def get_form_id(self, obj) -> str | None:
         form_id = getattr(obj.program, "form_id", None) if obj.program_id else None
         return str(form_id) if form_id else None
+
+    def get_send_now_allowed(self, obj) -> bool:
+        from apps.submissions.draft_services import ApplicationDraftService
+
+        return obj.status == ApplicationDraft.STATUS_DRAFT and ApplicationDraftService.allows_basics_only(obj)
 
     def get_form_version_id(self, obj) -> str | None:
         form = obj.program.form if obj.program_id else None
