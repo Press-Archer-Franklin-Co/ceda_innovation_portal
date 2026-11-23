@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { cn } from '../lib/cn'
 import { useLayout } from './LayoutContext'
+import { useOverlay } from '../lib/overlays'
 import { useAuth } from '../lib/auth/AuthContext'
 import { useT } from '../i18n/context'
 import { CedaMark, CedaWord } from '../components/ui/Logo'
@@ -175,6 +176,7 @@ export default function Sidebar({ previewUser } = {}) {
   const t = useT()
   const layout = useLayout()
   const { sidebarOpen, mobileSidebarOpen, setMobileSidebarOpen, phone = false, shellRef } = layout
+  useOverlay(phone && mobileSidebarOpen) // the phone menu is a drawer: the Need help? button hides under it
   const open = phone ? mobileSidebarOpen : sidebarOpen
   const els = useRef({}).current
   const ref = (name) => (el) => { els[name] = el }

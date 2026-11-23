@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Move, ZoomIn } from 'lucide-react'
 import { useT } from '../../i18n/context'
+import { useOverlay } from '../../lib/overlays'
 
 /**
  * Place and crop a picture before upload. `title` and `description` are optional (already translated) for a
@@ -8,6 +9,7 @@ import { useT } from '../../i18n/context'
  */
 export default function ImageCropModal({ src, aspect = 4, outputWidth = 1600, fileName = 'banner.jpg', title, description, onApply, onCancel }) {
   const t = useT()
+  useOverlay(true) // the Need help? button hides while this is open
   const frameRef = useRef(null)
   const dragRef = useRef(null)
   const [img, setImg] = useState(null)
