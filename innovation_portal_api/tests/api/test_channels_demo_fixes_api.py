@@ -17,10 +17,17 @@ from apps.submissions.models import ApplicationDraft
 from tests.api.test_channels_api import BASE, data
 from tests.api.test_channels_full_flow_api import PHONE, FlowTestCase
 
-PNG = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-    b"\x00\x00\x00\rIDATx\x9cc\xf8\xcf\xc0\x00\x00\x03\x01\x01\x00\xc9\xfe\x92\xef\x00\x00\x00\x00IEND\xaeB`\x82"
-)
+def _png() -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+
+    buffer = BytesIO()
+    Image.new("RGB", (4, 4), (0, 120, 80)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+PNG = _png()
 
 
 class Base(FlowTestCase):
@@ -118,6 +125,7 @@ class WayOutTests(Base):
 
     def test_cancel_asks_then_keeps_or_deletes(self):
         for answer, kept in (("Keep it", True), ("Delete it", False)):
+            JourneySession.objects.update(draft=None)
             ApplicationDraft.objects.all().delete()
             self.say("menu")
             for text in ("1", "Solar pump", "Neo Kgosi", "General idea"):

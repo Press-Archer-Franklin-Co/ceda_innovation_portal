@@ -514,6 +514,8 @@ class SessionService:
             session.user = runner.user
         if runner.effects.get("draft_id"):
             session.draft_id = runner.effects["draft_id"]
+        if runner.effects.get("draft_deleted"):
+            session.draft_id = None
         if runner.effects.get("conversation_id"):
             session.conversation_id = runner.effects["conversation_id"][:64]
         if screen.end:

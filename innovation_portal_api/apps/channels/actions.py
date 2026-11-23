@@ -297,8 +297,11 @@ def delete_draft(*, draft_id: str, user, phone: str, channel: str) -> bool:
     draft = ApplicationDraft.objects.filter(owner, id=draft_id, status=ApplicationDraft.STATUS_DRAFT).first()
     if draft is None:
         return False
+    from apps.channels.models import JourneySession
+
     files = [document.file for document in draft.documents.all() if document.file]
     reference = draft.reference_number
+    JourneySession.objects.filter(draft=draft).update(draft=None)  # the session log stays, without the idea
     draft.delete()
     for stored in files:
         try:

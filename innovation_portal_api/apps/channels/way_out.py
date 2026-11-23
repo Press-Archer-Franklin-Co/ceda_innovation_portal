@@ -228,5 +228,6 @@ class WayOutMixin:
 
         draft_id = self.state.get("draft_id") or ""
         if draft_id and not (self.simulation or self.dry_run):
-            actions.delete_draft(draft_id=draft_id, user=self.user, phone=self.phone, channel=self.channel)
+            if actions.delete_draft(draft_id=draft_id, user=self.user, phone=self.phone, channel=self.channel):
+                self.effects["draft_deleted"] = True
         return self._go_menu(node, text, prefix=[self._wo("deleted")])
