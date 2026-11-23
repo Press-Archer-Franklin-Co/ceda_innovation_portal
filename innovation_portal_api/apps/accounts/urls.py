@@ -38,7 +38,7 @@ from apps.accounts.views import (
     UserRoleUpdateView,
 )
 
-from apps.accounts.user_admin_views import UserDeactivateView, UserInviteView, UserReactivateView  # noqa: E402
+from apps.accounts.user_admin_views import MyPhoneVerifyView, UserDeactivateView, UserInviteView, UserReactivateView  # noqa: E402
 
 urlpatterns = [
     path("register/", RegisterView.as_view(), name="register"),
@@ -62,6 +62,7 @@ urlpatterns = [
     path("me/delete/", DeleteMyAccountView.as_view(), name="auth-me-delete"),
     path("sessions/", AccountSessionsView.as_view(), name="auth-sessions"),
     path("sessions/<uuid:session_id>/sign-out/", AccountSessionSignOutView.as_view(), name="auth-session-sign-out"),
+    path("me/phone/verify/", MyPhoneVerifyView.as_view(), name="auth-me-phone-verify"),
     path("me/photo/", AuthMePhotoView.as_view(), name="auth-me-photo"),
     path("account-security/", AccountSecurityView.as_view(), name="account-security"),
     path("set-password/", SetPasswordView.as_view(), name="set-password"),

@@ -152,9 +152,13 @@ class OTPService:
     def find_user(*, target_type: str, target: str) -> User | None:
         if target_type == LoginCode.TargetType.EMAIL:
             return User.objects.filter(email__iexact=target).first()
-        matches = list(User.objects.filter(phone_number=target).order_by("-phone_verified", "-last_login", "created_at")[:2])
+        from apps.accounts.phone_accounts import best_order, pick_account, variants
+
+        # Any written form of the number (73000280, 26773000280, +267 7300 0280) finds the account.
+        rows = list(User.objects.filter(phone_number__in=variants(target)).order_by(*best_order())[:5])
+        matches = pick_account(rows)
         if not matches:
-            return None
+            return rows[0] if rows else None  # a switched-off account still answers "account disabled"
         if len(matches) > 1 and matches[0].phone_verified == matches[1].phone_verified:
             raise ValidationError(
                 {
@@ -266,6 +270,14 @@ class OTPService:
     @staticmethod
     def verify_code(*, target_type: str, target: str, code: str) -> LoginCodeVerifyResult:
         login_code = OTPService.check_code_or_raise(target_type=target_type, target=target, code=code)
+        if target_type == LoginCode.TargetType.PHONE:
+            # Outside the sign-in transaction, so the audit entry stays when the sign-in is refused.
+            from apps.accounts.phone_accounts import OTHER_ACCOUNT, may_take_phone
+
+            holder = OTPService.find_user(target_type=target_type, target=target)
+            if holder is not None and holder.is_active and not may_take_phone(holder):
+                AuditService.log_action(actor=None, action_type="accounts_join_needed", target=holder, metadata={"phone": mask_phone(target), "reason": "number_only_typed_on_this_account"})
+                raise ValidationError({"code": "phone_other_account", "detail": OTHER_ACCOUNT})
         return OTPService._resolve_user(target_type=target_type, target=target, login_code=login_code)
 
     @staticmethod
@@ -315,6 +327,13 @@ class OTPService:
         is_phone = target_type == LoginCode.TargetType.PHONE
         auth_method = User.PrimaryAuthMethod.PHONE_CODE if is_phone else User.PrimaryAuthMethod.EMAIL_CODE
         user = OTPService.find_user(target_type=target_type, target=target)
+        if is_phone and user is not None and user.is_active and source.endswith("_journey"):
+            from apps.accounts.phone_accounts import may_take_phone
+
+            if not may_take_phone(user):
+                # WhatsApp or USSD vouches for this number; the other account only has it typed in. The person gets
+                # a phone account of their own, which joins their main account once they prove the number there.
+                user = None
         created = False
         if user is None:
             user = User.objects.create_user(
@@ -346,11 +365,19 @@ class OTPService:
                 raise ValidationError({"code": "account_disabled", "detail": "This account is disabled."})
             # The person just proved they control this phone or inbox.
             if is_phone and not user.phone_verified:
+                from apps.accounts.phone_accounts import OTHER_ACCOUNT, may_take_phone
+
+                if not may_take_phone(user):
+                    raise ValidationError({"code": "phone_other_account", "detail": OTHER_ACCOUNT})
                 user.phone_verified = True
                 user.save(update_fields=["phone_verified", "updated_at"])
             if not is_phone and not user.email_verified:
                 user.email_verified = True
                 user.save(update_fields=["email_verified", "updated_at"])
+        if is_phone:
+            from apps.accounts.phone_accounts import phone_proved
+
+            phone_proved(user, target, source=source, actor=user)
         return user, created
 
     @staticmethod

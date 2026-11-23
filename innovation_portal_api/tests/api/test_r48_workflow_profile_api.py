@@ -172,7 +172,7 @@ class DailySummaryAndProfileTests(B5TestCase):
         response = self.client.patch("/api/auth/me/", {"first_name": "Kagiso", "phone_number": "+267 71 234 567", "preferred_language": "tn"}, format="json")
         self.assertEqual(response.status_code, 200, response.content)
         me = data(response)
-        self.assertEqual((me["first_name"], me["phone_number"], me["preferred_language"], me["photo_url"]), ("Kagiso", "+267 71 234 567", "tn", None))
+        self.assertEqual((me["first_name"], me["phone_number"], me["preferred_language"], me["photo_url"]), ("Kagiso", "+26771234567", "tn", None))
         self.assertTrue(AuditLog.objects.filter(action_type="account_profile_updated").exists())
         self.assertEqual(self.client.patch("/api/auth/me/", {"first_name": " "}, format="json").status_code, 400)
         self.assertEqual(self.client.patch("/api/auth/me/", {"preferred_language": "fr"}, format="json").status_code, 400)
