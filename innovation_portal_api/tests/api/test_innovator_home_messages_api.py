@@ -64,7 +64,7 @@ class HomeMessagesApiTests(DashboardFixtureMixin, TestCase):
 
         got = [(m["type"], m["idea_id"]) for m in self.messages()]
         self.assertEqual(got, [("shortlisted", str(short.id)), ("stage_moved", str(moved.id))])
-        self.assertEqual(self.messages()[1]["stage"], "In review")
+        self.assertEqual(self.messages()[1]["status"], "under_review")  # the screen words it from the status code
 
     def test_upcoming_event_of_a_challenge_i_entered(self):
         program = self.challenge("Agribusiness Value-Add", self.sectors[:1])
