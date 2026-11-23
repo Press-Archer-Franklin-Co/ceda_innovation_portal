@@ -147,9 +147,10 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
   }, [open])
 
   if (!user) return null
-  const name = `${user.first_name} ${user.last_name}`.trim() || user.email
-  // Frame 2.1: initials (or photo) and "Neo M." on the button.
-  const short = user.first_name ? `${user.first_name}${user.last_name ? ` ${user.last_name.charAt(0)}.` : ''}` : name
+// A phone account can have no name or email yet (made from a phone code on 1.2 or 2.0).
+  const name = `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() || user.email || user.phone_number || ''
+  // Frame 2.1: initials (or photo) and "Neo M." on the button. No name yet: the avatar alone, never a phone or email.
+  const short = user.first_name ? `${user.first_name}${user.last_name ? ` ${user.last_name.charAt(0)}.` : ''}` : ''
   const item = 'flex items-center gap-2.5 px-3 py-2 rounded-control text-d-body-s text-text hover:bg-surface2 focus-visible:outline-none focus-visible:bg-surface2'
 
   return (
@@ -159,18 +160,18 @@ function UserMenu({ canStaff, onLogout }: { canStaff: boolean; onLogout: () => v
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-haspopup="menu"
-        aria-label={t('hdr.account', { name: short })}
+        aria-label={short ? t('hdr.account', { name: short }) : t('common.account')}
         className="flex h-11 items-center gap-2 rounded-full border border-border bg-surface py-1 pl-1 pr-1 hover:bg-surface2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:pr-3"
       >
         <Avatar name={name} src={user.photo_url} size="md" decorative />
-        <span className="hidden max-w-[120px] truncate text-d-label-s text-text sm:inline">{short}</span>
+        {short && <span className="hidden max-w-[120px] truncate text-d-label-s text-text sm:inline">{short}</span>}
         <ChevronDown size={16} aria-hidden className="hidden text-muted sm:inline" />
       </button>
       {open && (
         <div role="menu" className="absolute right-0 mt-2 w-64 rounded-card bg-surface border border-border shadow-pop p-2 z-50">
           <div className="px-3 py-2 border-b border-border mb-1">
             <p className="text-d-label text-text truncate">{name}</p>
-            <p className="text-d-cap text-muted truncate">{user.email}</p>
+            <p className="text-d-cap text-muted truncate">{user.email || user.phone_number}</p>
           </div>
           <Link role="menuitem" to="/my-ideas" className={item} onClick={() => setOpen(false)}>
             <LayoutDashboard size={16} aria-hidden className="text-muted" /> {t('nav.myIdeas')}
