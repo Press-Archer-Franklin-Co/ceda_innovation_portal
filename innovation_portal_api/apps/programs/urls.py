@@ -6,6 +6,7 @@ from apps.programs.stage_views import ProgramStageDetailView, ProgramStagesView
 from apps.programs.entry_views import (
     EntryPanelFeedbackView,
     EntryPitchSessionView,
+    PitchScheduleView,
     MyChallengeAttendView,
     ChallengeStatusNumbersView,
     ChallengeUpdatesView,
@@ -51,6 +52,7 @@ urlpatterns = [
     path("public/<slug:slug>/my-result/", MyChallengeResultView.as_view(), name="public-challenge-my-result"),
     path("public/<slug:slug>/my-result/attend/", MyChallengeAttendView.as_view(), name="public-challenge-my-result-attend"),
     path("<uuid:program_id>/entries/<uuid:submission_id>/panel-feedback/", EntryPanelFeedbackView.as_view(), name="program-entry-panel-feedback"),
+    path("<uuid:program_id>/pitch-schedule/", PitchScheduleView.as_view(), name="program-pitch-schedule"),
     path("<uuid:program_id>/entries/<uuid:submission_id>/pitch/", EntryPitchSessionView.as_view(), name="program-entry-pitch"),
     path("<uuid:program_id>/eligibility/", ChallengeEligibilityRulesView.as_view(), name="program-eligibility"),
     path("<uuid:program_id>/results/publish/", PublishChallengeResultsView.as_view(), name="program-results-publish"),
